@@ -296,6 +296,7 @@ local function row(title: string, onBuy: () -> ())
 		AnchorPoint = Vector2.new(1, 0.5),
 		Size = UDim2.new(0.38, 0, 0, 38),
 		Position = UDim2.new(1, -8, 0.5, 0),
+		Text = "",
 		Font = Enum.Font.GothamBlack,
 		TextScaled = true,
 		TextColor3 = Color3.new(0.08, 0.06, 0.04),
@@ -387,13 +388,38 @@ local reveal = new("Frame", {
 	ZIndex = 10,
 	Parent = gui,
 })
-local cards = new("Frame", {
+-- Titre, cartes et total empilés et centrés, pour ne jamais se chevaucher sur un petit écran
+local stack = new("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0.5),
-	Size = UDim2.new(0.9, 0, 0, 280),
-	Position = UDim2.fromScale(0.5, 0.45),
+	Size = UDim2.fromScale(0.94, 0.9),
+	Position = UDim2.fromScale(0.5, 0.5),
 	BackgroundTransparency = 1,
 	ZIndex = 10,
 	Parent = reveal,
+}, {
+	new("UIListLayout", {
+		Padding = UDim.new(0, 10),
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}),
+})
+local big = label({
+	Size = UDim2.new(1, 0, 0, 56),
+	LayoutOrder = 1,
+	Text = "",
+	Font = Enum.Font.GothamBlack,
+	MaxText = 44,
+	ZIndex = 11,
+	Parent = stack,
+})
+local cards = new("Frame", {
+	Size = UDim2.fromScale(1, 0),
+	AutomaticSize = Enum.AutomaticSize.Y,
+	LayoutOrder = 2,
+	BackgroundTransparency = 1,
+	ZIndex = 10,
+	Parent = stack,
 }, {
 	new("UIGridLayout", {
 		CellSize = UDim2.fromOffset(120, 130),
@@ -402,26 +428,15 @@ local cards = new("Frame", {
 		SortOrder = Enum.SortOrder.LayoutOrder,
 	}),
 })
-local big = label({
-	AnchorPoint = Vector2.new(0.5, 0.5),
-	Size = UDim2.new(0.9, 0, 0, 70),
-	Position = UDim2.fromScale(0.5, 0.16),
-	Text = "",
-	Font = Enum.Font.GothamBlack,
-	MaxText = 48,
-	ZIndex = 11,
-	Parent = reveal,
-})
 local totalText = label({
-	AnchorPoint = Vector2.new(0.5, 0.5),
-	Size = UDim2.new(0.9, 0, 0, 40),
-	Position = UDim2.fromScale(0.5, 0.82),
+	Size = UDim2.new(1, 0, 0, 40),
+	LayoutOrder = 3,
 	Text = "",
 	TextColor3 = Color3.fromRGB(255, 210, 110),
 	Font = Enum.Font.GothamBlack,
 	MaxText = 32,
 	ZIndex = 11,
-	Parent = reveal,
+	Parent = stack,
 })
 
 local function card(g, order: number)
@@ -488,8 +503,8 @@ Remotes.CrackResult.OnClientEvent:Connect(function(results, total: number)
 		big.Text = "CRACKED!"
 		big.TextColor3 = INK
 	end
-	local grow = TweenService:Create(big, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(0.95, 0, 0, 84) })
-	big.Size = UDim2.new(0.6, 0, 0, 50)
+	local grow = TweenService:Create(big, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(1, 0, 0, 56) })
+	big.Size = UDim2.new(0.6, 0, 0, 40)
 	grow:Play()
 	totalText.Text = string.format("+◆ %s credits%s", Format.Short(total), if skip > 0 then string.format("  (%d more geodes)", skip) else "")
 	task.wait(if best.Rarity >= 5 then 3.5 else 2.2)

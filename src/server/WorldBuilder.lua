@@ -84,7 +84,8 @@ local function buildStation(world: Folder)
 	})
 	prompt(machine, "Crack geodes", "Cracking Machine", Enum.KeyCode.E)
 	local sign = Instance.new("BillboardGui")
-	sign.Size = UDim2.fromOffset(240, 50)
+	sign.Size = UDim2.fromScale(12, 2.4) -- en studs : le panneau rapetisse avec la distance
+	sign.MaxDistance = 120
 	sign.StudsOffset = Vector3.new(0, 8, 0)
 	sign.AlwaysOnTop = false
 	local label = Instance.new("TextLabel")
