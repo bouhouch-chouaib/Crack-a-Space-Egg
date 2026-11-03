@@ -93,7 +93,7 @@ local function onDrill(player: Player, target: any)
 	end
 	local max = Config.CargoSlots(d.levels.Cargo)
 	if #d.cargo >= max then
-		notice(player, "Cargo full! Go back to the station to crack your geodes", "warn")
+		notice(player, "Cargo full! Go back to the station to crack your space eggs", "warn")
 		return
 	end
 
@@ -106,7 +106,7 @@ local function onDrill(player: Player, target: any)
 	-- L'astéroïde casse : des géodes dans la soute, puis il se recharge
 	target:SetAttribute("HP", 0)
 	local ring = Config.Rings[ringIndex]
-	local gained = math.min(ring.GeodesPerAsteroid, max - #d.cargo)
+	local gained = math.min(ring.EggsPerAsteroid, max - #d.cargo)
 	for _ = 1, gained do
 		table.insert(d.cargo, ringIndex)
 	end
@@ -139,7 +139,7 @@ local function pick(weights: { number }): number
 	return 1
 end
 
-local function rollGeode(d, ringIndex: number)
+local function rollEgg(d, ringIndex: number)
 	local probs = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner))
 	local rarity = pick(probs)
 	-- Compteur de veine
@@ -179,13 +179,13 @@ local function crackAll(player: Player)
 		return
 	end
 	if #d.cargo == 0 then
-		notice(player, "No geodes to crack. Drill asteroids out there!", "warn")
+		notice(player, "No space eggs to crack. Drill asteroids out there!", "warn")
 		return
 	end
 	local results = {}
 	local total = 0
 	for _, ringIndex in ipairs(d.cargo) do
-		local g = rollGeode(d, ringIndex)
+		local g = rollEgg(d, ringIndex)
 		table.insert(results, g)
 		total += g.Value
 		local key = ringIndex .. ":" .. g.Rarity
@@ -264,7 +264,7 @@ local function watchFalls()
 				hrp.CFrame = STATION_SPAWN
 				sync(player)
 				if lost > 0 then
-					notice(player, "You drifted into space and lost " .. lost .. " geodes", "bad")
+					notice(player, "You drifted into space and lost " .. lost .. " eggs", "bad")
 				end
 			end
 		end

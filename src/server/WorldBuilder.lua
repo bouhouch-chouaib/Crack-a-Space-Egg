@@ -82,7 +82,7 @@ local function buildStation(world: Folder)
 		Color = Color3.fromRGB(255, 196, 40),
 		Parent = station,
 	})
-	prompt(machine, "Crack geodes", "Cracking Machine", Enum.KeyCode.E)
+	prompt(machine, "Crack eggs", "Cracking Machine", Enum.KeyCode.E)
 	local sign = Instance.new("BillboardGui")
 	sign.Size = UDim2.fromScale(12, 2.4) -- en studs : le panneau rapetisse avec la distance
 	sign.MaxDistance = 120
@@ -91,7 +91,7 @@ local function buildStation(world: Folder)
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
 	label.BackgroundTransparency = 1
-	label.Text = "CRACK GEODES"
+	label.Text = "CRACK EGGS"
 	label.TextScaled = true
 	label.Font = Enum.Font.GothamBlack
 	label.TextColor3 = Color3.fromRGB(255, 220, 120)

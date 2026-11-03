@@ -207,7 +207,7 @@ local function refresh()
 	local ring = Config.Rings[player:GetAttribute("Ring") or 1]
 	ringText.Text = "Unlocked up to: " .. (ring and ring.Name or "?")
 	hint.Text = if cargo >= max
-		then "Cargo full! Fly back to the station and crack your geodes"
+		then "Cargo full! Fly back to the station and crack your space eggs"
 		else "Hold click on an asteroid to drill  ·  Hold Jump in the air to use your jetpack"
 end
 player.AttributeChanged:Connect(function(name)
@@ -277,7 +277,7 @@ local EFFECTS = {
 		return string.format("Power %.1f", Config.DrillPower(l))
 	end,
 	Cargo = function(l)
-		return string.format("%d geodes", Config.CargoSlots(l))
+		return string.format("%d eggs", Config.CargoSlots(l))
 	end,
 	Thruster = function(l)
 		return string.format("Speed x%.2f", Config.Speed(l))
@@ -506,7 +506,7 @@ Remotes.CrackResult.OnClientEvent:Connect(function(results, total: number)
 	local grow = TweenService:Create(big, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(1, 0, 0, 56) })
 	big.Size = UDim2.new(0.6, 0, 0, 40)
 	grow:Play()
-	totalText.Text = string.format("+◆ %s credits%s", Format.Short(total), if skip > 0 then string.format("  (%d more geodes)", skip) else "")
+	totalText.Text = string.format("+◆ %s credits%s", Format.Short(total), if skip > 0 then string.format("  (%d more eggs)", skip) else "")
 	task.wait(if best.Rarity >= 5 then 3.5 else 2.2)
 	reveal.Visible = false
 	revealing = false

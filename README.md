@@ -1,8 +1,8 @@
-# Crack an Asteroid!
+# Crack a Space Egg
 
-Jeu Roblox : on saute d'astéroïde en astéroïde, on les fore, on ramène les géodes à la station et on les casse pour révéler des cristaux rares. Sortie visée : 12 décembre 2026.
+Jeu Roblox : on saute d'astéroïde en astéroïde, on les fore pour récupérer des œufs de l'espace (des œufs de roche), on les ramène à sa base et on les casse : dedans, des éclats de cristal et parfois une créature qui éclot. Sortie visée : vendredi 11 décembre 2026.
 
-- Fiche de game design : https://claude.ai/artifact/WWrBdwE984G5YZDFRjAibu
+- Fiche de game design (onglet « Descriptif complet (v2) ») : https://claude.ai/artifact/WWrBdwE984G5YZDFRjAibu
 - Tableau de production : https://claude.ai/artifact/81ksryaWTYWxuPQ6GoGvHE
 
 ## Lancer le projet
