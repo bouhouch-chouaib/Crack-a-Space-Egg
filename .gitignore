@@ -1,4 +1,5 @@
-# Fichiers de place Studio (la source de vérité est src/)
+# Fichier de place Studio : c'est la source de vérité, sauvegardée par OneDrive.
+# Git garde une copie lisible des scripts dans src/ (tools/export-scripts.sh).
 *.rbxl
 *.rbxlx
 *.rbxl.lock
