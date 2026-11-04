@@ -8,7 +8,7 @@ local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 
 local DataService = {}
 
-local VERSION = 1
+local VERSION = 2 -- v2 : la soute contient des œufs { ring, rarity } (rareté tirée au forage)
 local store: DataStore? = nil
 local ok, err = pcall(function()
 	store = DataStoreService:GetDataStore(Config.SaveKey)
@@ -28,7 +28,7 @@ local function default()
 		credits = 0,
 		levels = { Drill = 0, Cargo = 0, Thruster = 0, Scanner = 0 },
 		ring = 1, -- plus haut anneau débloqué
-		cargo = {}, -- une entrée par géode : l'index de l'anneau d'où elle vient
+		cargo = {}, -- un œuf par entrée : { ring = anneau d'origine, rarity = rareté }
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
 		pity = 0,
 		stats = { geodes = 0, best = 0 },
@@ -46,6 +46,12 @@ local function migrate(data)
 	for k, v in pairs(base.levels) do
 		if data.levels[k] == nil then
 			data.levels[k] = v
+		end
+	end
+	-- v1 -> v2 : la soute ne gardait que l'anneau ; la rareté sera tirée à la casse
+	for i, egg in ipairs(data.cargo) do
+		if type(egg) == "number" then
+			data.cargo[i] = { ring = egg }
 		end
 	end
 	data.v = VERSION

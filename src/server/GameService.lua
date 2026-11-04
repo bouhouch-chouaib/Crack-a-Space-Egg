@@ -1,4 +1,4 @@
--- La boucle de jeu côté serveur : forage, soute, casse des géodes, améliorations, anneaux.
+-- La boucle de jeu côté serveur : forage, soute, casse des œufs, améliorations, anneaux.
 -- Le serveur décide de tout ce qui rapporte : le client n'envoie que des intentions.
 
 local Players = game:GetService("Players")
@@ -6,6 +6,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
+local BeltService = require(script.Parent.BeltService)
+local Bases = require(script.Parent.Bases)
+local WorldBuilder = require(script.Parent.WorldBuilder)
 
 local Remotes = ReplicatedStorage.Remotes
 
@@ -14,7 +17,6 @@ local GameService = {}
 local rng = Random.new()
 local lastDrill: { [Player]: number } = {}
 local lastNotice: { [Player]: number } = {}
-local STATION_SPAWN = CFrame.new(0, 4, 0)
 
 local function notice(player: Player, text: string, kind: string?)
 	-- Pas plus d'un message par seconde pour ne pas noyer l'écran
@@ -56,15 +58,42 @@ local function root(player: Player): BasePart?
 	return c and c:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
+local function pick(weights: { number }): number
+	local x = rng:NextNumber()
+	local acc = 0
+	for i, w in ipairs(weights) do
+		acc += w
+		if x < acc then
+			return i
+		end
+	end
+	return 1
+end
+
+-- Rareté d'un œuf, tirée au forage (ses veines brillent de cette couleur pendant le retour)
+local function rollRarity(d, ringIndex: number): number
+	local probs = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner))
+	local rarity = pick(probs)
+	-- Compteur de veine
+	d.pity += 1
+	if rarity < 5 and d.pity >= Config.PityLegendary then
+		rarity = 5
+	end
+	if rarity >= 5 then
+		d.pity = 0
+	end
+	return rarity
+end
+
 -- FORAGE ------------------------------------------------------------------
 
 local function onDrill(player: Player, target: any)
 	local d = DataService.Get(player)
-	if not d or typeof(target) ~= "Instance" or not target:IsA("BasePart") then
+	if not d or typeof(target) ~= "Instance" then
 		return
 	end
-	local asteroids = workspace:FindFirstChild("World") and workspace.World:FindFirstChild("Asteroids")
-	if not asteroids or target.Parent ~= asteroids then
+	local a = BeltService.Get(target)
+	if not a then
 		return
 	end
 	-- Cadence : un coup tous les DrillTick, avec un peu de marge pour la latence
@@ -78,78 +107,46 @@ local function onDrill(player: Player, target: any)
 	if not hrp then
 		return
 	end
-	local reach = (hrp.Position - target.Position).Magnitude - target.Size.X / 2
-	if reach > Config.DrillRange + 6 then
+	local pos = BeltService.Position(a, workspace:GetServerTimeNow())
+	local reach = (hrp.Position - pos).Magnitude - a.part.Size.X / 2
+	if reach > Config.DrillRange + Config.DrillSlack then
 		return
 	end
-	local ringIndex = target:GetAttribute("Ring") :: number
-	if ringIndex > d.ring then
-		notice(player, "Unlock the " .. Config.Rings[ringIndex].Name .. " at the Upgrades terminal", "warn")
-		return
-	end
-	local hp = target:GetAttribute("HP") :: number
-	if hp <= 0 then
+	if a.ring > d.ring then
+		notice(player, "Unlock the " .. Config.Rings[a.ring].Name .. " at the Upgrades terminal", "warn")
 		return
 	end
 	local max = Config.CargoSlots(d.levels.Cargo)
-	if #d.cargo >= max then
-		notice(player, "Cargo full! Go back to the station to crack your space eggs", "warn")
+	local room = max - #d.cargo
+	if room <= 0 then
+		notice(player, "Cargo full! Go back to your base to crack your space eggs", "warn")
 		return
 	end
 
-	hp -= Config.DrillPower(d.levels.Drill) * Config.DrillTick
-	if hp > 0 then
-		target:SetAttribute("HP", hp)
-		return
-	end
-
-	-- L'astéroïde casse : des géodes dans la soute, puis il se recharge
-	target:SetAttribute("HP", 0)
-	local ring = Config.Rings[ringIndex]
-	local gained = math.min(ring.EggsPerAsteroid, max - #d.cargo)
-	for _ = 1, gained do
-		table.insert(d.cargo, ringIndex)
-	end
-	sync(player)
-	Remotes.AsteroidBroken:FireAllClients(target, player, gained)
-
-	local color = target.Color
-	target.Color = Color3.fromRGB(40, 40, 44)
-	target.Transparency = 0.35
-	task.delay(Config.AsteroidRespawn, function()
-		if target.Parent then
-			target.Color = color
-			target.Transparency = 0
-			target:SetAttribute("HP", target:GetAttribute("MaxHP"))
+	local eggs, broken = BeltService.Hit(a, player, Config.DrillPower(d.levels.Drill) * Config.DrillTick, room)
+	if eggs > 0 then
+		local best = 0
+		for _ = 1, eggs do
+			local rarity = rollRarity(d, a.ring)
+			table.insert(d.cargo, { ring = a.ring, rarity = rarity })
+			best = math.max(best, rarity)
 		end
-	end)
+		sync(player)
+		-- Message d'œuf : jamais filtré par la limite d'un message par seconde
+		local r = Config.Rarities[best]
+		Remotes.Notice:FireClient(player, string.format("+%d egg%s · best: %s", eggs, if eggs > 1 then "s" else "", r.Name), "good")
+	end
+	if broken then
+		Remotes.AsteroidBroken:FireAllClients(a.part, player, eggs)
+	end
 end
 
--- CASSE DES GÉODES ---------------------------------------------------------
+-- CASSE DES ŒUFS -----------------------------------------------------------
 
-local function pick(weights: { number }): number
-	local x = rng:NextNumber()
-	local acc = 0
-	for i, w in ipairs(weights) do
-		acc += w
-		if x < acc then
-			return i
-		end
-	end
-	return 1
-end
-
-local function rollEgg(d, ringIndex: number)
-	local probs = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner))
-	local rarity = pick(probs)
-	-- Compteur de veine
-	d.pity += 1
-	if rarity < 5 and d.pity >= Config.PityLegendary then
-		rarity = 5
-	end
-	if rarity >= 5 then
-		d.pity = 0
-	end
+-- egg : { ring, rarity } ; les anciennes sauvegardes n'ont que l'anneau (rareté tirée maintenant)
+local function crackEgg(d, egg)
+	local ringIndex = egg.ring
+	local rarity = egg.rarity or rollRarity(d, ringIndex)
 
 	local sizeWeights = {}
 	for i, s in ipairs(Config.Sizes) do
@@ -169,7 +166,7 @@ local function rollEgg(d, ringIndex: number)
 		Size = size.Name,
 		Shiny = shiny,
 		Value = value,
-		Chance = probs[rarity],
+		Chance = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner))[rarity],
 	}
 end
 
@@ -184,11 +181,11 @@ local function crackAll(player: Player)
 	end
 	local results = {}
 	local total = 0
-	for _, ringIndex in ipairs(d.cargo) do
-		local g = rollEgg(d, ringIndex)
+	for _, egg in ipairs(d.cargo) do
+		local g = crackEgg(d, egg)
 		table.insert(results, g)
 		total += g.Value
-		local key = ringIndex .. ":" .. g.Rarity
+		local key = g.Ring .. ":" .. g.Rarity
 		d.index[key] = (d.index[key] or 0) + 1
 		d.stats.geodes += 1
 		d.stats.best = math.max(d.stats.best, g.Rarity)
@@ -243,32 +240,55 @@ local function unlockRing(player: Player, index: any)
 	d.credits -= ring.UnlockCost
 	d.ring = index
 	sync(player)
-	notice(player, ring.Name .. " unlocked! Rarer crystals out there", "good")
+	notice(player, ring.Name .. " unlocked! Rarer eggs out there", "good")
 end
 
 -- CHUTE DANS LE VIDE ---------------------------------------------------------
 
--- Tomber dans l'espace ramène à la station, mais fait perdre la moitié de la soute
+-- Tomber dans le Vide ramène à sa base avec une soute vide (docs/Mecaniques.md §13)
 local function watchFalls()
 	while true do
 		task.wait(0.5)
 		for _, player in ipairs(Players:GetPlayers()) do
 			local hrp = root(player)
 			local d = DataService.Get(player)
-			if hrp and d and hrp.Position.Y < -140 then
-				local lost = math.floor(#d.cargo / 2)
-				for _ = 1, lost do
-					table.remove(d.cargo)
-				end
+			local character = player.Character
+			if hrp and d and character and hrp.Position.Y < Config.Map.FallY then
+				local lost = #d.cargo
+				d.cargo = {}
 				hrp.AssemblyLinearVelocity = Vector3.zero
-				hrp.CFrame = STATION_SPAWN
+				local cf = Bases.SpawnCFrame(player) or CFrame.new(0, 4, -70)
+				character:SetPrimaryPartCFrame(cf)
 				sync(player)
 				if lost > 0 then
-					notice(player, "You drifted into space and lost " .. lost .. " eggs", "bad")
+					notice(player, "You drifted into the Void and lost " .. lost .. " eggs", "bad")
 				end
 			end
 		end
 	end
+end
+
+-- Les machines et terminaux d'une base ne servent qu'à son propriétaire
+local function bindBase(base: Model)
+	local crackPrompt = (base:FindFirstChild("CrackMachine") :: BasePart):FindFirstChildOfClass("ProximityPrompt") :: ProximityPrompt
+	local shopPrompt = (base:FindFirstChild("ShopTerminal") :: BasePart):FindFirstChildOfClass("ProximityPrompt") :: ProximityPrompt
+	local function mine(player: Player): boolean
+		if Bases.OwnerOf(base) == player then
+			return true
+		end
+		notice(player, "This is not your base", "warn")
+		return false
+	end
+	crackPrompt.Triggered:Connect(function(p)
+		if mine(p) then
+			crackAll(p)
+		end
+	end)
+	shopPrompt.Triggered:Connect(function(p)
+		if mine(p) then
+			Remotes.OpenShop:FireClient(p)
+		end
+	end)
 end
 
 function GameService.Start()
@@ -276,13 +296,9 @@ function GameService.Start()
 	Remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
 	Remotes.UnlockRing.OnServerEvent:Connect(unlockRing)
 
-	local station = workspace.World.Station
-	local crackPrompt = station.CrackMachine:FindFirstChildOfClass("ProximityPrompt") :: ProximityPrompt
-	local shopPrompt = station.ShopTerminal:FindFirstChildOfClass("ProximityPrompt") :: ProximityPrompt
-	crackPrompt.Triggered:Connect(crackAll)
-	shopPrompt.Triggered:Connect(function(p)
-		Remotes.OpenShop:FireClient(p)
-	end)
+	for _, base in ipairs(WorldBuilder.Bases) do
+		bindBase(base)
+	end
 
 	DataService.Loaded:Connect(function(player: Player)
 		local ls = Instance.new("Folder")

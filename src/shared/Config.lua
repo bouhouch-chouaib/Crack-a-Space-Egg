@@ -3,7 +3,7 @@
 
 local Config = {}
 
-Config.SaveKey = "Player_v1"
+Config.SaveKey = "Player_v1" -- ne pas changer : le schéma est versionné dans DataService
 Config.AutosaveSeconds = 60
 
 -- Raretés : nom affiché, chance de base, valeur de base (crédits à l'anneau 1), couleur
@@ -25,52 +25,109 @@ Config.AnnounceFrom = 6
 -- Compteur de veine : Légendaire garanti après N géodes sans Légendaire ou mieux
 Config.PityLegendary = 1000
 
--- Anneaux de la version de Noël (MVP : 1 à 3). Distance = rayon du centre de l'anneau depuis la station.
-Config.Rings = {
-	{
-		Name = "Dust Belt",
-		Radius = 140,
-		Width = 70,
-		Asteroids = 40,
-		HP = 10,
-		EggsPerAsteroid = 1,
-		ValueMult = 1,
-		Depth = 1.0,
-		UnlockCost = 0,
-		DrillLevel = 0,
-		Color = Color3.fromRGB(120, 108, 98),
-		Crystals = { "Grey Quartz", "Calcite", "Amethyst", "Topaz", "Stellar Opal", "Pluto Diamond", "" },
-	},
-	{
-		Name = "Ice Ring",
-		Radius = 260,
-		Width = 70,
-		Asteroids = 60,
-		HP = 60,
-		EggsPerAsteroid = 1,
-		ValueMult = 4,
-		Depth = 1.3,
-		UnlockCost = 340,
-		DrillLevel = 5,
-		Color = Color3.fromRGB(150, 200, 230),
-		Crystals = { "Frostite", "Snow Crystal", "Aquamarine", "Boreal Sapphire", "Comet Tear", "Aurora Heart", "" },
-	},
-	{
-		Name = "Magma Field",
-		Radius = 380,
-		Width = 70,
-		Asteroids = 80,
-		HP = 400,
-		EggsPerAsteroid = 2,
-		ValueMult = 16,
-		Depth = 1.8,
-		UnlockCost = 11000,
-		DrillLevel = 13,
-		Color = Color3.fromRGB(110, 50, 40),
-		Crystals = { "Obsidian", "Red Basalt", "Garnet", "Volcanic Ruby", "Phoenix Eye", "Sun Blood", "" },
-	},
+-- CARTE V2 (docs/Mecaniques.md §2) ---------------------------------------------
+-- Le vaisseau est à l'origine, son avant en z = 0 ; le couloir part vers +Z.
+-- Les anneaux sont des cercles horizontaux autour d'un axe vertical placé derrière le vaisseau.
+Config.Map = {
+	PlanetRadius = 1200,
+	PlanetDrop = 750, -- le centre de la planète est sous le plan des anneaux : elle paraît sous le vaisseau
+	AxisDistance = 1200, -- distance entre l'axe de rotation des anneaux et l'avant du vaisseau
+	ShipSize = Vector3.new(240, 4, 140),
+	BubbleSize = 400, -- bulle de pression autour du vaisseau et des bases
+	BaseSize = Vector3.new(36, 2, 28),
+	DockLength = 20, -- quai de départ, à l'avant du vaisseau
+	CorridorWidth = 90,
+	FirstRingDistance = 220, -- distance entre l'avant du vaisseau et le centre de l'anneau 1
+	RingGap = 150, -- écart entre les centres des anneaux 1 et 2
+	RingWidth = 60, -- épaisseur de l'anneau 1
+	RingGrowth = 1.35, -- écart et épaisseur grandissent de 35 % à chaque anneau
+	PadSpacing = 32, -- plateformes du couloir entre deux anneaux (saut + jetpack)
+	PadSize = Vector3.new(12, 1.5, 12),
+	RelaySize = 30, -- relais de pression, au milieu de chaque espace entre deux anneaux
+	BuoySpacing = 60,
+	DecorPerRing = 30, -- astéroïdes de décor sur le reste de chaque anneau
+	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
 }
-Config.CosmicMinRing = 5 -- n'existe pas encore dans le MVP
+
+-- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
+Config.Belt = {
+	MaxActive = 60,
+	SpawnArc = 160, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
+	HeightJitter = 8,
+}
+
+-- Tailles d'astéroïdes : stock d'œufs, qui sortent un par un pendant le forage
+Config.AsteroidSizes = {
+	{ Name = "Small", Min = 10, Max = 13, Eggs = 3, Chance = 0.5 },
+	{ Name = "Medium", Min = 15, Max = 19, Eggs = 5, Chance = 0.35 },
+	{ Name = "Large", Min = 22, Max = 28, Eggs = 8, Chance = 0.15 },
+}
+
+-- Les 7 anneaux. Speed = vitesse de défilement (studs/s) : les anneaux intérieurs vont plus vite.
+-- Active = astéroïdes visibles en même temps. EggHP = dégâts de forage pour détacher un œuf.
+local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost, drillLevel, color, crystals)
+	return {
+		Name = name,
+		Speed = speed,
+		Active = active,
+		EggHP = eggHP,
+		ValueMult = valueMult,
+		Depth = depth,
+		UnlockCost = unlockCost,
+		DrillLevel = drillLevel,
+		Color = color,
+		Crystals = crystals,
+	}
+end
+Config.Rings = {
+	newRing("Dust Belt", 4.5, 9, 8, 1, 1.0, 0, 0, Color3.fromRGB(120, 108, 98), {
+		"Grey Quartz", "Calcite", "Amethyst", "Topaz", "Stellar Opal", "Pluto Diamond", "",
+	}),
+	newRing("Ice Ring", 4.1, 9, 40, 4, 1.3, 340, 5, Color3.fromRGB(150, 200, 230), {
+		"Frostite", "Snow Crystal", "Aquamarine", "Boreal Sapphire", "Comet Tear", "Aurora Heart", "",
+	}),
+	newRing("Magma Field", 3.7, 9, 180, 16, 1.8, 11000, 13, Color3.fromRGB(110, 50, 40), {
+		"Obsidian", "Red Basalt", "Garnet", "Volcanic Ruby", "Phoenix Eye", "Sun Blood", "",
+	}),
+	newRing("Nebula", 3.3, 8, 800, 64, 2.4, 350000, 21, Color3.fromRGB(120, 80, 170), {
+		"Haze Quartz", "Mist Pearl", "Violet Flux", "Dreamstone", "Nova Shard", "Nebula Heart", "",
+	}),
+	newRing("Devourer Belt", 2.9, 8, 3600, 256, 3.2, 11000000, 30, Color3.fromRGB(70, 60, 60), {
+		"Bone Flint", "Fang Stone", "Maw Garnet", "Hunger Opal", "Devourer Eye", "Abyss Crown", "Void Pearl",
+	}),
+	newRing("The Rift", 2.6, 8, 16000, 1024, 4.2, 350000000, 39, Color3.fromRGB(60, 90, 120), {
+		"Rift Shale", "Split Jade", "Fracture Gem", "Warp Sapphire", "Paradox Prism", "Time Shard", "Rift Singularity",
+	}),
+	newRing("The Nest", 2.25, 8, 70000, 4096, 5.5, 11000000000, 48, Color3.fromRGB(150, 120, 80), {
+		"Shell Quartz", "Nest Amber", "Brood Ruby", "Mother Opal", "Hatchling Star", "Queen's Tear", "Cosmic Yolk",
+	}),
+}
+Config.CosmicMinRing = 5
+
+-- Distance entre l'avant du vaisseau et le centre de l'anneau i
+function Config.RingDistance(i: number): number
+	local m = Config.Map
+	local d = m.FirstRingDistance
+	for k = 1, i - 1 do
+		d += m.RingGap * m.RingGrowth ^ (k - 1)
+	end
+	return d
+end
+
+-- Épaisseur de l'anneau i
+function Config.RingWidth(i: number): number
+	return Config.Map.RingWidth * Config.Map.RingGrowth ^ (i - 1)
+end
+
+-- Rayon de l'anneau i, mesuré depuis l'axe de rotation
+function Config.RingRadius(i: number): number
+	return Config.Map.AxisDistance + Config.RingDistance(i)
+end
+
+-- Position d'un point d'orbite : angle 0 = centre du couloir, angle positif = déjà passé
+function Config.OrbitPosition(radius: number, angle: number, height: number): Vector3
+	return Vector3.new(radius * math.sin(angle), height, radius * math.cos(angle) - Config.Map.AxisDistance)
+end
 
 -- Améliorations : coût = Base * Growth^niveau
 Config.Upgrades = {
@@ -94,7 +151,7 @@ Config.ShinyMult = 3
 -- Forage
 Config.DrillRange = 22 -- studs entre le joueur et la surface de l'astéroïde
 Config.DrillTick = 0.25 -- secondes entre deux coups envoyés au serveur
-Config.AsteroidRespawn = 25
+Config.DrillSlack = 10 -- marge de portée côté serveur (latence + défilement)
 
 -- Jetpack (côté client)
 Config.JetpackFuelBase = 2.5 -- secondes de poussée

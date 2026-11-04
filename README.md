@@ -12,7 +12,7 @@ Jeu Roblox : on saute d'astéroïde en astéroïde, on les fore pour récupérer
 
 1. Ouvrir la place dans Studio, puis cliquer sur **Connect** dans le plugin Ropilot.
 2. **Ne pas connecter le plugin Rojo** : il réécrirait les scripts de Studio.
-3. Les scripts se modifient dans Studio via Ropilot. L'envoi `ropilot_sourcecontrol_commitscript` échoue pour l'instant (« source was not injected ») : on passe par `ScriptEditorService:UpdateSourceAsync` dans `ropilot_edit_ctx_run_command`.
+3. Les scripts s'écrivent dans `src/` puis s'envoient dans Studio avec `tools/push-to-studio.lua` (lancé par `ropilot_edit_ctx_run_command`, avec `python -m http.server 34873 --bind 127.0.0.1` dans `src/`). L'envoi `ropilot_sourcecontrol_commitscript` échoue pour l'instant (« source was not injected »).
 4. En fin de session : redemander chaque script à Ropilot (`ropilot_sourcecontrol_requestscript`, après avoir supprimé sa copie locale), lancer `bash tools/export-scripts.sh`, puis `selene src`, commit et push.
 5. Pour que la sauvegarde marche dans Studio : Game Settings > Security > *Enable Studio Access to API Services*.
 
@@ -23,8 +23,9 @@ Jeu Roblox : on saute d'astéroïde en astéroïde, on les fore pour récupérer
 | Dossier | Contenu |
 | --- | --- |
 | `src/shared` | `Config` (toutes les valeurs d'équilibrage), `Format` (nombres affichés) |
-| `src/server` | `Main` (démarrage), `WorldBuilder` (carte greybox générée par code), `DataService` (sauvegarde), `GameService` (forage, soute, casse, améliorations, anneaux) |
-| `src/client` | `Controls` (jetpack, foreuse), `Interface` (HUD, boutique, révélation des géodes) |
+| `src/server` | `Main` (démarrage), `WorldBuilder` (carte v2 générée par code), `Bases` (une base par joueur), `BeltService` (tapis d'astéroïdes), `DataService` (sauvegarde), `GameService` (forage, soute, casse, améliorations) |
+| `src/client` | `Belt` (mouvement fluide des astéroïdes), `Controls` (jetpack, foreuse), `Interface` (HUD, boutique, révélation) |
+| `tools` | `push-to-studio.lua` (envoie src/ dans Studio par HTTP), `export-scripts.sh` (recopie Studio dans src/) |
 
 Les RemoteEvents sont déclarés dans `default.project.json` (`ReplicatedStorage.Remotes`).
 

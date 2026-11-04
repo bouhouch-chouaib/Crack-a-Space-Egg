@@ -207,7 +207,7 @@ local function refresh()
 	local ring = Config.Rings[player:GetAttribute("Ring") or 1]
 	ringText.Text = "Unlocked up to: " .. (ring and ring.Name or "?")
 	hint.Text = if cargo >= max
-		then "Cargo full! Fly back to the station and crack your space eggs"
+		then "Cargo full! Fly back to your base and crack your space eggs"
 		else "Hold click on an asteroid to drill  ·  Hold Jump in the air to use your jetpack"
 end
 player.AttributeChanged:Connect(function(name)
