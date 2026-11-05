@@ -113,7 +113,7 @@ local function onDrill(player: Player, target: any)
 		return
 	end
 	if a.ring > d.ring then
-		notice(player, "Unlock the " .. Config.Rings[a.ring].Name .. " at the workshops", "warn")
+		notice(player, "Unlock the " .. Config.Rings[a.ring].Name .. " at the Space Shop", "warn")
 		return
 	end
 	local max = Config.CargoSlots(d.levels.Cargo)
@@ -284,7 +284,8 @@ local function bindBase(base: Model)
 	end)
 end
 
--- Ateliers (améliorations) et boutique, sur le devant du vaisseau
+-- Points de service du pont : la boutique ouvre les améliorations ;
+-- la vente et la fusion arrivent avec les créatures (semaine 2)
 local function bindShopPoint(point: BasePart)
 	local pp = point:FindFirstChildOfClass("ProximityPrompt")
 	if not pp then
@@ -292,11 +293,11 @@ local function bindShopPoint(point: BasePart)
 	end
 	pp.Triggered:Connect(function(p)
 		if point.Name == "ShopPoint" then
-			notice(p, "The Space Shop opens soon!", "info")
-		elseif point:GetAttribute("Upgrade") then
 			Remotes.OpenShop:FireClient(p)
+		elseif point.Name == "SellPoint" then
+			notice(p, "The Trading Post opens soon!", "info")
 		else
-			notice(p, "This workshop opens soon!", "info")
+			notice(p, "The Fusion Machine opens soon!", "info")
 		end
 	end)
 end

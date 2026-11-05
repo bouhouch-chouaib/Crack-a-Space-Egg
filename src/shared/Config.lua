@@ -30,30 +30,20 @@ Config.PityLegendary = 1000
 -- z = FrontZ ; le couloir part du quai vers +Z.
 -- Les anneaux sont des cercles horizontaux autour d'un axe vertical placé derrière le vaisseau.
 Config.Map = {
-	FrontZ = 40, -- position du repère Ship.Deck.Dock.DockEnd (début du couloir)
-	PlanetRadius = 1200,
-	PlanetDrop = 750, -- le centre de la planète est sous le plan des anneaux : elle paraît sous le vaisseau
-	AxisDistance = 1200, -- distance entre l'axe de rotation des anneaux et le quai
+	FrontZ = 64, -- position du repère Ship.Deck.Dock.DockEnd (bout du quai, début du couloir)
+	PlanetRadius = 500, -- au centre des anneaux, derrière le vaisseau ; le dessous du vaisseau reste du ciel
+	PlanetDrop = 150, -- centre un peu sous le plan des anneaux : ils tournent autour d'elle comme ceux de Saturne
+	AxisDistance = 1200, -- distance entre l'axe de rotation des anneaux et le bout du quai
 	CorridorWidth = 90,
-	FirstRingDistance = 220, -- distance entre le quai et le centre de l'anneau 1
-	RingGap = 150, -- écart entre les centres des anneaux 1 et 2
-	RingWidth = 60, -- épaisseur de l'anneau 1
-	RingGrowth = 1.35, -- écart et épaisseur grandissent de 35 % à chaque anneau
-	PadSpacing = 32, -- plateformes du couloir entre deux anneaux (saut + jetpack)
-	PadSize = Vector3.new(12, 1.5, 12),
-	RelaySize = 30, -- relais de pression, au milieu de chaque espace entre deux anneaux
+	FirstRingGap = 12, -- vide entre le bout du quai et le bord de l'anneau 1
+	RingWidth = 28, -- épaisseur de l'anneau 1
+	RingGap = 16, -- vide entre les anneaux 1 et 2 (bord à bord)
+	RingGrowth = 1.35, -- épaisseur et vide grandissent de 35 % à chaque anneau
+	RelaySize = 30, -- relais de pression, au milieu des vides assez larges entre deux anneaux
+	RelayMinGap = 38, -- pas de relais dans un vide plus étroit
 	BuoySpacing = 60,
 	DecorPerRing = 30, -- astéroïdes de décor sur le reste de chaque anneau
 	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
-}
-
--- Ateliers du vaisseau -> amélioration qu'ils vendent (nil = pas encore disponible)
-Config.Workshops = {
-	DrillWorkshop = "Drill",
-	CargoWorkshop = "Cargo",
-	JetpackWorkshop = "Thruster",
-	ScannerWorkshop = "Scanner",
-	SuitWorkshop = nil, -- Combinaison : semaine 2
 }
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
@@ -87,43 +77,47 @@ local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost,
 	}
 end
 Config.Rings = {
-	newRing("Dust Belt", 4.5, 9, 8, 1, 1.0, 0, 0, Color3.fromRGB(120, 108, 98), {
+	newRing("Dust Belt", 4.5, 6, 8, 1, 1.0, 0, 0, Color3.fromRGB(120, 108, 98), {
 		"Grey Quartz", "Calcite", "Amethyst", "Topaz", "Stellar Opal", "Pluto Diamond", "",
 	}),
-	newRing("Ice Ring", 4.1, 9, 40, 4, 1.3, 340, 5, Color3.fromRGB(150, 200, 230), {
+	newRing("Ice Ring", 4.1, 6, 40, 4, 1.3, 340, 5, Color3.fromRGB(150, 200, 230), {
 		"Frostite", "Snow Crystal", "Aquamarine", "Boreal Sapphire", "Comet Tear", "Aurora Heart", "",
 	}),
-	newRing("Magma Field", 3.7, 9, 180, 16, 1.8, 11000, 13, Color3.fromRGB(110, 50, 40), {
+	newRing("Magma Field", 3.7, 7, 180, 16, 1.8, 11000, 13, Color3.fromRGB(110, 50, 40), {
 		"Obsidian", "Red Basalt", "Garnet", "Volcanic Ruby", "Phoenix Eye", "Sun Blood", "",
 	}),
 	newRing("Nebula", 3.3, 8, 800, 64, 2.4, 350000, 21, Color3.fromRGB(120, 80, 170), {
 		"Haze Quartz", "Mist Pearl", "Violet Flux", "Dreamstone", "Nova Shard", "Nebula Heart", "",
 	}),
-	newRing("Devourer Belt", 2.9, 8, 3600, 256, 3.2, 11000000, 30, Color3.fromRGB(70, 60, 60), {
+	newRing("Devourer Belt", 2.9, 9, 3600, 256, 3.2, 11000000, 30, Color3.fromRGB(70, 60, 60), {
 		"Bone Flint", "Fang Stone", "Maw Garnet", "Hunger Opal", "Devourer Eye", "Abyss Crown", "Void Pearl",
 	}),
-	newRing("The Rift", 2.6, 8, 16000, 1024, 4.2, 350000000, 39, Color3.fromRGB(60, 90, 120), {
+	newRing("The Rift", 2.6, 11, 16000, 1024, 4.2, 350000000, 39, Color3.fromRGB(60, 90, 120), {
 		"Rift Shale", "Split Jade", "Fracture Gem", "Warp Sapphire", "Paradox Prism", "Time Shard", "Rift Singularity",
 	}),
-	newRing("The Nest", 2.25, 8, 70000, 4096, 5.5, 11000000000, 48, Color3.fromRGB(150, 120, 80), {
+	newRing("The Nest", 2.25, 13, 70000, 4096, 5.5, 11000000000, 48, Color3.fromRGB(150, 120, 80), {
 		"Shell Quartz", "Nest Amber", "Brood Ruby", "Mother Opal", "Hatchling Star", "Queen's Tear", "Cosmic Yolk",
 	}),
 }
 Config.CosmicMinRing = 5
 
--- Distance entre le quai et le centre de l'anneau i
-function Config.RingDistance(i: number): number
-	local m = Config.Map
-	local d = m.FirstRingDistance
-	for k = 1, i - 1 do
-		d += m.RingGap * m.RingGrowth ^ (k - 1)
-	end
-	return d
-end
-
 -- Épaisseur de l'anneau i
 function Config.RingWidth(i: number): number
 	return Config.Map.RingWidth * Config.Map.RingGrowth ^ (i - 1)
+end
+
+-- Vide (bord à bord) entre l'anneau i et l'anneau i + 1
+function Config.RingGapAfter(i: number): number
+	return Config.Map.RingGap * Config.Map.RingGrowth ^ (i - 1)
+end
+
+-- Distance entre le bout du quai et le centre de l'anneau i
+function Config.RingDistance(i: number): number
+	local d = Config.Map.FirstRingGap
+	for k = 1, i - 1 do
+		d += Config.RingWidth(k) + Config.RingGapAfter(k)
+	end
+	return d + Config.RingWidth(i) / 2
 end
 
 -- Rayon de l'anneau i, mesuré depuis l'axe de rotation

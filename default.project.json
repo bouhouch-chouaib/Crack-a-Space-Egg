@@ -3,38 +3,55 @@
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
-      "Shared": { "$path": "src/shared" },
+      "Shared": {
+        "$path": "src/shared"
+      },
       "Remotes": {
         "$className": "Folder",
-        "Drill": { "$className": "RemoteEvent" },
-        "AsteroidBroken": { "$className": "RemoteEvent" },
-        "CrackAll": { "$className": "RemoteEvent" },
-        "CrackResult": { "$className": "RemoteEvent" },
-        "BuyUpgrade": { "$className": "RemoteEvent" },
-        "UnlockRing": { "$className": "RemoteEvent" },
-        "Announcement": { "$className": "RemoteEvent" },
-        "Notice": { "$className": "RemoteEvent" },
-        "OpenShop": { "$className": "RemoteEvent" }
+        "Drill": {
+          "$className": "RemoteEvent"
+        },
+        "AsteroidBroken": {
+          "$className": "RemoteEvent"
+        },
+        "CrackAll": {
+          "$className": "RemoteEvent"
+        },
+        "CrackResult": {
+          "$className": "RemoteEvent"
+        },
+        "BuyUpgrade": {
+          "$className": "RemoteEvent"
+        },
+        "UnlockRing": {
+          "$className": "RemoteEvent"
+        },
+        "Announcement": {
+          "$className": "RemoteEvent"
+        },
+        "Notice": {
+          "$className": "RemoteEvent"
+        },
+        "OpenShop": {
+          "$className": "RemoteEvent"
+        }
       }
     },
     "ServerScriptService": {
-      "Server": { "$path": "src/server" }
+      "Server": {
+        "$path": "src/server"
+      }
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {
-        "Client": { "$path": "src/client" }
+        "Client": {
+          "$path": "src/client"
+        }
       }
     },
     "Workspace": {
-      "$properties": { "Gravity": 70 }
-    },
-    "Lighting": {
       "$properties": {
-        "ClockTime": 0,
-        "Brightness": 2,
-        "Ambient": [0.45, 0.44, 0.58],
-        "OutdoorAmbient": [0.55, 0.53, 0.66],
-        "GlobalShadows": true
+        "Gravity": 70
       }
     }
   }

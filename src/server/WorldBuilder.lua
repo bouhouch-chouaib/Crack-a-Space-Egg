@@ -1,7 +1,7 @@
 -- Carte v2, préparée au démarrage du serveur (docs/Mecaniques.md §2).
--- Le vaisseau (Workspace.Ship, 7 bases, boutique, ateliers, quai) est construit dans Studio :
+-- Le vaisseau (Workspace.Ship : bases, boutique, magasin de vente, machine à fusion, quai) est construit dans Studio :
 -- on y ajoute seulement les invites d'interaction. Le reste est généré par code dans Workspace.World :
--- la planète, le couloir balisé, les relais de pression et le décor des 7 anneaux.
+-- la planète, le couloir balisé (sans plateformes), les relais de pression et le décor des 7 anneaux.
 -- Les astéroïdes qui défilent sont gérés par BeltService.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -89,6 +89,13 @@ end
 
 -- VAISSEAU (construit dans Studio) ---------------------------------------------
 
+-- Repère -> texte de l'invite (action, objet)
+local SERVICES = {
+	ShopPoint = { "Shop", "Space Shop" },
+	SellPoint = { "Sell", "Trading Post" },
+	FusionPoint = { "Fuse", "Fusion Machine" },
+}
+
 local function prepareShip(): ({ Model }, { BasePart })
 	local ship = workspace:FindFirstChild("Ship")
 	if not ship then
@@ -117,22 +124,14 @@ local function prepareShip(): ({ Model }, { BasePart })
 		table.insert(bases, base)
 	end
 
-	-- Ateliers : une invite par atelier, qui ouvre ses améliorations
+	-- Points de service sur le pont : boutique, magasin de vente, machine à fusion
 	local points = {}
-	local workshops = ship:FindFirstChild("Workshops")
-	for _, w in ipairs(workshops and workshops:GetChildren() or {}) do
-		local point = w:FindFirstChild("Point") :: BasePart?
+	for name, info in pairs(SERVICES) do
+		local point = ship:FindFirstChild(name, true) :: BasePart?
 		if point then
-			point:SetAttribute("Upgrade", Config.Workshops[w.Name])
-			local label = w.Name:gsub("Workshop$", "")
-			prompt(point, "Upgrade", label, Enum.KeyCode.F)
+			prompt(point, info[1], info[2], Enum.KeyCode.F)
 			table.insert(points, point)
 		end
-	end
-	local shopPoint = ship:FindFirstChild("ShopPoint", true)
-	if shopPoint then
-		prompt(shopPoint, "Shop", "Space Shop", Enum.KeyCode.F)
-		table.insert(points, shopPoint :: BasePart)
 	end
 	return bases, points
 end
@@ -197,38 +196,9 @@ local function relay(z: number, index: number, parent: Instance)
 	m.Parent = parent
 end
 
--- Plateformes régulières de a à b, sur l'axe du couloir avec un léger décalage
-local function padsBetween(a: number, b: number, parent: Instance)
-	local length = b - a
-	local count = math.max(1, math.ceil(length / M.PadSpacing) - 1)
-	for s = 1, count do
-		local z = M.FrontZ + a + length * s / (count + 1)
-		local x = rng:NextNumber(-12, 12)
-		local topY = -2 + M.PadSize.Y / 2
-		local model = asset("Corridor", "Pad")
-		if model then
-			placeTop(model, x, topY, z)
-			model.Name = "Pad"
-			model.Parent = parent
-		else
-			part({
-				Name = "Pad",
-				Size = M.PadSize,
-				CFrame = CFrame.new(x, -2, z),
-				Material = Enum.Material.Metal,
-				Color = Color3.fromRGB(90, 100, 125),
-				Parent = parent,
-			})
-		end
-	end
-end
-
 local function buildCorridor(world: Folder)
 	local corridor = Instance.new("Folder")
 	corridor.Name = "Corridor"
-	local pads = Instance.new("Folder")
-	pads.Name = "Pads"
-	pads.Parent = corridor
 	local relays = Instance.new("Folder")
 	relays.Name = "Relays"
 	relays.Parent = corridor
@@ -236,16 +206,13 @@ local function buildCorridor(world: Folder)
 	local n = #Config.Rings
 	local last = Config.RingDistance(n) + Config.RingWidth(n) / 2
 
-	-- Du quai au premier anneau, puis entre deux anneaux (avec un relais au milieu)
-	padsBetween(0, Config.RingDistance(1) - Config.RingWidth(1) / 2, pads)
+	-- Un relais au milieu de chaque vide assez large entre deux anneaux
 	for i = 1, n - 1 do
-		local a = Config.RingDistance(i) + Config.RingWidth(i) / 2
-		local b = Config.RingDistance(i + 1) - Config.RingWidth(i + 1) / 2
-		local mid = (a + b) / 2
-		local r = M.RelaySize / 2
-		padsBetween(a, mid - r, pads)
-		relay(mid, i, relays)
-		padsBetween(mid + r, b, pads)
+		local gap = Config.RingGapAfter(i)
+		if gap >= M.RelayMinGap then
+			local edge = Config.RingDistance(i) + Config.RingWidth(i) / 2
+			relay(edge + gap / 2, i, relays)
+		end
 	end
 
 	-- Bouées lumineuses sur les deux bords : la combinaison est protégée entre elles
@@ -341,6 +308,6 @@ function WorldBuilder.Build(): Folder
 end
 
 WorldBuilder.Bases = {} :: { Model }
-WorldBuilder.ShopPoints = {} :: { BasePart } -- ateliers + boutique (repères « Point » / « ShopPoint »)
+WorldBuilder.ShopPoints = {} :: { BasePart } -- repères ShopPoint, SellPoint, FusionPoint
 
 return WorldBuilder
