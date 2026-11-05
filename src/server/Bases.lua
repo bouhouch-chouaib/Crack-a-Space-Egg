@@ -1,4 +1,4 @@
--- Attribution des 8 bases du vaisseau : une par joueur, libérée quand il part.
+-- Attribution des bases du vaisseau (7) : une par joueur, libérée quand il part.
 -- Le joueur réapparaît dans sa base ; son nom s'affiche au-dessus.
 
 local Players = game:GetService("Players")
@@ -9,10 +9,9 @@ local Bases = {}
 
 local owners: { [number]: Player } = {}
 
+-- Panneau au nom du propriétaire (TextLabel « OwnerName » à l'arrière de la base)
 local function label(base: Model): TextLabel?
-	local post = base:FindFirstChild("OwnerPost")
-	local gui = post and post:FindFirstChildOfClass("BillboardGui")
-	return gui and gui:FindFirstChild("Label") :: TextLabel?
+	return base:FindFirstChild("OwnerName", true) :: TextLabel?
 end
 
 function Bases.Get(player: Player): Model?

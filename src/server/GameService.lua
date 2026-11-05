@@ -113,7 +113,7 @@ local function onDrill(player: Player, target: any)
 		return
 	end
 	if a.ring > d.ring then
-		notice(player, "Unlock the " .. Config.Rings[a.ring].Name .. " at the Upgrades terminal", "warn")
+		notice(player, "Unlock the " .. Config.Rings[a.ring].Name .. " at the workshops", "warn")
 		return
 	end
 	local max = Config.CargoSlots(d.levels.Cargo)
@@ -257,7 +257,7 @@ local function watchFalls()
 				local lost = #d.cargo
 				d.cargo = {}
 				hrp.AssemblyLinearVelocity = Vector3.zero
-				local cf = Bases.SpawnCFrame(player) or CFrame.new(0, 4, -70)
+				local cf = Bases.SpawnCFrame(player) or CFrame.new(0, 4, -40)
 				character:SetPrimaryPartCFrame(cf)
 				sync(player)
 				if lost > 0 then
@@ -268,25 +268,35 @@ local function watchFalls()
 	end
 end
 
--- Les machines et terminaux d'une base ne servent qu'à son propriétaire
+-- La machine à casser d'une base ne sert qu'à son propriétaire
 local function bindBase(base: Model)
-	local crackPrompt = (base:FindFirstChild("CrackMachine") :: BasePart):FindFirstChildOfClass("ProximityPrompt") :: ProximityPrompt
-	local shopPrompt = (base:FindFirstChild("ShopTerminal") :: BasePart):FindFirstChildOfClass("ProximityPrompt") :: ProximityPrompt
-	local function mine(player: Player): boolean
-		if Bases.OwnerOf(base) == player then
-			return true
-		end
-		notice(player, "This is not your base", "warn")
-		return false
+	local point = base:FindFirstChild("CrackPoint", true)
+	local crackPrompt = point and point:FindFirstChildOfClass("ProximityPrompt")
+	if not crackPrompt then
+		return
 	end
 	crackPrompt.Triggered:Connect(function(p)
-		if mine(p) then
+		if Bases.OwnerOf(base) == p then
 			crackAll(p)
+		else
+			notice(p, "This is not your base", "warn")
 		end
 	end)
-	shopPrompt.Triggered:Connect(function(p)
-		if mine(p) then
+end
+
+-- Ateliers (améliorations) et boutique, sur le devant du vaisseau
+local function bindShopPoint(point: BasePart)
+	local pp = point:FindFirstChildOfClass("ProximityPrompt")
+	if not pp then
+		return
+	end
+	pp.Triggered:Connect(function(p)
+		if point.Name == "ShopPoint" then
+			notice(p, "The Space Shop opens soon!", "info")
+		elseif point:GetAttribute("Upgrade") then
 			Remotes.OpenShop:FireClient(p)
+		else
+			notice(p, "This workshop opens soon!", "info")
 		end
 	end)
 end
@@ -298,6 +308,9 @@ function GameService.Start()
 
 	for _, base in ipairs(WorldBuilder.Bases) do
 		bindBase(base)
+	end
+	for _, point in ipairs(WorldBuilder.ShopPoints) do
+		bindShopPoint(point)
 	end
 
 	DataService.Loaded:Connect(function(player: Player)

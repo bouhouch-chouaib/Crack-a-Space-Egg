@@ -20,10 +20,13 @@ Jeu Roblox : on saute d'astéroïde en astéroïde, on les fore pour récupérer
 
 ## Organisation
 
+Le vaisseau (`Workspace.Ship` : 7 bases, boutique, ateliers, quai) est construit dans Studio avec Ropilot (prompts dans `docs/prompts/`). Le code s'appuie sur les noms de ses pièces : `CrackPoint`, `Spawn`, `OwnerName`, `DockEnd`, `ShopPoint`, `Point`…
+
+
 | Dossier | Contenu |
 | --- | --- |
 | `src/shared` | `Config` (toutes les valeurs d'équilibrage), `Format` (nombres affichés) |
-| `src/server` | `Main` (démarrage), `WorldBuilder` (carte v2 générée par code), `Bases` (une base par joueur), `BeltService` (tapis d'astéroïdes), `DataService` (sauvegarde), `GameService` (forage, soute, casse, améliorations) |
+| `src/server` | `Main` (démarrage), `WorldBuilder` (prépare `Workspace.Ship`, construit le couloir et les anneaux), `Bases` (une base par joueur), `BeltService` (tapis d'astéroïdes), `DataService` (sauvegarde), `GameService` (forage, soute, casse, améliorations) |
 | `src/client` | `Belt` (mouvement fluide des astéroïdes), `Controls` (jetpack, foreuse), `Interface` (HUD, boutique, révélation) |
 | `tools` | `push-to-studio.lua` (envoie src/ dans Studio par HTTP), `export-scripts.sh` (recopie Studio dans src/) |
 

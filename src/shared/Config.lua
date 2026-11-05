@@ -26,18 +26,16 @@ Config.AnnounceFrom = 6
 Config.PityLegendary = 1000
 
 -- CARTE V2 (docs/Mecaniques.md §2) ---------------------------------------------
--- Le vaisseau est à l'origine, son avant en z = 0 ; le couloir part vers +Z.
+-- Le vaisseau (Workspace.Ship, construit dans Studio) a son centre en (0, 0, 0) et son quai en
+-- z = FrontZ ; le couloir part du quai vers +Z.
 -- Les anneaux sont des cercles horizontaux autour d'un axe vertical placé derrière le vaisseau.
 Config.Map = {
+	FrontZ = 40, -- position du repère Ship.Deck.Dock.DockEnd (début du couloir)
 	PlanetRadius = 1200,
 	PlanetDrop = 750, -- le centre de la planète est sous le plan des anneaux : elle paraît sous le vaisseau
-	AxisDistance = 1200, -- distance entre l'axe de rotation des anneaux et l'avant du vaisseau
-	ShipSize = Vector3.new(240, 4, 140),
-	BubbleSize = 400, -- bulle de pression autour du vaisseau et des bases
-	BaseSize = Vector3.new(36, 2, 28),
-	DockLength = 20, -- quai de départ, à l'avant du vaisseau
+	AxisDistance = 1200, -- distance entre l'axe de rotation des anneaux et le quai
 	CorridorWidth = 90,
-	FirstRingDistance = 220, -- distance entre l'avant du vaisseau et le centre de l'anneau 1
+	FirstRingDistance = 220, -- distance entre le quai et le centre de l'anneau 1
 	RingGap = 150, -- écart entre les centres des anneaux 1 et 2
 	RingWidth = 60, -- épaisseur de l'anneau 1
 	RingGrowth = 1.35, -- écart et épaisseur grandissent de 35 % à chaque anneau
@@ -47,6 +45,15 @@ Config.Map = {
 	BuoySpacing = 60,
 	DecorPerRing = 30, -- astéroïdes de décor sur le reste de chaque anneau
 	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
+}
+
+-- Ateliers du vaisseau -> amélioration qu'ils vendent (nil = pas encore disponible)
+Config.Workshops = {
+	DrillWorkshop = "Drill",
+	CargoWorkshop = "Cargo",
+	JetpackWorkshop = "Thruster",
+	ScannerWorkshop = "Scanner",
+	SuitWorkshop = nil, -- Combinaison : semaine 2
 }
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
@@ -104,7 +111,7 @@ Config.Rings = {
 }
 Config.CosmicMinRing = 5
 
--- Distance entre l'avant du vaisseau et le centre de l'anneau i
+-- Distance entre le quai et le centre de l'anneau i
 function Config.RingDistance(i: number): number
 	local m = Config.Map
 	local d = m.FirstRingDistance
@@ -126,7 +133,8 @@ end
 
 -- Position d'un point d'orbite : angle 0 = centre du couloir, angle positif = déjà passé
 function Config.OrbitPosition(radius: number, angle: number, height: number): Vector3
-	return Vector3.new(radius * math.sin(angle), height, radius * math.cos(angle) - Config.Map.AxisDistance)
+	local m = Config.Map
+	return Vector3.new(radius * math.sin(angle), height, radius * math.cos(angle) - m.AxisDistance + m.FrontZ)
 end
 
 -- Améliorations : coût = Base * Growth^niveau
