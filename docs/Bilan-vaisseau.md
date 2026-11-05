@@ -44,3 +44,16 @@ Il manque aussi une palette commune : chaque morceau a ses couleurs (rouge, mari
 5. **La lumière finale**, puis une capture à hauteur de joueur pour validation.
 
 Chaque étape se termine par une capture à hauteur de joueur et ta validation.
+
+## Reprise faite (6 nov. 2026)
+
+| Étape | Fait |
+| --- | --- |
+| 1. Sol, rebord, palette | Damier pastel retiré ; sol crème uni, chemins turquoise de guidage (bases → place → quai, ligne avant) ; rebord crème à un seul liseré turquoise ; palette commune dans la direction artistique |
+| Picots | Picots carrés Roblox sur toutes les pièces (`tools/apply-studs.lua`), sauf verre, néon et formes rondes |
+| 2. Kit de base | Machine à casser (presse à œufs), caisson de pression (capsule à hublot), panneau du propriétaire réduit, modélisés dans Blender et posés dans les 5 bases à leur couleur ; enclos néon et cubes retirés |
+| 3. Coque | Coque ronde avec hublots et bande turquoise, 2 réacteurs, tour à dôme vitré (Blender) ; lueurs des réacteurs et de lévitation en couches de particules |
+| 4. Quai | Quai à la largeur du couloir (90 studs), rambardes, flèches au sol, portique LAUNCH ; rebord ouvert sur 90 studs |
+| 5. Lumière | Lumière claire et saturée, bloom réservé au néon ; noyau de la fusion moins brûlé, avec un halo en couches |
+
+Le vaisseau est passé de 1 983 à environ 650 pièces. Tout ce qui a été retiré est rangé dans `ServerStorage.RemovedFromShip`.
