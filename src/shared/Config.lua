@@ -201,6 +201,84 @@ function Config.UpgradeCost(id: string, level: number): number
 	return math.floor(u.Base * u.Growth ^ level + 0.5)
 end
 
+-- CRÉATURES (docs/Mecaniques.md §9) ----------------------------------------------
+-- 6 espèces par anneau, une par rareté (fenêtre glissante) : anneaux 1 à 4 de Common à Mythic,
+-- anneaux 5 à 7 de Uncommon à Cosmic. Une espèce = (anneau, rareté), clé « anneau:rareté ».
+-- Size = échelle min/max, Weight = kg min/max (tirés au hasard à l'obtention).
+-- Art = portrait de l'index ("" tant qu'il n'est pas dessiné : l'index montre un œuf mystère).
+local function creature(name, look, size, weight, art)
+	return { Name = name, Look = look, Size = size, Weight = weight, Art = art or "" }
+end
+Config.Creatures = {
+	{ -- 1. Dust Belt
+		creature("Pebblepup", "a round grey rock puppy with pebble spots", { 0.8, 1.3 }, { 2, 6 }, "rbxassetid://90741116767916"),
+		creature("Dust Bunny", "a fluffy beige space-dust bunny with tiny stars in its fur", { 0.8, 1.3 }, { 1, 4 }, "rbxassetid://94023738417136"),
+		creature("Craterhog", "a hedgehog whose quills are purple amethyst crystals", { 0.8, 1.4 }, { 3, 8 }, "rbxassetid://112305469629457"),
+		creature("Orbitoad", "a chubby blue toad with two tiny moons orbiting its head", { 0.8, 1.4 }, { 4, 10 }, "rbxassetid://125220581470065"),
+		creature("Meteor Fox", "an orange fox with a flaming meteor tail", { 0.9, 1.5 }, { 6, 14 }, "rbxassetid://87457434529699"),
+		creature("Stardust Dragon", "a small sparkly pink and gold dragon made of stardust", { 0.9, 1.6 }, { 10, 25 }, "rbxassetid://92504307265377"),
+	},
+	{ -- 2. Ice Ring
+		creature("Frostling", "a baby penguin with an ice crystal crown", { 0.8, 1.3 }, { 3, 7 }, "rbxassetid://95514930331993"),
+		creature("Snow Moth", "a fluffy white moth with snowflake wings", { 0.8, 1.3 }, { 1, 3 }, "rbxassetid://102968738400324"),
+		creature("Glacier Otter", "a light blue otter holding an ice shard", { 0.8, 1.4 }, { 5, 11 }, "rbxassetid://120720165056024"),
+		creature("Comet Seal", "a white seal with a glowing comet trail", { 0.9, 1.4 }, { 15, 40 }, "rbxassetid://122615777392569"),
+		creature("Aurora Owl", "an owl with green and violet aurora feathers", { 0.9, 1.5 }, { 3, 8 }, "rbxassetid://102347659893942"),
+		creature("Crystal Yeti", "a cute yeti covered in blue ice crystals", { 1, 1.7 }, { 60, 150 }, "rbxassetid://84298675238705"),
+	},
+	{ -- 3. Magma Field
+		creature("Cinder Slug", "a little dark slug with glowing lava spots", { 0.8, 1.3 }, { 1, 4 }),
+		creature("Lava Crab", "a red crab with a volcano-shaped shell", { 0.8, 1.4 }, { 3, 9 }),
+		creature("Blaze Newt", "an orange salamander with flame frills", { 0.8, 1.4 }, { 2, 6 }),
+		creature("Obsidian Rhino", "a baby rhino of black obsidian with a fiery horn", { 0.9, 1.5 }, { 80, 200 }),
+		creature("Solar Phoenix", "a golden phoenix chick with sun-flare wings", { 0.9, 1.5 }, { 4, 10 }),
+		creature("Magma Wyrm", "a coiled dragon of cooled lava with glowing cracks", { 1, 1.7 }, { 50, 140 }),
+	},
+	{ -- 4. Nebula
+		creature("Nebula Jelly", "a pink and violet floating jellyfish full of stars", { 0.8, 1.3 }, { 1, 3 }),
+		creature("Haze Kitten", "a misty lavender kitten with a cloud tail", { 0.8, 1.3 }, { 2, 5 }),
+		creature("Dreamfin", "a small sky-blue whale swimming in nebula clouds", { 0.9, 1.4 }, { 20, 60 }),
+		creature("Prism Ray", "a manta ray with rainbow prism wings", { 0.9, 1.5 }, { 10, 30 }),
+		creature("Nova Lion", "a lion cub with a mane of glowing star light", { 0.9, 1.5 }, { 20, 50 }),
+		creature("Galaxy Unicorn", "a unicorn with a swirling galaxy mane and horn", { 1, 1.7 }, { 40, 110 }),
+	},
+	{ -- 5. Devourer Belt
+		creature("Fang Beetle", "a dark green beetle with big friendly fangs", { 0.8, 1.3 }, { 1, 4 }),
+		creature("Gloom Bat", "a round purple bat with glowing yellow eyes", { 0.8, 1.4 }, { 1, 3 }),
+		creature("Void Shark", "a small black shark with a starry belly", { 0.9, 1.5 }, { 30, 90 }),
+		creature("Hunger Hound", "a shadowy hound with a glowing teal collar", { 0.9, 1.5 }, { 20, 55 }),
+		creature("Abyss Serpent", "a coiled deep-purple serpent with glowing runes", { 1, 1.6 }, { 30, 80 }),
+		creature("Eclipse Devourer", "a majestic creature with an eclipse halo and cosmic mouth", { 1, 1.8 }, { 120, 300 }),
+	},
+	{ -- 6. The Rift
+		creature("Chrono Snail", "a snail with a clock-spiral shell", { 0.8, 1.3 }, { 1, 3 }),
+		creature("Glitch Cat", "a cat with pixel glitch stripes in cyan and magenta", { 0.8, 1.4 }, { 3, 7 }),
+		creature("Paradox Panda", "a panda with swapped black and white patches and a time swirl", { 0.9, 1.5 }, { 40, 100 }),
+		creature("Hourglass Tortoise", "a tortoise carrying a golden hourglass shell", { 0.9, 1.5 }, { 30, 90 }),
+		creature("Rift Griffin", "a griffin with wings torn into glowing space rifts", { 1, 1.6 }, { 60, 150 }),
+		creature("Quasar Kraken", "a small kraken whose head shines like a quasar", { 1, 1.8 }, { 100, 260 }),
+	},
+	{ -- 7. The Nest
+		creature("Hatchling", "a tiny chick still wearing half of its cosmic egg shell", { 0.8, 1.3 }, { 1, 3 }),
+		creature("Yolk Slime", "a golden yolk slime with a happy face", { 0.8, 1.4 }, { 2, 6 }),
+		creature("Brood Raptor", "a baby raptor with amber egg-shell armor", { 0.9, 1.5 }, { 15, 40 }),
+		creature("Nest Drake", "a drake that carries a nest of glowing eggs on its back", { 1, 1.6 }, { 50, 130 }),
+		creature("Hive Queen", "a regal space bee queen with a crystal crown", { 1, 1.6 }, { 10, 30 }),
+		creature("Cosmic Mother", "the cosmic mother of all eggs, a winged creature made of galaxies", { 1.1, 1.9 }, { 200, 500 }),
+	},
+}
+
+-- Rareté de la n-ième espèce d'un anneau (fenêtre glissante)
+function Config.CreatureRarity(ring: number, slot: number): number
+	return if ring >= Config.CosmicMinRing then slot + 1 else slot
+end
+
+-- Récompense quand on a trouvé les 6 espèces d'un anneau : chance permanente et $
+Config.IndexReward = {
+	Luck = 0.1, -- +10 % de chance par anneau complété (cumulable)
+	Money = 2500, -- × multiplicateur de valeur de l'anneau
+}
+
 -- BOUTIQUE (docs/Interfaces.md §9) ---------------------------------------------
 -- Id = identifiant du passe ou du produit Robux sur Roblox : 0 tant qu'il n'est pas créé
 -- (le bouton affiche alors « Coming soon! »). Price = prix affiché en Robux.
