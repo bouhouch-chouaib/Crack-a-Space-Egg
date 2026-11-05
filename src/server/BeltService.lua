@@ -7,11 +7,13 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local WorldBuilder = require(script.Parent.WorldBuilder)
 
 local BeltService = {}
 
 type Asteroid = {
-	part: BasePart,
+	part: BasePart, -- la roche « Asteroid » (PrimaryPart) : c'est elle qu'on vise et qu'on fore
+	model: Model,
 	ring: number,
 	radius: number,
 	angle0: number,
@@ -65,7 +67,31 @@ local function remove(a: Asteroid)
 		active[a.part] = nil
 		count -= 1
 	end
-	a.part:Destroy()
+	a.model:Destroy()
+end
+
+-- Le modèle de l'anneau (ReplicatedStorage.Assets.Asteroids.RingN) à la bonne taille,
+-- ou une boule grise s'il n'existe pas encore
+local function build(ringIndex: number, diameter: number): Model
+	local model = WorldBuilder.Asset("Asteroids", "Ring" .. ringIndex)
+	if model then
+		model:ScaleTo(diameter / WorldBuilder.Width(model))
+		return model
+	end
+	local ring = Config.Rings[ringIndex]
+	local m = Instance.new("Model")
+	local p = Instance.new("Part")
+	p.Name = "Asteroid"
+	p.Shape = Enum.PartType.Ball
+	p.Size = Vector3.one * diameter
+	p.Anchored = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.Slate
+	p.Color = ring.Color:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.25))
+	p.Parent = m
+	m.PrimaryPart = p
+	return m
 end
 
 -- age : secondes déjà écoulées depuis la naissance (pour remplir le tapis au démarrage)
@@ -79,6 +105,7 @@ local function spawn(ringIndex: number, age: number)
 	local t0 = now() - age
 	local a: Asteroid = {
 		part = nil :: any,
+		model = nil :: any,
 		ring = ringIndex,
 		radius = radius,
 		angle0 = -Config.Belt.SpawnArc / radius,
@@ -92,31 +119,31 @@ local function spawn(ringIndex: number, age: number)
 		progress = {},
 	}
 
-	local p = Instance.new("Part")
-	p.Name = "Asteroid"
-	p.Shape = Enum.PartType.Ball
-	p.Size = Vector3.one * diameter
-	p.Anchored = true
-	p.TopSurface = Enum.SurfaceType.Smooth
-	p.BottomSurface = Enum.SurfaceType.Smooth
-	p.Material = Enum.Material.Slate
-	p.Color = ring.Color:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.25))
-	p.CFrame = CFrame.new(BeltService.Position(a, now()))
+	local model = build(ringIndex, diameter)
+	local yaw = rng:NextNumber(0, math.pi * 2)
+	model.Name = "Ring" .. ringIndex
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- le modèle arrive entier chez le client
+	model:PivotTo(CFrame.new(BeltService.Position(a, now())) * CFrame.Angles(0, yaw, 0))
 	-- Formule du mouvement, lue par les clients
+	model:SetAttribute("Ring", ringIndex)
+	model:SetAttribute("Radius", a.radius)
+	model:SetAttribute("Angle0", a.angle0)
+	model:SetAttribute("Height", a.height)
+	model:SetAttribute("Omega", a.omega)
+	model:SetAttribute("T0", a.t0)
+	model:SetAttribute("Yaw", yaw)
+	-- État du forage, sur la roche visée (lu par l'interface)
+	local p = model.PrimaryPart :: BasePart
+	p.Name = "Asteroid"
 	p:SetAttribute("Ring", ringIndex)
-	p:SetAttribute("Radius", a.radius)
-	p:SetAttribute("Angle0", a.angle0)
-	p:SetAttribute("Height", a.height)
-	p:SetAttribute("Omega", a.omega)
-	p:SetAttribute("T0", a.t0)
-	-- État du forage, lu par l'interface
 	p:SetAttribute("MaxHP", a.hp)
 	p:SetAttribute("HP", a.hp)
 	p:SetAttribute("Eggs", a.stock)
 	a.part = p
+	a.model = model
 	active[p] = a
 	count += 1
-	p.Parent = folder
+	model.Parent = folder
 end
 
 local function step()
@@ -154,15 +181,19 @@ function BeltService.Hit(a: Asteroid, player: Player, damage: number, room: numb
 	a.part:SetAttribute("Eggs", a.stock)
 	if a.stock <= 0 then
 		-- Laisse le temps à l'événement de casse d'arriver chez les clients avant de supprimer
-		a.part.Transparency = 1
-		a.part.CanCollide = false
-		a.part.CanQuery = false
+		for _, d in ipairs(a.model:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.Transparency = 1
+				d.CanCollide = false
+				d.CanQuery = false
+			end
+		end
 		if active[a.part] then
 			active[a.part] = nil
 			count -= 1
 		end
 		task.delay(0.5, function()
-			a.part:Destroy()
+			a.model:Destroy()
 		end)
 		return eggs, true
 	end

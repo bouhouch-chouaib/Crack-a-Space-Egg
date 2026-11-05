@@ -4,7 +4,9 @@
 -- la planète, le couloir balisé, les relais de pression et le décor des 7 anneaux.
 -- Les astéroïdes qui défilent sont gérés par BeltService.
 
-local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local WorldBuilder = {}
 
@@ -29,6 +31,48 @@ local function decor(props): Part
 	p.CanQuery = false
 	p.CanTouch = false
 	return p
+end
+
+-- MODÈLES FAITS DANS STUDIO (ReplicatedStorage.Assets) ----------------------------
+-- S'il manque un modèle, on garde la forme grise générée par code.
+
+local function asset(folder: string, name: string): Model?
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local f = assets and assets:FindFirstChild(folder)
+	local m = f and f:FindFirstChild(name)
+	return if m and m:IsA("Model") and m.PrimaryPart then m:Clone() else nil
+end
+WorldBuilder.Asset = asset
+
+-- Demi-hauteur d'une pièce, quelle que soit sa rotation
+local function halfHeight(p: BasePart): number
+	local cf, s = p.CFrame, p.Size
+	return (math.abs(cf.RightVector.Y) * s.X + math.abs(cf.UpVector.Y) * s.Y + math.abs(cf.LookVector.Y) * s.Z) / 2
+end
+
+-- Pose un modèle centré en (x, z), le dessus de sa PrimaryPart à la hauteur topY
+local function placeTop(model: Model, x: number, topY: number, z: number)
+	model:PivotTo(CFrame.new(x, 0, z))
+	local pp = model.PrimaryPart :: BasePart
+	local top = pp.Position.Y + halfHeight(pp)
+	model:PivotTo(model:GetPivot() + Vector3.new(0, topY - top, 0))
+end
+
+-- Largeur d'un modèle d'astéroïde (pour le mettre à l'échelle voulue)
+function WorldBuilder.Width(model: Model): number
+	local size = model:GetExtentsSize()
+	return math.max(size.X, size.Z)
+end
+
+-- Rend tout un modèle décoratif (ni collision, ni requête, ni contact)
+local function ghost(model: Model)
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+		end
+	end
 end
 
 local function prompt(parent: Instance, action: string, object: string, key: Enum.KeyCode): ProximityPrompt
@@ -121,30 +165,36 @@ end
 -- Les distances sont mesurées depuis le quai (z = FrontZ)
 
 local function relay(z: number, index: number, parent: Instance)
-	local model = Instance.new("Model")
-	model.Name = "Relay" .. index
-	local floor = part({
-		Name = "Floor",
-		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(2, M.RelaySize - 6, M.RelaySize - 6),
-		CFrame = CFrame.new(0, -1, M.FrontZ + z) * CFrame.Angles(0, 0, math.rad(90)),
-		Material = Enum.Material.DiamondPlate,
-		Color = Color3.fromRGB(80, 90, 110),
-		Parent = model,
-	})
-	model.PrimaryPart = floor
-	decor({
-		Name = "Bubble",
-		Shape = Enum.PartType.Ball,
-		Size = Vector3.one * M.RelaySize,
-		CFrame = CFrame.new(0, 4, M.FrontZ + z),
-		Material = Enum.Material.ForceField,
-		Color = Color3.fromRGB(120, 220, 255),
-		Transparency = 0.5,
-		Parent = model,
-	})
-	model:SetAttribute("Radius", M.RelaySize / 2)
-	model.Parent = parent
+	local model = asset("Corridor", "Relay")
+	if model then
+		placeTop(model, 0, 0, M.FrontZ + z)
+	else
+		model = Instance.new("Model")
+		local floor = part({
+			Name = "Floor",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(2, M.RelaySize - 6, M.RelaySize - 6),
+			CFrame = CFrame.new(0, -1, M.FrontZ + z) * CFrame.Angles(0, 0, math.rad(90)),
+			Material = Enum.Material.DiamondPlate,
+			Color = Color3.fromRGB(80, 90, 110),
+			Parent = model,
+		})
+		model.PrimaryPart = floor
+		decor({
+			Name = "Bubble",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * M.RelaySize,
+			CFrame = CFrame.new(0, 4, M.FrontZ + z),
+			Material = Enum.Material.ForceField,
+			Color = Color3.fromRGB(120, 220, 255),
+			Transparency = 0.5,
+			Parent = model,
+		})
+	end
+	local m = model :: Model
+	m.Name = "Relay" .. index
+	m:SetAttribute("Radius", M.RelaySize / 2)
+	m.Parent = parent
 end
 
 -- Plateformes régulières de a à b, sur l'axe du couloir avec un léger décalage
@@ -152,15 +202,24 @@ local function padsBetween(a: number, b: number, parent: Instance)
 	local length = b - a
 	local count = math.max(1, math.ceil(length / M.PadSpacing) - 1)
 	for s = 1, count do
-		local z = a + length * s / (count + 1)
-		part({
-			Name = "Pad",
-			Size = M.PadSize,
-			CFrame = CFrame.new(rng:NextNumber(-12, 12), -2, M.FrontZ + z),
-			Material = Enum.Material.Metal,
-			Color = Color3.fromRGB(90, 100, 125),
-			Parent = parent,
-		})
+		local z = M.FrontZ + a + length * s / (count + 1)
+		local x = rng:NextNumber(-12, 12)
+		local topY = -2 + M.PadSize.Y / 2
+		local model = asset("Corridor", "Pad")
+		if model then
+			placeTop(model, x, topY, z)
+			model.Name = "Pad"
+			model.Parent = parent
+		else
+			part({
+				Name = "Pad",
+				Size = M.PadSize,
+				CFrame = CFrame.new(x, -2, z),
+				Material = Enum.Material.Metal,
+				Color = Color3.fromRGB(90, 100, 125),
+				Parent = parent,
+			})
+		end
 	end
 end
 
@@ -196,15 +255,24 @@ local function buildCorridor(world: Folder)
 	local z = 0
 	while z <= last do
 		for _, side in ipairs({ -1, 1 }) do
-			decor({
-				Name = "Buoy",
-				Shape = Enum.PartType.Ball,
-				Size = Vector3.new(2.5, 2.5, 2.5),
-				CFrame = CFrame.new(side * M.CorridorWidth / 2, 0, M.FrontZ + z),
-				Material = Enum.Material.Neon,
-				Color = Color3.fromRGB(90, 220, 255),
-				Parent = buoys,
-			})
+			local cf = CFrame.new(side * M.CorridorWidth / 2, 0, M.FrontZ + z)
+			local model = asset("Corridor", "Buoy")
+			if model then
+				model:PivotTo(cf)
+				ghost(model)
+				model.Name = "Buoy"
+				model.Parent = buoys
+			else
+				decor({
+					Name = "Buoy",
+					Shape = Enum.PartType.Ball,
+					Size = Vector3.new(2.5, 2.5, 2.5),
+					CFrame = cf,
+					Material = Enum.Material.Neon,
+					Color = Color3.fromRGB(90, 220, 255),
+					Parent = buoys,
+				})
+			end
 		end
 		z += M.BuoySpacing
 	end
@@ -227,15 +295,25 @@ local function buildRingDecor(world: Folder)
 			local angle = rng:NextNumber(keepOut, math.pi * 2 - keepOut)
 			local r = radius + rng:NextNumber(-width / 2, width / 2)
 			local size = rng:NextNumber(8, 26)
-			decor({
-				Name = "Rock",
-				Shape = Enum.PartType.Ball,
-				Size = Vector3.one * size,
-				CFrame = CFrame.new(Config.OrbitPosition(r, angle, rng:NextNumber(-12, 12))),
-				Material = Enum.Material.Slate,
-				Color = ring.Color:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.3)),
-				Parent = folder,
-			})
+			local pos = Config.OrbitPosition(r, angle, rng:NextNumber(-12, 12))
+			local template = asset("Asteroids", "Ring" .. i)
+			if template then
+				template:ScaleTo(size / WorldBuilder.Width(template))
+				template:PivotTo(CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+				ghost(template)
+				template.Name = "Rock"
+				template.Parent = folder
+			else
+				decor({
+					Name = "Rock",
+					Shape = Enum.PartType.Ball,
+					Size = Vector3.one * size,
+					CFrame = CFrame.new(pos),
+					Material = Enum.Material.Slate,
+					Color = ring.Color:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.3)),
+					Parent = folder,
+				})
+			end
 		end
 	end
 	folder.Parent = world
