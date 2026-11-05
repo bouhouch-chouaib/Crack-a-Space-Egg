@@ -26,12 +26,22 @@ local function group(name: string, anchor: Vector2, pos: UDim2, size: UDim2): Fr
 	return f
 end
 
--- ARGENT (en bas à gauche) ---------------------------------------------------
-local moneyGroup = group("Money", Vector2.new(0, 1), UDim2.new(0, 18, 1, -18), UDim2.fromOffset(400, 112))
-local cashIcon = UIKit.icon("Cash", { Size = UDim2.fromOffset(104, 104), Position = UDim2.fromOffset(0, 4), ZIndex = 2, Parent = moneyGroup })
+-- STATS (en bas à gauche) : l'oxygène max au-dessus, l'argent en énorme dessous -------------
+local moneyGroup = group("Money", Vector2.new(0, 1), UDim2.new(0, 18, 1, -18), UDim2.fromOffset(420, 180))
+local oxygenIcon = UIKit.icon("Oxygen", { Size = UDim2.fromOffset(72, 72), Position = UDim2.fromOffset(16, 0), ZIndex = 2, Parent = moneyGroup })
+local oxygenText = UIKit.text({
+	Size = UDim2.fromOffset(280, 50),
+	Position = UDim2.fromOffset(104, 10),
+	Text = "0s",
+	TextColor3 = Color3.fromRGB(110, 235, 255),
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Stroke = 3.5,
+	Parent = moneyGroup,
+})
+local cashIcon = UIKit.icon("Cash", { Size = UDim2.fromOffset(104, 104), Position = UDim2.fromOffset(0, 72), ZIndex = 2, Parent = moneyGroup })
 local moneyText = UIKit.text({
-	Size = UDim2.fromOffset(290, 68),
-	Position = UDim2.fromOffset(104, 14),
+	Size = UDim2.fromOffset(300, 68),
+	Position = UDim2.fromOffset(104, 82),
 	Text = "$0",
 	TextColor3 = UIKit.Money,
 	TextXAlignment = Enum.TextXAlignment.Left,
@@ -39,13 +49,30 @@ local moneyText = UIKit.text({
 	Parent = moneyGroup,
 })
 local incomeText = UIKit.text({
-	Size = UDim2.fromOffset(200, 28),
-	Position = UDim2.fromOffset(108, 80),
+	Size = UDim2.fromOffset(200, 26),
+	Position = UDim2.fromOffset(108, 150),
 	Text = "",
 	TextColor3 = Color3.fromRGB(200, 255, 170),
 	TextXAlignment = Enum.TextXAlignment.Left,
 	Parent = moneyGroup,
 })
+
+-- Oxygène max (secondes), qui défile quand on s'entraîne
+local shownOxygen = 0
+local function oxygenLabel(n: number): string
+	return Format.Short(n) .. "s O₂"
+end
+local function refreshOxygen()
+	local o2 = player:GetAttribute("OxygenMax") or Config.Oxygen.Start
+	if o2 ~= shownOxygen then
+		if o2 > shownOxygen and shownOxygen > 0 then
+			UIKit.flyText(moneyGroup, "+" .. oxygenLabel(o2 - shownOxygen), UDim2.fromOffset(110, 0), Color3.fromRGB(110, 235, 255))
+			UIKit.bump(oxygenIcon, 0.2)
+		end
+		UIKit.countTo(oxygenText, shownOxygen, o2, oxygenLabel, 0.5)
+		shownOxygen = o2
+	end
+end
 
 local shownMoney = 0
 local function money(n: number): string
@@ -55,7 +82,7 @@ local function refreshMoney()
 	local credits = player:GetAttribute("Credits") or 0
 	if credits ~= shownMoney then
 		if credits > shownMoney and shownMoney > 0 then
-			UIKit.flyText(moneyGroup, "+" .. money(credits - shownMoney), UDim2.fromOffset(110, 6))
+			UIKit.flyText(moneyGroup, "+" .. money(credits - shownMoney), UDim2.fromOffset(110, 76))
 			UIKit.bump(cashIcon, 0.2)
 		end
 		UIKit.countTo(moneyText, shownMoney, credits, money, 0.6)
@@ -188,6 +215,8 @@ player.AttributeChanged:Connect(function(name)
 	if name == "Credits" or name == "Income" then
 		refreshMoney()
 		refreshBadges()
+	elseif name == "OxygenMax" then
+		refreshOxygen()
 	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" then
 		refreshCargo()
 	elseif string.sub(name, 1, 4) == "Lvl_" then
@@ -195,6 +224,7 @@ player.AttributeChanged:Connect(function(name)
 	end
 end)
 refreshMoney()
+refreshOxygen()
 refreshCargo()
 refreshBadges()
 

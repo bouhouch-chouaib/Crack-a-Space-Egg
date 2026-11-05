@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Theme = require(ReplicatedStorage.Shared.Theme)
 local DataService = require(script.Parent.DataService)
 
 local LeaderboardService = {}
@@ -82,7 +83,7 @@ local function buildScreen(board: Model, stat: string)
 	title.Size = UDim2.fromScale(0.94, 0.12)
 	title.Position = UDim2.fromScale(0.03, 0.02)
 	title.BackgroundTransparency = 1
-	title.Font = Enum.Font.FredokaOne
+	title.FontFace = Theme.FontHeavy
 	title.TextScaled = true
 	title.TextColor3 = Color3.new(1, 1, 1)
 	title.Text = STATS[stat].Icon .. " " .. STATS[stat].Title
@@ -104,7 +105,7 @@ local function buildScreen(board: Model, stat: string)
 			t.Size = UDim2.fromScale(w, 0.8)
 			t.Position = UDim2.fromScale(x, 0.1)
 			t.BackgroundTransparency = 1
-			t.Font = Enum.Font.FredokaOne
+			t.FontFace = Theme.Font
 			t.TextScaled = true
 			t.TextXAlignment = align
 			t.TextColor3 = Color3.new(1, 1, 1)

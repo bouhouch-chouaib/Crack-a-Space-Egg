@@ -46,6 +46,12 @@ Config.Map = {
 	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
 }
 
+-- Oxygène (docs/Mecaniques.md §12) : la statistique qu'on entraîne dans les caissons de pression,
+-- l'équivalent de la vitesse des jeux d'œufs. Affichée en secondes dans le HUD.
+Config.Oxygen = {
+	Start = 15, -- secondes d'oxygène au départ
+}
+
 -- Événements (docs/Mecaniques.md §14) ---------------------------------------
 Config.Events = {
 	MeteorShower = {

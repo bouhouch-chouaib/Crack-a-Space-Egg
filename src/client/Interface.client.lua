@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 
 local player = Players.LocalPlayer
 
@@ -42,7 +43,7 @@ end
 local function label(props)
 	local base = {
 		BackgroundTransparency = 1,
-		Font = Enum.Font.GothamBold,
+		FontFace = Theme.Font,
 		TextColor3 = INK,
 		TextScaled = true,
 	}
@@ -81,7 +82,7 @@ Remotes.Announcement.OnClientEvent:Connect(function(who: string, crystal: string
 		Position = UDim2.fromOffset(10, 6),
 		Text = string.format("%s just cracked a %s %s!", who, r.Name:upper(), crystal),
 		TextColor3 = Color3.new(0.05, 0.05, 0.1),
-		Font = Enum.Font.GothamBlack,
+		FontFace = Theme.Font,
 		Parent = banner,
 	})
 	task.delay(5, function()
@@ -122,12 +123,12 @@ local shop = new("Frame", {
 	Visible = false,
 	Parent = gui,
 }, { corner(16), new("UISizeConstraint", { MaxSize = Vector2.new(460, 420) }) })
-label({ Size = UDim2.new(1, -60, 0, 36), Position = UDim2.fromOffset(18, 12), Text = "UPGRADES", Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left, Parent = shop })
+label({ Size = UDim2.new(1, -60, 0, 36), Position = UDim2.fromOffset(18, 12), Text = "UPGRADES", FontFace = Theme.Font, TextXAlignment = Enum.TextXAlignment.Left, Parent = shop })
 local close = new("TextButton", {
 	Size = UDim2.fromOffset(36, 36),
 	Position = UDim2.new(1, -48, 0, 12),
 	Text = "X",
-	Font = Enum.Font.GothamBlack,
+	FontFace = Theme.Font,
 	TextScaled = true,
 	TextColor3 = INK,
 	BackgroundColor3 = Color3.fromRGB(50, 56, 86),
@@ -162,13 +163,13 @@ local rows = {}
 local function row(title: string, onBuy: () -> ())
 	local f = new("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundColor3 = Color3.fromRGB(34, 40, 66), Parent = list }, { corner(10) })
 	local t = label({ Size = UDim2.new(0.6, -12, 0, 24), Position = UDim2.fromOffset(12, 5), Text = title, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 20, Parent = f })
-	local sub = label({ Size = UDim2.new(0.6, -12, 0, 18), Position = UDim2.fromOffset(12, 29), Text = "", TextColor3 = MUTED, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 14, Parent = f })
+	local sub = label({ Size = UDim2.new(0.6, -12, 0, 18), Position = UDim2.fromOffset(12, 29), Text = "", TextColor3 = MUTED, FontFace = Theme.Font, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 14, Parent = f })
 	local b = new("TextButton", {
 		AnchorPoint = Vector2.new(1, 0.5),
 		Size = UDim2.new(0.38, 0, 0, 38),
 		Position = UDim2.new(1, -8, 0.5, 0),
 		Text = "",
-		Font = Enum.Font.GothamBlack,
+		FontFace = Theme.Font,
 		TextScaled = true,
 		TextColor3 = Color3.new(0.08, 0.06, 0.04),
 		BackgroundColor3 = ACCENT,
@@ -271,7 +272,7 @@ local big = label({
 	Size = UDim2.new(1, 0, 0, 56),
 	LayoutOrder = 1,
 	Text = "",
-	Font = Enum.Font.GothamBlack,
+	FontFace = Theme.Font,
 	MaxText = 44,
 	ZIndex = 11,
 	Parent = stack,
@@ -296,7 +297,7 @@ local totalText = label({
 	LayoutOrder = 3,
 	Text = "",
 	TextColor3 = Color3.fromRGB(255, 210, 110),
-	Font = Enum.Font.GothamBlack,
+	FontFace = Theme.Font,
 	MaxText = 32,
 	ZIndex = 11,
 	Parent = stack,

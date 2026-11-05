@@ -6,6 +6,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local Theme = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Theme"))
+
 local player = Players.LocalPlayer
 
 -- MAISON « YOUR BASE » ------------------------------------------------------
@@ -37,7 +39,7 @@ local function buildMarker(adornee: BasePart): BillboardGui
 	text.BackgroundTransparency = 1
 	text.Text = "YOUR BASE"
 	text.TextScaled = true
-	text.Font = Enum.Font.FredokaOne
+	text.FontFace = Theme.Font
 	text.TextColor3 = Color3.new(1, 1, 1)
 	text.TextStrokeTransparency = 0
 	text.TextStrokeColor3 = Color3.fromRGB(30, 35, 60)

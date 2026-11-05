@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Theme = require(ReplicatedStorage.Shared.Theme)
 
 local WorldBuilder = {}
 
@@ -283,7 +284,7 @@ local function buildEventBanner(world: Folder)
 		t.Position = UDim2.fromScale(0.04, y)
 		t.BackgroundTransparency = 1
 		t.TextScaled = true
-		t.Font = Enum.Font.FredokaOne
+		t.FontFace = Theme.FontHeavy
 		t.TextColor3 = color
 		t.TextStrokeTransparency = 0.3
 		t.Text = ""

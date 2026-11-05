@@ -1,11 +1,13 @@
 -- Kit d'interface commun à tous les écrans (docs/Interfaces.md, style des jeux d'œufs) :
 -- thème, illustrations, composants « gros boutons » et animations.
--- Règles : texte FredokaOne blanc à épais contour sombre, contours noirs épais,
+-- Règles : texte Montserrat très gras blanc à épais contour sombre, contours noirs épais,
 -- dégradés vifs, coins arrondis, et tout ce qui se touche réagit (survol, appui).
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+
+local Theme = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Theme"))
 
 local UIKit = {}
 
@@ -28,7 +30,7 @@ UIKit.Art = {
 }
 
 -- THÈME ------------------------------------------------------------------
-UIKit.Font = Enum.Font.FredokaOne
+UIKit.Font = Theme.Font
 UIKit.Ink = Color3.fromRGB(255, 255, 255)
 UIKit.Outline = Color3.fromRGB(22, 22, 32)
 UIKit.Panel = Color3.fromRGB(44, 46, 58)
@@ -91,7 +93,7 @@ function UIKit.text(props: { [string]: any }): TextLabel
 	props.Stroke = nil
 	local t = new("TextLabel", {
 		BackgroundTransparency = 1,
-		Font = UIKit.Font,
+		FontFace = UIKit.Font,
 		TextColor3 = UIKit.Ink,
 		TextScaled = true,
 	})
@@ -205,15 +207,16 @@ function UIKit.shine(g: GuiObject, every: number?)
 	return band
 end
 
--- Compteur qui défile jusqu'à sa nouvelle valeur
+-- Compteur qui défile jusqu'à sa nouvelle valeur (un seul défilement à la fois par texte)
+local countTokens: { [TextLabel]: {} } = setmetatable({}, { __mode = "k" }) :: any
 function UIKit.countTo(label: TextLabel, from: number, to: number, format: (number) -> string, duration: number?)
 	local token = {}
-	(label :: any).__countToken = token
+	countTokens[label] = token
 	task.spawn(function()
 		local d = duration or 0.5
 		local t0 = os.clock()
 		while os.clock() - t0 < d do
-			if (label :: any).__countToken ~= token then
+			if countTokens[label] ~= token then
 				return
 			end
 			local a = (os.clock() - t0) / d
@@ -221,7 +224,7 @@ function UIKit.countTo(label: TextLabel, from: number, to: number, format: (numb
 			label.Text = format(from + (to - from) * a)
 			task.wait()
 		end
-		if (label :: any).__countToken == token then
+		if countTokens[label] == token then
 			label.Text = format(to)
 		end
 	end)

@@ -44,6 +44,7 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("CargoRarities", table.concat(rarities, ","))
 	player:SetAttribute("Ring", d.ring)
+	player:SetAttribute("OxygenMax", d.oxygenMax or Config.Oxygen.Start)
 	for id in pairs(Config.Upgrades) do
 		player:SetAttribute("Lvl_" .. id, d.levels[id])
 	end
