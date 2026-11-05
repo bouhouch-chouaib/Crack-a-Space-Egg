@@ -15,10 +15,8 @@ local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 local player = Players.LocalPlayer
 
 local INK = Color3.fromRGB(235, 238, 248)
-local MUTED = Color3.fromRGB(150, 158, 185)
 local PANEL = Color3.fromRGB(22, 26, 46)
 local ACCENT = Color3.fromRGB(233, 131, 74)
-local GOOD = Color3.fromRGB(90, 210, 130)
 
 local function new(class: string, props: { [string]: any }, children: { Instance }?): any
 	local o = Instance.new(class)
@@ -114,134 +112,7 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- BOUTIQUE ------------------------------------------------------------------
-local shop = new("Frame", {
-	AnchorPoint = Vector2.new(0.5, 0.5),
-	Size = UDim2.fromOffset(460, 420),
-	Position = UDim2.fromScale(0.5, 0.5),
-	BackgroundColor3 = PANEL,
-	Visible = false,
-	Parent = gui,
-}, { corner(16), new("UISizeConstraint", { MaxSize = Vector2.new(460, 420) }) })
-label({ Size = UDim2.new(1, -60, 0, 36), Position = UDim2.fromOffset(18, 12), Text = "UPGRADES", FontFace = Theme.Font, TextXAlignment = Enum.TextXAlignment.Left, Parent = shop })
-local close = new("TextButton", {
-	Size = UDim2.fromOffset(36, 36),
-	Position = UDim2.new(1, -48, 0, 12),
-	Text = "X",
-	FontFace = Theme.Font,
-	TextScaled = true,
-	TextColor3 = INK,
-	BackgroundColor3 = Color3.fromRGB(50, 56, 86),
-	Parent = shop,
-}, { corner(10) })
-close.MouseButton1Click:Connect(function()
-	shop.Visible = false
-end)
-local list = new("Frame", {
-	Size = UDim2.new(1, -36, 1, -64),
-	Position = UDim2.fromOffset(18, 56),
-	BackgroundTransparency = 1,
-	Parent = shop,
-}, { new("UIListLayout", { Padding = UDim.new(0, 8) }) })
-
-local EFFECTS = {
-	Drill = function(l)
-		return string.format("Power %.1f", Config.DrillPower(l))
-	end,
-	Cargo = function(l)
-		return string.format("%d eggs", Config.CargoSlots(l))
-	end,
-	Thruster = function(l)
-		return string.format("Speed x%.2f", Config.Speed(l))
-	end,
-	Scanner = function(l)
-		return string.format("Luck x%.2f", Config.Luck(l))
-	end,
-}
-
-local rows = {}
-local function row(title: string, onBuy: () -> ())
-	local f = new("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundColor3 = Color3.fromRGB(34, 40, 66), Parent = list }, { corner(10) })
-	local t = label({ Size = UDim2.new(0.6, -12, 0, 24), Position = UDim2.fromOffset(12, 5), Text = title, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 20, Parent = f })
-	local sub = label({ Size = UDim2.new(0.6, -12, 0, 18), Position = UDim2.fromOffset(12, 29), Text = "", TextColor3 = MUTED, FontFace = Theme.Font, TextXAlignment = Enum.TextXAlignment.Left, MaxText = 14, Parent = f })
-	local b = new("TextButton", {
-		AnchorPoint = Vector2.new(1, 0.5),
-		Size = UDim2.new(0.38, 0, 0, 38),
-		Position = UDim2.new(1, -8, 0.5, 0),
-		Text = "",
-		FontFace = Theme.Font,
-		TextScaled = true,
-		TextColor3 = Color3.new(0.08, 0.06, 0.04),
-		BackgroundColor3 = ACCENT,
-		Parent = f,
-	}, { corner(8), new("UITextSizeConstraint", { MaxTextSize = 18 }) })
-	b.MouseButton1Click:Connect(onBuy)
-	return { Title = t, Sub = sub, Button = b }
-end
-
-for _, id in ipairs(Config.UpgradeOrder) do
-	rows[id] = row(Config.Upgrades[id].Name, function()
-		Remotes.BuyUpgrade:FireServer(id)
-	end)
-end
-local ringRow = row("Next ring", function()
-	Remotes.UnlockRing:FireServer((player:GetAttribute("Ring") or 1) + 1)
-end)
-
-local function refreshShop()
-	local credits = player:GetAttribute("Credits") or 0
-	for _, id in ipairs(Config.UpgradeOrder) do
-		local l = player:GetAttribute("Lvl_" .. id) or 0
-		local r = rows[id]
-		r.Title.Text = string.format("%s  Lv %d", Config.Upgrades[id].Name, l)
-		if l >= Config.Upgrades[id].Max then
-			r.Sub.Text = EFFECTS[id](l)
-			r.Button.Text = "MAX"
-			r.Button.AutoButtonColor = false
-		else
-			local cost = Config.UpgradeCost(id, l)
-			r.Sub.Text = EFFECTS[id](l) .. "  →  " .. EFFECTS[id](l + 1)
-			r.Button.Text = "◆ " .. Format.Short(cost)
-			r.Button.BackgroundColor3 = if credits >= cost then ACCENT else Color3.fromRGB(80, 84, 104)
-		end
-	end
-	local nextIndex = (player:GetAttribute("Ring") or 1) + 1
-	local nextRing = Config.Rings[nextIndex]
-	if nextRing then
-		local drill = player:GetAttribute("Lvl_Drill") or 0
-		ringRow.Title.Text = "Unlock " .. nextRing.Name
-		ringRow.Sub.Text = string.format("Needs Drill Lv %d · values x%d", nextRing.DrillLevel, nextRing.ValueMult)
-		ringRow.Button.Text = "◆ " .. Format.Short(nextRing.UnlockCost)
-		local ok = credits >= nextRing.UnlockCost and drill >= nextRing.DrillLevel
-		ringRow.Button.BackgroundColor3 = if ok then GOOD else Color3.fromRGB(80, 84, 104)
-	else
-		ringRow.Title.Text = "All rings unlocked"
-		ringRow.Sub.Text = "More rings in the next update"
-		ringRow.Button.Text = "-"
-	end
-end
-player.AttributeChanged:Connect(function(name)
-	if shop.Visible and name ~= "Fuel" then
-		refreshShop()
-	end
-end)
-
-local function openShop()
-	refreshShop()
-	shop.Visible = true
-end
-Remotes.OpenShop.OnClientEvent:Connect(openShop)
-
--- Le bouton SHOP du HUD ouvre et ferme la fenêtre (en attendant la boutique complète)
-UIKit.Open.Event:Connect(function(what: string)
-	if what == "Shop" then
-		if shop.Visible then
-			shop.Visible = false
-		else
-			openShop()
-		end
-	end
-end)
+-- La boutique est dans Shop.client.lua
 
 -- RÉVÉLATION DES GÉODES ------------------------------------------------------------------
 local reveal = new("Frame", {
@@ -338,7 +209,7 @@ Remotes.CrackResult.OnClientEvent:Connect(function(results, total: number)
 		return
 	end
 	revealing = true
-	shop.Visible = false
+	UIKit.Open:Fire("Close")
 	for _, child in ipairs(cards:GetChildren()) do
 		if child:IsA("Frame") then
 			child:Destroy()

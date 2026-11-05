@@ -201,6 +201,55 @@ function Config.UpgradeCost(id: string, level: number): number
 	return math.floor(u.Base * u.Growth ^ level + 0.5)
 end
 
+-- BOUTIQUE (docs/Interfaces.md §9) ---------------------------------------------
+-- Id = identifiant du passe ou du produit Robux sur Roblox : 0 tant qu'il n'est pas créé
+-- (le bouton affiche alors « Coming soon! »). Price = prix affiché en Robux.
+-- Jamais d'œufs ni de créatures contre des Robux.
+Config.Shop = {
+	-- Offre du moment, renouvelée chaque jour à minuit UTC (compte à rebours affiché)
+	Featured = {
+		Name = "Starter Pack",
+		Text = "Big money pack + x2 Luck + x2 Money potions",
+		Art = "Money4",
+		Id = 0,
+		Price = 99,
+		Was = 249, -- prix barré
+	},
+	Passes = {
+		{ Key = "CargoXL", Name = "Cargo XL", Text = "+50% cargo slots", Art = "PassCargoXL", Id = 0, Price = 149 },
+		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "x2 fuel, faster flight", Art = "PassTurboJetpack", Id = 0, Price = 99 },
+		{ Key = "AutoCrack", Name = "Auto Crack", Text = "Eggs crack by themselves", Art = "PassAutoCrack", Id = 0, Price = 199, Ribbon = "BEST SELLER!" },
+		{ Key = "Money2x", Name = "x2 Money", Text = "Double money forever", Art = "PassMoney2x", Id = 0, Price = 299, Ribbon = "BEST VALUE!" },
+		{ Key = "Training2x", Name = "x2 Training", Text = "Train oxygen twice as fast", Art = "PassTraining2x", Id = 0, Price = 149 },
+		{ Key = "PetSlot", Name = "+1 Creature", Text = "Equip one more creature", Art = "PassPetSlot", Id = 0, Price = 249 },
+		{ Key = "VIP", Name = "VIP", Text = "VIP tag, +10% money, chat color", Art = "PassVIP", Id = 0, Price = 399 },
+	},
+	-- Potions de 15 minutes (produits Robux)
+	PotionMinutes = 15,
+	Potions = {
+		{ Key = "Luck", Name = "x2 Luck", Art = "PotionLuck", Id = 0, Price = 39 },
+		{ Key = "Money", Name = "x2 Money", Art = "PotionMoney", Id = 0, Price = 39 },
+		{ Key = "Suit", Name = "Suit Refill", Art = "PotionSuit", Id = 0, Price = 25 },
+		{ Key = "Meteor", Name = "Meteor Shower", Text = "For the whole server!", Art = "PotionMeteor", Id = 0, Price = 99 },
+	},
+	-- Boost gratuit contre une pub récompensée
+	FreeBoost = { Name = "Free x2 Boost", Minutes = 5, Art = "FreeBoost" },
+	-- Paquets d'argent : montant = Base × multiplicateur de valeur de l'anneau le plus loin débloqué,
+	-- pour qu'un paquet reste intéressant à toutes les étapes du jeu
+	MoneyPacks = {
+		{ Art = "Money1", Base = 500, Id = 0, Price = 19 },
+		{ Art = "Money2", Base = 1800, Id = 0, Price = 49 },
+		{ Art = "Money3", Base = 4000, Id = 0, Price = 99, Ribbon = "POPULAR!" },
+		{ Art = "Money4", Base = 11000, Id = 0, Price = 249 },
+		{ Art = "Money5", Base = 25000, Id = 0, Price = 499, Ribbon = "BEST VALUE!" },
+	},
+}
+
+function Config.MoneyPackAmount(base: number, ring: number): number
+	local r = Config.Rings[math.clamp(ring, 1, #Config.Rings)]
+	return base * r.ValueMult
+end
+
 -- Probabilités d'une géode selon l'anneau et la chance du joueur
 function Config.Probabilities(ringIndex: number, luck: number): { number }
 	local ring = Config.Rings[ringIndex]

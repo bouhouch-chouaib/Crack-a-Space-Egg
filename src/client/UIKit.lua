@@ -27,6 +27,29 @@ UIKit.Art = {
 	Noise = "rbxassetid://98491956885523",
 	Supernova = "rbxassetid://83408422703072",
 	Studs = "rbxassetid://99589690361139", -- picots carrés transparents, en fond de panneau
+	Robux = "rbxasset://textures/ui/common/robux.png", -- icône Robux intégrée à Roblox
+	-- Boutique
+	UpDrill = "rbxassetid://86154871998620",
+	UpCargo = "rbxassetid://90917292816313",
+	UpScanner = "rbxassetid://124687389931596",
+	UpSuit = "rbxassetid://75604068902739",
+	PassCargoXL = "rbxassetid://77531807677614",
+	PassTurboJetpack = "rbxassetid://74692079286837",
+	PassAutoCrack = "rbxassetid://78868782472712",
+	PassMoney2x = "rbxassetid://130933275552247",
+	PassTraining2x = "rbxassetid://95560756730337",
+	PassPetSlot = "rbxassetid://108524790080914",
+	PassVIP = "rbxassetid://91710080668004",
+	FreeBoost = "rbxassetid://76252909226674",
+	PotionLuck = "rbxassetid://137531128029569",
+	PotionMoney = "rbxassetid://102224284561997",
+	PotionSuit = "rbxassetid://92378546874482",
+	PotionMeteor = "rbxassetid://86978114973777",
+	Money1 = "rbxassetid://133083710430055",
+	Money2 = "rbxassetid://78320872986897",
+	Money3 = "rbxassetid://124340597600892",
+	Money4 = "rbxassetid://131346362295272",
+	Money5 = "rbxassetid://95885845881469",
 }
 
 -- THÈME ------------------------------------------------------------------
@@ -45,6 +68,7 @@ UIKit.Colors = {
 	Gold = { Color3.fromRGB(255, 232, 110), Color3.fromRGB(240, 170, 20) },
 	Teal = { Color3.fromRGB(120, 245, 240), Color3.fromRGB(30, 180, 200) },
 	Dark = { Color3.fromRGB(70, 74, 92), Color3.fromRGB(40, 42, 54) },
+	Grey = { Color3.fromRGB(165, 170, 186), Color3.fromRGB(104, 108, 126) },
 }
 UIKit.Money = Color3.fromRGB(120, 245, 80)
 
@@ -365,6 +389,329 @@ function UIKit.gauge(props: { name: string, art: string, color: string, height: 
 	}, { UIKit.corner(13), UIKit.gradient(colors[1], colors[2]) })
 	UIKit.icon(props.art, { Size = UDim2.fromOffset(46, 46), Position = UDim2.fromOffset(0, h - 6), ZIndex = 3, Parent = holder })
 	return holder, fill
+end
+
+-- FENÊTRES ET CARTES ---------------------------------------------------------
+
+-- Fond à picots discret, en mosaïque, posé sur un panneau
+function UIKit.studs(parent: GuiObject, transparency: number?): ImageLabel
+	return new("ImageLabel", {
+		Name = "Studs",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Image = UIKit.Art.Studs,
+		ImageTransparency = transparency or 0.55,
+		ScaleType = Enum.ScaleType.Tile,
+		TileSize = UDim2.fromOffset(28, 28),
+		ZIndex = parent.ZIndex,
+		Parent = parent,
+	}, { UIKit.corner(14) })
+end
+
+export type Window = {
+	gui: ScreenGui,
+	frame: Frame,
+	body: ScrollingFrame,
+	header: Frame,
+	open: (prepare: (() -> ())?) -> (),
+	close: () -> (),
+	isOpen: () -> boolean,
+}
+
+-- Grande fenêtre : bandeau de titre en dégradé à reflets, croix rouge, corps sombre à picots qui défile
+function UIKit.window(props: { name: string, title: string, color: string, size: Vector2? }): Window
+	local size = props.size or Vector2.new(880, 600)
+	local colors = UIKit.Colors[props.color] or UIKit.Colors.Green
+	local gui = new("ScreenGui", {
+		Name = props.name,
+		ResetOnSpawn = false,
+		DisplayOrder = 10,
+		IgnoreGuiInset = true,
+		Enabled = false,
+		Parent = Players.LocalPlayer:WaitForChild("PlayerGui"),
+	})
+	local dim = new("TextButton", {
+		Name = "Dim",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		Parent = gui,
+	})
+	-- Le cadre extérieur porte l'échelle écran, la fenêtre porte l'animation (deux UIScale distincts)
+	local holder = new("Frame", {
+		Name = "Holder",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.53),
+		Size = UDim2.fromOffset(size.X, size.Y),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	})
+	UIKit.autoScale(holder)
+	local frame = new("Frame", {
+		Name = "Window",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = UIKit.Panel,
+		Parent = holder,
+	}, { UIKit.corner(18), UIKit.stroke(5) })
+	UIKit.studs(frame, 0.75)
+	-- Bandeau de titre
+	local header = new("Frame", {
+		Name = "Header",
+		Size = UDim2.new(1, 0, 0, 84),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		ClipsDescendants = true,
+		ZIndex = 2,
+		Parent = frame,
+	}, { UIKit.corner(18), UIKit.stroke(5), UIKit.gradient(colors[1], colors[2]) })
+	-- Reflets en diagonale
+	for i, x in ipairs({ 0.56, 0.64, 0.69 }) do
+		new("Frame", {
+			Size = UDim2.new(0, if i == 1 then 36 else 16, 1.8, 0),
+			Position = UDim2.fromScale(x, -0.4),
+			Rotation = 28,
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 0.72,
+			BorderSizePixel = 0,
+			ZIndex = 2,
+			Parent = header,
+		})
+	end
+	UIKit.text({
+		Size = UDim2.fromScale(0.6, 0.7),
+		Position = UDim2.new(0, 26, 0.15, 0),
+		Text = props.title,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 3,
+		Stroke = 4.5,
+		Parent = header,
+	})
+	-- Croix rouge
+	local close = new("TextButton", {
+		Name = "Close",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.fromOffset(72, 64),
+		Position = UDim2.new(1, -16, 0, 10),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		AutoButtonColor = false,
+		Text = "",
+		ZIndex = 6,
+		Parent = frame,
+	}, { UIKit.corner(14), UIKit.stroke(4), UIKit.gradient(UIKit.Colors.Red[1], UIKit.Colors.Red[2]) })
+	UIKit.text({ Size = UDim2.fromScale(0.6, 0.76), Position = UDim2.fromScale(0.2, 0.12), Text = "X", ZIndex = 7, Stroke = 4, Parent = close })
+	UIKit.juice(close)
+	-- Corps qui défile
+	local body = new("ScrollingFrame", {
+		Name = "Body",
+		Size = UDim2.new(1, -24, 1, -100),
+		Position = UDim2.fromOffset(12, 92),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 10,
+		ScrollBarImageColor3 = Color3.fromRGB(200, 205, 220),
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		ZIndex = 2,
+		Parent = frame,
+	}, {
+		new("UIListLayout", {
+			Padding = UDim.new(0, 12),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		}),
+		new("UIPadding", {
+			PaddingTop = UDim.new(0, 8),
+			PaddingBottom = UDim.new(0, 20),
+			PaddingLeft = UDim.new(0, 6),
+			PaddingRight = UDim.new(0, 18),
+		}),
+	})
+	local opened = false
+	-- prepare : lancé une fois la mise en page faite, avant l'animation (ex. sauter à une section)
+	local function open(prepare: (() -> ())?)
+		if opened then
+			return
+		end
+		opened = true
+		gui.Enabled = true
+		scaleOf(frame).Scale = 1
+		if prepare then
+			task.wait()
+			prepare()
+		end
+		dim.BackgroundTransparency = 1
+		tween(dim, 0.25, { BackgroundTransparency = 0.45 })
+		UIKit.popIn(frame)
+	end
+	local function closeWindow()
+		if not opened then
+			return
+		end
+		opened = false
+		tween(dim, 0.2, { BackgroundTransparency = 1 })
+		tween(scaleOf(frame), 0.18, { Scale = 0.6 }, Enum.EasingStyle.Back, Enum.EasingDirection.In).Completed:Connect(function()
+			if not opened then
+				gui.Enabled = false
+			end
+		end)
+	end
+	close.MouseButton1Click:Connect(closeWindow)
+	dim.MouseButton1Click:Connect(closeWindow)
+	return {
+		gui = gui,
+		frame = frame,
+		body = body,
+		header = header,
+		open = open,
+		close = closeWindow,
+		isOpen = function()
+			return opened
+		end,
+	}
+end
+
+-- Titre de section « ~ Potions ~ » en couleur, épais contour
+function UIKit.sectionTitle(parent: Instance, text: string, color: Color3, order: number): TextLabel
+	return UIKit.text({
+		Name = "Title_" .. text,
+		Size = UDim2.new(1, 0, 0, 48),
+		Text = "~ " .. text .. " ~",
+		TextColor3 = color,
+		LayoutOrder = order,
+		Stroke = 4,
+		Parent = parent,
+	})
+end
+
+-- Grille de cartes qui grandit avec son contenu
+function UIKit.grid(parent: Instance, cell: Vector2, order: number): Frame
+	return new("Frame", {
+		Name = "Grid" .. order,
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		LayoutOrder = order,
+		Parent = parent,
+	}, {
+		new("UIGridLayout", {
+			CellSize = UDim2.fromOffset(cell.X, cell.Y),
+			CellPadding = UDim2.fromOffset(12, 12),
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+end
+
+-- Carte d'offre : fond en dégradé vif à picots, contour noir
+function UIKit.card(props: { parent: Instance, color: string, order: number?, name: string? }): Frame
+	local colors = UIKit.Colors[props.color] or UIKit.Colors.Blue
+	local c = new("Frame", {
+		Name = props.name or "Card",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		LayoutOrder = props.order or 0,
+		Parent = props.parent,
+	}, { UIKit.corner(14), UIKit.stroke(4), UIKit.gradient(colors[1], colors[2]) })
+	UIKit.studs(c, 0.8)
+	return c
+end
+
+-- Bouton de prix (vert par défaut, gris si on ne peut pas payer), avec l'icône Robux si besoin
+function UIKit.priceButton(props: {
+	parent: Instance,
+	text: string,
+	robux: boolean?,
+	color: string?,
+	size: UDim2?,
+	position: UDim2?,
+}): (TextButton, TextLabel, UIGradient)
+	local colors = UIKit.Colors[props.color or "Green"]
+	local grad = UIKit.gradient(colors[1], colors[2])
+	local b = new("TextButton", {
+		Name = "Price",
+		Size = props.size or UDim2.new(1, -20, 0, 50),
+		Position = props.position or UDim2.new(0, 10, 1, -60),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		AutoButtonColor = false,
+		Text = "",
+		ZIndex = 4,
+		Parent = props.parent,
+	}, { UIKit.corner(10), UIKit.stroke(3.5), grad })
+	local row = new("Frame", { Name = "Row", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 4, Parent = b }, {
+		new("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 6),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+	if props.robux then
+		new("ImageLabel", {
+			Name = "Robux",
+			Size = UDim2.fromOffset(30, 30),
+			BackgroundTransparency = 1,
+			Image = UIKit.Art.Robux,
+			ZIndex = 5,
+			LayoutOrder = 1,
+			Parent = row,
+		})
+	end
+	local label = UIKit.text({
+		Size = UDim2.fromOffset(0, 36),
+		AutomaticSize = Enum.AutomaticSize.X,
+		TextScaled = false,
+		TextSize = 30,
+		Text = props.text,
+		ZIndex = 5,
+		LayoutOrder = 2,
+		Stroke = 3,
+		Parent = row,
+	})
+	UIKit.shine(b, 6)
+	UIKit.juice(b)
+	return b, label, grad
+end
+
+-- Change la couleur d'un bouton de prix (vert = possible, gris = trop cher)
+function UIKit.recolor(grad: UIGradient, color: string)
+	local colors = UIKit.Colors[color]
+	grad.Color = ColorSequence.new(colors[1], colors[2])
+end
+
+-- Petit bouton cadeau violet (offrir à un ami)
+function UIKit.giftButton(parent: Instance, position: UDim2?): TextButton
+	local b = new("TextButton", {
+		Name = "Gift",
+		Size = UDim2.fromOffset(54, 50),
+		Position = position or UDim2.new(0, 10, 1, -60),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		AutoButtonColor = false,
+		Text = "",
+		ZIndex = 4,
+		Parent = parent,
+	}, { UIKit.corner(10), UIKit.stroke(3.5), UIKit.gradient(UIKit.Colors.Purple[1], UIKit.Colors.Purple[2]) })
+	UIKit.icon("Rewards", { Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), ZIndex = 5, Parent = b })
+	UIKit.juice(b)
+	return b
+end
+
+-- Pastille penchée « BEST VALUE! » en haut d'une carte
+function UIKit.ribbon(parent: GuiObject, text: string, color: string?): Frame
+	local colors = UIKit.Colors[color or "Red"]
+	local r = new("Frame", {
+		Name = "Ribbon",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.fromOffset(140, 28),
+		Position = UDim2.new(1, -50, 0, -12), -- à cheval sur le bord haut, pour ne pas cacher le titre
+		Rotation = 7,
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		ZIndex = 8,
+		Parent = parent,
+	}, { UIKit.corner(8), UIKit.stroke(3), UIKit.gradient(colors[1], colors[2]) })
+	UIKit.text({ Size = UDim2.fromScale(0.9, 0.78), Position = UDim2.fromScale(0.05, 0.11), Text = text, ZIndex = 9, Stroke = 2.5, Parent = r })
+	return r
 end
 
 -- MESSAGES ---------------------------------------------------------------
