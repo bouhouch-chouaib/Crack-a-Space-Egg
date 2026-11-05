@@ -9,3 +9,6 @@ Packages/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Captures d'autres jeux, références de style (non versionnées)
+references/

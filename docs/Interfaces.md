@@ -16,7 +16,7 @@ Légende : ✅ décidé dans `docs/Mecaniques.md` · ❓ à trancher (voir la fi
 | Zone | Contenu |
 | --- | --- |
 | **En bas à gauche** | **Argent** en énorme ($, vert-or), avec le revenu par seconde des créatures de la base (« +$120/s ») et les gains qui s'envolent en « +$12.5K » |
-| **À gauche, colonne de gros boutons** | 🛒 **Shop** (boutique Robux), ⬆️ **Upgrades**, 📖 **Index**, 🐾 **Creatures** (inventaire), 🎁 **Rewards** (cadeaux et quêtes). Chacun peut avoir une pastille rouge « ! » quand il y a quelque chose à voir ou à réclamer |
+| **À gauche, deux gros boutons seulement** | 🛒 **SHOP** et 📖 **INDEX** (décision du 6 nov.). Tout le reste est dans la boutique, en faisant défiler. Pastille rouge « ! » quand il y a quelque chose à acheter ou à réclamer |
 | **En haut au centre** | **Soute** : « 🥚 3/8 », avec des petits œufs colorés selon leur rareté. Pleine, elle clignote : « GO HOME! » et une flèche vers la base |
 | **En haut à droite** | Petit rappel d'événement (« ☄️ 12:34 »), ⚙️ réglages |
 | **À droite, ronds** | Raccourcis : ⭐ Supernova (quand elle est disponible), 🛡️ boost actif (potion, avec son minuteur) |
@@ -40,7 +40,7 @@ On la voit à la machine à casser de sa base.
 
 L'intensité dépend de la rareté ✅ : un Commun fait un petit « pop », un Cosmique assombrit l'écran, fait tourner des rayons et arrête le temps. Un bouton **Skip** permet de passer.
 
-## 3. Upgrades : améliorations (stand SHOP du vaisseau et bouton du HUD)
+## 3. Upgrades : améliorations (section de la boutique, et stand SHOP du vaisseau)
 
 Cinq cartes, une par amélioration ✅ :
 
@@ -90,17 +90,21 @@ Trois onglets ✅ :
 
 En bas : le champ **Codes**, et la récompense **Join the group** (+10 % de chance) ✅.
 
-## 9. Shop (boutique Robux)
+## 9. Shop : la boutique unique (bouton SHOP du HUD)
 
-Sections qui défilent, comme dans tes captures :
-1. **Featured** : l'offre du moment, par exemple un pack de Noël avec skin et potions, avec un compte à rebours. **Jamais d'œufs contre des Robux** ✅.
-2. **Game Passes** ✅ : Cargo XL, Turbo Jetpack, Auto Crack, x2 Money, x2 Training, +1 Equipped Creature, VIP.
-3. **Potions** ✅ (15 min) : x2 Luck, x2 Money, Suit Refill, Meteor Shower pour tout le serveur.
-4. **Skins** ✅ : thèmes de base, couleurs de combinaison, traînées de jetpack.
-5. **Money packs** ✅ : comme dans Break and Steal an Egg, jusqu'à de gros montants (5 paliers, du petit paquet de billets au coffre).
-6. **Free boost** ✅ : une potion x2 de 5 min contre une pub récompensée de Roblox.
+Décision du 6 nov. : **une seule fenêtre qui défile**, qui regroupe tout ce qui n'est pas l'index. Le haut a des raccourcis vers chaque section (petites icônes) pour y sauter directement.
 
-Chaque carte a une illustration sur un fond en dégradé, un bouton **Robux** vert et un bouton **cadeau** violet (offrir à un ami), et parfois une pastille « BEST SELLER! » ou « BEST VALUE! ».
+1. **Featured** : l'offre du moment, avec un compte à rebours. **Jamais d'œufs contre des Robux** ✅.
+2. **Upgrades** ($) : les 5 cartes Drill, Cargo, Jetpack, Scanner, Suit (contenu en §3). Le stand SHOP du vaisseau ouvre la boutique directement à cette section.
+3. **Pets** : ses créatures, les emplacements équipés et le bouton Equip best (contenu en §6). La vente (§4) et la fusion (§5) restent aux machines du vaisseau.
+4. **Rewards** : connexion quotidienne, cadeaux de temps de jeu, 3 quêtes du jour, codes, bonus du groupe (contenu en §8).
+5. **Game Passes** ✅ : Cargo XL, Turbo Jetpack, Auto Crack, x2 Money, x2 Training, +1 Equipped Creature, VIP.
+6. **Potions** ✅ (15 min) : x2 Luck, x2 Money, Suit Refill, Meteor Shower pour tout le serveur.
+7. **Money packs** ✅ : 5 paliers, du paquet de billets au coffre, jusqu'à de gros montants.
+8. **Skins** ✅ : thèmes de base, couleurs de combinaison, traînées de jetpack.
+9. **Free boost** ✅ : une potion x2 de 5 min contre une pub récompensée.
+
+Les cartes ont une illustration sur un fond en dégradé, un bouton vert (Robux ou $) et un bouton cadeau violet pour les achats Robux, avec parfois une pastille « BEST SELLER! » ou « BEST VALUE! ».
 
 ## 10. Écrans de la base
 
@@ -135,4 +139,5 @@ Chaque carte a une illustration sur un fond en dégradé, un bouton **Robux** ve
 1. **Money packs** : oui, comme sur la capture de Break and Steal an Egg (gros montants possibles). Jamais d'œufs ni de créatures contre des Robux.
 2. **Free boost contre une pub récompensée** : oui.
 3. **Gemmes** : non, une seule monnaie ($).
-4. **Améliorations** : au stand SHOP du vaisseau **et** depuis un bouton ⬆️ **Upgrades** du HUD (dans la colonne de gauche).
+4. **Améliorations** : au stand SHOP du vaisseau **et** dans la boutique (section Upgrades).
+5. **HUD** : seulement deux boutons, SHOP et INDEX. Upgrades, Pets et Rewards sont des sections de la boutique.

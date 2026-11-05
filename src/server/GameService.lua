@@ -37,6 +37,12 @@ local function sync(player: Player)
 	player:SetAttribute("Credits", d.credits)
 	player:SetAttribute("Cargo", #d.cargo)
 	player:SetAttribute("CargoMax", Config.CargoSlots(d.levels.Cargo))
+	-- Raretés des œufs de la soute (« 1,3,2 »), pour les pastilles de couleur du HUD
+	local rarities = {}
+	for _, egg in ipairs(d.cargo) do
+		table.insert(rarities, tostring(if type(egg) == "table" then egg.rarity or 1 else 1))
+	end
+	player:SetAttribute("CargoRarities", table.concat(rarities, ","))
 	player:SetAttribute("Ring", d.ring)
 	for id in pairs(Config.Upgrades) do
 		player:SetAttribute("Lvl_" .. id, d.levels[id])

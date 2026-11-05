@@ -27,7 +27,7 @@ Le vaisseau (`Workspace.Ship` : 7 bases, boutique, ateliers, quai) est construit
 | --- | --- |
 | `src/shared` | `Config` (toutes les valeurs d'équilibrage), `Format` (nombres affichés) |
 | `src/server` | `Main` (démarrage), `WorldBuilder` (prépare `Workspace.Ship`, construit le couloir et les anneaux), `Bases` (une base par joueur), `BeltService` (tapis d'astéroïdes), `EventService` (pluie de météores), `LeaderboardService` (classements), `DataService` (sauvegarde), `GameService` (forage, soute, casse, améliorations) |
-| `src/client` | `Belt` (mouvement fluide des astéroïdes), `Markers` (maison « Your base », bannière d'événement), `Controls` (jetpack, foreuse), `Interface` (HUD, boutique, révélation) |
+| `src/client` | `UIKit` (kit d'interface : illustrations, gros boutons, animations), `Hud` (HUD), `Belt` (mouvement fluide des astéroïdes), `Markers` (maison « Your base », bannière d'événement), `Controls` (jetpack, foreuse), `Interface` (HUD, boutique, révélation) |
 | `tools` | `push-to-studio.lua` (envoie src/ dans Studio par HTTP), `export-scripts.sh` (recopie Studio dans src/) |
 
 Les RemoteEvents sont déclarés dans `default.project.json` (`ReplicatedStorage.Remotes`).

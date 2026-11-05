@@ -1,5 +1,5 @@
--- Interface du MVP : HUD (crédits, soute, carburant), boutique d'améliorations, révélation des géodes,
--- messages et annonces serveur. Tout est construit par code (greybox), l'art viendra remplacer les styles.
+-- Interface du MVP encore à refaire dans le style du kit (UIKit) : fenêtre d'améliorations, révélation
+-- de la casse, annonces serveur et barre de vie de l'astéroïde visé. Le HUD est dans Hud.client.lua.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,6 +9,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local UIKit = require(script.Parent:WaitForChild("UIKit"))
 
 local player = Players.LocalPlayer
 
@@ -17,7 +18,6 @@ local MUTED = Color3.fromRGB(150, 158, 185)
 local PANEL = Color3.fromRGB(22, 26, 46)
 local ACCENT = Color3.fromRGB(233, 131, 74)
 local GOOD = Color3.fromRGB(90, 210, 130)
-local BAD = Color3.fromRGB(240, 100, 100)
 
 local function new(class: string, props: { [string]: any }, children: { Instance }?): any
 	local o = Instance.new(class)
@@ -61,116 +61,9 @@ local gui = new("ScreenGui", {
 	Parent = player:WaitForChild("PlayerGui"),
 })
 
--- CRÉDITS ------------------------------------------------------------------
-local creditsBox = new("Frame", {
-	Size = UDim2.fromOffset(200, 48),
-	Position = UDim2.fromOffset(16, 16),
-	BackgroundColor3 = PANEL,
-	BackgroundTransparency = 0.15,
-	Parent = gui,
-}, { corner(12) })
-local creditsText = label({
-	Size = UDim2.new(1, -20, 1, -12),
-	Position = UDim2.fromOffset(10, 6),
-	Text = "0",
-	TextColor3 = Color3.fromRGB(255, 210, 110),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = creditsBox,
-})
-
--- SOUTE ------------------------------------------------------------------
-local cargoBox = new("Frame", {
-	AnchorPoint = Vector2.new(0.5, 0),
-	Size = UDim2.fromOffset(260, 44),
-	Position = UDim2.new(0.5, 0, 0, 16),
-	BackgroundColor3 = PANEL,
-	BackgroundTransparency = 0.15,
-	Parent = gui,
-}, { corner(12) })
-local cargoFill = new("Frame", {
-	Size = UDim2.fromScale(0, 1),
-	BackgroundColor3 = ACCENT,
-	BackgroundTransparency = 0.25,
-	Parent = cargoBox,
-}, { corner(12) })
-local cargoText = label({
-	Size = UDim2.new(1, -16, 1, -14),
-	Position = UDim2.fromOffset(8, 7),
-	Text = "Cargo 0/4",
-	ZIndex = 2,
-	Parent = cargoBox,
-})
-local ringText = label({
-	AnchorPoint = Vector2.new(0.5, 0),
-	Size = UDim2.fromOffset(260, 20),
-	Position = UDim2.new(0.5, 0, 0, 64),
-	Text = "",
-	TextColor3 = MUTED,
-	Font = Enum.Font.GothamMedium,
-	MaxText = 16,
-	Parent = gui,
-})
-
--- CARBURANT ------------------------------------------------------------------
-local fuelBox = new("Frame", {
-	AnchorPoint = Vector2.new(0, 0.5),
-	Size = UDim2.fromOffset(16, 160),
-	Position = UDim2.new(0, 16, 0.5, 0),
-	BackgroundColor3 = PANEL,
-	BackgroundTransparency = 0.15,
-	Parent = gui,
-}, { corner(8) })
-local fuelFill = new("Frame", {
-	AnchorPoint = Vector2.new(0, 1),
-	Size = UDim2.fromScale(1, 1),
-	Position = UDim2.fromScale(0, 1),
-	BackgroundColor3 = Color3.fromRGB(110, 190, 255),
-	Parent = fuelBox,
-}, { corner(8) })
-label({
-	AnchorPoint = Vector2.new(0, 0),
-	Size = UDim2.fromOffset(60, 16),
-	Position = UDim2.new(0, 10, 0.5, 86),
-	Text = "JETPACK",
-	TextColor3 = MUTED,
-	MaxText = 12,
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = gui,
-})
-
--- AIDE ------------------------------------------------------------------
-local hint = label({
-	AnchorPoint = Vector2.new(0.5, 1),
-	Size = UDim2.new(0.9, 0, 0, 22),
-	Position = UDim2.new(0.5, 0, 1, -14),
-	Text = "Hold click on an asteroid to drill  ·  Hold Jump in the air to use your jetpack",
-	TextColor3 = MUTED,
-	Font = Enum.Font.GothamMedium,
-	MaxText = 16,
-	Parent = gui,
-})
-
 -- MESSAGES ------------------------------------------------------------------
-local noticeStack = new("Frame", {
-	AnchorPoint = Vector2.new(0.5, 0),
-	Size = UDim2.fromOffset(420, 200),
-	Position = UDim2.new(0.5, 0, 0, 92),
-	BackgroundTransparency = 1,
-	Parent = gui,
-}, { new("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center }) })
-
 local function notice(text: string, kind: string?)
-	local color = if kind == "good" then GOOD elseif kind == "bad" or kind == "warn" then BAD else INK
-	local box = new("Frame", {
-		Size = UDim2.fromOffset(420, 36),
-		BackgroundColor3 = PANEL,
-		BackgroundTransparency = 0.1,
-		Parent = noticeStack,
-	}, { corner(10) })
-	label({ Size = UDim2.new(1, -20, 1, -10), Position = UDim2.fromOffset(10, 5), Text = text, TextColor3 = color, MaxText = 18, Parent = box })
-	task.delay(3, function()
-		box:Destroy()
-	end)
+	UIKit.toast(text, kind)
 end
 Remotes.Notice.OnClientEvent:Connect(notice)
 
@@ -196,27 +89,6 @@ Remotes.Announcement.OnClientEvent:Connect(function(who: string, crystal: string
 	end)
 end)
 
--- HUD : mise à jour depuis les attributs du joueur --------------------------------
-local function refresh()
-	creditsText.Text = "◆ " .. Format.Short(player:GetAttribute("Credits") or 0)
-	local cargo = player:GetAttribute("Cargo") or 0
-	local max = player:GetAttribute("CargoMax") or 4
-	cargoText.Text = string.format("Cargo %d/%d", cargo, max)
-	cargoFill.Size = UDim2.fromScale(math.clamp(cargo / max, 0, 1), 1)
-	cargoFill.BackgroundColor3 = if cargo >= max then BAD else ACCENT
-	local ring = Config.Rings[player:GetAttribute("Ring") or 1]
-	ringText.Text = "Unlocked up to: " .. (ring and ring.Name or "?")
-	hint.Text = if cargo >= max
-		then "Cargo full! Fly back to your base and crack your space eggs"
-		else "Hold click on an asteroid to drill  ·  Hold Jump in the air to use your jetpack"
-end
-player.AttributeChanged:Connect(function(name)
-	if name ~= "Fuel" then
-		refresh()
-	end
-end)
-refresh()
-
 -- Barre de vie de l'astéroïde visé
 local hpGui = new("BillboardGui", {
 	Size = UDim2.fromOffset(120, 14),
@@ -230,7 +102,6 @@ local hpFill = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = A
 local targetValue = player:WaitForChild("DrillTarget", 10) :: ObjectValue?
 
 RunService.RenderStepped:Connect(function()
-	fuelFill.Size = UDim2.fromScale(1, player:GetAttribute("Fuel") or 1)
 	local t = targetValue and targetValue.Value :: BasePart?
 	if t and t.Parent then
 		hpGui.Adornee = t
@@ -360,22 +231,14 @@ local function openShop()
 end
 Remotes.OpenShop.OnClientEvent:Connect(openShop)
 
-local shopButton = new("TextButton", {
-	AnchorPoint = Vector2.new(1, 1),
-	Size = UDim2.fromOffset(150, 48),
-	Position = UDim2.new(1, -16, 1, -48),
-	Text = "UPGRADES",
-	Font = Enum.Font.GothamBlack,
-	TextScaled = true,
-	TextColor3 = Color3.new(0.08, 0.06, 0.04),
-	BackgroundColor3 = ACCENT,
-	Parent = gui,
-}, { corner(12), new("UITextSizeConstraint", { MaxTextSize = 20 }) })
-shopButton.MouseButton1Click:Connect(function()
-	if shop.Visible then
-		shop.Visible = false
-	else
-		openShop()
+-- Le bouton SHOP du HUD ouvre et ferme la fenêtre (en attendant la boutique complète)
+UIKit.Open.Event:Connect(function(what: string)
+	if what == "Shop" then
+		if shop.Visible then
+			shop.Visible = false
+		else
+			openShop()
+		end
 	end
 end)
 
