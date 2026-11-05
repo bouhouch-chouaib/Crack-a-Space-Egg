@@ -35,7 +35,23 @@ Un **jouet cosmique de luxe**. Tout a l'air doux, rond, coloré et précieux, co
 
 Une couleur qui porte un sens (sûr, danger, argent, rareté) **ne sert jamais à décorer**.
 
+**Palette du vaisseau** (codes à utiliser partout) :
+
+| Nom | Code | Usage |
+| --- | --- | --- |
+| Crème | `#F4EFE6` | sol du pont, coque, structures |
+| Crème clair | `#FBF8F2` | rambardes, bords, détails |
+| Gris doux | `#C9CCD6` | ombres peintes, joints, pieds |
+| Bleu nuit | `#2B3350` | contrastes (dessus de comptoir, socles) |
+| Turquoise (sûr) | `#3FC9D8` | liserés de la zone sûre, chemins, quai |
+| Turquoise pâle | `#BDEFF3` | chemins de guidage au sol |
+| Orange doux | `#FFB37A` | petits accents chauds |
+| Or (argent) | `#FFC43C` | tout ce qui touche à l'argent |
+| Bases 1 à 5 | `#3E8CFF` bleu, `#4CD07D` vert, `#FF9F43` orange, `#A66BFF` violet, `#FF5D6C` rouge | sol, murets et panneau de chaque base |
+
 ## 4. Matériaux et textures
+
+- **Picots carrés (studs) partout** : c'est la signature visuelle des jeux du genre. Toutes les pièces visibles portent la texture de picots transparente (`tools/apply-studs.lua`). Elle reprend la case « Studs » de la texture intégrée de Roblox : picots carrés aux coins arrondis, 1 picot par stud. Chaque pièce garde sa couleur, les picots s'y superposent. Exceptions : le verre, le néon et les pièces transparentes. **Relancer le script après chaque ajout d'objet.**
 
 - **Textures peintes maison** (`SurfaceAppearance` ou textures des maillages) : dégradés doux, bords éclaircis, ombres peintes, petites usures stylisées. On les fabrique dans Blender ou on les génère, toujours dans le style cartoon.
 - **Interdits comme matériau principal** : `DiamondPlate`, `CorrodedMetal`, `Slate` brut, `Foil`, `ForceField` brut. Ils font « prototype ». `SmoothPlastic` est accepté, toujours avec une couleur choisie dans la palette.
@@ -82,6 +98,38 @@ Commun aux deux :
 - **Guidage permanent** : une flèche ou une ligne lumineuse vers l'objectif du moment (sortir, forer, rentrer, casser).
 - **Zones de clic larges** : boutons d'au moins 44 px, invites assez grandes et assez proches pour les doigts.
 - **On vérifie toujours à hauteur de joueur**, en vue PC et en format téléphone, jamais seulement en vue du dessus.
+
+## 7 bis. Ce qu'on retient de Break and Steal an Egg (80 000 joueurs, capture du 6 nov.)
+
+**Organisation de la carte**
+- Bases du joueur au premier plan → **ligne de zone sûre** bien marquée (trait rouge, texte, icônes de bouclier) → zone à œufs juste derrière.
+- Juste après la ligne, la zone à œufs part tout droit au loin : c'est un long canyon, avec des œufs posés au sol et des œufs qui se déplacent.
+- **Tout ce qui sert est collé à cette ligne** : les petites boutiques, une machine et 3 tableaux de classement. Il n'y a rien entre les bases et la ligne, sinon de l'herbe.
+
+**Boutiques**
+- De **petits stands à auvent rayé** (bleu et blanc, vert et blanc), un par thème (pioches, diamants, pistes…), avec le nom flottant au-dessus.
+- Pas de gros bâtiments : c'est petit, lisible et proche.
+
+**Repères dans le monde**
+- Une **grande bannière au-dessus de l'entrée** de la zone à œufs annonce l'événement à venir avec un compte à rebours (« ??? Titanic Egg — Spawns In: 16:33 »).
+- Une **énorme icône de maison « Votre base »** flotte au-dessus de la base du joueur, et elle est la seule.
+- Les bases ont des clôtures basses. On voit les pets des autres joueurs se promener.
+
+**Interface**
+- **Gros boutons épais et colorés** à gauche (Boutique, Index), avec une **pastille rouge « ! »** pour attirer l'œil.
+- Raccourcis ronds à droite (œufs, pets).
+- **Argent en énorme, en vert, en bas à gauche**, avec les gains qui s'envolent en « +$12.5K ».
+- Barre d'objets en bas (outils numérotés) et compte à rebours d'événement.
+
+**Rendu**
+- **Très lumineux et très saturé** : on n'y voit jamais de sombre.
+- Les picots Roblox sont gardés sur l'herbe : ils ne gênent pas quand les couleurs sont franches et cohérentes.
+- Formes simples, parfois en blocs.
+
+**Pour nous**
+- Le bord avant du vaisseau devient la ligne de zone sûre : on y garde la vente, la boutique, les classements et la bannière d'événement au-dessus du quai.
+- L'icône « Your base » sur sa propre base, et l'interface en gros boutons avec pastilles.
+- Une ambiance bien plus claire que l'espace sombre actuel.
 
 ## 8. Budgets (téléphone)
 
