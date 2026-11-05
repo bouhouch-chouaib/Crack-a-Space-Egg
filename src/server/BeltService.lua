@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local WorldBuilder = require(script.Parent.WorldBuilder)
+local EventService = require(script.Parent.EventService)
 
 local BeltService = {}
 
@@ -113,9 +114,9 @@ local function spawn(ringIndex: number, age: number)
 		omega = ring.Speed / radius,
 		t0 = t0,
 		tEnd = t0 + travelTime(ringIndex),
-		stock = size.Eggs,
-		maxStock = size.Eggs,
-		hp = size.Eggs * ring.EggHP,
+		stock = math.ceil(size.Eggs * EventService.EggMult()),
+		maxStock = math.ceil(size.Eggs * EventService.EggMult()),
+		hp = math.ceil(size.Eggs * EventService.EggMult()) * ring.EggHP,
 		progress = {},
 	}
 
@@ -158,7 +159,8 @@ local function step()
 			if count < Config.Belt.MaxActive then
 				spawn(i, 0)
 			end
-			nextSpawn[i] = t + travelTime(i) / ring.Active * rng:NextNumber(0.6, 1.4)
+			-- Pendant une pluie de météores, les astéroïdes arrivent plus souvent
+			nextSpawn[i] = t + travelTime(i) / ring.Active * rng:NextNumber(0.6, 1.4) / EventService.SpawnMult()
 		end
 	end
 end

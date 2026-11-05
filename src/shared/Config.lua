@@ -46,9 +46,21 @@ Config.Map = {
 	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
 }
 
+-- Événements (docs/Mecaniques.md §14) ---------------------------------------
+Config.Events = {
+	MeteorShower = {
+		Name = "Meteor Shower",
+		Icon = "☄️",
+		Every = 20 * 60, -- secondes entre deux pluies
+		Duration = 3 * 60,
+		SpawnMult = 1.5, -- le défilement accélère
+		EggMult = 1.5, -- +50 % d'œufs par astéroïde
+	},
+}
+
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 60,
+	MaxActive = 90, -- 60 en temps normal, plus pendant une pluie de météores
 	SpawnArc = 160, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
 	HeightJitter = 8,
 }

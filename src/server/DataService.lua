@@ -74,6 +74,11 @@ function DataService.Get(player: Player)
 	return profiles[player]
 end
 
+-- Vrai si la partie a bien été chargée (on peut donc l'écrire, et la classer)
+function DataService.CanSave(player: Player): boolean
+	return canSave[player] == true
+end
+
 function DataService.Load(player: Player)
 	local key = "u_" .. player.UserId
 	local data = nil

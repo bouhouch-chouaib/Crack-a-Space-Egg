@@ -248,6 +248,53 @@ local function buildCorridor(world: Folder)
 	corridor.Parent = world
 end
 
+-- BANNIÈRE D'ÉVÉNEMENT ---------------------------------------------------------
+-- Grand panneau au-dessus du portique LAUNCH, tourné vers le vaisseau ; le texte
+-- (événement à venir et compte à rebours) est mis à jour par chaque client (Markers.client).
+local function buildEventBanner(world: Folder)
+	local board = decor({
+		Name = "EventBanner",
+		Size = Vector3.new(34, 9, 0.2),
+		CFrame = CFrame.new(0, 38, M.FrontZ - 4),
+		Transparency = 1,
+		Parent = world,
+	})
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "BannerGui"
+	gui.Face = Enum.NormalId.Front -- vers -Z : vers le vaisseau
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 30
+	gui.LightInfluence = 0
+	local bg = Instance.new("Frame")
+	bg.Name = "Background"
+	bg.Size = UDim2.fromScale(1, 1)
+	bg.BackgroundColor3 = Color3.fromRGB(43, 51, 80)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.25, 0)
+	corner.Parent = bg
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(63, 201, 216)
+	stroke.Thickness = 8
+	stroke.Parent = bg
+	local function label(name: string, y: number, h: number, color: Color3)
+		local t = Instance.new("TextLabel")
+		t.Name = name
+		t.Size = UDim2.fromScale(0.92, h)
+		t.Position = UDim2.fromScale(0.04, y)
+		t.BackgroundTransparency = 1
+		t.TextScaled = true
+		t.Font = Enum.Font.FredokaOne
+		t.TextColor3 = color
+		t.TextStrokeTransparency = 0.3
+		t.Text = ""
+		t.Parent = bg
+	end
+	label("Title", 0.08, 0.5, Color3.fromRGB(255, 255, 255))
+	label("Timer", 0.58, 0.34, Color3.fromRGB(127, 243, 255))
+	bg.Parent = gui
+	gui.Parent = board
+end
+
 -- DÉCOR DES ANNEAUX ---------------------------------------------------------
 
 local function buildRingDecor(world: Folder)
@@ -298,6 +345,7 @@ function WorldBuilder.Build(): Folder
 	buildPlanet(world)
 	buildCorridor(world)
 	buildRingDecor(world)
+	buildEventBanner(world)
 
 	local belt = Instance.new("Folder")
 	belt.Name = "Belt"
