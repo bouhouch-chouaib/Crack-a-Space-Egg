@@ -3,7 +3,10 @@
 -- Règles : texte Montserrat très gras blanc à épais contour sombre, contours noirs épais,
 -- dégradés vifs, coins arrondis, et tout ce qui se touche réagit (survol, appui).
 
+local Debris = game:GetService("Debris")
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -50,6 +53,10 @@ UIKit.Art = {
 	Money3 = "rbxassetid://124340597600892",
 	Money4 = "rbxassetid://131346362295272",
 	Money5 = "rbxassetid://95885845881469",
+	-- Lumières (blanches, teintées par ImageColor3), dessinées par tools/fx
+	FxRays = "rbxassetid://100803246971606",
+	FxGlow = "rbxassetid://103844906730878",
+	FxSparkle = "rbxassetid://138922153683020",
 }
 
 -- THÈME ------------------------------------------------------------------
@@ -391,6 +398,357 @@ function UIKit.gauge(props: { name: string, art: string, color: string, height: 
 	return holder, fill
 end
 
+-- EFFETS ET LUMIÈRES -----------------------------------------------------------
+-- Une seule boucle anime tout ; un effet ne tourne que si son écran est affiché.
+
+type Animator = { obj: Instance, gui: ScreenGui?, fn: (number, number) -> () }
+local animators: { Animator } = {}
+
+function UIKit.every(obj: Instance, fn: (number, number) -> ())
+	table.insert(animators, { obj = obj, gui = obj:FindFirstAncestorOfClass("ScreenGui"), fn = fn })
+end
+
+RunService.RenderStepped:Connect(function(dt)
+	local t = os.clock()
+	local i = 1
+	while i <= #animators do
+		local a = animators[i]
+		if not a.obj.Parent then
+			-- L'objet a été détruit : on retire son animation
+			animators[i] = animators[#animators]
+			animators[#animators] = nil
+		else
+			if not a.gui then
+				a.gui = a.obj:FindFirstAncestorOfClass("ScreenGui")
+			end
+			if a.gui and a.gui.Enabled then
+				a.fn(t, dt)
+			end
+			i += 1
+		end
+	end
+end)
+
+local function centerOf(g: GuiObject): UDim2
+	return g.Position
+		+ UDim2.new(g.Size.X.Scale * (0.5 - g.AnchorPoint.X), g.Size.X.Offset * (0.5 - g.AnchorPoint.X), g.Size.Y.Scale * (0.5 - g.AnchorPoint.Y), g.Size.Y.Offset * (0.5 - g.AnchorPoint.Y))
+end
+UIKit.centerOf = centerOf
+
+-- Rayons de soleil qui tournent derrière une illustration
+function UIKit.rays(parent: GuiObject, props: { color: Color3?, size: number?, speed: number?, transparency: number?, position: UDim2?, z: number? }): ImageLabel
+	local size = props.size or 200
+	local r = new("ImageLabel", {
+		Name = "Rays",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = props.position or UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(size, size),
+		BackgroundTransparency = 1,
+		Image = UIKit.Art.FxRays,
+		ImageColor3 = props.color or Color3.fromRGB(255, 240, 170),
+		ImageTransparency = props.transparency or 0.3,
+		ZIndex = props.z or parent.ZIndex,
+		Parent = parent,
+	})
+	local speed = props.speed or 18
+	local base = r.ImageTransparency
+	local phase = math.random() * 10
+	UIKit.every(r, function(t)
+		r.Rotation = (t * speed + phase * 36) % 360
+		r.ImageTransparency = math.clamp(base + 0.12 * math.sin(t * 2 + phase), 0, 1)
+	end)
+	return r
+end
+
+-- Halo de lumière doux qui respire
+function UIKit.glow(parent: GuiObject, props: { color: Color3?, size: number?, transparency: number?, position: UDim2?, z: number?, pulse: number? }): ImageLabel
+	local size = props.size or 160
+	local g = new("ImageLabel", {
+		Name = "Glow",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = props.position or UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(size, size),
+		BackgroundTransparency = 1,
+		Image = UIKit.Art.FxGlow,
+		ImageColor3 = props.color or Color3.new(1, 1, 1),
+		ImageTransparency = props.transparency or 0.35,
+		ZIndex = props.z or parent.ZIndex,
+		Parent = parent,
+	})
+	local pulse = props.pulse or 0.08
+	local phase = math.random() * 10
+	UIKit.every(g, function(t)
+		local k = 1 + pulse * math.sin(t * 2.4 + phase)
+		g.Size = UDim2.fromOffset(size * k, size * k)
+	end)
+	return g
+end
+
+-- Étincelles qui scintillent à des endroits au hasard sur un élément
+function UIKit.sparkles(parent: GuiObject, props: { count: number?, color: Color3?, size: number?, z: number? })
+	local base = props.size or 22
+	for _ = 1, props.count or 3 do
+		local s = new("ImageLabel", {
+			Name = "Sparkle",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(0, 0),
+			BackgroundTransparency = 1,
+			Image = UIKit.Art.FxSparkle,
+			ImageColor3 = props.color or Color3.new(1, 1, 1),
+			ZIndex = props.z or parent.ZIndex + 5,
+			Parent = parent,
+		})
+		local start, len, size = os.clock() + math.random() * 2, 1, base
+		local function reset(t: number)
+			start = t + math.random() * 1.6
+			len = 0.9 + math.random() * 0.9
+			size = base * (0.6 + math.random() * 0.7)
+			s.Position = UDim2.fromScale(0.08 + math.random() * 0.84, 0.06 + math.random() * 0.7)
+		end
+		reset(os.clock())
+		UIKit.every(s, function(t)
+			local k = (t - start) / len
+			if k >= 1 then
+				reset(t)
+				k = 0
+			end
+			if k <= 0 then
+				s.Size = UDim2.fromOffset(0, 0)
+				return
+			end
+			local v = math.sin(k * math.pi)
+			s.Size = UDim2.fromOffset(size * v, size * v)
+			s.Rotation = k * 120
+		end)
+	end
+end
+
+-- Flottement : monte et descend doucement en se balançant
+function UIKit.float(g: GuiObject, amp: number?, rot: number?, speed: number?, phase: number?)
+	local base = g.Position
+	local baseRot = g.Rotation
+	local a, r, sp = amp or 5, rot or 3, speed or 2
+	local ph = phase or math.random() * 10
+	UIKit.every(g, function(t)
+		g.Position = base + UDim2.fromOffset(0, math.sin(t * sp + ph) * a)
+		g.Rotation = baseRot + math.sin(t * sp * 0.5 + ph) * r
+	end)
+end
+
+-- Balancement (pastilles, titres)
+function UIKit.wiggle(g: GuiObject, amp: number?, speed: number?)
+	local baseRot = g.Rotation
+	local ph = math.random() * 10
+	UIKit.every(g, function(t)
+		g.Rotation = baseRot + math.sin(t * (speed or 3) + ph) * (amp or 4)
+	end)
+end
+
+-- Contour brillant : un reflet fait le tour du contour noir (doré, arc-en-ciel...)
+UIKit.GoldShine = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 190, 40)),
+	ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 240, 150)),
+	ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+	ColorSequenceKeypoint.new(0.6, Color3.fromRGB(255, 240, 150)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 190, 40)),
+})
+UIKit.Rainbow = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
+	ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 200, 60)),
+	ColorSequenceKeypoint.new(0.4, Color3.fromRGB(120, 240, 90)),
+	ColorSequenceKeypoint.new(0.6, Color3.fromRGB(80, 200, 255)),
+	ColorSequenceKeypoint.new(0.8, Color3.fromRGB(190, 110, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 90, 90)),
+})
+function UIKit.shinyStroke(g: GuiObject, colors: ColorSequence?, thickness: number?, speed: number?)
+	local stroke = g:FindFirstChildOfClass("UIStroke")
+	if not stroke then
+		stroke = UIKit.stroke(thickness or 4)
+		stroke.Parent = g
+	end
+	local s = stroke :: UIStroke
+	s.Color = Color3.new(1, 1, 1)
+	s.Thickness = thickness or s.Thickness + 1
+	local grad = new("UIGradient", { Color = colors or UIKit.GoldShine, Parent = s })
+	UIKit.every(grad, function(t)
+		grad.Rotation = (t * (speed or 90)) % 360
+	end)
+end
+
+-- Texte qui brille : une bande claire balaie les lettres de temps en temps
+function UIKit.shinyText(label: TextLabel, color: Color3)
+	label.TextColor3 = Color3.new(1, 1, 1)
+	local light = color:Lerp(Color3.new(1, 1, 1), 0.75)
+	local grad = new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, color),
+			ColorSequenceKeypoint.new(0.42, color),
+			ColorSequenceKeypoint.new(0.5, light),
+			ColorSequenceKeypoint.new(0.58, color),
+			ColorSequenceKeypoint.new(1, color),
+		}),
+		Parent = label,
+	})
+	local ph = math.random() * 3
+	UIKit.every(grad, function(t)
+		-- Balayage d'une seconde toutes les 3 secondes
+		local k = ((t + ph) % 3) / 1
+		grad.Offset = Vector2.new(if k < 1 then -1 + 2 * k else 1, 0)
+	end)
+end
+
+-- Lumière qui pulse derrière un bouton (« achète-moi ! ») ; renvoie le halo pour l'allumer ou l'éteindre
+function UIKit.buttonGlow(button: GuiObject, color: Color3?): ImageLabel
+	local parent = button.Parent :: GuiObject
+	local g = new("ImageLabel", {
+		Name = "ButtonGlow",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = centerOf(button),
+		Size = button.Size + UDim2.fromOffset(70, 60),
+		BackgroundTransparency = 1,
+		Image = UIKit.Art.FxGlow,
+		ImageColor3 = color or Color3.fromRGB(170, 255, 90),
+		ZIndex = button.ZIndex - 1,
+		Parent = parent,
+	})
+	local ph = math.random() * 10
+	UIKit.every(g, function(t)
+		g.ImageTransparency = 0.25 + 0.35 * (0.5 + 0.5 * math.sin(t * 4 + ph))
+	end)
+	return g
+end
+
+-- Explosion de lumière et d'étincelles (achat, niveau gagné)
+function UIKit.burst(parent: GuiObject, at: UDim2?, color: Color3?)
+	local c = color or Color3.fromRGB(255, 230, 120)
+	local pos = at or UDim2.fromScale(0.5, 0.45)
+	local z = parent.ZIndex + 10
+	local flash = new("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = pos,
+		Size = UDim2.fromOffset(40, 40),
+		BackgroundTransparency = 1,
+		Image = UIKit.Art.FxGlow,
+		ImageColor3 = c,
+		ZIndex = z,
+		Parent = parent,
+	})
+	tween(flash, 0.5, { Size = UDim2.fromOffset(300, 300), ImageTransparency = 1 })
+	local rays = new("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = pos,
+		Size = UDim2.fromOffset(60, 60),
+		BackgroundTransparency = 1,
+		Image = UIKit.Art.FxRays,
+		ImageColor3 = c,
+		ZIndex = z,
+		Parent = parent,
+	})
+	tween(rays, 0.7, { Size = UDim2.fromOffset(260, 260), Rotation = 90, ImageTransparency = 1 })
+	for i = 1, 12 do
+		local a = (i / 12) * math.pi * 2 + math.random() * 0.4
+		local d = 70 + math.random() * 70
+		local size = 14 + math.random() * 16
+		local s = new("ImageLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = pos,
+			Size = UDim2.fromOffset(size, size),
+			BackgroundTransparency = 1,
+			Image = UIKit.Art.FxSparkle,
+			ImageColor3 = if i % 2 == 0 then Color3.new(1, 1, 1) else c,
+			ZIndex = z + 1,
+			Parent = parent,
+		})
+		tween(s, 0.55 + math.random() * 0.25, {
+			Position = pos + UDim2.fromOffset(math.cos(a) * d, math.sin(a) * d),
+			Rotation = 180,
+			Size = UDim2.fromOffset(0, 0),
+		}, Enum.EasingStyle.Quart)
+		Debris:AddItem(s, 1)
+	end
+	Debris:AddItem(flash, 0.6)
+	Debris:AddItem(rays, 0.8)
+end
+
+-- Carte qui grossit et s'illumine au survol de la souris
+-- (pas de rotation : elle désactiverait le rognage des rayons de la carte)
+function UIKit.hoverCard(card: GuiObject)
+	local s = scaleOf(card)
+	local stroke = card:FindFirstChildOfClass("UIStroke")
+	local thickness = if stroke then stroke.Thickness else 0
+	card.MouseEnter:Connect(function()
+		tween(s, 0.18, { Scale = 1.06 }, Enum.EasingStyle.Back)
+		if stroke then
+			tween(stroke, 0.15, { Thickness = thickness + 2 })
+		end
+	end)
+	card.MouseLeave:Connect(function()
+		tween(s, 0.2, { Scale = 1 })
+		if stroke then
+			tween(stroke, 0.2, { Thickness = thickness })
+		end
+	end)
+end
+
+-- Calque rogné à l'intérieur d'une carte, pour que rayons et halos ne débordent pas
+function UIKit.fxLayer(card: GuiObject): Frame
+	local existing = card:FindFirstChild("Fx")
+	if existing then
+		return existing :: Frame
+	end
+	return new("Frame", {
+		Name = "Fx",
+		Size = UDim2.new(1, -8, 1, -8),
+		Position = UDim2.fromOffset(4, 4),
+		BackgroundTransparency = 1,
+		ClipsDescendants = true,
+		ZIndex = card.ZIndex + 1,
+		Parent = card,
+	})
+end
+
+-- Poussières lumineuses qui montent lentement dans un panneau (fond vivant)
+function UIKit.dust(parent: GuiObject, count: number?, color: Color3?)
+	local box = new("Frame", {
+		Name = "Dust",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		ClipsDescendants = true,
+		ZIndex = parent.ZIndex,
+		Parent = parent,
+	})
+	for _ = 1, count or 14 do
+		local size = 6 + math.random() * 14
+		local d = new("ImageLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(size, size),
+			BackgroundTransparency = 1,
+			Image = UIKit.Art.FxGlow,
+			ImageColor3 = color or Color3.fromRGB(150, 220, 255),
+			ImageTransparency = 0.35,
+			ZIndex = parent.ZIndex,
+			Parent = box,
+		})
+		local x, speed, ph = math.random(), 0.03 + math.random() * 0.05, math.random()
+		UIKit.every(d, function(t)
+			local y = 1.05 - ((t * speed + ph) % 1) * 1.1
+			d.Position = UDim2.fromScale(x + math.sin(t + ph * 6) * 0.015, y)
+		end)
+	end
+	return box
+end
+
+-- Flou de la scène derrière les fenêtres (le monde se met en retrait)
+local blur: BlurEffect? = nil
+local openWindows = 0
+function UIKit.setBlur(on: boolean)
+	openWindows = math.max(0, openWindows + (if on then 1 else -1))
+	if not blur or not blur.Parent then
+		blur = new("BlurEffect", { Name = "UIBlur", Size = 0, Parent = Lighting })
+	end
+	tween(blur :: BlurEffect, 0.3, { Size = if openWindows > 0 then 14 else 0 })
+end
+
 -- FENÊTRES ET CARTES ---------------------------------------------------------
 
 -- Fond à picots discret, en mosaïque, posé sur un panneau
@@ -456,6 +814,8 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		Parent = holder,
 	}, { UIKit.corner(18), UIKit.stroke(5) })
 	UIKit.studs(frame, 0.75)
+	-- Fond vivant : poussières lumineuses qui montent
+	UIKit.dust(frame, 16)
 	-- Bandeau de titre
 	local header = new("Frame", {
 		Name = "Header",
@@ -465,9 +825,9 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		ZIndex = 2,
 		Parent = frame,
 	}, { UIKit.corner(18), UIKit.stroke(5), UIKit.gradient(colors[1], colors[2]) })
-	-- Reflets en diagonale
+	-- Reflets en diagonale qui glissent lentement
 	for i, x in ipairs({ 0.56, 0.64, 0.69 }) do
-		new("Frame", {
+		local band = new("Frame", {
 			Size = UDim2.new(0, if i == 1 then 36 else 16, 1.8, 0),
 			Position = UDim2.fromScale(x, -0.4),
 			Rotation = 28,
@@ -477,16 +837,25 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 			ZIndex = 2,
 			Parent = header,
 		})
+		UIKit.every(band, function(t)
+			band.Position = UDim2.fromScale(x + math.sin(t * 0.8) * 0.04, -0.4)
+		end)
 	end
-	UIKit.text({
+	-- Lueur derrière le titre et éclat qui balaie le bandeau
+	UIKit.glow(header, { size = 260, position = UDim2.new(0, 110, 0.5, 0), transparency = 0.6, z = 2 })
+	UIKit.shine(header, 3)
+	local title = UIKit.text({
+		AnchorPoint = Vector2.new(0, 0.5),
 		Size = UDim2.fromScale(0.6, 0.7),
-		Position = UDim2.new(0, 26, 0.15, 0),
+		Position = UDim2.new(0, 26, 0.5, 0),
 		Text = props.title,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		ZIndex = 3,
+		ZIndex = 4,
 		Stroke = 4.5,
 		Parent = header,
 	})
+	UIKit.float(title, 2, 1.5, 2.2)
+	UIKit.sparkles(header, { count = 3, size = 26, z = 5 })
 	-- Croix rouge
 	local close = new("TextButton", {
 		Name = "Close",
@@ -501,6 +870,12 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 	}, { UIKit.corner(14), UIKit.stroke(4), UIKit.gradient(UIKit.Colors.Red[1], UIKit.Colors.Red[2]) })
 	UIKit.text({ Size = UDim2.fromScale(0.6, 0.76), Position = UDim2.fromScale(0.2, 0.12), Text = "X", ZIndex = 7, Stroke = 4, Parent = close })
 	UIKit.juice(close)
+	close.MouseEnter:Connect(function()
+		tween(close, 0.2, { Rotation = 10 }, Enum.EasingStyle.Back)
+	end)
+	close.MouseLeave:Connect(function()
+		tween(close, 0.2, { Rotation = 0 })
+	end)
 	-- Corps qui défile
 	local body = new("ScrollingFrame", {
 		Name = "Body",
@@ -542,7 +917,11 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 			prepare()
 		end
 		dim.BackgroundTransparency = 1
-		tween(dim, 0.25, { BackgroundTransparency = 0.45 })
+		tween(dim, 0.25, { BackgroundTransparency = 0.5 })
+		UIKit.setBlur(true)
+		-- Arrivée en rebond depuis le bas (pas de rotation : elle désactiverait le rognage du défilement)
+		frame.Position = UDim2.fromOffset(0, 60)
+		tween(frame, 0.45, { Position = UDim2.new() }, Enum.EasingStyle.Back)
 		UIKit.popIn(frame)
 	end
 	local function closeWindow()
@@ -550,7 +929,9 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 			return
 		end
 		opened = false
+		UIKit.setBlur(false)
 		tween(dim, 0.2, { BackgroundTransparency = 1 })
+		tween(frame, 0.18, { Position = UDim2.fromOffset(0, 40) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 		tween(scaleOf(frame), 0.18, { Scale = 0.6 }, Enum.EasingStyle.Back, Enum.EasingDirection.In).Completed:Connect(function()
 			if not opened then
 				gui.Enabled = false
@@ -574,15 +955,18 @@ end
 
 -- Titre de section « ~ Potions ~ » en couleur, épais contour
 function UIKit.sectionTitle(parent: Instance, text: string, color: Color3, order: number): TextLabel
-	return UIKit.text({
+	local t = UIKit.text({
 		Name = "Title_" .. text,
 		Size = UDim2.new(1, 0, 0, 48),
 		Text = "~ " .. text .. " ~",
-		TextColor3 = color,
 		LayoutOrder = order,
 		Stroke = 4,
 		Parent = parent,
 	})
+	-- Reflet qui balaie le titre et léger balancement (la position est tenue par la liste)
+	UIKit.shinyText(t, color)
+	UIKit.wiggle(t, 1.5, 2)
+	return t
 end
 
 -- Grille de cartes qui grandit avec son contenu
@@ -597,10 +981,12 @@ function UIKit.grid(parent: Instance, cell: Vector2, order: number): Frame
 	}, {
 		new("UIGridLayout", {
 			CellSize = UDim2.fromOffset(cell.X, cell.Y),
-			CellPadding = UDim2.fromOffset(12, 12),
+			CellPadding = UDim2.fromOffset(12, 18),
 			HorizontalAlignment = Enum.HorizontalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
+		-- Marge en haut : les pastilles penchées dépassent des cartes sans cacher le titre
+		new("UIPadding", { PaddingTop = UDim.new(0, 12) }),
 	})
 end
 
@@ -711,6 +1097,8 @@ function UIKit.ribbon(parent: GuiObject, text: string, color: string?): Frame
 		Parent = parent,
 	}, { UIKit.corner(8), UIKit.stroke(3), UIKit.gradient(colors[1], colors[2]) })
 	UIKit.text({ Size = UDim2.fromScale(0.9, 0.78), Position = UDim2.fromScale(0.05, 0.11), Text = text, ZIndex = 9, Stroke = 2.5, Parent = r })
+	UIKit.wiggle(r, 4, 3.5)
+	UIKit.shine(r, 2.5)
 	return r
 end
 
