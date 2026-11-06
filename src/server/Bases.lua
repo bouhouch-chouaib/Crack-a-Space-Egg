@@ -54,9 +54,10 @@ local function release(player: Player)
 	for i, p in pairs(owners) do
 		if p == player then
 			owners[i] = nil
+			-- Plus de panneau « FREE BASE » : une base libre n'affiche rien
 			local l = label(WorldBuilder.Bases[i])
 			if l then
-				l.Text = "FREE BASE"
+				l.Text = ""
 			end
 		end
 	end

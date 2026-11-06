@@ -128,11 +128,10 @@ local function prepareShip(): ({ Model }, { BasePart })
 			break
 		end
 		base:SetAttribute("Index", #bases + 1)
+		-- Les bases sont vides au départ (clôture + sol) : la machine à casser viendra plus tard
 		local crack = base:FindFirstChild("CrackPoint", true)
 		if crack then
 			prompt(crack, "Crack eggs", "Cracking Machine", Enum.KeyCode.E)
-		else
-			warn("[WorldBuilder] CrackPoint manquant dans " .. base.Name)
 		end
 		table.insert(bases, base)
 	end
