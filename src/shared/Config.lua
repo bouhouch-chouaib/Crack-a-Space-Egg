@@ -115,26 +115,29 @@ local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost,
 		Crystals = crystals,
 	}
 end
+-- Prix de déblocage (UnlockCost) calés sur les revenus des créatures (Config.Hatch) : avec une base
+-- pleine de créatures plutôt communes de l'anneau précédent, il faut environ 10 min (anneau 2),
+-- 15 min (3), 20 min (4), 30 min (5), 45 min (6) et 1 h (7).
 Config.Rings = {
 	newRing("Dust Belt", 3.4, 20, 24, 1, 1.0, 0, Color3.fromRGB(120, 108, 98), {
 		"Grey Quartz", "Calcite", "Amethyst", "Topaz", "Stellar Opal", "Pluto Diamond", "",
 	}),
-	newRing("Ice Ring", 3.1, 18, 120, 4, 1.3, 340, Color3.fromRGB(150, 200, 230), {
+	newRing("Ice Ring", 3.1, 18, 120, 4, 1.3, 75000, Color3.fromRGB(150, 200, 230), {
 		"Frostite", "Snow Crystal", "Aquamarine", "Boreal Sapphire", "Comet Tear", "Aurora Heart", "",
 	}),
-	newRing("Magma Field", 2.8, 20, 540, 16, 1.8, 11000, Color3.fromRGB(110, 50, 40), {
+	newRing("Magma Field", 2.8, 20, 540, 16, 1.8, 4e6, Color3.fromRGB(110, 50, 40), {
 		"Obsidian", "Red Basalt", "Garnet", "Volcanic Ruby", "Phoenix Eye", "Sun Blood", "",
 	}),
-	newRing("Nebula", 2.5, 22, 2400, 64, 2.4, 350000, Color3.fromRGB(120, 80, 170), {
+	newRing("Nebula", 2.5, 22, 2400, 64, 2.4, 2e8, Color3.fromRGB(120, 80, 170), {
 		"Haze Quartz", "Mist Pearl", "Violet Flux", "Dreamstone", "Nova Shard", "Nebula Heart", "",
 	}),
-	newRing("Devourer Belt", 2.2, 24, 10800, 256, 3.2, 11000000, Color3.fromRGB(70, 60, 60), {
+	newRing("Devourer Belt", 2.2, 24, 10800, 256, 3.2, 1e10, Color3.fromRGB(70, 60, 60), {
 		"Bone Flint", "Fang Stone", "Maw Garnet", "Hunger Opal", "Devourer Eye", "Abyss Crown", "Void Pearl",
 	}),
-	newRing("The Rift", 1.95, 28, 48000, 1024, 4.2, 350000000, Color3.fromRGB(60, 90, 120), {
+	newRing("The Rift", 1.95, 28, 48000, 1024, 4.2, 5.5e11, Color3.fromRGB(60, 90, 120), {
 		"Rift Shale", "Split Jade", "Fracture Gem", "Warp Sapphire", "Paradox Prism", "Time Shard", "Rift Singularity",
 	}),
-	newRing("The Nest", 1.7, 32, 210000, 4096, 5.5, 11000000000, Color3.fromRGB(150, 120, 80), {
+	newRing("The Nest", 1.7, 32, 210000, 4096, 5.5, 2.6e13, Color3.fromRGB(150, 120, 80), {
 		"Shell Quartz", "Nest Amber", "Brood Ruby", "Mother Opal", "Hatchling Star", "Queen's Tear", "Cosmic Yolk",
 	}),
 }
@@ -172,9 +175,10 @@ end
 
 -- Améliorations : coût = Base * Growth^niveau
 Config.Upgrades = {
-	Cargo = { Name = "Cargo", Base = 40, Growth = 1.5, Max = 30 },
-	Thruster = { Name = "Thruster", Base = 30, Growth = 1.7, Max = 25 },
-	Scanner = { Name = "Scanner", Base = 90, Growth = 2.05, Max = 20 },
+	-- Coût du niveau n = Base × Growth^n (de quelques centaines de $ aux milliers de milliards)
+	Cargo = { Name = "Cargo", Base = 250, Growth = 2.3, Max = 30 },
+	Thruster = { Name = "Thruster", Base = 200, Growth = 2.6, Max = 25 },
+	Scanner = { Name = "Scanner", Base = 800, Growth = 3.1, Max = 20 },
 }
 Config.UpgradeOrder = { "Cargo", "Thruster", "Scanner" }
 
@@ -196,18 +200,19 @@ Config.Derock = {
 local function drill(name, power, cost, robux, color)
 	return { Name = name, Power = power, Cost = cost, Robux = robux, ProductId = 0, Color = color }
 end
+-- Prix en $ calés sur les revenus des créatures : chaque foreuse vaut à peu près le déblocage d'un demi-anneau
 Config.Drills = {
 	drill("Starter Drill", 5, 0, 0, Color3.fromRGB(170, 176, 190)),
-	drill("Rusty Drill", 14, 120, 25, Color3.fromRGB(196, 120, 70)),
-	drill("Steel Drill", 40, 900, 49, Color3.fromRGB(150, 170, 200)),
-	drill("Turbo Drill", 110, 6000, 79, Color3.fromRGB(80, 170, 255)),
-	drill("Laser Drill", 320, 40000, 129, Color3.fromRGB(90, 230, 120)),
-	drill("Plasma Drill", 900, 260000, 199, Color3.fromRGB(190, 100, 255)),
-	drill("Golden Drill", 2600, 1700000, 299, Color3.fromRGB(255, 200, 50)),
-	drill("Crystal Drill", 7500, 11000000, 449, Color3.fromRGB(120, 240, 255)),
-	drill("Nova Drill", 21000, 75000000, 699, Color3.fromRGB(255, 120, 80)),
-	drill("Galaxy Drill", 60000, 500000000, 999, Color3.fromRGB(255, 110, 210)),
-	drill("Cosmic Drill", 170000, 3500000000, 1499, Color3.fromRGB(130, 255, 240)),
+	drill("Rusty Drill", 14, 5000, 25, Color3.fromRGB(196, 120, 70)),
+	drill("Steel Drill", 40, 65000, 49, Color3.fromRGB(150, 170, 200)),
+	drill("Turbo Drill", 110, 850000, 79, Color3.fromRGB(80, 170, 255)),
+	drill("Laser Drill", 320, 1.1e7, 129, Color3.fromRGB(90, 230, 120)),
+	drill("Plasma Drill", 900, 1.4e8, 199, Color3.fromRGB(190, 100, 255)),
+	drill("Golden Drill", 2600, 1.8e9, 299, Color3.fromRGB(255, 200, 50)),
+	drill("Crystal Drill", 7500, 2.3e10, 449, Color3.fromRGB(120, 240, 255)),
+	drill("Nova Drill", 21000, 3e11, 699, Color3.fromRGB(255, 120, 80)),
+	drill("Galaxy Drill", 60000, 4e12, 999, Color3.fromRGB(255, 110, 210)),
+	drill("Cosmic Drill", 170000, 5e13, 1499, Color3.fromRGB(130, 255, 240)),
 }
 
 -- Mutations
@@ -542,20 +547,20 @@ Config.Shop = {
 	},
 	-- Boost gratuit contre une pub récompensée
 	FreeBoost = { Name = "Free x2 Boost", Minutes = 5, Art = "FreeBoost" },
-	-- Paquets d'argent : montant = Base × multiplicateur de valeur de l'anneau le plus loin débloqué,
-	-- pour qu'un paquet reste intéressant à toutes les étapes du jeu
+	-- Paquets d'argent : montant = Base × Config.Hatch.RingIncome de l'anneau le plus loin débloqué
+	-- (environ 4 min à 35 min de revenus), pour qu'un paquet reste intéressant à toutes les étapes du jeu
 	MoneyPacks = {
-		{ Art = "Money1", Base = 500, Id = 0, Price = 19 },
-		{ Art = "Money2", Base = 1800, Id = 0, Price = 49 },
-		{ Art = "Money3", Base = 4000, Id = 0, Price = 99, Ribbon = "POPULAR!" },
-		{ Art = "Money4", Base = 11000, Id = 0, Price = 249 },
-		{ Art = "Money5", Base = 25000, Id = 0, Price = 499, Ribbon = "BEST VALUE!" },
+		{ Art = "Money1", Base = 6000, Id = 0, Price = 19 },
+		{ Art = "Money2", Base = 20000, Id = 0, Price = 49 },
+		{ Art = "Money3", Base = 45000, Id = 0, Price = 99, Ribbon = "POPULAR!" },
+		{ Art = "Money4", Base = 120000, Id = 0, Price = 249 },
+		{ Art = "Money5", Base = 260000, Id = 0, Price = 499, Ribbon = "BEST VALUE!" },
 	},
 }
 
 function Config.MoneyPackAmount(base: number, ring: number): number
-	local r = Config.Rings[math.clamp(ring, 1, #Config.Rings)]
-	return base * r.ValueMult
+	local incomes = Config.Hatch.RingIncome
+	return base * incomes[math.clamp(ring, 1, #incomes)]
 end
 
 -- ŒUFS ------------------------------------------------------------------------
