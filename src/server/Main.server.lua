@@ -7,6 +7,7 @@ local BeltService = require(script.Parent.BeltService)
 local GameService = require(script.Parent.GameService)
 local DataService = require(script.Parent.DataService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
+local MonetizationService = require(script.Parent.MonetizationService)
 
 WorldBuilder.Build()
 Bases.Start()
@@ -15,3 +16,4 @@ BeltService.Start()
 GameService.Start() -- branche DataService.Loaded avant que les parties se chargent
 DataService.Start()
 LeaderboardService.Start()
+MonetizationService.Start()

@@ -219,9 +219,6 @@ local upgradeGrid = UIKit.grid(body, Vector2.new(152, 258), nextOrder())
 
 -- Ce qu'on montre pour chaque amélioration : titre, illustration, effet d'un niveau
 local UPGRADES = {
-	{ id = "Drill", title = "DRILL", art = "UpDrill", color = "Orange", effect = function(l)
-		return string.format("%.1f", Config.DrillPower(l))
-	end },
 	{ id = "Cargo", title = "CARGO", art = "UpCargo", color = "Blue", effect = function(l)
 		return string.format("%d eggs", Config.CargoSlots(l))
 	end },
@@ -268,6 +265,29 @@ local function upgradeCard(title: string, art: string, color: string, i: number,
 	return data
 end
 
+-- La foreuse : on achète la suivante, en $ (gros bouton) ou en Robux (petit bouton en haut)
+local drillCard = upgradeCard("DRILL", "UpDrill", "Orange", 0, function()
+	Remotes.BuyDrill:FireServer()
+end)
+local drillRobux, drillRobuxText = UIKit.priceButton({
+	parent = drillCard.card,
+	text = "",
+	robux = true,
+	size = UDim2.fromOffset(74, 32),
+	position = UDim2.new(1, -80, 0, 36),
+})
+drillRobuxText.TextSize = 20
+local robuxIcon = drillRobux:FindFirstChild("Robux", true) :: ImageLabel?
+if robuxIcon then
+	robuxIcon.Size = UDim2.fromOffset(20, 20)
+end
+drillRobux.MouseButton1Click:Connect(function()
+	local nextDrill = Config.Drills[(player:GetAttribute("Drill") or 1) + 1]
+	if nextDrill then
+		buyRobux(nextDrill.ProductId, false)
+	end
+end)
+
 for i, u in ipairs(UPGRADES) do
 	upgradeCards[u.id] = upgradeCard(u.title, u.art, u.color, i, function()
 		Remotes.BuyUpgrade:FireServer(u.id)
@@ -298,23 +318,34 @@ local function refreshUpgrades()
 		end
 		card.light.Visible = card.affordable
 	end
+	-- Foreuse : nom de l'actuelle, puissance actuelle -> suivante
+	local tier = player:GetAttribute("Drill") or 1
+	local current, nextDrill = Config.Drills[tier], Config.Drills[tier + 1]
+	drillCard.level.Text = if current then current.Name else ""
+	if current and nextDrill then
+		drillCard.effect.Text = "⚡" .. Format.Short(current.Power) .. " → " .. Format.Short(nextDrill.Power)
+		drillCard.price.Text = "$" .. Format.Short(nextDrill.Cost)
+		drillCard.affordable, drillCard.why = credits >= nextDrill.Cost, "Not enough $!"
+		UIKit.recolor(drillCard.grad, if drillCard.affordable then "Green" else "Grey")
+		drillRobuxText.Text = tostring(nextDrill.Robux)
+		drillRobux.Visible = true
+	else
+		drillCard.effect.Text = "⚡" .. Format.Short(current and current.Power or 0)
+		drillCard.price.Text = "MAX"
+		UIKit.recolor(drillCard.grad, "Gold")
+		drillCard.affordable, drillCard.why = false, "Best drill already!"
+		drillRobux.Visible = false
+	end
+	drillCard.light.Visible = drillCard.affordable
+
 	local ring = player:GetAttribute("Ring") or 1
 	local nextRing = Config.Rings[ring + 1]
 	suit.level.Text = "Lv " .. ring
 	if nextRing then
-		local drill = player:GetAttribute("Lvl_Drill") or 0
-		if drill < nextRing.DrillLevel then
-			-- Il faut d'abord une meilleure foreuse : on le dit sur le bouton
-			suit.effect.Text = "Opens " .. nextRing.Name
-			suit.price.Text = "Drill Lv " .. nextRing.DrillLevel
-			UIKit.recolor(suit.grad, "Grey")
-			suit.affordable, suit.why = false, "Upgrade your drill first!"
-		else
-			suit.effect.Text = "Opens " .. nextRing.Name
-			suit.price.Text = "$" .. Format.Short(nextRing.UnlockCost)
-			suit.affordable, suit.why = credits >= nextRing.UnlockCost, "Not enough $!"
-			UIKit.recolor(suit.grad, if suit.affordable then "Green" else "Grey")
-		end
+		suit.effect.Text = "Opens " .. nextRing.Name
+		suit.price.Text = "$" .. Format.Short(nextRing.UnlockCost)
+		suit.affordable, suit.why = credits >= nextRing.UnlockCost, "Not enough $!"
+		UIKit.recolor(suit.grad, if suit.affordable then "Green" else "Grey")
 	else
 		suit.effect.Text = "All rings open"
 		suit.price.Text = "MAX"
@@ -531,11 +562,12 @@ local function remember()
 		known[u.id] = player:GetAttribute("Lvl_" .. u.id) or 0
 	end
 	known.Ring = player:GetAttribute("Ring") or 1
+	known.Drill = player:GetAttribute("Drill") or 1
 end
 remember()
 
 player.AttributeChanged:Connect(function(name)
-	if not (name == "Credits" or name == "Ring" or string.sub(name, 1, 4) == "Lvl_") then
+	if not (name == "Credits" or name == "Ring" or name == "Drill" or string.sub(name, 1, 4) == "Lvl_") then
 		return
 	end
 	if win.isOpen() then
@@ -546,11 +578,13 @@ player.AttributeChanged:Connect(function(name)
 	end
 	-- Chaque niveau est suivi séparément : les événements arrivent en différé,
 	-- un autre attribut ne doit pas « voir » ce niveau avant lui
-	local id = if name == "Ring" then "Ring" else string.sub(name, 5)
+	local id = if name == "Ring" or name == "Drill" then name else string.sub(name, 5)
 	local now = player:GetAttribute(name)
 	if win.isOpen() and known[id] and type(now) == "number" and now > known[id] then
 		if id == "Ring" then
 			celebrate(suit.card, "NEW RING!", Color3.fromRGB(230, 170, 255))
+		elseif id == "Drill" then
+			celebrate(drillCard.card, "NEW DRILL!", Color3.fromRGB(255, 200, 90))
 		elseif upgradeCards[id] then
 			celebrate(upgradeCards[id].card, "LEVEL UP!", Color3.fromRGB(255, 236, 110))
 		end

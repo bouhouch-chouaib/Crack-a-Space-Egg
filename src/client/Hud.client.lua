@@ -124,6 +124,10 @@ local function refreshBadges()
 			affordable = true
 		end
 	end
+	local nextDrill = Config.Drills[(player:GetAttribute("Drill") or 1) + 1]
+	if nextDrill and credits >= nextDrill.Cost then
+		affordable = true
+	end
 	buttons.Shop.badge.Visible = affordable
 end
 
@@ -219,7 +223,7 @@ player.AttributeChanged:Connect(function(name)
 		refreshOxygen()
 	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" then
 		refreshCargo()
-	elseif string.sub(name, 1, 4) == "Lvl_" then
+	elseif name == "Drill" or string.sub(name, 1, 4) == "Lvl_" then
 		refreshBadges()
 	end
 end)

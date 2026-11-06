@@ -23,6 +23,9 @@
         "BuyUpgrade": {
           "$className": "RemoteEvent"
         },
+        "BuyDrill": {
+          "$className": "RemoteEvent"
+        },
         "UnlockRing": {
           "$className": "RemoteEvent"
         },

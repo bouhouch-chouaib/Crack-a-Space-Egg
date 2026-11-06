@@ -44,6 +44,7 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("CargoRarities", table.concat(rarities, ","))
 	player:SetAttribute("Ring", d.ring)
+	player:SetAttribute("Drill", d.drill)
 	player:SetAttribute("OxygenMax", d.oxygenMax or Config.Oxygen.Start)
 	for id in pairs(Config.Upgrades) do
 		player:SetAttribute("Lvl_" .. id, d.levels[id])
@@ -130,7 +131,7 @@ local function onDrill(player: Player, target: any)
 		return
 	end
 
-	local eggs, broken = BeltService.Hit(a, player, Config.DrillPower(d.levels.Drill) * Config.DrillTick, room)
+	local eggs, broken = BeltService.Hit(a, player, Config.DrillPower(d.drill) * Config.DrillTick, room)
 	if eggs > 0 then
 		local best = 0
 		for _ = 1, eggs do
@@ -227,6 +228,40 @@ local function buyUpgrade(player: Player, id: any)
 	sync(player)
 end
 
+-- Foreuse suivante, payée en $ (en Robux : MonetizationService)
+local function buyDrill(player: Player)
+	local d = DataService.Get(player)
+	if not d then
+		return
+	end
+	local nextDrill = Config.Drills[d.drill + 1]
+	if not nextDrill then
+		return
+	end
+	if d.credits < nextDrill.Cost then
+		notice(player, "Not enough $", "warn")
+		return
+	end
+	d.credits -= nextDrill.Cost
+	d.drill += 1
+	sync(player)
+	notice(player, nextDrill.Name .. " equipped!", "good")
+end
+
+-- Donne une foreuse achetée en Robux (appelé par MonetizationService). On ne redescend jamais.
+function GameService.GrantDrill(player: Player, tier: number): boolean
+	local d = DataService.Get(player)
+	if not d or not Config.Drills[tier] then
+		return false
+	end
+	if tier > d.drill then
+		d.drill = tier
+		sync(player)
+		notice(player, Config.Drills[tier].Name .. " equipped!", "good")
+	end
+	return true
+end
+
 local function unlockRing(player: Player, index: any)
 	local d = DataService.Get(player)
 	if not d or type(index) ~= "number" or index ~= d.ring + 1 then
@@ -234,10 +269,6 @@ local function unlockRing(player: Player, index: any)
 	end
 	local ring = Config.Rings[index]
 	if not ring then
-		return
-	end
-	if d.levels.Drill < ring.DrillLevel then
-		notice(player, "Your drill must be level " .. ring.DrillLevel, "warn")
 		return
 	end
 	if d.credits < ring.UnlockCost then
@@ -312,6 +343,7 @@ end
 function GameService.Start()
 	Remotes.Drill.OnServerEvent:Connect(onDrill)
 	Remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
+	Remotes.BuyDrill.OnServerEvent:Connect(buyDrill)
 	Remotes.UnlockRing.OnServerEvent:Connect(unlockRing)
 
 	for _, base in ipairs(WorldBuilder.Bases) do

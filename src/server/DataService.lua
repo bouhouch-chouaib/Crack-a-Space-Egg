@@ -8,7 +8,7 @@ local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 
 local DataService = {}
 
-local VERSION = 2 -- v2 : la soute contient des œufs { ring, rarity } (rareté tirée au forage)
+local VERSION = 3 -- v2 : la soute contient des œufs { ring, rarity } ; v3 : foreuses achetées une par une
 local store: DataStore? = nil
 local ok, err = pcall(function()
 	store = DataStoreService:GetDataStore(Config.SaveKey)
@@ -26,7 +26,8 @@ local function default()
 	return {
 		v = VERSION,
 		credits = 0,
-		levels = { Drill = 0, Cargo = 0, Thruster = 0, Scanner = 0 },
+		drill = 1, -- foreuse équipée (index dans Config.Drills ; on les achète dans l'ordre)
+		levels = { Cargo = 0, Thruster = 0, Scanner = 0 },
 		ring = 1, -- plus haut anneau débloqué
 		cargo = {}, -- un œuf par entrée : { ring = anneau d'origine, rarity = rareté }
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
@@ -53,6 +54,11 @@ local function migrate(data)
 		if type(egg) == "number" then
 			data.cargo[i] = { ring = egg }
 		end
+	end
+	-- v2 -> v3 : l'ancien niveau de foreuse (0 à 60) devient la foreuse du palier correspondant
+	if data.levels.Drill ~= nil then
+		data.drill = math.clamp(1 + math.floor(data.levels.Drill / 6), 1, #Config.Drills)
+		data.levels.Drill = nil
 	end
 	data.v = VERSION
 	return data
