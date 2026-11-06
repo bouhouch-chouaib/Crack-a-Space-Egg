@@ -108,7 +108,7 @@ local function onDrill(player: Player, target: any, at: any)
 	end
 	-- Cadence : un coup tous les DrillTick, avec un peu de marge pour la latence
 	local now = os.clock()
-	if lastDrill[player] and now - lastDrill[player] < Config.DrillTick * 0.8 then
+	if lastDrill[player] and now - lastDrill[player] < Config.DrillTick * 0.6 then
 		return
 	end
 	lastDrill[player] = now
@@ -118,7 +118,9 @@ local function onDrill(player: Player, target: any, at: any)
 		return
 	end
 	local pos = BeltService.Position(a, workspace:GetServerTimeNow())
-	local reach = (hrp.Position - pos).Magnitude - a.part.Size.X / 2
+	-- Distance à la surface, au plus large de la roche (les formes allongées ne sont pas pénalisées)
+	local s = a.part.Size
+	local reach = (hrp.Position - pos).Magnitude - math.max(s.X, s.Y, s.Z) / 2
 	if reach > Config.DrillRange + Config.DrillSlack then
 		return
 	end
@@ -345,14 +347,22 @@ local function watchFalls()
 			local d = DataService.Get(player)
 			local character = player.Character
 			if hrp and d and character and hrp.Position.Y < Config.Map.FallY then
-				local lost = #d.cargo
-				d.cargo = {}
 				hrp.AssemblyLinearVelocity = Vector3.zero
-				local cf = Bases.SpawnCFrame(player) or CFrame.new(0, 4, -40)
-				character:SetPrimaryPartCFrame(cf)
-				sync(player)
-				if lost > 0 then
-					notice(player, "You drifted into the Void and lost " .. lost .. " eggs", "bad")
+				local grace = BeltService.Grace[player]
+				if grace and os.clock() < grace then
+					-- Sa roche a cassé ou disparu sous lui : on le sauve, il garde ses œufs
+					BeltService.Grace[player] = nil
+					character:SetPrimaryPartCFrame(CFrame.new(0, 4, Config.Map.FrontZ - 6))
+					notice(player, "🛟 Saved! Your rock broke, your eggs are safe", "info")
+				else
+					local lost = #d.cargo
+					d.cargo = {}
+					local cf = Bases.SpawnCFrame(player) or CFrame.new(0, 4, -40)
+					character:SetPrimaryPartCFrame(cf)
+					sync(player)
+					if lost > 0 then
+						notice(player, "You drifted into the Void and lost " .. lost .. " eggs", "bad")
+					end
 				end
 			end
 		end

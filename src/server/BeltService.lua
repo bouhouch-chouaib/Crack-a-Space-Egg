@@ -63,7 +63,25 @@ function BeltService.Get(part: Instance): Asteroid?
 	return active[part :: BasePart]
 end
 
+-- Joueurs qui se tenaient sur une roche qui vient de casser ou de disparaître : délai de grâce
+-- (lu par GameService.watchFalls : une chute pendant ce délai ne fait pas perdre la soute)
+BeltService.Grace = {} :: { [Player]: number }
+
+local function rescueRiders(a: Asteroid)
+	local pos = BeltService.Position(a, now())
+	local s = a.part.Size
+	local reach = math.max(s.X, s.Y, s.Z) / 2 + 8
+	for _, player in ipairs(Players:GetPlayers()) do
+		local character = player.Character
+		local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if hrp and (hrp.Position - pos).Magnitude <= reach then
+			BeltService.Grace[player] = os.clock() + Config.RescueTime
+		end
+	end
+end
+
 local function remove(a: Asteroid)
+	rescueRiders(a)
 	if active[a.part] then
 		active[a.part] = nil
 		count -= 1
@@ -109,8 +127,15 @@ local function spawn(ringIndex: number, age: number)
 	-- (même vitesse linéaire : deux voisins gardent à peu près leur écart en défilant)
 	local radius, height
 	for attempt = 1, 6 do
-		radius = Config.RingRadius(ringIndex) + rng:NextNumber(-margin, margin)
-		height = rng:NextNumber(-field, field)
+		local B = Config.Belt
+		if rng:NextNumber() < B.WalkShare then
+			-- Couche de marche : à hauteur du pont, côté intérieur de l'anneau (atteignable)
+			radius = Config.RingRadius(ringIndex) - margin + rng:NextNumber(0, 2 * margin * B.WalkDepth)
+			height = rng:NextNumber(B.WalkHeight[1], B.WalkHeight[2])
+		else
+			radius = Config.RingRadius(ringIndex) + rng:NextNumber(-margin, margin)
+			height = rng:NextNumber(-field, field)
+		end
 		local angle = -Config.Belt.SpawnArc / radius + ring.Speed / radius * age
 		local pos = Config.OrbitPosition(radius, angle, height)
 		local free = true
@@ -210,6 +235,7 @@ function BeltService.Hit(a: Asteroid, player: Player, damage: number, room: numb
 	a.part:SetAttribute("HP", a.hp)
 	a.part:SetAttribute("Eggs", a.stock)
 	if a.stock <= 0 then
+		rescueRiders(a)
 		-- On ne cache pas la roche ici : chaque client la fait voler en éclats (Impact.client).
 		-- On la rend juste intraversable et non visable, et on la supprime un peu plus tard.
 		for _, d in ipairs(a.model:GetDescendants()) do

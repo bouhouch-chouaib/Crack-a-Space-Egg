@@ -69,13 +69,18 @@ Config.Events = {
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 180, -- environ 120 en temps normal, plus pendant une pluie de météores
+	MaxActive = 230, -- environ 160 en temps normal, plus pendant une pluie de météores
 	SpawnArc = 180, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
 	-- Hauteur : les astéroïdes s'étalent sur plusieurs étages, plus haut dans les grands anneaux
 	HeightBase = 10, -- ± studs au minimum
 	HeightPerWidth = 0.15, -- + 15 % de l'épaisseur de l'anneau
 	HeightMax = 36,
 	Spacing = 0.9, -- deux astéroïdes ne naissent pas plus près que 90 % de leurs rayons cumulés
+	-- Couche de marche : une partie des astéroïdes passe à la hauteur du pont, du côté intérieur de
+	-- l'anneau. On peut forer depuis le quai (ou un relais) et sauter de roche en roche.
+	WalkShare = 0.6, -- part des astéroïdes dans la couche de marche
+	WalkHeight = { -9, 0 }, -- hauteur de leur centre (le pont est à 0)
+	WalkDepth = 0.3, -- ils restent dans les 30 % intérieurs de l'épaisseur de l'anneau (près du quai / du relais)
 }
 
 -- Demi-hauteur du champ de l'anneau i (les astéroïdes vont de -h à +h)
@@ -112,25 +117,25 @@ local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost,
 	}
 end
 Config.Rings = {
-	newRing("Dust Belt", 3.4, 12, 24, 1, 1.0, 0, Color3.fromRGB(120, 108, 98), {
+	newRing("Dust Belt", 3.4, 20, 24, 1, 1.0, 0, Color3.fromRGB(120, 108, 98), {
 		"Grey Quartz", "Calcite", "Amethyst", "Topaz", "Stellar Opal", "Pluto Diamond", "",
 	}),
-	newRing("Ice Ring", 3.1, 12, 120, 4, 1.3, 340, Color3.fromRGB(150, 200, 230), {
+	newRing("Ice Ring", 3.1, 18, 120, 4, 1.3, 340, Color3.fromRGB(150, 200, 230), {
 		"Frostite", "Snow Crystal", "Aquamarine", "Boreal Sapphire", "Comet Tear", "Aurora Heart", "",
 	}),
-	newRing("Magma Field", 2.8, 14, 540, 16, 1.8, 11000, Color3.fromRGB(110, 50, 40), {
+	newRing("Magma Field", 2.8, 20, 540, 16, 1.8, 11000, Color3.fromRGB(110, 50, 40), {
 		"Obsidian", "Red Basalt", "Garnet", "Volcanic Ruby", "Phoenix Eye", "Sun Blood", "",
 	}),
-	newRing("Nebula", 2.5, 16, 2400, 64, 2.4, 350000, Color3.fromRGB(120, 80, 170), {
+	newRing("Nebula", 2.5, 22, 2400, 64, 2.4, 350000, Color3.fromRGB(120, 80, 170), {
 		"Haze Quartz", "Mist Pearl", "Violet Flux", "Dreamstone", "Nova Shard", "Nebula Heart", "",
 	}),
-	newRing("Devourer Belt", 2.2, 18, 10800, 256, 3.2, 11000000, Color3.fromRGB(70, 60, 60), {
+	newRing("Devourer Belt", 2.2, 24, 10800, 256, 3.2, 11000000, Color3.fromRGB(70, 60, 60), {
 		"Bone Flint", "Fang Stone", "Maw Garnet", "Hunger Opal", "Devourer Eye", "Abyss Crown", "Void Pearl",
 	}),
-	newRing("The Rift", 1.95, 22, 48000, 1024, 4.2, 350000000, Color3.fromRGB(60, 90, 120), {
+	newRing("The Rift", 1.95, 28, 48000, 1024, 4.2, 350000000, Color3.fromRGB(60, 90, 120), {
 		"Rift Shale", "Split Jade", "Fracture Gem", "Warp Sapphire", "Paradox Prism", "Time Shard", "Rift Singularity",
 	}),
-	newRing("The Nest", 1.7, 26, 210000, 4096, 5.5, 11000000000, Color3.fromRGB(150, 120, 80), {
+	newRing("The Nest", 1.7, 32, 210000, 4096, 5.5, 11000000000, Color3.fromRGB(150, 120, 80), {
 		"Shell Quartz", "Nest Amber", "Brood Ruby", "Mother Opal", "Hatchling Star", "Queen's Tear", "Cosmic Yolk",
 	}),
 }
@@ -217,9 +222,12 @@ Config.ShinyChance = 1 / 40
 Config.ShinyMult = 3
 
 -- Forage
-Config.DrillRange = 22 -- studs entre le joueur et la surface de l'astéroïde
+Config.DrillRange = 32 -- studs entre le joueur et la surface de l'astéroïde
 Config.DrillTick = 0.25 -- secondes entre deux coups envoyés au serveur
-Config.DrillSlack = 10 -- marge de portée côté serveur (latence + défilement)
+Config.DrillSlack = 12 -- marge de portée côté serveur (latence + défilement)
+-- Sauvetage : si la roche sous le joueur casse ou disparaît, il a ce temps pour se rattraper ;
+-- s'il tombe quand même dans le Vide, il est ramené au bout du quai SANS perdre ses œufs
+Config.RescueTime = 6
 
 -- Jetpack (côté client)
 Config.JetpackFuelBase = 2.5 -- secondes de poussée
