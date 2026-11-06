@@ -3,6 +3,7 @@
 -- on calcule sa position à partir du temps serveur, donc tous les clients voient la même chose.
 -- La vitesse donnée à la roche entraîne le joueur qui se tient dessus.
 
+local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -21,6 +22,7 @@ type Orbit = {
 	t0: number,
 	yaw: CFrame,
 	root: BasePart?, -- la roche sur laquelle on marche
+	half: number, -- demi-taille de la roche (pour le fondu au loin)
 	fade: number, -- transparence de fondu actuelle (0 = bien visible)
 	parts: { BasePart },
 	offsets: { CFrame }, -- position de chaque pièce par rapport au pivot du modèle
@@ -41,6 +43,7 @@ local function track(model: Instance)
 		t0 = model:GetAttribute("T0") :: number,
 		yaw = CFrame.Angles(0, (model:GetAttribute("Yaw") or 0) :: number, 0),
 		root = model.PrimaryPart,
+		half = if model.PrimaryPart then model.PrimaryPart.Size.Magnitude / 2 else 0,
 		fade = -1, -- forcé au premier calcul
 		parts = {},
 		offsets = {},
@@ -67,6 +70,10 @@ local cframes: { CFrame } = {}
 
 RunService.PreRender:Connect(function()
 	local t = workspace:GetServerTimeNow()
+	-- Au loin, les roches s'effacent avant la fin du brouillard (sinon silhouettes sombres sur le ciel)
+	local cam = workspace.CurrentCamera.CFrame.Position
+	local fogEnd = Lighting.FogEnd
+	local farA, farB = fogEnd * Config.FarFade.Start, fogEnd * Config.FarFade.Finish
 	table.clear(parts)
 	table.clear(cframes)
 	for _, o in pairs(orbits) do
@@ -79,6 +86,8 @@ RunService.PreRender:Connect(function()
 		end
 		-- Apparition et disparition en fondu aux deux bouts du tapis (pas de roche qui « pop »)
 		local fade = 1 - math.clamp((Config.Belt.SpawnArc - math.abs(angle * o.radius)) / FADE, 0, 1)
+		local far = math.clamp(((pivot.Position - cam).Magnitude - o.half - farA) / (farB - farA), 0, 1)
+		fade = math.max(fade, far)
 		local fadeChanged = math.abs(fade - o.fade) > 0.02 or (fade == 0 and o.fade ~= 0)
 		if fadeChanged then
 			o.fade = fade

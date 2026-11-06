@@ -165,3 +165,7 @@ La planète est **peinte dans le ciel** (`Lighting.PlanetSky`). Le brouillard du
 - Réglages en tête du script : `PLANET_DIR`, `PLANET_ANG` (taille), `LIGHT`, `BANDS` (couleurs), `STORM`, `MOONS`.
 - Ancien ciel (nébuleuse, non modifiable) : faces 603495955 (Bk), 603494072 (Dn), 603498814 (Ft),
   603493194 (Lf), 603494693 (Rt), 603500172 (Up).
+- Fondu au loin : sans précaution, le brouillard peignait les objets lointains en violet sombre, en
+  silhouettes devant ce ciel clair. Ils deviennent maintenant transparents entre 72 % et 97 % de la
+  distance du brouillard (`Config.FarFade`) : `FarFade.client` pour le décor, les relais et le vaisseau,
+  `Belt.client` pour les astéroïdes.

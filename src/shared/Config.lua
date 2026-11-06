@@ -375,6 +375,13 @@ Config.Fog = {
 	Margin = 80, -- au-delà du milieu de l'anneau suivant
 	StartRatio = 0.45, -- le brouillard commence à 45 % de sa distance de fin
 }
+-- Fondu des objets lointains (FarFade.client, Belt.client) : au-delà de la fin du brouillard, un
+-- objet prend la couleur du brouillard et fait une silhouette sombre devant le ciel clair (planète,
+-- nébuleuses). Il devient transparent entre Start et Finish × FogEnd (distance à la caméra).
+Config.FarFade = {
+	Start = 0.72,
+	Finish = 0.97,
+}
 -- Rideaux de brume dans les vides entre deux anneaux (WorldBuilder)
 Config.FogCurtains = {
 	PerGap = 16,
