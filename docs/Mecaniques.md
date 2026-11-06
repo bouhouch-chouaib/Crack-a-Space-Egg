@@ -127,13 +127,15 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 | --- | --- |
 | Foreuse | Fore plus vite |
 | Soute | Plus d'œufs par voyage |
-| Jetpack | Plus de poussée, de carburant et de vitesse |
 | Scanner | Plus de chance ; repère les astéroïdes rares et les épaves |
 | Combinaison | Chaque palier donne la résistance à la pression qui ouvre l'anneau suivant. Sans le bon palier, la pression y est mortelle |
 
-### Vitesse (remplace l'oxygène, 7 nov.)
+### Niveau du jetpack et souffleries (remplace l'oxygène, 7 nov.)
 
-- ✅ L'oxygène est retiré. À sa place, deux vitesses affichées dans le HUD : **🏃 au sol** et **🚀 en vol** (jetpack). Elles montent avec l'amélioration Jetpack (+8 % par niveau, `Config.Movement`).
+- ✅ L'oxygène est retiré, et la vitesse ne s'achète plus. Elle vient du **niveau du jetpack** (HUD : « Jetpack Lv N » + barre d'XP). Chaque niveau donne +3 % de vitesse au sol et en vol et +0,05 s de carburant (`Config.Movement`, `Config.Jetpack`).
+- ✅ **Souffleries** (l'équivalent des tapis de course) : 7 souffleries au centre du pont, entre les bases, une par anneau. On entre dans le courant d'air, on flotte sur place (Saut tenu = monter plus haut) et on gagne de l'XP chaque seconde, même AFK : 2, 8, 30, 120, 500, 2 000, 8 000 XP/s. Une soufflerie d'un anneau pas encore débloqué repousse le joueur (cadenas sur le panneau).
+- ✅ Voler en mission (poussée ou plané, hors soufflerie) rapporte 1 XP/s.
+- ✅ XP pour passer au niveau suivant : 20 × 1,12^(niveau − 1), niveau max 150. Le serveur compte l'XP (`WindTunnelService`) et la sauvegarde (`jetXP`).
 - ✅ Jetpack : Saut maintenu = poussée vers le haut (carburant, rechargé au sol) ; relâché = vol plané (chute freinée) ; on pilote la direction avec de l'inertie. Modèle 3D porté au dos, flammes, fumée, étincelles, traînée, lumière, poussière au décollage et à l'atterrissage ; le joueur se penche dans le sens du vol. Les autres joueurs voient les flammes (état relayé par le serveur).
 - La foreuse est maintenant accrochée sur le côté (le jetpack occupe le dos).
 

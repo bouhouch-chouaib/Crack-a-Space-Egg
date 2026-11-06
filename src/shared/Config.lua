@@ -48,13 +48,13 @@ Config.Map = {
 	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
 }
 
--- Vitesse (remplace l'oxygène) : au sol et en vol avec le jetpack. Elle monte avec l'amélioration
--- Jetpack (Thruster) : × (1 + PerLevel × niveau). Affichée dans le HUD (🏃 sol, 🚀 vol).
+-- Vitesse au sol et en vol : elle monte avec le NIVEAU DU JETPACK (Config.Jetpack), qu'on farme dans
+-- les souffleries du vaisseau (l'équivalent des tapis de course) et en volant pendant les missions.
 Config.Movement = {
-	Walk = 16, -- vitesse au sol de départ (studs/s)
-	Air = 30, -- vitesse horizontale en vol de départ
+	Walk = 16, -- vitesse au sol au niveau 1 (studs/s)
+	Air = 30, -- vitesse horizontale en vol au niveau 1
 	Climb = 32, -- vitesse de montée maximale quand on pousse
-	PerLevel = 0.08, -- +8 % par niveau de Jetpack
+	PerLevel = 0.03, -- +3 % de vitesse par niveau de jetpack
 	AirAccel = 5, -- réactivité en vol (plus haut = virages plus secs)
 	ClimbAccel = 90, -- accélération verticale de la poussée (studs/s²)
 	FallBrake = 0.35, -- en vol plané (Saut relâché), la chute est freinée de ce facteur
@@ -182,10 +182,9 @@ end
 -- Améliorations : coût = Base * Growth^niveau
 Config.Upgrades = {
 	-- Coût du niveau n = Base × Growth^n (de quelques centaines de $ aux milliers de milliards)
-	Thruster = { Name = "Thruster", Base = 200, Growth = 2.6, Max = 25 },
 	Scanner = { Name = "Scanner", Base = 800, Growth = 3.1, Max = 20 },
 }
-Config.UpgradeOrder = { "Thruster", "Scanner" }
+Config.UpgradeOrder = { "Scanner" }
 
 -- MACHINE À DÉROCHER (docs/Mecaniques.md §7) ---------------------------------------
 -- Les œufs sortent des astéroïdes encore pris dans la roche ; la machine de la base la retire.
@@ -240,7 +239,51 @@ Config.RescueTime = 6
 
 -- Jetpack (côté client) : carburant en secondes de poussée, rechargé au sol
 Config.JetpackFuelBase = 4
-Config.JetpackFuelPerLevel = 0.2
+Config.JetpackFuelPerLevel = 0.05 -- secondes de plus par niveau de jetpack
+
+-- NIVEAU DU JETPACK -------------------------------------------------------------------
+-- On gagne de l'XP de jetpack en restant dans une soufflerie (même AFK) et en volant en mission.
+-- XP pour passer du niveau L au niveau L+1 = XPBase × XPGrowth^(L-1).
+Config.Jetpack = {
+	XPBase = 20,
+	XPGrowth = 1.12,
+	MaxLevel = 150,
+	FlightXP = 1, -- XP par seconde de vol réel (poussée ou plané, hors soufflerie)
+	-- Souffleries : une par anneau, débloquée avec l'anneau ; XP gagnée par seconde dans le courant d'air
+	TunnelRadius = 4.5,
+	TunnelHeight = 20,
+	TunnelSpacing = 14, -- écart entre deux souffleries (studs)
+	TunnelZ = -22, -- ligne des souffleries au centre du pont, entre les bases
+	Tunnels = {
+		{ Name = "Breeze Tunnel", Ring = 1, XP = 2, Color = Color3.fromRGB(150, 235, 255) },
+		{ Name = "Gale Tunnel", Ring = 2, XP = 8, Color = Color3.fromRGB(90, 200, 255) },
+		{ Name = "Storm Tunnel", Ring = 3, XP = 30, Color = Color3.fromRGB(255, 140, 60) },
+		{ Name = "Cyclone Tunnel", Ring = 4, XP = 120, Color = Color3.fromRGB(190, 120, 255) },
+		{ Name = "Hurricane Tunnel", Ring = 5, XP = 500, Color = Color3.fromRGB(255, 80, 120) },
+		{ Name = "Tempest Tunnel", Ring = 6, XP = 2000, Color = Color3.fromRGB(60, 255, 220) },
+		{ Name = "Supernova Vortex", Ring = 7, XP = 8000, Color = Color3.fromRGB(255, 220, 80) },
+	},
+}
+
+-- XP pour passer au niveau suivant
+function Config.JetpackXPNeed(level: number): number
+	local j = Config.Jetpack
+	return math.floor(j.XPBase * j.XPGrowth ^ (level - 1) + 0.5)
+end
+
+-- Niveau atteint avec cette XP totale, XP déjà faite dans ce niveau, XP du niveau
+function Config.JetpackLevel(totalXP: number): (number, number, number)
+	local level, rest = 1, totalXP
+	while level < Config.Jetpack.MaxLevel do
+		local need = Config.JetpackXPNeed(level)
+		if rest < need then
+			return level, rest, need
+		end
+		rest -= need
+		level += 1
+	end
+	return level, 0, 0
+end
 Config.JetpackRefill = 2.5 -- secondes de carburant regagnées par seconde au sol
 
 -- Statistiques dérivées des niveaux
@@ -263,9 +306,9 @@ function Config.CargoSlots(_level: number?): number
 	return Config.CargoMax
 end
 
--- Multiplicateur de vitesse selon le niveau de Jetpack, et vitesses qui en découlent
+-- Multiplicateur de vitesse selon le niveau du jetpack (niveau 1 = ×1), et vitesses qui en découlent
 function Config.Speed(level: number): number
-	return 1 + Config.Movement.PerLevel * (level or 0)
+	return 1 + Config.Movement.PerLevel * math.max(0, (level or 1) - 1)
 end
 function Config.GroundSpeed(level: number): number
 	return Config.Movement.Walk * Config.Speed(level)

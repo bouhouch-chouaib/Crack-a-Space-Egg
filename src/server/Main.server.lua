@@ -10,6 +10,7 @@ local LeaderboardService = require(script.Parent.LeaderboardService)
 local MonetizationService = require(script.Parent.MonetizationService)
 local MachineService = require(script.Parent.MachineService)
 local HatchService = require(script.Parent.HatchService)
+local WindTunnelService = require(script.Parent.WindTunnelService)
 
 WorldBuilder.Build()
 Bases.Start()
@@ -21,3 +22,4 @@ DataService.Start()
 LeaderboardService.Start()
 MonetizationService.Start()
 MachineService.Start()
+WindTunnelService.Start() -- souffleries : on y farme le niveau du jetpack

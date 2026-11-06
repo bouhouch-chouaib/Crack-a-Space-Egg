@@ -246,7 +246,7 @@ local lastJump = 0
 local sentState = 0
 
 local function maxFuel(): number
-	return Config.JetpackFuelBase + Config.JetpackFuelPerLevel * (player:GetAttribute("Lvl_Thruster") or 0)
+	return Config.JetpackFuelBase + Config.JetpackFuelPerLevel * math.max(0, ((player:GetAttribute("JetLevel") or 1) :: number) - 1)
 end
 
 -- JumpRequest se répète tant que Saut est tenu (clavier, manette, bouton tactile)
@@ -280,7 +280,12 @@ RunService.RenderStepped:Connect(function(dt)
 	if math.abs(hum.WalkSpeed - want) > 0.01 then
 		hum.WalkSpeed = want
 	end
-	if airborne then
+	local inTunnel = player:GetAttribute("InTunnel") == true
+	if inTunnel then
+		-- soufflerie : le courant d'air porte le joueur (WindTunnel.client), effets en vol plané
+		fuel = math.min(maxFuel(), fuel + Config.JetpackRefill * dt)
+		state = 2
+	elseif airborne then
 		local v = hrp.AssemblyLinearVelocity
 		local vy = v.Y
 		if holding and fuel > 0 then

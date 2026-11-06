@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
@@ -26,17 +27,41 @@ local function group(name: string, anchor: Vector2, pos: UDim2, size: UDim2): Fr
 	return f
 end
 
--- STATS (en bas à gauche) : les vitesses au-dessus (🏃 sol, 🚀 vol), l'argent en énorme dessous -------------
+-- STATS (en bas à gauche) : le niveau du jetpack et sa barre d'XP au-dessus, l'argent en énorme dessous -------
 local moneyGroup = group("Money", Vector2.new(0, 1), UDim2.new(0, 18, 1, -18), UDim2.fromOffset(420, 180))
 local speedIcon = UIKit.icon("Jetpack", { Size = UDim2.fromOffset(72, 72), Position = UDim2.fromOffset(16, 0), ZIndex = 2, Parent = moneyGroup })
+local JET_COLOR = Color3.fromRGB(110, 235, 255)
 local speedText = UIKit.text({
-	Size = UDim2.fromOffset(300, 50),
-	Position = UDim2.fromOffset(104, 10),
-	Text = "",
-	TextColor3 = Color3.fromRGB(110, 235, 255),
+	Size = UDim2.fromOffset(300, 36),
+	Position = UDim2.fromOffset(100, 2),
+	Text = "Jetpack Lv 1",
+	TextColor3 = JET_COLOR,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	Stroke = 3.5,
 	Parent = moneyGroup,
+})
+-- Barre d'XP du jetpack (se remplit dans les souffleries et en vol)
+local xpBar = UIKit.new("Frame", {
+	Name = "JetXPBar",
+	Size = UDim2.fromOffset(270, 22),
+	Position = UDim2.fromOffset(100, 42),
+	BackgroundColor3 = Color3.fromRGB(25, 30, 48),
+	Parent = moneyGroup,
+}, { UIKit.corner(), UIKit.stroke(3) })
+local xpFill = UIKit.new("Frame", {
+	Name = "Fill",
+	Size = UDim2.fromScale(0, 1),
+	BackgroundColor3 = Color3.new(1, 1, 1),
+	Parent = xpBar,
+}, { UIKit.corner(), UIKit.gradient(Color3.fromRGB(150, 245, 255), Color3.fromRGB(40, 150, 255)) })
+local xpText = UIKit.text({
+	Size = UDim2.new(1, -8, 1, -4),
+	Position = UDim2.fromOffset(4, 2),
+	Text = "",
+	TextColor3 = Color3.new(1, 1, 1),
+	Stroke = 2,
+	ZIndex = 3,
+	Parent = xpBar,
 })
 local cashIcon = UIKit.icon("Cash", { Size = UDim2.fromOffset(104, 104), Position = UDim2.fromOffset(0, 72), ZIndex = 2, Parent = moneyGroup })
 local moneyText = UIKit.text({
@@ -57,17 +82,23 @@ local incomeText = UIKit.text({
 	Parent = moneyGroup,
 })
 
--- Vitesses au sol et en vol (montent avec l'amélioration Jetpack)
-local shownSpeed = 0
+-- Niveau du jetpack et barre d'XP (la vitesse au sol et en vol monte avec le niveau)
+local shownLevel = 0
 local function refreshSpeed()
-	local ground = player:GetAttribute("GroundSpeed") or Config.Movement.Walk
-	local air = player:GetAttribute("AirSpeed") or Config.Movement.Air
-	speedText.Text = string.format("🏃 %d   🚀 %d", math.floor(ground + 0.5), math.floor(air + 0.5))
-	if shownSpeed > 0 and air > shownSpeed then
-		UIKit.flyText(moneyGroup, "+SPEED!", UDim2.fromOffset(110, 0), Color3.fromRGB(110, 235, 255))
-		UIKit.bump(speedIcon, 0.2)
+	local level = player:GetAttribute("JetLevel") or 1
+	local xp = player:GetAttribute("JetXP") or 0
+	local need = player:GetAttribute("JetXPNeed") or 0
+	speedText.Text = ("Jetpack Lv %d"):format(level)
+	local ratio = if need > 0 then math.clamp(xp / need, 0, 1) else 1
+	xpText.Text = if need > 0 then ("%s / %s XP"):format(Format.Short(xp), Format.Short(need)) else "MAX"
+	TweenService:Create(xpFill, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(ratio, 1) }):Play()
+	if shownLevel > 0 and level > shownLevel then
+		xpFill.Size = UDim2.fromScale(0, 1)
+		UIKit.flyText(moneyGroup, "LEVEL UP! FASTER!", UDim2.fromOffset(110, -10), JET_COLOR)
+		UIKit.bump(speedIcon, 0.3)
+		UIKit.burst(moneyGroup, UDim2.fromOffset(52, 36), JET_COLOR)
 	end
-	shownSpeed = air
+	shownLevel = level
 end
 
 local shownMoney = 0
@@ -214,7 +245,7 @@ player.AttributeChanged:Connect(function(name)
 	if name == "Credits" or name == "Income" then
 		refreshMoney()
 		refreshBadges()
-	elseif name == "GroundSpeed" or name == "AirSpeed" then
+	elseif name == "JetLevel" or name == "JetXP" or name == "JetXPNeed" then
 		refreshSpeed()
 	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" then
 		refreshCargo()
