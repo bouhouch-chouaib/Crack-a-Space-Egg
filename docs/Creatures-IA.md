@@ -20,8 +20,7 @@ Ring, Rarity, Height ; la taille en jeu vient de `Config.Hatch.PetHeight`. Pas d
 Les astéroïdes du tapis et du décor (`ReplicatedStorage.Assets.Asteroids.Ring<N>.V1..V3`) sont aussi
 générés par l'IA 3D de Roblox : 3 formes par anneau, une seule pièce (`segmentation = none`, 4 000 triangles).
 Chaque variante est un modèle avec une MeshPart texturée `Asteroid` (PrimaryPart, collision Hull, on marche dessus).
-Les anciens modèles low-poly sont sauvegardés dans `ServerStorage.OldAsteroids`, les générations brutes
-dans `ServerStorage.RockStagingAI`.
+Les anciens modèles low-poly sont sauvegardés dans `ServerStorage.OldAsteroids`.
 
 Description : « Floating <biome> space asteroid rock, <forme>, rough stone surface with sharp broken edges
 and dark cracks, <matière>, rocky on all sides, stylized semi-realistic game asset ».
