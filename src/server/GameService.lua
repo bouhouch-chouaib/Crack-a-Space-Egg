@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local BeltService = require(script.Parent.BeltService)
 local Bases = require(script.Parent.Bases)
@@ -58,7 +59,7 @@ local function sync(player: Player)
 	end
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
-		(ls:FindFirstChild("Credits") :: IntValue).Value = d.credits
+		(ls:FindFirstChild("Credits") :: StringValue).Value = "$" .. Format.Short(d.credits)
 	end
 	local character = player.Character
 	local hum = character and character:FindFirstChildOfClass("Humanoid")
@@ -429,7 +430,7 @@ function GameService.Start()
 	DataService.Loaded:Connect(function(player: Player)
 		local ls = Instance.new("Folder")
 		ls.Name = "leaderstats"
-		local credits = Instance.new("IntValue")
+		local credits = Instance.new("StringValue")
 		credits.Name = "Credits"
 		credits.Parent = ls
 		ls.Parent = player

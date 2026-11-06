@@ -575,6 +575,9 @@ function HatchService.Start()
 			task.wait(0.1)
 		end
 		for _, item in ipairs(d.base) do
+			if item.kind == "pet" then
+				item.income = Config.CreatureIncome(item.ring, item.rarity, item.size or 1)
+			end
 			build(player, item)
 		end
 		syncBase(player)

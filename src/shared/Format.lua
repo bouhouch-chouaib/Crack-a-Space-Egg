@@ -2,12 +2,12 @@
 
 local Format = {}
 
-local SUFFIXES = { "", "K", "M", "B", "T", "Qa", "Qi" }
+local SUFFIXES = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
 
 function Format.Short(n: number): string
 	n = math.floor(n)
 	if n < 1000 then
-		return tostring(n)
+		return string.format("%d", n)
 	end
 	local i = 1
 	local v = n

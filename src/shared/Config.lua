@@ -651,8 +651,12 @@ Config.Hatch = {
 	Margin = 2.0, -- marge le long des murs (en plus de la moitié de la place occupée)
 	-- Zones interdites autour de la machine et du point d'apparition (rayon en studs)
 	KeepOut = { DerockMachine = 8.5, Spawn = 4 },
-	-- Revenu d'une créature en $/s = valeur de la rareté × multiplicateur de l'anneau × IncomeFactor × taille
-	IncomeFactor = 0.5,
+	-- Revenu d'une créature en $/s = RarityIncome[rareté] × RingIncome[anneau] × taille tirée (0,8 à 1,9).
+	-- De ~5 $/s (Common de l'anneau 1) à ~1 Qa/s = 10^15 (Cosmic de l'anneau 7).
+	-- Exemples (taille 1) : anneau 1 = 5 / 15 / 60 / 300 / 2,5K / 30K ; anneau 4 Mythic ≈ 1,3B ;
+	-- anneau 7 = 30B (Uncommon), 120B, 600B, 5T, 60T (Mythic), 1Qa (Cosmic).
+	RarityIncome = { 1, 3, 12, 60, 500, 6000, 100000 },
+	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10 },
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement (l'œuf tremble et se fissure)
 	Burst = 1.6,
 	-- Œuf tenu dans les mains en sortant de la machine : hauteur selon la rareté (studs),
@@ -755,9 +759,16 @@ end
 
 -- Revenu d'une créature en $/s
 function Config.CreatureIncome(ringIndex: number, rarity: number, size: number): number
-	local r = Config.Rarities[rarity] or Config.Rarities[1]
-	local ring = Config.Rings[ringIndex] or Config.Rings[1]
-	return r.Value * ring.ValueMult * Config.Hatch.IncomeFactor * size
+	local h = Config.Hatch
+	local r = h.RarityIncome[math.clamp(rarity, 1, #h.RarityIncome)]
+	local ring = h.RingIncome[math.clamp(ringIndex, 1, #h.RingIncome)]
+	local v = r * ring * (size or 1)
+	-- arrondi lisible : entier sous 1000, sinon 3 chiffres significatifs
+	if v < 1000 then
+		return math.max(1, math.floor(v + 0.5))
+	end
+	local p = 10 ^ (math.floor(math.log10(v)) - 2)
+	return math.floor(v / p + 0.5) * p
 end
 
 -- Probabilités de chaque rareté (index 1..7, 0 si l'anneau n'a pas cet œuf) selon la chance du joueur

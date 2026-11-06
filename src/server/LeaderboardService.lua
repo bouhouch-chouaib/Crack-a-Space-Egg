@@ -19,7 +19,15 @@ local ROWS = 10
 
 -- Titre, icône et lecture de la valeur dans une sauvegarde
 local STATS = {
-	Credits = { Title = "RICHEST", Icon = "💰", Read = function(d) return d.credits end },
+	-- Les $ montent jusqu'aux quadrillions : on classe log10($) × 10^6 (entier), relu avec Decode
+	Credits = {
+		Title = "RICHEST",
+		Icon = "💰",
+		Read = function(d) return d.credits end,
+		Encode = function(v: number): number return math.floor(math.log10(math.max(1, v)) * 1e6) end,
+		Decode = function(x: number): number return 10 ^ (x / 1e6) end,
+		Key = "LB_Credits_v2",
+	},
 	Eggs = { Title = "EGGS CRACKED", Icon = "🥚", Read = function(d) return d.stats.geodes end },
 	Best = { Title = "BEST FIND", Icon = "⭐", Read = function(d) return d.stats.best end },
 }
@@ -34,7 +42,7 @@ local function store(stat: string): OrderedDataStore?
 	end
 	if stores[stat] == nil then
 		local ok, s = pcall(function()
-			return DataStoreService:GetOrderedDataStore("LB_" .. stat .. "_v1")
+			return DataStoreService:GetOrderedDataStore(STATS[stat].Key or ("LB_" .. stat .. "_v1"))
 		end)
 		stores[stat] = if ok then s else nil
 	end
@@ -142,7 +150,8 @@ local function top(stat: string): { { name: string, value: number } }
 		else
 			for _, entry in ipairs(pages:GetCurrentPage()) do
 				local userId = tonumber(string.match(entry.key, "%d+"))
-				table.insert(list, { name = userId and nameOf(userId) or entry.key, value = entry.value })
+				local decode = STATS[stat].Decode
+				table.insert(list, { name = userId and nameOf(userId) or entry.key, value = if decode then decode(entry.value) else entry.value })
 			end
 			return list
 		end
@@ -168,7 +177,9 @@ local function submit()
 				local s = store(stat)
 				if s then
 					pcall(function()
-						(s :: OrderedDataStore):SetAsync("u_" .. p.UserId, math.floor(info.Read(d)))
+						local v = info.Read(d)
+						local ods = s :: OrderedDataStore
+						ods:SetAsync("u_" .. p.UserId, if info.Encode then info.Encode(v) else math.floor(v))
 					end)
 				end
 			end
