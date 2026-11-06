@@ -64,16 +64,21 @@ Légende : ✅ décidé · 💡 détail proposé, à ajuster en jeu · ❓ reste
 
 ## 6. Œufs et soute
 
-- ✅ **La rareté est tirée au forage** : les veines de l'œuf brillent de sa couleur dès qu'il sort, donc le retour devient tendu. Le contenu reste une surprise jusqu'à la casse.
+- ✅ **La rareté est tirée au forage** : les veines de l'œuf brillent de sa couleur dès qu'il sort, donc le retour devient tendu. Le contenu reste une surprise jusqu'à l'éclosion.
+- ✅ (7 nov.) **L'œuf sort encore pris dans la roche** : on le ramène tel quel à la base, où une machine retire la roche (section 7).
 - ✅ Les 7 raretés : Commun 58 %, Peu commun 27 %, Rare 11 %, Épique 3,75 %, Légendaire 1/400, Mythique 1/4 000, Cosmique 1/100 000. Elles sont modifiées par l'anneau, le scanner et les potions, et un compteur de veine garantit un Légendaire.
 - ✅ La soute a une place limitée, qu'on agrandit avec l'amélioration. Un œuf colossal se porte à deux.
 - 💡 L'œuf le plus rare de la soute se voit sur le dos du joueur.
 
-## 7. Casse des œufs
+## 7. De la roche à l'éclosion (décision du 7 nov.)
 
-- ✅ On casse les œufs à la machine de sa base. L'animation fend la coque, fait sortir la lumière puis le contenu, avec une intensité qui dépend de la rareté (module Ropilot `EggCrackSequence`, à recopier dans `src/`).
-- ✅ Contenu d'un œuf : **70 % de dollars, 25 % de créature, 5 % d'objet spécial**.
+La casse instantanée à la machine est remplacée par un parcours en deux temps :
+
+1. ✅ **La machine à dérocher** : à sa base, le joueur passe ses œufs dans une machine **ultra détaillée et spectaculaire** qui retire la roche autour de l'œuf. On voit la roche se fissurer, éclater et l'œuf apparaître, avec une intensité qui dépend de la rareté. Le modèle est fait sur mesure (aucun modèle du Creator Store n'était au niveau) d'après une image de référence de Chouaib.
+2. ✅ **Couver dans la base** : le joueur pose l'œuf dégagé dans sa base, et il **éclot au bout d'un certain temps**.
+
 - ✅ La créature obtenue a la rareté de l'œuf et vient de l'anneau d'où il sort.
+- ❓ À trancher : le temps d'éclosion (fixe ou selon la rareté), le nombre d'œufs qu'on peut couver en même temps, ce qu'on fait des $ et des objets spéciaux (l'ancien partage était 70 % de $, 25 % de créature, 5 % d'objet), et si on peut accélérer l'éclosion (Robux interdits pour les œufs : seulement des $ ou un passe de confort).
 
 ## 8. Monnaie : les dollars ($)
 
@@ -103,7 +108,8 @@ Légende : ✅ décidé · 💡 détail proposé, à ajuster en jeu · ❓ reste
 
 ## 11. Base du joueur
 
-- ✅ La base contient la machine à casser, la vitrine à reliques, le terminal d'équipement, le quai et l'espace où se promènent les créatures.
+- ✅ (7 nov.) **Au départ, les 5 bases sont vides** : seulement la clôture et le sol, avec la même apparence pour toutes. L'ancien contenu (panneaux « FREE BASE », machine à casser, caisson, vitrine, zone des créatures) est rangé dans `ServerStorage.RemovedFromBases`.
+- ✅ La base accueillera la machine à dérocher, les emplacements où couvent les œufs, puis la vitrine à reliques, le terminal d'équipement et l'espace où se promènent les créatures.
 - ✅ **Skins de base** : des thèmes complets (sol, murs, lumière), trouvés dans les œufs ou achetés.
 - ✅ **Gardien de base** : un PNJ par base, acheté en $. 💡 Il casse les œufs et range les créatures pendant que le joueur est dehors.
 - ✅ Les mineurs et scientifiques du descriptif v2 sont remplacés par le gardien.
