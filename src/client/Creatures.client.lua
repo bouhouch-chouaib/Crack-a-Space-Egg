@@ -198,7 +198,8 @@ local function spot(p: Pet, k: number): Vector3
 		return Vector3.zero
 	end
 	local a = hash(p.seed + k * 7.1) * TAU
-	local r = H.WanderRadius * (0.45 + 0.55 * hash(p.seed * 3 + k)) * math.clamp(p.motion.Speed, 0.6, 1.5)
+	local giant = math.clamp(H.WanderFullHeight / p.height, 0.25, 1) -- les géantes restent près de leur socle
+	local r = H.WanderRadius * (0.45 + 0.55 * hash(p.seed * 3 + k)) * math.clamp(p.motion.Speed, 0.6, 1.5) * giant
 	return Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
 end
 
@@ -363,6 +364,8 @@ local function trickPose(p: Pet, pose: Pose, g: number, now: number)
 	local trick = p.motion.Trick
 	local up = math.sin(g * math.pi)
 	local fwdX, fwdZ = -math.sin(pose.yaw), -math.cos(pose.yaw)
+	-- déplacements des figures limités : une géante ne traverse pas toute la base
+	local reach = math.min(h, H.WanderFullHeight)
 	if trick == "spin" then
 		pose.yaw += smooth(g) * TAU
 		pose.y += up * h * 0.25
@@ -383,12 +386,12 @@ local function trickPose(p: Pet, pose: Pose, g: number, now: number)
 		local back = smooth((g - 0.75) / 0.25)
 		pose.sy = 1 - crouch * 0.15
 		pose.y += math.sin(leap * math.pi) * h * 0.5
-		local d = smooth(leap) * (1 - back) * h * 0.8
+		local d = smooth(leap) * (1 - back) * reach * 0.8
 		pose.x += fwdX * d
 		pose.z += fwdZ * d
 		pose.pitch += (0.5 - leap) * 0.4 * math.sin(leap * math.pi)
 	elseif trick == "charge" then
-		local d = (smooth(g / 0.35) - smooth((g - 0.5) / 0.5)) * h * 1.2
+		local d = (smooth(g / 0.35) - smooth((g - 0.5) / 0.5)) * reach * 1.2
 		pose.x += fwdX * d
 		pose.z += fwdZ * d
 		pose.pitch -= 0.12 * math.sin(math.clamp(g / 0.5, 0, 1) * math.pi)
@@ -405,8 +408,8 @@ local function trickPose(p: Pet, pose: Pose, g: number, now: number)
 	elseif trick == "glitch" then
 		if g > 0.1 and g < 0.9 then
 			local tick = math.floor(now * 12)
-			pose.x += (hash(tick + p.seed) - 0.5) * h * 0.6
-			pose.z += (hash(tick * 3 + p.seed) - 0.5) * h * 0.6
+			pose.x += (hash(tick + p.seed) - 0.5) * reach * 0.6
+			pose.z += (hash(tick * 3 + p.seed) - 0.5) * reach * 0.6
 			pose.yaw += (hash(tick * 7 + p.seed) - 0.5) * 1.5
 			pose.sx = 1 + (hash(tick * 5) - 0.5) * 0.4
 		end
@@ -421,14 +424,14 @@ local function trickPose(p: Pet, pose: Pose, g: number, now: number)
 		local a = math.clamp((g - 0.3) / 0.15, 0, 1) * (1 - smooth((g - 0.5) / 0.3))
 		local coil = smooth(g / 0.3) * (1 - a)
 		pose.sz = 1 - coil * 0.2 + a * 0.25
-		pose.x += fwdX * a * h * 0.5
-		pose.z += fwdZ * a * h * 0.5
+		pose.x += fwdX * a * reach * 0.5
+		pose.z += fwdZ * a * reach * 0.5
 		pose.pitch += coil * 0.2
 	elseif trick == "slide" then
 		local a = smooth(g / 0.2) * (1 - smooth((g - 0.8) / 0.2))
 		pose.pitch -= a * 1.3
 		pose.y += a * h * 0.15
-		local d = smooth((g - 0.15) / 0.65) * (1 - smooth((g - 0.85) / 0.15)) * h * 1.2
+		local d = smooth((g - 0.15) / 0.65) * (1 - smooth((g - 0.85) / 0.15)) * reach * 1.2
 		pose.x += fwdX * d
 		pose.z += fwdZ * d
 	elseif trick == "stomp" then

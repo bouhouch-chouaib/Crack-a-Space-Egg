@@ -255,6 +255,7 @@ function HatchService.CanPlace(base: Model, d, x: number, z: number, rarity: num
 		return false, "No floor"
 	end
 	local foot = H.Footprint[rarity] or 3
+	-- la clôture est basse : une géante peut la dépasser un peu (moitié de sa place)
 	local hx, hz = floor.Size.X / 2 - H.Margin - foot * 0.5, floor.Size.Z / 2 - H.Margin - foot * 0.5
 	if math.abs(x) > hx or math.abs(z) > hz then
 		return false, "Too close to the wall"
@@ -264,7 +265,7 @@ function HatchService.CanPlace(base: Model, d, x: number, z: number, rarity: num
 		local pos = if thing and thing:IsA("Model") then thing:GetPivot().Position elseif thing and thing:IsA("BasePart") then thing.Position else nil
 		if pos then
 			local p = floor.CFrame:PointToObjectSpace(pos)
-			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius + foot * 0.6 then
+			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius + foot * 0.4 then
 				return false, if name == "Spawn" then "Not on the spawn!" else "Too close to the machine"
 			end
 		end

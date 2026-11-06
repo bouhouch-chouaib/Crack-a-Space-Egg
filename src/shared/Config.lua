@@ -646,7 +646,8 @@ Config.Hatch = {
 	EggHeight = { 2.4, 2.7, 3.0, 3.4, 3.9, 4.5, 5.2 },
 	-- Place occupée par un œuf posé puis par sa créature (rayon en studs, selon la rareté) :
 	-- deux objets posés ne se touchent pas, et les créatures rares, plus grandes, prennent plus de place
-	Footprint = { 2.2, 2.4, 2.8, 3.4, 4.2, 5.0, 6.0 },
+	-- Les Mythic et Cosmic sont immenses : elles prennent une grande partie de la base
+	Footprint = { 2.2, 2.4, 2.8, 3.4, 4.6, 6.4, 8.6 },
 	Margin = 2.0, -- marge le long des murs (en plus de la moitié de la place occupée)
 	-- Zones interdites autour de la machine et du point d'apparition (rayon en studs)
 	KeepOut = { DerockMachine = 8.5, Spawn = 4 },
@@ -660,9 +661,11 @@ Config.Hatch = {
 	HandDelay = 1.4,
 	-- Hauteur d'une créature dans la base (studs) selon la rareté, multipliée par sa taille tirée.
 	-- Les rares sont nettement plus grandes (et plus impressionnantes) : la récompense se voit.
-	PetHeight = { 2.6, 3.0, 3.7, 4.8, 6.2, 7.8, 9.8 },
+	PetHeight = { 2.6, 3.0, 3.7, 4.8, 7.0, 10.5, 15.0 },
 	-- Promenade autour de son socle : rayon (studs) et durée d'un aller (secondes)
 	WanderRadius = 2.2,
+	-- Au-delà de cette hauteur (studs), une créature se promène moins loin (les géantes piétinent sur place)
+	WanderFullHeight = 4,
 	WanderPeriod = 6,
 	-- Faire éclore tout de suite contre des Robux (du temps, jamais des œufs ni des créatures).
 	-- Un produit de développeur par rareté ; ProductId = 0 tant qu'il n'est pas créé sur Roblox.

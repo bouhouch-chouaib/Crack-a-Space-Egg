@@ -107,7 +107,7 @@ local function canPlace(base: Model, floor: BasePart, x: number, z: number, rari
 		local pos = if thing and thing:IsA("Model") then thing:GetPivot().Position elseif thing and thing:IsA("BasePart") then thing.Position else nil
 		if pos then
 			local p = floor.CFrame:PointToObjectSpace(pos)
-			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius + foot * 0.6 then
+			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius + foot * 0.4 then
 				return false, if name == "Spawn" then "Not on the spawn!" else "Too close to the machine"
 			end
 		end
