@@ -29,7 +29,8 @@ local function default()
 		drill = 1, -- foreuse équipée (index dans Config.Drills ; on les achète dans l'ordre)
 		levels = { Cargo = 0, Thruster = 0, Scanner = 0 },
 		ring = 1, -- plus haut anneau débloqué
-		cargo = {}, -- un œuf par entrée : { ring = anneau d'origine, rarity = rareté }
+		cargo = {}, -- un œuf par entrée : { ring = anneau d'origine, rarity = rareté } (encore pris dans la roche)
+		ready = {}, -- œufs dérochés par la machine, prêts à couver : { ring, rarity }
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
 		pity = 0,
 		stats = { geodes = 0, best = 0 },

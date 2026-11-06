@@ -174,6 +174,16 @@ Config.Upgrades = {
 }
 Config.UpgradeOrder = { "Cargo", "Thruster", "Scanner" }
 
+-- MACHINE À DÉROCHER (docs/Mecaniques.md §7) ---------------------------------------
+-- Les œufs sortent des astéroïdes encore pris dans la roche ; la machine de la base la retire.
+-- Durée pour un œuf = Time + PerRarity × (rareté - 1) secondes ; Gap = pause entre deux œufs
+-- (le temps que l'œuf révélé vole jusqu'au joueur).
+Config.Derock = {
+	Time = 4,
+	PerRarity = 0.5,
+	Gap = 1.6,
+}
+
 -- FOREUSES ------------------------------------------------------------------------
 -- Une foreuse de départ, puis 10 à acheter une par une (comme les pioches des jeux d'œufs),
 -- en $ ou en Robux. Toutes marchent sur tous les anneaux : une petite foreuse est juste lente.

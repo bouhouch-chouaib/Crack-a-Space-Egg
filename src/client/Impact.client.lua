@@ -29,7 +29,6 @@ local CRACKS = { "rbxassetid://94972210493198", "rbxassetid://94296533181521", "
 local FACES = { Enum.NormalId.Top, Enum.NormalId.Front, Enum.NormalId.Right, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Bottom }
 local OUTLINE = Color3.fromRGB(22, 22, 32)
 
-local gui = UIKit.new("ScreenGui", { Name = "Impact", ResetOnSpawn = false, Parent = player:WaitForChild("PlayerGui") })
 
 local function tween(o: Instance, t: number, props: { [string]: any }, style: Enum.EasingStyle?, dir: Enum.EasingDirection?)
 	local tw = TweenService:Create(o, TweenInfo.new(t, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)

@@ -43,6 +43,7 @@ local function sync(player: Player)
 		table.insert(rarities, tostring(if type(egg) == "table" then egg.rarity or 1 else 1))
 	end
 	player:SetAttribute("CargoRarities", table.concat(rarities, ","))
+	player:SetAttribute("ReadyEggs", #(d.ready or {}))
 	player:SetAttribute("Ring", d.ring)
 	player:SetAttribute("Drill", d.drill)
 	player:SetAttribute("OxygenMax", d.oxygenMax or Config.Oxygen.Start)
@@ -60,6 +61,7 @@ local function sync(player: Player)
 	end
 end
 GameService.Sync = sync
+GameService.Notice = notice
 
 local function root(player: Player): BasePart?
 	local c = player.Character
@@ -160,6 +162,10 @@ end
 -- CASSE DES ŒUFS -----------------------------------------------------------
 
 -- egg : { ring, rarity } ; les anciennes sauvegardes n'ont que l'anneau (rareté tirée maintenant)
+GameService.RollRarity = function(d, ringIndex: number): number
+	return rollRarity(d, ringIndex)
+end
+
 local function crackEgg(d, egg)
 	local ringIndex = egg.ring
 	local rarity = egg.rarity or rollRarity(d, ringIndex)

@@ -17,6 +17,9 @@
         "DrillHit": {
           "$className": "RemoteEvent"
         },
+        "EggRevealed": {
+          "$className": "RemoteEvent"
+        },
         "CrackAll": {
           "$className": "RemoteEvent"
         },
