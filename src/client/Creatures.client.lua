@@ -3,6 +3,7 @@
 -- se pose, regarde autour d'elle, puis repart. Le trajet dépend seulement de l'heure du serveur
 -- et de l'identifiant de la créature : tous les joueurs la voient au même endroit, sans réseau.
 -- Ses pièces animées bougent aussi : Tail (balance), WingL / WingR (battent), Orbit (tourne).
+-- Les rares brillent : lumière et étincelles (Epic+), aura (Legendary+), particules qui montent (Mythic+).
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,6 +14,72 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local camera = workspace.CurrentCamera
 local H = Config.Hatch
 local MAX_DISTANCE = 160
+local SPARKLE = "rbxassetid://138922153683020"
+local GLOW = "rbxassetid://103844906730878"
+
+local function kp(t: number, v: number): NumberSequenceKeypoint
+	return NumberSequenceKeypoint.new(t, v)
+end
+
+-- Effets à la taille de la créature (au centre de son corps, ils la suivent quand elle se promène)
+local function addFx(core: BasePart, rarity: number, h: number)
+	if rarity < 4 or core:FindFirstChild("PetFx") then
+		return
+	end
+	local color = (Config.Rarities[rarity] or Config.Rarities[1]).Color
+	local at = Instance.new("Attachment")
+	at.Name = "PetFx"
+	at.Position = Vector3.new(0, h * 0.5, 0)
+	at.Parent = core
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = h * 1.6
+	light.Brightness = 0.5 + (rarity - 4) * 0.35
+	light.Parent = at
+	local sp = Instance.new("ParticleEmitter")
+	sp.Texture = SPARKLE
+	sp.Color = ColorSequence.new(Color3.new(1, 1, 1), color)
+	sp.Size = NumberSequence.new({ kp(0, 0), kp(0.3, h * 0.07), kp(1, 0) })
+	sp.Lifetime = NumberRange.new(0.8, 1.4)
+	sp.Rate = 3 + (rarity - 4) * 5
+	sp.Speed = NumberRange.new(0.5, 1.5)
+	sp.SpreadAngle = Vector2.new(180, 180)
+	sp.RotSpeed = NumberRange.new(-120, 120)
+	sp.LightEmission = 1
+	sp.LightInfluence = 0
+	sp.Shape = Enum.ParticleEmitterShape.Sphere
+	sp.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	sp.Parent = at
+	if rarity >= 5 then
+		local au = Instance.new("ParticleEmitter")
+		au.Texture = GLOW
+		au.Color = ColorSequence.new(color)
+		au.Size = NumberSequence.new({ kp(0, h * 0.9), kp(1, h * 1.3) })
+		au.Transparency = NumberSequence.new({ kp(0, 1), kp(0.3, 0.84), kp(1, 1) })
+		au.Lifetime = NumberRange.new(1.4, 1.8)
+		au.Rate = 3
+		au.Speed = NumberRange.new(0)
+		au.LightEmission = 0.5
+		au.LightInfluence = 0
+		au.LockedToPart = true
+		au.ZOffset = -4
+		au.Parent = at
+	end
+	if rarity >= 6 then
+		local up = Instance.new("ParticleEmitter")
+		up.Texture = SPARKLE
+		up.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+		up.Size = NumberSequence.new({ kp(0, h * 0.05), kp(1, 0) })
+		up.Lifetime = NumberRange.new(1.5, 2.5)
+		up.Rate = if rarity >= 7 then 30 else 16
+		up.Speed = NumberRange.new(2, 4)
+		up.EmissionDirection = Enum.NormalId.Top
+		up.SpreadAngle = Vector2.new(30, 30)
+		up.LightEmission = 1
+		up.LightInfluence = 0
+		up.Parent = at
+	end
+end
 local WALK = 0.45 -- part de la période passée à marcher (le reste : pause)
 
 type Group = { model: Model, offset: CFrame, root: CFrame, kind: string, side: number }
@@ -78,6 +145,7 @@ local function track(m: Instance)
 			table.insert(p.groups, g)
 		end
 	end
+	addFx(core, (m:GetAttribute("Rarity") or 1) :: number, p.height)
 	pets[m] = p
 end
 

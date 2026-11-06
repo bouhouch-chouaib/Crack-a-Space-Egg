@@ -170,7 +170,8 @@ local function buildPet(player: Player, floor: BasePart, item): Model
 	local pad = Instance.new("Part")
 	pad.Name = "Pad"
 	pad.Shape = Enum.PartType.Cylinder
-	pad.Size = Vector3.new(0.2, 3.4, 3.4)
+	local foot = (H.Footprint[item.rarity] or 3) * 1.5
+	pad.Size = Vector3.new(0.2, foot, foot)
 	pad.CFrame = at * CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.pi / 2)
 	pad.Color = r.Color
 	pad.Material = Enum.Material.Neon
@@ -248,12 +249,13 @@ end
 
 -- Une place est libre si elle est sur le sol (loin des murs), loin de la machine, du point
 -- d'apparition et des autres objets posés
-function HatchService.CanPlace(base: Model, d, x: number, z: number): (boolean, string?)
+function HatchService.CanPlace(base: Model, d, x: number, z: number, rarity: number): (boolean, string?)
 	local floor = floorOf(base)
 	if not floor then
 		return false, "No floor"
 	end
-	local hx, hz = floor.Size.X / 2 - H.Margin, floor.Size.Z / 2 - H.Margin
+	local foot = H.Footprint[rarity] or 3
+	local hx, hz = floor.Size.X / 2 - H.Margin - foot * 0.5, floor.Size.Z / 2 - H.Margin - foot * 0.5
 	if math.abs(x) > hx or math.abs(z) > hz then
 		return false, "Too close to the wall"
 	end
@@ -262,13 +264,13 @@ function HatchService.CanPlace(base: Model, d, x: number, z: number): (boolean, 
 		local pos = if thing and thing:IsA("Model") then thing:GetPivot().Position elseif thing and thing:IsA("BasePart") then thing.Position else nil
 		if pos then
 			local p = floor.CFrame:PointToObjectSpace(pos)
-			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius then
+			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius + foot * 0.6 then
 				return false, if name == "Spawn" then "Not on the spawn!" else "Too close to the machine"
 			end
 		end
 	end
 	for _, item in ipairs(d.base) do
-		if Vector2.new(item.x - x, item.z - z).Magnitude < H.Gap then
+		if Vector2.new(item.x - x, item.z - z).Magnitude < foot + (H.Footprint[item.rarity] or 3) then
 			return false, "Too close to another egg"
 		end
 	end
@@ -301,7 +303,7 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	if not index then
 		return
 	end
-	local ok, why = HatchService.CanPlace(base, d, x, z)
+	local ok, why = HatchService.CanPlace(base, d, x, z, rarity)
 	if not ok then
 		GameService.Notice(player, why or "You can't place it here", "warn")
 		return

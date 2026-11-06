@@ -43,6 +43,11 @@ local function timeText(s: number): string
 	return ("%d:%02d"):format(s // 60, s % 60)
 end
 
+-- $/s lisibles même petits (« 0.9 », « 3.5 », « 12 », « 2.7K »)
+local function money(n: number): string
+	return if n < 10 then string.format("%.1f", n) else Format.Short(n)
+end
+
 local function artOf(ring: number, name: string): string?
 	for _, c in ipairs(Config.Creatures[ring] or {}) do
 		if c.Name == name and c.Art ~= "" then
@@ -92,8 +97,9 @@ local function myBase(): Model?
 end
 
 -- Même règle que le serveur (HatchService.CanPlace), pour la couleur du cercle
-local function canPlace(base: Model, floor: BasePart, x: number, z: number): (boolean, string?)
-	if math.abs(x) > floor.Size.X / 2 - H.Margin or math.abs(z) > floor.Size.Z / 2 - H.Margin then
+local function canPlace(base: Model, floor: BasePart, x: number, z: number, rarity: number): (boolean, string?)
+	local foot = H.Footprint[rarity] or 3
+	if math.abs(x) > floor.Size.X / 2 - H.Margin - foot * 0.5 or math.abs(z) > floor.Size.Z / 2 - H.Margin - foot * 0.5 then
 		return false, "Too close to the wall"
 	end
 	for name, radius in pairs(H.KeepOut) do
@@ -101,7 +107,7 @@ local function canPlace(base: Model, floor: BasePart, x: number, z: number): (bo
 		local pos = if thing and thing:IsA("Model") then thing:GetPivot().Position elseif thing and thing:IsA("BasePart") then thing.Position else nil
 		if pos then
 			local p = floor.CFrame:PointToObjectSpace(pos)
-			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius then
+			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius + foot * 0.6 then
 				return false, if name == "Spawn" then "Not on the spawn!" else "Too close to the machine"
 			end
 		end
@@ -109,8 +115,11 @@ local function canPlace(base: Model, floor: BasePart, x: number, z: number): (bo
 	local hatchery = base:FindFirstChild("Hatchery")
 	for _, m in ipairs(hatchery and hatchery:GetChildren() or {}) do
 		if m:IsA("Model") then
-			local p = floor.CFrame:PointToObjectSpace(m:GetPivot().Position)
-			if Vector2.new(p.X - x, p.Z - z).Magnitude < H.Gap then
+			-- La créature se promène : on mesure depuis son socle
+			local pad = m:FindFirstChild("Pad") :: BasePart?
+			local p = floor.CFrame:PointToObjectSpace(if pad then pad.Position else m:GetPivot().Position)
+			local other = H.Footprint[(m:GetAttribute("Rarity") or 1) :: number] or 3
+			if Vector2.new(p.X - x, p.Z - z).Magnitude < foot + other then
 				return false, "Too close to another egg"
 			end
 		end
@@ -148,7 +157,7 @@ local function startPlacing(ring: number, rarity: number)
 	ring3d = new("Part", {
 		Name = "PlaceRing",
 		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(0.15, H.Gap, H.Gap),
+		Size = Vector3.new(0.15, (H.Footprint[rarity] or 3) * 2, (H.Footprint[rarity] or 3) * 2),
 		Material = Enum.Material.Neon,
 		Transparency = 0.45,
 		Anchored = true,
@@ -224,7 +233,7 @@ RunService.RenderStepped:Connect(function()
 	end
 	local p = floor.CFrame:PointToObjectSpace(hit.Position)
 	placeX, placeZ = p.X, p.Z
-	local ok, why = canPlace(base, floor, placeX, placeZ)
+	local ok, why = canPlace(base, floor, placeX, placeZ, current.rarity)
 	placeOk = ok
 	local h = H.EggHeight[current.rarity] or 3
 	local top = floor.CFrame * CFrame.new(placeX, floor.Size.Y / 2, placeZ)
@@ -520,7 +529,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 	if rarity >= 5 then
 		UIKit.shinyText(nameLabel, r.Color)
 	end
-	UIKit.text({ Size = UDim2.new(1, 0, 0, 34), Position = UDim2.new(0, 0, 1, -40), Text = r.Name:upper() .. "  ·  💰 " .. Format.Short(income) .. "/s", TextColor3 = UIKit.Money, ZIndex = 33, Stroke = 3, Parent = frame })
+	UIKit.text({ Size = UDim2.new(1, 0, 0, 34), Position = UDim2.new(0, 0, 1, -40), Text = r.Name:upper() .. "  ·  💰 " .. money(income) .. "/s", TextColor3 = UIKit.Money, ZIndex = 33, Stroke = 3, Parent = frame })
 	UIKit.popIn(frame)
 	task.delay(3.2, function()
 		local s = frame:FindFirstChild("AnimScale") :: UIScale?
@@ -569,7 +578,7 @@ local function trackCreature(m: Instance)
 			Parent = gui,
 		})
 		UIKit.text({ Size = UDim2.fromScale(1, 0.55), Text = (m:GetAttribute("Creature") or "?") :: string, TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), Parent = tag })
-		UIKit.text({ Size = UDim2.fromScale(1, 0.45), Position = UDim2.fromScale(0, 0.55), Text = "💰 " .. Format.Short((m:GetAttribute("Income") or 0) :: number) .. "/s", TextColor3 = UIKit.Money, Parent = tag })
+		UIKit.text({ Size = UDim2.fromScale(1, 0.45), Position = UDim2.fromScale(0, 0.55), Text = "💰 " .. money((m:GetAttribute("Income") or 0) :: number) .. "/s", TextColor3 = UIKit.Money, Parent = tag })
 		creatures[m] = tag
 		return
 	end
@@ -605,7 +614,7 @@ local function trackCreature(m: Instance)
 	end
 	UIKit.float(img, 4, 3, 1.6, math.random() * 6)
 	UIKit.text({ Size = UDim2.fromScale(1, 0.13), Position = UDim2.fromScale(0, 0.74), Text = name, TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), Parent = holder })
-	UIKit.text({ Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 0.87), Text = "💰 " .. Format.Short(income) .. "/s", TextColor3 = UIKit.Money, Parent = holder })
+	UIKit.text({ Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 0.87), Text = "💰 " .. money(income) .. "/s", TextColor3 = UIKit.Money, Parent = holder })
 	creatures[m] = b
 end
 

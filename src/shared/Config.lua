@@ -644,9 +644,10 @@ Config.Hatch = {
 	Slots = 10,
 	-- Hauteur du corps de l'œuf posé (studs) selon la rareté : les rares sont plus gros
 	EggHeight = { 2.4, 2.7, 3.0, 3.4, 3.9, 4.5, 5.2 },
-	-- Écart minimal entre deux objets posés, et marge le long des murs (studs)
-	Gap = 4.5,
-	Margin = 2.5,
+	-- Place occupée par un œuf posé puis par sa créature (rayon en studs, selon la rareté) :
+	-- deux objets posés ne se touchent pas, et les créatures rares, plus grandes, prennent plus de place
+	Footprint = { 2.2, 2.4, 2.8, 3.4, 4.2, 5.0, 6.0 },
+	Margin = 2.0, -- marge le long des murs (en plus de la moitié de la place occupée)
 	-- Zones interdites autour de la machine et du point d'apparition (rayon en studs)
 	KeepOut = { DerockMachine = 8.5, Spawn = 4 },
 	-- Revenu d'une créature en $/s = valeur de la rareté × multiplicateur de l'anneau × IncomeFactor × taille
@@ -657,8 +658,9 @@ Config.Hatch = {
 	-- et délai avant qu'il apparaisse (le temps que l'œuf révélé vole jusqu'au joueur)
 	HeldHeight = { 1.7, 1.85, 2.0, 2.15, 2.35, 2.55, 2.8 },
 	HandDelay = 1.4,
-	-- Hauteur d'une créature dans la base (studs) selon la rareté, multipliée par sa taille tirée
-	PetHeight = { 3.0, 3.3, 3.6, 4.0, 4.6, 5.3, 6.2 },
+	-- Hauteur d'une créature dans la base (studs) selon la rareté, multipliée par sa taille tirée.
+	-- Les rares sont nettement plus grandes (et plus impressionnantes) : la récompense se voit.
+	PetHeight = { 2.6, 3.0, 3.7, 4.8, 6.2, 7.8, 9.8 },
 	-- Promenade autour de son socle : rayon (studs) et durée d'un aller (secondes)
 	WanderRadius = 2.2,
 	WanderPeriod = 6,
