@@ -249,6 +249,12 @@ Config.Jetpack = {
 	XPGrowth = 1.12,
 	MaxLevel = 150,
 	FlightXP = 1, -- XP par seconde de vol réel (poussée ou plané, hors soufflerie)
+	-- Niveau de jetpack pour entrer dans chaque anneau : au niveau 1, on ne va que sur l'anneau 1.
+	-- Un mur de vent repousse le joueur à l'entrée d'un anneau trop loin pour son jetpack.
+	-- Temps visés dans la soufflerie de l'anneau (débloquée avec l'achat de l'anneau) : ~10 min pour
+	-- l'anneau 2, ~20 min, ~40 min, ~1 h 15, ~2 h, ~3 h pour l'anneau 7 (environ 7 h 30 en tout).
+	RingLevel = { 1, 30, 50, 70, 90, 110, 130 },
+	WallMargin = 4, -- le mur est à 4 studs avant le bord intérieur de l'anneau
 	-- Souffleries : une par anneau, débloquée avec l'anneau ; XP gagnée par seconde dans le courant d'air
 	TunnelRadius = 4.5,
 	TunnelHeight = 20,
@@ -258,10 +264,10 @@ Config.Jetpack = {
 		{ Name = "Breeze Tunnel", Ring = 1, XP = 2, Color = Color3.fromRGB(150, 235, 255) },
 		{ Name = "Gale Tunnel", Ring = 2, XP = 8, Color = Color3.fromRGB(90, 200, 255) },
 		{ Name = "Storm Tunnel", Ring = 3, XP = 30, Color = Color3.fromRGB(255, 140, 60) },
-		{ Name = "Cyclone Tunnel", Ring = 4, XP = 120, Color = Color3.fromRGB(190, 120, 255) },
-		{ Name = "Hurricane Tunnel", Ring = 5, XP = 500, Color = Color3.fromRGB(255, 80, 120) },
-		{ Name = "Tempest Tunnel", Ring = 6, XP = 2000, Color = Color3.fromRGB(60, 255, 220) },
-		{ Name = "Supernova Vortex", Ring = 7, XP = 8000, Color = Color3.fromRGB(255, 220, 80) },
+		{ Name = "Cyclone Tunnel", Ring = 4, XP = 150, Color = Color3.fromRGB(190, 120, 255) },
+		{ Name = "Hurricane Tunnel", Ring = 5, XP = 800, Color = Color3.fromRGB(255, 80, 120) },
+		{ Name = "Tempest Tunnel", Ring = 6, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
+		{ Name = "Supernova Vortex", Ring = 7, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
 	},
 }
 
@@ -269,6 +275,17 @@ Config.Jetpack = {
 function Config.JetpackXPNeed(level: number): number
 	local j = Config.Jetpack
 	return math.floor(j.XPBase * j.XPGrowth ^ (level - 1) + 0.5)
+end
+
+-- Anneau le plus loin que le jetpack de ce niveau peut atteindre
+function Config.JetpackRingMax(level: number): number
+	local best = 1
+	for i, need in ipairs(Config.Jetpack.RingLevel) do
+		if level >= need then
+			best = i
+		end
+	end
+	return best
 end
 
 -- Niveau atteint avec cette XP totale, XP déjà faite dans ce niveau, XP du niveau

@@ -148,6 +148,11 @@ local function onDrill(player: Player, target: any, at: any)
 		notice(player, "Unlock the " .. Config.Rings[a.ring].Name .. " at the Space Shop", "warn")
 		return
 	end
+	-- le jetpack doit aussi être assez fort pour cet anneau (le client montre un mur de vent)
+	if Config.JetpackRingMax((Config.JetpackLevel(d.jetXP or 0))) < a.ring then
+		notice(player, ("🚀 Jetpack Lv %d needed for the %s"):format(Config.Jetpack.RingLevel[a.ring], Config.Rings[a.ring].Name), "warn")
+		return
+	end
 	local max = Config.CargoSlots()
 	local room = max - #d.cargo
 	if room <= 0 then
