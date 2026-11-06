@@ -158,8 +158,10 @@ local function buildEgg(player: Player, floor: BasePart, item): Model?
 	return m
 end
 
--- Créature : socle à la couleur de sa rareté + centre invisible. Le client affiche sa carte
--- (image, nom, $/s) tant que les modèles 3D des créatures ne sont pas faits.
+-- Créature : socle à la couleur de sa rareté + son modèle 3D en briques (Assets.Creatures.R<anneau>_T<rareté>),
+-- à la taille de sa rareté et de son tirage. Le modèle s'appelle « Body » : chaque client le fait se
+-- promener autour du socle et l'anime (Creatures.client). Sans modèle 3D : un centre invisible, et le
+-- client affiche la carte de la créature (image, nom, $/s).
 local function buildPet(player: Player, floor: BasePart, item): Model
 	local m = Instance.new("Model")
 	m.Name = "Pet_" .. item.id
@@ -168,25 +170,44 @@ local function buildPet(player: Player, floor: BasePart, item): Model
 	local pad = Instance.new("Part")
 	pad.Name = "Pad"
 	pad.Shape = Enum.PartType.Cylinder
-	pad.Size = Vector3.new(0.5, 3.6, 3.6)
-	pad.CFrame = at * CFrame.new(0, 0.25, 0) * CFrame.Angles(0, 0, math.pi / 2)
+	pad.Size = Vector3.new(0.2, 3.4, 3.4)
+	pad.CFrame = at * CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.pi / 2)
 	pad.Color = r.Color
-	pad.Material = Enum.Material.SmoothPlastic
+	pad.Material = Enum.Material.Neon
+	pad.Transparency = 0.55
 	pad.Anchored = true
 	pad.CanCollide = false
 	pad.CanTouch = false
+	pad.CanQuery = false
 	pad.Parent = m
-	local core = Instance.new("Part")
-	core.Name = "Core"
-	core.Size = Vector3.one
-	core.Transparency = 1
-	core.Anchored = true
-	core.CanCollide = false
-	core.CanQuery = false
-	core.CanTouch = false
-	core.CFrame = at * CFrame.new(0, 2.6, 0)
-	core.Parent = m
-	m.PrimaryPart = core
+	local creatures = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Creatures")
+	local template = creatures and creatures:FindFirstChild(("R%d_T%d"):format(item.ring, item.rarity)) :: Model?
+	if template then
+		local body = template:Clone()
+		body.Name = "Body"
+		local h = (H.PetHeight[item.rarity] or 3.5) * (item.size or 1)
+		body:ScaleTo(body:GetScale() * h / ((body:GetAttribute("Height") or 1) :: number))
+		body:SetAttribute("Height", h)
+		-- Il regarde vers le centre de la base, un peu de travers
+		local toCenter = floor.CFrame:PointToObjectSpace(floor.Position) - Vector3.new(item.x, 0, item.z)
+		local yaw = math.atan2(-toCenter.X, -toCenter.Z) + rng:NextNumber(-0.6, 0.6)
+		body:PivotTo(at * CFrame.Angles(0, yaw, 0))
+		body.Parent = m
+		m.PrimaryPart = body.PrimaryPart
+		m:SetAttribute("Has3D", true)
+	else
+		local core = Instance.new("Part")
+		core.Name = "Core"
+		core.Size = Vector3.one
+		core.Transparency = 1
+		core.Anchored = true
+		core.CanCollide = false
+		core.CanQuery = false
+		core.CanTouch = false
+		core.CFrame = at * CFrame.new(0, 2.6, 0)
+		core.Parent = m
+		m.PrimaryPart = core
+	end
 	m:SetAttribute("Owner", player.UserId)
 	m:SetAttribute("ItemId", item.id)
 	m:SetAttribute("Ring", item.ring)
@@ -584,6 +605,12 @@ function HatchService.Start()
 			if cmd == "give" then
 				for _, e in ipairs(arg) do
 					table.insert(d.ready, { ring = e[1], rarity = e[2] })
+				end
+			elseif cmd == "hatchall" then
+				for _, item in ipairs(d.base) do
+					if item.kind == "egg" then
+						HatchService.Hatch(player, item.id)
+					end
 				end
 			elseif cmd == "skip" then
 				return tostring(HatchService.SkipEgg(player, arg))

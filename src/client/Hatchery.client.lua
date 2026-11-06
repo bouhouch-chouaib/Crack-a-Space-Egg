@@ -476,8 +476,44 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 	if rarity >= 4 then
 		UIKit.sparkles(frame, { count = 6 + rarity, color = r.Color, z = 33 })
 	end
-	local art = artOf(ring, name)
-	local img = UIKit.icon(art or "Creatures", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(190, 190), ZIndex = 32, Parent = frame })
+	-- La créature en 3D qui tourne (ou son image tant qu'elle n'a pas de modèle)
+	local folder = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Creatures")
+	local template = folder and folder:FindFirstChild(("R%d_T%d"):format(ring, rarity)) :: Model?
+	local img: GuiObject
+	if template then
+		local vp = new("ViewportFrame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.42),
+			Size = UDim2.fromOffset(230, 230),
+			BackgroundTransparency = 1,
+			Ambient = Color3.fromRGB(190, 190, 205),
+			LightColor = Color3.new(1, 1, 1),
+			LightDirection = Vector3.new(-1, -1.5, -1),
+			ZIndex = 32,
+			Parent = frame,
+		})
+		local c = template:Clone()
+		c:PivotTo(CFrame.new())
+		c.Parent = vp
+		local _, size = c:GetBoundingBox()
+		local cam = new("Camera", { FieldOfView = 30, Parent = vp })
+		local dist = math.max(size.X, size.Y, size.Z) * 2.2
+		local mid = Vector3.new(0, size.Y * 0.45, 0)
+		cam.CFrame = CFrame.lookAt(mid + Vector3.new(0, size.Y * 0.25, -dist), mid)
+		vp.CurrentCamera = cam
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			if not vp.Parent then
+				conn:Disconnect()
+				return
+			end
+			c:PivotTo(CFrame.Angles(0, math.sin(os.clock() * 1.4) * 0.7, 0))
+		end)
+		img = vp
+	else
+		local art = artOf(ring, name)
+		img = UIKit.icon(art or "Creatures", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(190, 190), ZIndex = 32, Parent = frame })
+	end
 	UIKit.float(img, 6, 4, 2)
 	UIKit.text({ Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, -6), Text = "🐣 YOU HATCHED", ZIndex = 33, Stroke = 3, Parent = frame })
 	local nameLabel = UIKit.text({ Size = UDim2.new(1, 0, 0, 46), Position = UDim2.new(0, 0, 1, -86), Text = name:upper(), TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), ZIndex = 33, Stroke = 4, Parent = frame })
@@ -512,6 +548,29 @@ local creatures: { [Model]: BillboardGui } = {}
 
 local function trackCreature(m: Instance)
 	if not m:IsA("Model") or creatures[m] then
+		return
+	end
+	-- Créature en 3D : le nom et les $/s flottent au-dessus de sa tête (elle se promène : Creatures.client)
+	if m:GetAttribute("Has3D") then
+		local body = m:WaitForChild("Body", 10) :: Model?
+		local bcore = body and body:WaitForChild("Core", 10) :: BasePart?
+		if not body or not bcore or creatures[m] then
+			return
+		end
+		local r = rarityOf((m:GetAttribute("Rarity") or 1) :: number)
+		local h = (body:GetAttribute("Height") or 3) :: number
+		local tag = new("BillboardGui", {
+			Name = "CreatureTag",
+			Size = UDim2.fromOffset(170, 46),
+			StudsOffsetWorldSpace = Vector3.new(0, h + 1.1, 0),
+			MaxDistance = 90,
+			LightInfluence = 0,
+			Adornee = bcore,
+			Parent = gui,
+		})
+		UIKit.text({ Size = UDim2.fromScale(1, 0.55), Text = (m:GetAttribute("Creature") or "?") :: string, TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), Parent = tag })
+		UIKit.text({ Size = UDim2.fromScale(1, 0.45), Position = UDim2.fromScale(0, 0.55), Text = "💰 " .. Format.Short((m:GetAttribute("Income") or 0) :: number) .. "/s", TextColor3 = UIKit.Money, Parent = tag })
+		creatures[m] = tag
 		return
 	end
 	local core = m:WaitForChild("Core", 10) :: BasePart?

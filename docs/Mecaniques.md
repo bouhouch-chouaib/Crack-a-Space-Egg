@@ -83,7 +83,7 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 - ✅ Temps d'éclosion selon la rareté (`Config.Hatch.Time`) : 20 s (Common) → 30 min (Cosmic). Le temps passe aussi hors ligne. Compte à rebours au-dessus de l'œuf, puis « READY! Press F ».
 - ✅ Éclosion (touche F, E étant pris par la machine) : l'œuf tremble et blanchit, éclate en coquilles et en lumière ; bannière « YOU HATCHED » avec la créature, sa rareté et ses $/s ; annonce au serveur à partir de Mythic.
 - ✅ La créature reste dans la base et rapporte des $ chaque seconde : valeur de la rareté × multiplicateur de l'anneau × 0,5 × taille (`Config.CreatureIncome`). 10 places par base (œufs + créatures).
-- ⏳ En attendant les modèles 3D des créatures, chacune est une carte (image, nom, $/s) au-dessus d'un socle de la couleur de sa rareté.
+- ✅ Créatures en 3D, style briques + picots comme les œufs (tools/blender/creatures.py). Dans la base, chacune se promène autour de son socle lumineux (même trajet chez tous les joueurs), sautille, balance la queue, bat des ailes ; nom et $/s au-dessus de la tête. Anneau 1 fait (6/42) ; en attendant les autres, une carte (image, nom, $/s) les remplace.
 - ❓ Encore à trancher : vendre ou ranger une créature pour libérer une place, agrandir la base, accélérer aussi l'éclosion avec des $.
 
 ## 8. Monnaie : les dollars ($)

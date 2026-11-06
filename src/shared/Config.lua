@@ -657,6 +657,11 @@ Config.Hatch = {
 	-- et délai avant qu'il apparaisse (le temps que l'œuf révélé vole jusqu'au joueur)
 	HeldHeight = { 1.7, 1.85, 2.0, 2.15, 2.35, 2.55, 2.8 },
 	HandDelay = 1.4,
+	-- Hauteur d'une créature dans la base (studs) selon la rareté, multipliée par sa taille tirée
+	PetHeight = { 3.0, 3.3, 3.6, 4.0, 4.6, 5.3, 6.2 },
+	-- Promenade autour de son socle : rayon (studs) et durée d'un aller (secondes)
+	WanderRadius = 2.2,
+	WanderPeriod = 6,
 	-- Faire éclore tout de suite contre des Robux (du temps, jamais des œufs ni des créatures).
 	-- Un produit de développeur par rareté ; ProductId = 0 tant qu'il n'est pas créé sur Roblox.
 	Skip = {
