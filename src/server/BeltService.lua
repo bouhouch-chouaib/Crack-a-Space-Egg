@@ -102,15 +102,39 @@ local function spawn(ringIndex: number, age: number)
 	local diameter = rng:NextNumber(size.Min, size.Max)
 	local width = Config.RingWidth(ringIndex)
 	local margin = math.max(0, width / 2 - diameter / 2)
-	local radius = Config.RingRadius(ringIndex) + rng:NextNumber(-margin, margin)
+	local field = Config.FieldHeight(ringIndex)
 	local t0 = now() - age
+	-- Place sur toute l'épaisseur et la hauteur du champ, sans chevaucher un voisin du même anneau
+	-- (même vitesse linéaire : deux voisins gardent à peu près leur écart en défilant)
+	local radius, height
+	for attempt = 1, 6 do
+		radius = Config.RingRadius(ringIndex) + rng:NextNumber(-margin, margin)
+		height = rng:NextNumber(-field, field)
+		local angle = -Config.Belt.SpawnArc / radius + ring.Speed / radius * age
+		local pos = Config.OrbitPosition(radius, angle, height)
+		local free = true
+		for _, other in pairs(active) do
+			if other.ring == ringIndex then
+				local gap = (other.part.Size.X + diameter) / 2 * Config.Belt.Spacing
+				if (BeltService.Position(other, now()) - pos).Magnitude < gap then
+					free = false
+					break
+				end
+			end
+		end
+		if free then
+			break
+		elseif attempt == 6 then
+			return -- champ trop plein à cet endroit : on réessaiera au prochain tour
+		end
+	end
 	local a: Asteroid = {
 		part = nil :: any,
 		model = nil :: any,
 		ring = ringIndex,
 		radius = radius,
 		angle0 = -Config.Belt.SpawnArc / radius,
-		height = rng:NextNumber(-Config.Belt.HeightJitter, Config.Belt.HeightJitter),
+		height = height,
 		omega = ring.Speed / radius,
 		t0 = t0,
 		tEnd = t0 + travelTime(ringIndex),

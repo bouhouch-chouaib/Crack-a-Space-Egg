@@ -36,13 +36,16 @@ Config.Map = {
 	AxisDistance = 1200, -- distance entre l'axe de rotation des anneaux et le bout du quai
 	CorridorWidth = 90,
 	FirstRingGap = 12, -- vide entre le bout du quai et le bord de l'anneau 1
-	RingWidth = 28, -- épaisseur de l'anneau 1
-	RingGap = 16, -- vide entre les anneaux 1 et 2 (bord à bord)
-	RingGrowth = 1.35, -- épaisseur et vide grandissent de 35 % à chaque anneau
+	RingWidth = 64, -- épaisseur de l'anneau 1 : un vrai champ, pas une ligne
+	RingGap = 20, -- vide entre les anneaux 1 et 2 (bord à bord)
+	RingGrowth = 1.22, -- épaisseur et vide grandissent de 22 % à chaque anneau
 	RelaySize = 30, -- relais de pression, au milieu des vides assez larges entre deux anneaux
-	RelayMinGap = 38, -- pas de relais dans un vide plus étroit
+	RelayMinGap = 30, -- pas de relais dans un vide plus étroit
 	BuoySpacing = 60,
-	DecorPerRing = 30, -- astéroïdes de décor sur le reste de chaque anneau
+	-- Champ de décor : roches du biome de chaque côté du tapis, sur toute l'épaisseur et la hauteur
+	DecorArc = 750, -- studs d'arc couverts de chaque côté du couloir (au-delà, la brume cache tout)
+	DecorDensity = 1 / 1100, -- roches par stud² de champ
+	DecorMax = 150, -- plafond par anneau (performances)
 	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
 }
 
@@ -66,10 +69,20 @@ Config.Events = {
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 90, -- 60 en temps normal, plus pendant une pluie de météores
-	SpawnArc = 160, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
-	HeightJitter = 8,
+	MaxActive = 260, -- environ 180 en temps normal, plus pendant une pluie de météores
+	SpawnArc = 180, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
+	-- Hauteur : les astéroïdes s'étalent sur plusieurs étages, plus haut dans les grands anneaux
+	HeightBase = 10, -- ± studs au minimum
+	HeightPerWidth = 0.15, -- + 15 % de l'épaisseur de l'anneau
+	HeightMax = 36,
+	Spacing = 0.9, -- deux astéroïdes ne naissent pas plus près que 90 % de leurs rayons cumulés
 }
+
+-- Demi-hauteur du champ de l'anneau i (les astéroïdes vont de -h à +h)
+function Config.FieldHeight(i: number): number
+	local b = Config.Belt
+	return math.min(b.HeightBase + Config.RingWidth(i) * b.HeightPerWidth, b.HeightMax)
+end
 
 -- Tailles d'astéroïdes : stock d'œufs, qui sortent un par un pendant le forage
 Config.AsteroidSizes = {
@@ -95,25 +108,25 @@ local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost,
 	}
 end
 Config.Rings = {
-	newRing("Dust Belt", 4.5, 6, 8, 1, 1.0, 0, 0, Color3.fromRGB(120, 108, 98), {
+	newRing("Dust Belt", 4.5, 18, 8, 1, 1.0, 0, 0, Color3.fromRGB(120, 108, 98), {
 		"Grey Quartz", "Calcite", "Amethyst", "Topaz", "Stellar Opal", "Pluto Diamond", "",
 	}),
-	newRing("Ice Ring", 4.1, 6, 40, 4, 1.3, 340, 5, Color3.fromRGB(150, 200, 230), {
+	newRing("Ice Ring", 4.1, 18, 40, 4, 1.3, 340, 5, Color3.fromRGB(150, 200, 230), {
 		"Frostite", "Snow Crystal", "Aquamarine", "Boreal Sapphire", "Comet Tear", "Aurora Heart", "",
 	}),
-	newRing("Magma Field", 3.7, 7, 180, 16, 1.8, 11000, 13, Color3.fromRGB(110, 50, 40), {
+	newRing("Magma Field", 3.7, 21, 180, 16, 1.8, 11000, 13, Color3.fromRGB(110, 50, 40), {
 		"Obsidian", "Red Basalt", "Garnet", "Volcanic Ruby", "Phoenix Eye", "Sun Blood", "",
 	}),
-	newRing("Nebula", 3.3, 8, 800, 64, 2.4, 350000, 21, Color3.fromRGB(120, 80, 170), {
+	newRing("Nebula", 3.3, 24, 800, 64, 2.4, 350000, 21, Color3.fromRGB(120, 80, 170), {
 		"Haze Quartz", "Mist Pearl", "Violet Flux", "Dreamstone", "Nova Shard", "Nebula Heart", "",
 	}),
-	newRing("Devourer Belt", 2.9, 9, 3600, 256, 3.2, 11000000, 30, Color3.fromRGB(70, 60, 60), {
+	newRing("Devourer Belt", 2.9, 27, 3600, 256, 3.2, 11000000, 30, Color3.fromRGB(70, 60, 60), {
 		"Bone Flint", "Fang Stone", "Maw Garnet", "Hunger Opal", "Devourer Eye", "Abyss Crown", "Void Pearl",
 	}),
-	newRing("The Rift", 2.6, 11, 16000, 1024, 4.2, 350000000, 39, Color3.fromRGB(60, 90, 120), {
+	newRing("The Rift", 2.6, 33, 16000, 1024, 4.2, 350000000, 39, Color3.fromRGB(60, 90, 120), {
 		"Rift Shale", "Split Jade", "Fracture Gem", "Warp Sapphire", "Paradox Prism", "Time Shard", "Rift Singularity",
 	}),
-	newRing("The Nest", 2.25, 13, 70000, 4096, 5.5, 11000000000, 48, Color3.fromRGB(150, 120, 80), {
+	newRing("The Nest", 2.25, 39, 70000, 4096, 5.5, 11000000000, 48, Color3.fromRGB(150, 120, 80), {
 		"Shell Quartz", "Nest Amber", "Brood Ruby", "Mother Opal", "Hatchling Star", "Queen's Tear", "Cosmic Yolk",
 	}),
 }

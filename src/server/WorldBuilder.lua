@@ -304,20 +304,32 @@ local function buildRingDecor(world: Folder)
 	for i, ring in ipairs(Config.Rings) do
 		local radius = Config.RingRadius(i)
 		local width = Config.RingWidth(i)
-		-- On laisse libre la zone où passe le tapis (couloir + naissance et disparition)
-		local keepOut = (Config.Belt.SpawnArc + 60) / radius
-		for _ = 1, M.DecorPerRing do
-			local angle = rng:NextNumber(keepOut, math.pi * 2 - keepOut)
+		local field = Config.FieldHeight(i)
+		-- Le tapis occupe ±SpawnArc autour du couloir ; le décor prolonge le champ de chaque côté,
+		-- sur toute l'épaisseur et la hauteur, jusqu'à DecorArc (la brume cache la suite)
+		local from = (Config.Belt.SpawnArc + 10) / radius
+		local to = (Config.Belt.SpawnArc + M.DecorArc) / radius
+		local count = math.min(M.DecorMax, math.floor(2 * M.DecorArc * width * M.DecorDensity))
+		local ringFolder = Instance.new("Folder")
+		ringFolder.Name = "Ring" .. i
+		ringFolder.Parent = folder
+		for _ = 1, count do
+			local side = if rng:NextNumber() < 0.5 then -1 else 1
+			local angle = side * rng:NextNumber(from, to)
 			local r = radius + rng:NextNumber(-width / 2, width / 2)
-			local size = rng:NextNumber(8, 26)
-			local pos = Config.OrbitPosition(r, angle, rng:NextNumber(-12, 12))
+			-- Les roches lointaines sont plus grosses : le champ reste lisible de loin
+			local far = (math.abs(angle) - from) / (to - from)
+			local size = rng:NextNumber(8, 14 + width * 0.12) * (1 + far * 0.6)
+			local pos = Config.OrbitPosition(r, angle, rng:NextNumber(-field * 1.3, field * 1.3))
 			local template = asset("Asteroids", "Ring" .. i)
 			if template then
 				template:ScaleTo(size / WorldBuilder.Width(template))
-				template:PivotTo(CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+				-- Légère inclinaison au hasard : le champ ne ressemble pas à une rangée de copies
+				local tilt = CFrame.Angles(rng:NextNumber(-0.5, 0.5), rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.5, 0.5))
+				template:PivotTo(CFrame.new(pos) * tilt)
 				ghost(template)
 				template.Name = "Rock"
-				template.Parent = folder
+				template.Parent = ringFolder
 			else
 				decor({
 					Name = "Rock",
@@ -326,7 +338,7 @@ local function buildRingDecor(world: Folder)
 					CFrame = CFrame.new(pos),
 					Material = Enum.Material.Slate,
 					Color = ring.Color:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.3)),
-					Parent = folder,
+					Parent = ringFolder,
 				})
 			end
 		end
