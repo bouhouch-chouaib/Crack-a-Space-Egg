@@ -53,18 +53,15 @@ local function sync(player: Player)
 	player:SetAttribute("ReadyList", table.concat(ready, ","))
 	player:SetAttribute("Ring", d.ring)
 	player:SetAttribute("Drill", d.drill)
-	player:SetAttribute("OxygenMax", d.oxygenMax or Config.Oxygen.Start)
+	-- Vitesses (sol / vol), lues par le HUD et le jetpack (Jetpack.client)
+	player:SetAttribute("GroundSpeed", Config.GroundSpeed(d.levels.Thruster))
+	player:SetAttribute("AirSpeed", Config.AirSpeed(d.levels.Thruster))
 	for id in pairs(Config.Upgrades) do
 		player:SetAttribute("Lvl_" .. id, d.levels[id])
 	end
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		(ls:FindFirstChild("Credits") :: StringValue).Value = "$" .. Format.Short(d.credits)
-	end
-	local character = player.Character
-	local hum = character and character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.WalkSpeed = 16 * Config.Speed(d.levels.Thruster)
 	end
 end
 GameService.Sync = sync
@@ -292,6 +289,61 @@ local function equipDrill(player: Player)
 end
 GameService.EquipDrill = equipDrill
 
+-- JETPACK PORTÉ ----------------------------------------------------------------------
+-- Le modèle ReplicatedStorage.Assets.Jetpack est soudé au dos (visible par tous). Ses tuyères
+-- (attachements NozzleL / NozzleR) portent les flammes, gérées par Jetpack.client.
+local function equipJetpack(player: Player)
+	local character = player.Character
+	local torso = character and (character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")) :: BasePart?
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local template = assets and assets:FindFirstChild("Jetpack") :: Model?
+	if not character or not torso or not template then
+		return
+	end
+	local old = character:FindFirstChild("EquippedJetpack")
+	if old then
+		old:Destroy()
+	end
+	local model = template:Clone()
+	model.Name = "EquippedJetpack"
+	local handle = model.PrimaryPart :: BasePart
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Anchored = false
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+			d.Massless = true
+		end
+	end
+	local weld = Instance.new("Weld")
+	weld.Name = "JetpackWeld"
+	weld.Part0 = torso
+	weld.Part1 = handle
+	-- au dos, plaque contre le torse, tuyères vers l'arrière et le bas
+	weld.C0 = CFrame.new(0, 0.05, torso.Size.Z / 2 + handle.Size.Z * 0.42) * CFrame.Angles(0, math.pi, 0)
+	weld.Parent = handle
+	model.Parent = character
+end
+
+-- État du jetpack envoyé par le client (0 = éteint, 1 = poussée, 2 = vol plané), recopié sur le
+-- personnage pour que tous les joueurs voient les flammes et la traînée
+local lastJet: { [Player]: number } = {}
+local function onJetState(player: Player, state: any)
+	if type(state) ~= "number" or (state ~= 0 and state ~= 1 and state ~= 2) then
+		return
+	end
+	local now = os.clock()
+	if lastJet[player] and now - lastJet[player] < 0.05 then
+		return
+	end
+	lastJet[player] = now
+	local character = player.Character
+	if character then
+		character:SetAttribute("Jet", state)
+	end
+end
+
 -- Foreuse suivante, payée en $ (en Robux : MonetizationService)
 local function buyDrill(player: Player)
 	local d = DataService.Get(player)
@@ -416,6 +468,7 @@ end
 
 function GameService.Start()
 	Remotes.Drill.OnServerEvent:Connect(onDrill)
+	Remotes.JetState.OnServerEvent:Connect(onJetState)
 	Remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
 	Remotes.BuyDrill.OnServerEvent:Connect(buyDrill)
 	Remotes.UnlockRing.OnServerEvent:Connect(unlockRing)
@@ -436,6 +489,7 @@ function GameService.Start()
 		ls.Parent = player
 		sync(player)
 		equipDrill(player)
+		equipJetpack(player)
 	end)
 	Players.PlayerAdded:Connect(function(player)
 		player.CharacterAdded:Connect(function(character)
@@ -444,11 +498,13 @@ function GameService.Start()
 			task.wait()
 			sync(player)
 			equipDrill(player)
+			equipJetpack(player)
 		end)
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		lastDrill[player] = nil
 		lastNotice[player] = nil
+		lastJet[player] = nil
 	end)
 	task.spawn(watchFalls)
 end

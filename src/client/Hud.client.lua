@@ -26,13 +26,13 @@ local function group(name: string, anchor: Vector2, pos: UDim2, size: UDim2): Fr
 	return f
 end
 
--- STATS (en bas à gauche) : l'oxygène max au-dessus, l'argent en énorme dessous -------------
+-- STATS (en bas à gauche) : les vitesses au-dessus (🏃 sol, 🚀 vol), l'argent en énorme dessous -------------
 local moneyGroup = group("Money", Vector2.new(0, 1), UDim2.new(0, 18, 1, -18), UDim2.fromOffset(420, 180))
-local oxygenIcon = UIKit.icon("Oxygen", { Size = UDim2.fromOffset(72, 72), Position = UDim2.fromOffset(16, 0), ZIndex = 2, Parent = moneyGroup })
-local oxygenText = UIKit.text({
-	Size = UDim2.fromOffset(280, 50),
+local speedIcon = UIKit.icon("Jetpack", { Size = UDim2.fromOffset(72, 72), Position = UDim2.fromOffset(16, 0), ZIndex = 2, Parent = moneyGroup })
+local speedText = UIKit.text({
+	Size = UDim2.fromOffset(300, 50),
 	Position = UDim2.fromOffset(104, 10),
-	Text = "0s",
+	Text = "",
 	TextColor3 = Color3.fromRGB(110, 235, 255),
 	TextXAlignment = Enum.TextXAlignment.Left,
 	Stroke = 3.5,
@@ -57,21 +57,17 @@ local incomeText = UIKit.text({
 	Parent = moneyGroup,
 })
 
--- Oxygène max (secondes), qui défile quand on s'entraîne
-local shownOxygen = 0
-local function oxygenLabel(n: number): string
-	return Format.Short(n) .. "s O₂"
-end
-local function refreshOxygen()
-	local o2 = player:GetAttribute("OxygenMax") or Config.Oxygen.Start
-	if o2 ~= shownOxygen then
-		if o2 > shownOxygen and shownOxygen > 0 then
-			UIKit.flyText(moneyGroup, "+" .. oxygenLabel(o2 - shownOxygen), UDim2.fromOffset(110, 0), Color3.fromRGB(110, 235, 255))
-			UIKit.bump(oxygenIcon, 0.2)
-		end
-		UIKit.countTo(oxygenText, shownOxygen, o2, oxygenLabel, 0.5)
-		shownOxygen = o2
+-- Vitesses au sol et en vol (montent avec l'amélioration Jetpack)
+local shownSpeed = 0
+local function refreshSpeed()
+	local ground = player:GetAttribute("GroundSpeed") or Config.Movement.Walk
+	local air = player:GetAttribute("AirSpeed") or Config.Movement.Air
+	speedText.Text = string.format("🏃 %d   🚀 %d", math.floor(ground + 0.5), math.floor(air + 0.5))
+	if shownSpeed > 0 and air > shownSpeed then
+		UIKit.flyText(moneyGroup, "+SPEED!", UDim2.fromOffset(110, 0), Color3.fromRGB(110, 235, 255))
+		UIKit.bump(speedIcon, 0.2)
 	end
+	shownSpeed = air
 end
 
 local shownMoney = 0
@@ -199,7 +195,6 @@ end)
 -- JAUGES (bord droit) ---------------------------------------------------------
 local gauges = group("Gauges", Vector2.new(1, 0.5), UDim2.new(1, -18, 0.5, 0), UDim2.fromOffset(160, 200))
 new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, Padding = UDim.new(0, 8), Parent = gauges })
-local oxygenGauge, oxygenFill = UIKit.gauge({ name = "Oxygen", art = "Oxygen", color = "Teal", parent = gauges })
 local noiseGauge, noiseFill = UIKit.gauge({ name = "Noise", art = "Noise", color = "Purple", parent = gauges })
 local _, fuelFill = UIKit.gauge({ name = "Jetpack", art = "Jetpack", color = "Orange", parent = gauges })
 
@@ -208,7 +203,7 @@ UIKit.text({
 	AnchorPoint = Vector2.new(0.5, 1),
 	Size = UDim2.new(0.6, 0, 0, 26),
 	Position = UDim2.new(0.5, 0, 1, -12),
-	Text = "🖱️ Hold click on an asteroid to drill   ·   ⬆️ Hold jump in the air to fly",
+	Text = "🖱️ Hold click on an asteroid to drill   ·   ⬆️ Hold jump to fly, steer to glide",
 	TextColor3 = Color3.fromRGB(230, 235, 255),
 	Stroke = 2,
 	Parent = gui,
@@ -219,8 +214,8 @@ player.AttributeChanged:Connect(function(name)
 	if name == "Credits" or name == "Income" then
 		refreshMoney()
 		refreshBadges()
-	elseif name == "OxygenMax" then
-		refreshOxygen()
+	elseif name == "GroundSpeed" or name == "AirSpeed" then
+		refreshSpeed()
 	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" then
 		refreshCargo()
 	elseif name == "Drill" or string.sub(name, 1, 4) == "Lvl_" then
@@ -228,7 +223,7 @@ player.AttributeChanged:Connect(function(name)
 	end
 end)
 refreshMoney()
-refreshOxygen()
+refreshSpeed()
 refreshCargo()
 refreshBadges()
 
@@ -239,12 +234,7 @@ end
 
 RunService.RenderStepped:Connect(function()
 	fuelFill.Size = UDim2.fromScale(1, math.clamp(player:GetAttribute("Fuel") or 1, 0, 1))
-	-- Oxygène et bruit n'apparaissent que lorsque le serveur les publie
-	local oxygen = player:GetAttribute("Oxygen")
-	oxygenGauge.Visible = oxygen ~= nil
-	if oxygen then
-		oxygenFill.Size = UDim2.fromScale(1, math.clamp(oxygen, 0, 1))
-	end
+	-- Le bruit n'apparaît que lorsque le serveur le publie
 	local noise = player:GetAttribute("Noise")
 	noiseGauge.Visible = noise ~= nil
 	if noise then

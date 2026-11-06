@@ -131,7 +131,13 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 | Scanner | Plus de chance ; repère les astéroïdes rares et les épaves |
 | Combinaison | Chaque palier donne la résistance à la pression qui ouvre l'anneau suivant. Sans le bon palier, la pression y est mortelle |
 
-### Oxygène et caissons de pression
+### Vitesse (remplace l'oxygène, 7 nov.)
+
+- ✅ L'oxygène est retiré. À sa place, deux vitesses affichées dans le HUD : **🏃 au sol** et **🚀 en vol** (jetpack). Elles montent avec l'amélioration Jetpack (+8 % par niveau, `Config.Movement`).
+- ✅ Jetpack : Saut maintenu = poussée vers le haut (carburant, rechargé au sol) ; relâché = vol plané (chute freinée) ; on pilote la direction avec de l'inertie. Modèle 3D porté au dos, flammes, fumée, étincelles, traînée, lumière, poussière au décollage et à l'atterrissage ; le joueur se penche dans le sens du vol. Les autres joueurs voient les flammes (état relayé par le serveur).
+- La foreuse est maintenant accrochée sur le côté (le jetpack occupe le dos).
+
+### (Ancien) Oxygène et caissons de pression
 
 C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, il ne s'achète pas.
 

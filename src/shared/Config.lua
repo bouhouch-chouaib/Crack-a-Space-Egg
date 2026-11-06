@@ -48,10 +48,16 @@ Config.Map = {
 	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
 }
 
--- Oxygène (docs/Mecaniques.md §12) : la statistique qu'on entraîne dans les caissons de pression,
--- l'équivalent de la vitesse des jeux d'œufs. Affichée en secondes dans le HUD.
-Config.Oxygen = {
-	Start = 15, -- secondes d'oxygène au départ
+-- Vitesse (remplace l'oxygène) : au sol et en vol avec le jetpack. Elle monte avec l'amélioration
+-- Jetpack (Thruster) : × (1 + PerLevel × niveau). Affichée dans le HUD (🏃 sol, 🚀 vol).
+Config.Movement = {
+	Walk = 16, -- vitesse au sol de départ (studs/s)
+	Air = 30, -- vitesse horizontale en vol de départ
+	Climb = 32, -- vitesse de montée maximale quand on pousse
+	PerLevel = 0.08, -- +8 % par niveau de Jetpack
+	AirAccel = 5, -- réactivité en vol (plus haut = virages plus secs)
+	ClimbAccel = 90, -- accélération verticale de la poussée (studs/s²)
+	FallBrake = 0.35, -- en vol plané (Saut relâché), la chute est freinée de ce facteur
 }
 
 -- Événements (docs/Mecaniques.md §14) ---------------------------------------
@@ -232,18 +238,18 @@ Config.DrillSlack = 12 -- marge de portée côté serveur (latence + défilement
 -- s'il tombe quand même dans le Vide, il est ramené au bout du quai SANS perdre ses œufs
 Config.RescueTime = 6
 
--- Jetpack (côté client)
-Config.JetpackFuelBase = 2.5 -- secondes de poussée
-Config.JetpackFuelPerLevel = 0.12
-Config.JetpackThrust = 55 -- vitesse verticale visée
-Config.JetpackRefill = 1.6 -- secondes de carburant regagnées par seconde au sol
+-- Jetpack (côté client) : carburant en secondes de poussée, rechargé au sol
+Config.JetpackFuelBase = 4
+Config.JetpackFuelPerLevel = 0.2
+Config.JetpackRefill = 2.5 -- secondes de carburant regagnées par seconde au sol
 
 -- Statistiques dérivées des niveaux
 -- Foreuse tenue par le personnage (modèles : ReplicatedStorage.Assets.Drills.DrillN)
 -- Carry = position du guidon par rapport au torse quand on ne fore pas (sur le dos, en biais)
 Config.DrillHold = {
 	Scale = 0.85,
-	Carry = CFrame.new(0, 0.3, 0.85) * CFrame.Angles(0, 0, math.rad(-35)),
+	-- Au repos, la foreuse est accrochée sur le côté (le jetpack occupe le dos)
+	Carry = CFrame.new(1.35, -0.55, 0.45) * CFrame.Angles(math.rad(-10), 0, math.rad(-12)),
 }
 
 function Config.DrillPower(tier: number): number
@@ -257,8 +263,15 @@ function Config.CargoSlots(_level: number?): number
 	return Config.CargoMax
 end
 
+-- Multiplicateur de vitesse selon le niveau de Jetpack, et vitesses qui en découlent
 function Config.Speed(level: number): number
-	return 1 + 0.08 * level
+	return 1 + Config.Movement.PerLevel * (level or 0)
+end
+function Config.GroundSpeed(level: number): number
+	return Config.Movement.Walk * Config.Speed(level)
+end
+function Config.AirSpeed(level: number): number
+	return Config.Movement.Air * Config.Speed(level)
 end
 
 function Config.Luck(level: number): number
@@ -533,7 +546,7 @@ Config.Shop = {
 		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "x2 fuel, faster flight", Art = "PassTurboJetpack", Id = 0, Price = 99 },
 		{ Key = "AutoCrack", Name = "Auto Crack", Text = "Eggs crack by themselves", Art = "PassAutoCrack", Id = 0, Price = 199, Ribbon = "BEST SELLER!" },
 		{ Key = "Money2x", Name = "x2 Money", Text = "Double money forever", Art = "PassMoney2x", Id = 0, Price = 299, Ribbon = "BEST VALUE!" },
-		{ Key = "Training2x", Name = "x2 Training", Text = "Train oxygen twice as fast", Art = "PassTraining2x", Id = 0, Price = 149 },
+		{ Key = "Speed2x", Name = "Speed Boots", Text = "+50% speed on ground and in the air", Art = "PassTraining2x", Id = 0, Price = 149 },
 		{ Key = "PetSlot", Name = "+1 Creature", Text = "Equip one more creature", Art = "PassPetSlot", Id = 0, Price = 249 },
 		{ Key = "VIP", Name = "VIP", Text = "VIP tag, +10% money, chat color", Art = "PassVIP", Id = 0, Price = 399 },
 	},
@@ -542,7 +555,7 @@ Config.Shop = {
 	Potions = {
 		{ Key = "Luck", Name = "x2 Luck", Art = "PotionLuck", Id = 0, Price = 39 },
 		{ Key = "Money", Name = "x2 Money", Art = "PotionMoney", Id = 0, Price = 39 },
-		{ Key = "Suit", Name = "Suit Refill", Art = "PotionSuit", Id = 0, Price = 25 },
+		{ Key = "Speed", Name = "x2 Speed", Art = "PotionSuit", Id = 0, Price = 25 },
 		{ Key = "Meteor", Name = "Meteor Shower", Text = "For the whole server!", Art = "PotionMeteor", Id = 0, Price = 99 },
 	},
 	-- Boost gratuit contre une pub récompensée

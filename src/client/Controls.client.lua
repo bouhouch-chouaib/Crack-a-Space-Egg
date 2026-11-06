@@ -1,4 +1,4 @@
--- Contrôles du joueur : jetpack (maintenir Saut en l'air) et foreuse (maintenir le clic / le doigt sur un astéroïde).
+-- Contrôles du joueur : foreuse (maintenir le clic / le doigt sur un astéroïde). Le jetpack est dans Jetpack.client.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,46 +11,6 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
-
--- JETPACK ------------------------------------------------------------------
-
-local fuel = Config.JetpackFuelBase
-local lastJumpRequest = 0
-local flame: ParticleEmitter? = nil
-
-local function maxFuel(): number
-	return Config.JetpackFuelBase + Config.JetpackFuelPerLevel * (player:GetAttribute("Lvl_Thruster") or 0)
-end
-
--- JumpRequest se répète tant que le bouton Saut est tenu (clavier, manette et bouton tactile)
-UserInputService.JumpRequest:Connect(function()
-	lastJumpRequest = os.clock()
-end)
-
-local function setupCharacter(character: Model)
-	local hrp = character:WaitForChild("HumanoidRootPart") :: BasePart
-	local attach = Instance.new("Attachment")
-	attach.Name = "JetpackAttachment"
-	attach.Position = Vector3.new(0, -0.6, 0.9)
-	attach.Parent = hrp
-	local p = Instance.new("ParticleEmitter")
-	p.Texture = "rbxasset://textures/particles/fire_main.dds"
-	p.Color = ColorSequence.new(Color3.fromRGB(120, 200, 255), Color3.fromRGB(255, 160, 80))
-	p.Size = NumberSequence.new(0.8, 0)
-	p.Lifetime = NumberRange.new(0.15, 0.3)
-	p.Rate = 80
-	p.Speed = NumberRange.new(12)
-	p.EmissionDirection = Enum.NormalId.Bottom
-	p.LightEmission = 1
-	p.Enabled = false
-	p.Parent = attach
-	flame = p
-	fuel = maxFuel()
-end
-player.CharacterAdded:Connect(setupCharacter)
-if player.Character then
-	task.spawn(setupCharacter, player.Character)
-end
 
 -- DRILL ------------------------------------------------------------------
 
@@ -190,30 +150,13 @@ end)
 
 -- BOUCLE PAR IMAGE ----------------------------------------------------------
 
-RunService.RenderStepped:Connect(function(dt)
+RunService.RenderStepped:Connect(function()
 	local character = player.Character
 	local hum = character and character:FindFirstChildOfClass("Humanoid")
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not hum or not hrp then
 		return
 	end
-
-	-- Jetpack : pousse vers le haut tant que Saut est tenu, en l'air, avec du carburant
-	local state = hum:GetState()
-	local airborne = state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.Jumping
-	local thrusting = airborne and fuel > 0 and os.clock() - lastJumpRequest < 0.15
-	if thrusting then
-		fuel = math.max(0, fuel - dt)
-		local v = hrp.AssemblyLinearVelocity
-		local up = math.min(v.Y + Config.JetpackThrust * 3 * dt, Config.JetpackThrust * 0.55)
-		hrp.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, up), v.Z)
-	elseif not airborne then
-		fuel = math.min(maxFuel(), fuel + Config.JetpackRefill * dt)
-	end
-	if flame then
-		flame.Enabled = thrusting
-	end
-	player:SetAttribute("Fuel", fuel / maxFuel())
 
 	-- Foreuse
 	local hitPart, hitPos, tooFar = nil, nil, nil
@@ -271,22 +214,5 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 end)
 
--- La casse des roches (éclats, morceaux) est dans Impact.client.lua.
--- Si la roche sous le joueur casse, il rebondit et son jetpack est plein : il peut se rattraper.
-Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, _by: Player, _damage: number, _rarities: { number }, broken: boolean)
-	if not broken or not rock then
-		return
-	end
-	local character = player.Character
-	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not hrp then
-		return
-	end
-	local s = rock.Size
-	if (hrp.Position - rock.Position).Magnitude <= math.max(s.X, s.Y, s.Z) / 2 + 8 then
-		fuel = maxFuel()
-		local v = hrp.AssemblyLinearVelocity
-		hrp.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, 45), v.Z)
-		UIKit.toast("🚀 Your rock broke! Fly to the next one", "info")
-	end
-end)
+-- La casse des roches (éclats, morceaux) est dans Impact.client.lua ; le rebond quand sa roche casse,
+-- dans Jetpack.client.lua.

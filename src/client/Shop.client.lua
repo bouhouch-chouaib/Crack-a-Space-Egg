@@ -219,8 +219,8 @@ local upgradeGrid = UIKit.grid(body, Vector2.new(152, 258), nextOrder())
 
 -- Ce qu'on montre pour chaque amélioration : titre, illustration, effet d'un niveau
 local UPGRADES = {
-	{ id = "Thruster", title = "JETPACK", art = "Jetpack", color = "Pink", effect = function(l)
-		return string.format("x%.2f", Config.Speed(l))
+	{ id = "Thruster", title = "SPEED", art = "Jetpack", color = "Pink", effect = function(l)
+		return string.format("🏃%d 🚀%d", math.floor(Config.GroundSpeed(l) + 0.5), math.floor(Config.AirSpeed(l) + 0.5))
 	end },
 	{ id = "Scanner", title = "SCANNER", art = "UpScanner", color = "Teal", effect = function(l)
 		return string.format("x%.2f", Config.Luck(l))

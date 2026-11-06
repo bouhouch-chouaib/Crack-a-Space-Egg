@@ -26,6 +26,9 @@
         "Hatched": {
           "$className": "RemoteEvent"
         },
+        "JetState": {
+          "$className": "RemoteEvent"
+        },
         "CrackAll": {
           "$className": "RemoteEvent"
         },
