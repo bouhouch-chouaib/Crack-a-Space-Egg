@@ -1,5 +1,5 @@
 -- Biomes : chaque anneau a sa propre ambiance (Config.Biomes).
--- Quand le joueur entre dans un anneau : la brume, la teinte et la lumière glissent vers celles
+-- Quand le joueur entre dans un anneau : le brouillard, la teinte et la lumière glissent vers ceux
 -- du biome, ses particules (3 couches) flottent autour de lui, et un grand titre l'annonce.
 -- Sur le vaisseau, on revient à l'éclairage réglé dans Studio (relu au démarrage).
 -- Tout est local au client : chaque joueur voit le biome où il se trouve.
@@ -27,22 +27,27 @@ local TEXTURES = {
 
 -- ÉCLAIRAGE DU VAISSEAU -------------------------------------------------------------
 
+-- Le brouillard « classique » (FogStart/FogEnd) permet de cacher précisément tout ce qui est
+-- au-delà d'une distance ; il ne marche que sans Atmosphere, qu'on retire donc chez le client.
+-- Sans elle, Roblox éclaire la scène avec les couleurs du ciel (chaudes) : on coupe cet apport
+-- pour garder le pont blanc tel qu'il est réglé dans Studio.
 local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
-if not atmosphere then
-	atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0
-	atmosphere.Parent = Lighting
+if atmosphere then
+	atmosphere.Parent = nil
 end
+Lighting.EnvironmentDiffuseScale = 0
+Lighting.FogColor = Config.Fog.ShipColor
+Lighting.FogEnd = Config.Fog.ShipEnd
+Lighting.FogStart = Config.Fog.ShipEnd * Config.Fog.StartRatio
+
 local tint = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
 if not tint then
 	tint = Instance.new("ColorCorrectionEffect")
 	tint.Parent = Lighting
 end
-local atmo = atmosphere :: Atmosphere
 local cc = tint :: ColorCorrectionEffect
 
 local ship = {
-	Atmosphere = { Density = atmo.Density, Haze = atmo.Haze, Glare = atmo.Glare, Color = atmo.Color, Decay = atmo.Decay },
 	Tint = cc.TintColor,
 	Saturation = cc.Saturation,
 	Brightness = cc.Brightness,
@@ -136,7 +141,7 @@ local function showTitle(index: number)
 	end
 	local box = UIKit.new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = titleHolder })
 	currentBox = box
-	local color = biome.Atmosphere.Color
+	local color = biome.Clouds[1]
 	UIKit.rays(box, { color = color, size = 420, transparency = 0.45, position = UDim2.fromScale(0.5, 0.45) })
 	local title = UIKit.text({
 		Size = UDim2.new(1, 0, 0, 84),
@@ -204,8 +209,13 @@ end
 local function apply(index: number)
 	local biome = Config.Biomes[index]
 	local info = TweenInfo.new(Config.BiomeFade, Enum.EasingStyle.Sine)
-	local a = if biome then biome.Atmosphere else ship.Atmosphere
-	TweenService:Create(atmo, info, { Density = a.Density, Haze = a.Haze, Glare = a.Glare, Color = a.Color, Decay = a.Decay }):Play()
+	-- Brouillard : sa couleur suit le biome, sa distance laisse voir la moitié de l'anneau suivant
+	local fogEnd = Config.FogEnd(index)
+	TweenService:Create(Lighting, info, {
+		FogColor = if biome then biome.Fog else Config.Fog.ShipColor,
+		FogEnd = fogEnd,
+		FogStart = fogEnd * Config.Fog.StartRatio,
+	}):Play()
 	TweenService:Create(cc, info, {
 		TintColor = if biome then biome.Tint else ship.Tint,
 		Saturation = if biome then biome.Saturation else ship.Saturation,

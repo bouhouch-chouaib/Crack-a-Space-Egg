@@ -411,6 +411,57 @@ local function buildRingClouds(world: Folder)
 	folder.Parent = world
 end
 
+-- RIDEAUX DE BRUME ------------------------------------------------------------------
+-- Dans chaque vide entre deux anneaux, une rangée de nuages plus épais, aux couleurs des deux
+-- biomes : on devine l'anneau suivant à travers, sans le voir nettement.
+
+local function buildFogCurtains(world: Folder)
+	local F = Config.FogCurtains
+	local folder = Instance.new("Folder")
+	folder.Name = "FogCurtains"
+	for i = 1, #Config.Rings - 1 do
+		local gap = Config.RingGapAfter(i)
+		local radius = M.AxisDistance + Config.RingDistance(i) + Config.RingWidth(i) / 2 + gap / 2
+		local field = math.max(Config.FieldHeight(i), Config.FieldHeight(i + 1))
+		local arc = F.Arc / radius
+		local from, to = Config.Biomes[i].Clouds[1], Config.Biomes[i + 1].Clouds[1]
+		for k = 1, F.PerGap do
+			local u = ((k - 0.5) / F.PerGap) * 2 - 1
+			local angle = math.sign(u) * math.abs(u) ^ F.Gather * arc
+			local pos = Config.OrbitPosition(radius + rng:NextNumber(-gap * 0.15, gap * 0.15), angle, rng:NextNumber(-field * 0.3, field * 0.3))
+			local box = decor({
+				Name = "Curtain",
+				Size = Vector3.new(F.Arc * 2 / F.PerGap, field * 2, gap * 0.6),
+				CFrame = CFrame.lookAt(pos, pos + Vector3.new(pos.X, 0, pos.Z + M.AxisDistance - M.FrontZ)),
+				Transparency = 1,
+				Parent = folder,
+			})
+			local e = Instance.new("ParticleEmitter")
+			e.Texture = Config.BiomeClouds.Texture
+			e.Color = ColorSequence.new(from, to)
+			e.Size = NumberSequence.new(F.Size[1], F.Size[2])
+			e.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(0.3, F.Transparency),
+				NumberSequenceKeypoint.new(0.7, F.Transparency),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			e.Lifetime = NumberRange.new(F.Life[1], F.Life[2])
+			e.Rate = F.Rate
+			e.Speed = NumberRange.new(0.3, 1)
+			e.SpreadAngle = Vector2.new(180, 180)
+			e.Rotation = NumberRange.new(0, 360)
+			e.RotSpeed = NumberRange.new(-3, 3)
+			e.LightEmission = 0.3
+			e.LightInfluence = 0
+			e.Shape = Enum.ParticleEmitterShape.Box
+			e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+			e.Parent = box
+		end
+	end
+	folder.Parent = world
+end
+
 function WorldBuilder.Build(): Folder
 	local old = workspace:FindFirstChild("World")
 	if old then
@@ -424,6 +475,7 @@ function WorldBuilder.Build(): Folder
 	buildCorridor(world)
 	buildRingDecor(world)
 	buildRingClouds(world)
+	buildFogCurtains(world)
 	buildEventBanner(world)
 
 	local belt = Instance.new("Folder")

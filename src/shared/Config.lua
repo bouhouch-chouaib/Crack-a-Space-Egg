@@ -238,6 +238,36 @@ local function layer(texture, c1, c2, size, rate, life, speed, drift, transparen
 	}
 end
 Config.BiomeFade = 2 -- secondes de transition entre deux biomes
+-- Brouillard : on ne voit que son biome et la moitié du suivant (depuis la base : l'anneau 1
+-- et la moitié de l'anneau 2). La suite se devine dans la brume et donne envie d'avancer.
+Config.Fog = {
+	ShipColor = rgb(34, 24, 52), -- sur le vaisseau
+	ShipEnd = 300, -- studs : depuis le pont, la moitié de l'anneau 2
+	MinEnd = 260,
+	Margin = 80, -- au-delà du milieu de l'anneau suivant
+	StartRatio = 0.45, -- le brouillard commence à 45 % de sa distance de fin
+}
+-- Rideaux de brume dans les vides entre deux anneaux (WorldBuilder)
+Config.FogCurtains = {
+	PerGap = 16,
+	Gather = 1.5, -- resserrés autour du couloir
+	Arc = 450, -- studs d'arc de chaque côté du couloir
+	Size = { 50, 75 },
+	Transparency = 0.78,
+	Rate = 0.8,
+	Life = { 10, 14 },
+}
+
+-- Distance de fin du brouillard quand on est dans l'anneau « zone » (0 = vaisseau)
+function Config.FogEnd(zone: number): number
+	local f = Config.Fog
+	if zone <= 0 then
+		return f.ShipEnd
+	end
+	local n = #Config.Rings
+	local nextHalf = if zone < n then Config.RingGapAfter(zone) + Config.RingWidth(zone + 1) / 2 else Config.RingWidth(zone) / 2
+	return math.max(f.MinEnd, Config.RingWidth(zone) / 2 + nextHalf + f.Margin)
+end
 -- Nuages colorés posés dans le champ de chaque anneau : ils donnent sa couleur au biome
 -- sans voiler le ciel (une brume globale peindrait tout le bas du ciel d'une couleur unie)
 Config.BiomeClouds = {
@@ -253,7 +283,7 @@ Config.Biomes = {
 	{ -- 1. Dust Belt : poussière dorée
 		Title = "DUST BELT",
 		Icon = "✨",
-		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(255, 215, 160), Decay = rgb(255, 215, 160) },
+		Fog = rgb(60, 42, 30), -- couleur du brouillard lointain
 		Clouds = { rgb(230, 170, 110), rgb(200, 130, 80) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(255, 230, 195),
 		Saturation = 0.15,
@@ -267,7 +297,7 @@ Config.Biomes = {
 	{ -- 2. Ice Ring : neige bleutée
 		Title = "ICE RING",
 		Icon = "❄️",
-		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(190, 225, 255), Decay = rgb(190, 225, 255) },
+		Fog = rgb(30, 42, 66), -- couleur du brouillard lointain
 		Clouds = { rgb(170, 205, 245), rgb(120, 165, 230) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(212, 232, 255),
 		Saturation = 0.1,
@@ -281,7 +311,7 @@ Config.Biomes = {
 	{ -- 3. Magma Field : braises qui montent et fumée rouge
 		Title = "MAGMA FIELD",
 		Icon = "🔥",
-		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(230, 150, 120), Decay = rgb(230, 150, 120) },
+		Fog = rgb(58, 22, 20), -- couleur du brouillard lointain
 		Clouds = { rgb(200, 90, 60), rgb(90, 40, 40) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(255, 212, 190),
 		Saturation = 0.2,
@@ -295,7 +325,7 @@ Config.Biomes = {
 	{ -- 4. Nebula : nuages roses et étincelles
 		Title = "NEBULA",
 		Icon = "🌌",
-		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(230, 160, 255), Decay = rgb(230, 160, 255) },
+		Fog = rgb(52, 28, 70), -- couleur du brouillard lointain
 		Clouds = { rgb(255, 140, 220), rgb(160, 110, 255) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(248, 220, 255),
 		Saturation = 0.3,
@@ -309,7 +339,7 @@ Config.Biomes = {
 	{ -- 5. Devourer Belt : brume verte sombre et spores
 		Title = "DEVOURER BELT",
 		Icon = "👁️",
-		Atmosphere = { Density = 0.2, Haze = 0, Glare = 0, Color = rgb(110, 160, 115), Decay = rgb(110, 160, 115) },
+		Fog = rgb(16, 30, 22), -- couleur du brouillard lointain
 		Clouds = { rgb(90, 160, 100), rgb(30, 60, 40) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(205, 235, 208),
 		Saturation = -0.05,
@@ -324,7 +354,7 @@ Config.Biomes = {
 	{ -- 6. The Rift : éclats cyan et magenta qui clignotent
 		Title = "THE RIFT",
 		Icon = "🌀",
-		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(150, 190, 255), Decay = rgb(150, 190, 255) },
+		Fog = rgb(24, 28, 62), -- couleur du brouillard lointain
 		Clouds = { rgb(120, 220, 255), rgb(220, 90, 255) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(222, 232, 255),
 		Saturation = 0.2,
@@ -338,7 +368,7 @@ Config.Biomes = {
 	{ -- 7. The Nest : pollen ambré et coquilles d'œufs qui flottent
 		Title = "THE NEST",
 		Icon = "🥚",
-		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(255, 220, 160), Decay = rgb(255, 220, 160) },
+		Fog = rgb(62, 44, 22), -- couleur du brouillard lointain
 		Clouds = { rgb(255, 220, 150), rgb(255, 180, 90) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(255, 232, 195),
 		Saturation = 0.2,
