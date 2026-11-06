@@ -105,16 +105,20 @@ function UIKit.new(class: string, props: { [string]: any }?, children: { Instanc
 end
 local new = UIKit.new
 
-function UIKit.corner(radius: number?): UICorner
-	return new("UICorner", { CornerRadius = if radius then UDim.new(0, radius) else UDim.new(0.25, 0) })
+-- Style des jeux d'œufs : angles droits partout (pas de coins arrondis). On garde la fonction
+-- (et son paramètre, ignoré) pour que tous les écrans passent au même style d'un coup.
+function UIKit.corner(_radius: number?): UICorner
+	return new("UICorner", { CornerRadius = UDim.new(0, 0) })
 end
 
+-- Bordure épaisse et nette (angles vifs), un peu plus grasse que la valeur demandée
+UIKit.BorderBoost = 1.5
 function UIKit.stroke(thickness: number?, color: Color3?): UIStroke
 	return new("UIStroke", {
-		Thickness = thickness or 3,
+		Thickness = (thickness or 3) + UIKit.BorderBoost,
 		Color = color or UIKit.Outline,
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		LineJoinMode = Enum.LineJoinMode.Round,
+		LineJoinMode = Enum.LineJoinMode.Miter,
 	})
 end
 
@@ -124,7 +128,7 @@ end
 
 -- Texte du style « jeu d'œufs » : blanc, gras, épais contour sombre
 function UIKit.text(props: { [string]: any }): TextLabel
-	local strokeSize = props.Stroke or 2.5
+	local strokeSize = (props.Stroke or 2.5) + 0.5
 	props.Stroke = nil
 	local t = new("TextLabel", {
 		BackgroundTransparency = 1,

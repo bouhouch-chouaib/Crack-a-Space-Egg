@@ -78,7 +78,8 @@ bar.AlwaysOnTop = true
 bar.LightInfluence = 0
 bar.MaxDistance = 180
 bar.Enabled = false
-bar.Parent = gui
+-- Directement dans PlayerGui : une BillboardGui rangée dans une ScreenGui ne s'affiche pas
+bar.Parent = player:WaitForChild("PlayerGui")
 
 local barTitle = label({ Size = UDim2.new(1, 0, 0, 24), Text = "", Stroke = 2.5, Parent = bar })
 local barEggs = label({ Size = UDim2.new(1, 0, 0, 20), Position = UDim2.fromOffset(0, 24), Text = "", TextColor3 = Color3.fromRGB(255, 240, 160), Stroke = 2, Parent = bar })
@@ -478,6 +479,7 @@ Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, by: Player, dam
 	end
 	if isMine then
 		lastHit = os.clock()
+		player:SetAttribute("LastDrillHit", workspace:GetServerTimeNow())
 		showBar(rock)
 		eggHP = perEgg or eggHP
 		if #rarities > 0 then

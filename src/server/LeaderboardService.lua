@@ -97,7 +97,7 @@ local function buildScreen(board: Model, stat: string)
 		row.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 		row.BackgroundTransparency = if i % 2 == 0 then 0.94 else 0.88
 		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0.3, 0)
+		corner.CornerRadius = UDim.new(0, 0)
 		corner.Parent = row
 		local function cell(name: string, x: number, w: number, align: Enum.TextXAlignment)
 			local t = Instance.new("TextLabel")

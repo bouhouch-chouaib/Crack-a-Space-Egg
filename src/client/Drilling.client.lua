@@ -447,7 +447,8 @@ RunService.PreSimulation:Connect(function(dt)
 						local want = CFrame.lookAt(root.Position, flat)
 						root.CFrame = root.CFrame:Lerp(want, math.min(1, dt * 10))
 					end
-					hum.CameraOffset = Vector3.new((math.random() - 0.5) * 0.12, (math.random() - 0.5) * 0.12, 0)
+					local confirmed = serverNow - (player:GetAttribute("LastDrillHit") or 0) < 0.6
+					hum.CameraOffset = if confirmed then Vector3.new((math.random() - 0.5) * 0.1, (math.random() - 0.5) * 0.1, 0) else Vector3.zero
 				else
 					hum.AutoRotate = true
 					hum.CameraOffset = Vector3.zero

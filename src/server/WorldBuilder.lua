@@ -283,11 +283,12 @@ local function buildEventBanner(world: Folder)
 	bg.Size = UDim2.fromScale(1, 1)
 	bg.BackgroundColor3 = Color3.fromRGB(43, 51, 80)
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.25, 0)
+	corner.CornerRadius = UDim.new(0, 0)
 	corner.Parent = bg
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = Color3.fromRGB(63, 201, 216)
-	stroke.Thickness = 8
+	stroke.Thickness = 11
+	stroke.LineJoinMode = Enum.LineJoinMode.Miter
 	stroke.Parent = bg
 	local function label(name: string, y: number, h: number, color: Color3)
 		local t = Instance.new("TextLabel")

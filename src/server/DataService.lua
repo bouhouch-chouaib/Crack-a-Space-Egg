@@ -71,6 +71,11 @@ local function withRetries(fn: () -> any, label: string)
 			return true, result
 		end
 		warn(string.format("[Data] %s échec %d/5 : %s", label, attempt, tostring(result)))
+		-- Studio sans accès aux API : ça ne marchera jamais, on joue tout de suite sans sauvegarde
+		local message = tostring(result)
+		if string.find(message, "StudioAccessToApisNotAllowed", 1, true) or string.find(message, "Studio access to APIs is not allowed", 1, true) then
+			return false, nil
+		end
 		task.wait(attempt * 1.5)
 	end
 	return false, nil

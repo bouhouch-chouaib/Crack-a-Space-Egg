@@ -32,8 +32,9 @@ local function new(class: string, props: { [string]: any }, children: { Instance
 	return o
 end
 
-local function corner(r: number)
-	return new("UICorner", { CornerRadius = UDim.new(0, r) })
+-- Angles droits (style des jeux d'œufs)
+local function corner(_r: number)
+	return new("UICorner", { CornerRadius = UDim.new(0, 0) })
 end
 
 local function label(props)

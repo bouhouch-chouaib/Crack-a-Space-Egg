@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local player = Players.LocalPlayer
@@ -63,6 +64,21 @@ local targetValue = Instance.new("ObjectValue")
 targetValue.Name = "DrillTarget"
 targetValue.Parent = player
 
+
+-- Raison pour laquelle on ne peut pas forer cette roche (nil = on peut)
+local function blocked(rock: BasePart): string?
+	if player:GetAttribute("Credits") == nil then
+		return "Loading your save..."
+	end
+	if (player:GetAttribute("Cargo") or 0) >= (player:GetAttribute("CargoMax") or 1) then
+		return "🎒 Cargo full! Go back to your base 🏠"
+	end
+	if (rock:GetAttribute("Ring") or 1) > (player:GetAttribute("Ring") or 1) then
+		return "🔒 Locked ring! Unlock it at the shop"
+	end
+	return nil
+end
+local lastWarn = 0
 
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -146,6 +162,16 @@ RunService.RenderStepped:Connect(function(dt)
 	target = hitPart
 	-- État lu par l'animation de forage (Drilling.client) : prêt à forer, et point d'impact
 	local active = hitPart ~= nil and hitPos ~= nil and (hitPart:GetAttribute("HP") or 0) > 0
+	if active and hitPart then
+		local why = blocked(hitPart)
+		if why then
+			active = false
+			if os.clock() - lastWarn > 2.5 then
+				lastWarn = os.clock()
+				UIKit.toast(why, "warn")
+			end
+		end
+	end
 	player:SetAttribute("DrillReady", drilling)
 	player:SetAttribute("DrillAtLocal", if active then hitPos else nil)
 	if active and os.clock() - lastSent >= Config.DrillTick then
