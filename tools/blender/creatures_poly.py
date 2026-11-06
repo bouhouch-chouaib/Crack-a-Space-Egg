@@ -7,7 +7,7 @@ from mathutils import Vector, Matrix
 
 PALP = {
     # communs
-    'eyew': '#ffffff', 'eyeb': '#141018', 'browdk': '#1a1218', 'nose': '#1e1620', 'mouth': '#3a1020', 'tooth': '#fff6e0',
+    'eyew': '#ffffff', 'eyeb': '#141018', 'shine': '#ffffff', 'browdk': '#1a1218', 'nose': '#1e1620', 'mouth': '#3a1020', 'tooth': '#fff6e0',
     'claw': '#f2ead8', 'pink': '#ff8ab0', 'gold': '#ffc21a', 'golddk': '#d8860c', 'ruby': '#ff2456',
     'eyeglow': '#ffd23a', 'star': '#fff27a',
     # Pebblepup

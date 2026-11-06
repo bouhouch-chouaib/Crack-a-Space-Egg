@@ -137,19 +137,26 @@ def flame_shape(bm, base, h, w, back=0.3, sides=5):
 # VISAGES ------------------------------------------------------------------------------------
 
 def eyes_cute(m, x, z, fy, w=1.1, h=1.3, pupil=0.55, look=0.0):
-    """Yeux des communs : rectangle blanc + pupille noire carrée (fy = plan de la face avant)."""
+    """Yeux des communs : rectangle blanc + grande pupille noire carrée centrée, reflet blanc
+    (regard droit et joyeux, jamais tombant)."""
     for s in (-1, 1):
         box(D(m, 'eyew'), (s * x, fy - 0.06, z), (w, 0.2, h), bevel=0.08)
-        box(D(m, 'eyeb'), (s * x - s * w * look, fy - 0.16, z - h * 0.06), (w * pupil, 0.2, h * pupil * 1.25), bevel=0.05)
+        box(D(m, 'eyeb'), (s * x - s * w * look, fy - 0.16, z + h * 0.02), (w * pupil, 0.2, h * pupil * 1.2), bevel=0.05)
+        box(D(m, 'shine'), (s * x - s * w * look + w * pupil * 0.22, fy - 0.2, z + h * pupil * 0.38), (w * pupil * 0.3, 0.2, h * pupil * 0.3), bevel=0.0)
 
 
 def eyes_fierce(m, x, z, fy, w=1.3, h=0.8, iris='G:eyeglow', brow='browdk', tilt=0.38):
-    """Yeux des rares : amande blanche inclinée, iris lumineux, sourcil froncé (intérieur plus bas)."""
+    """Yeux des rares : amande blanche, iris lumineux, sourcil froncé en V (intérieur plus BAS = air fâché).
+    Rotation autour de y : un angle négatif relève le côté +x ; pour l'œil droit (s = +1) on relève
+    donc le coin extérieur avec -s * angle."""
     for s in (-1, 1):
-        box(D(m, 'eyew'), (s * x, fy - 0.06, z), (w, 0.2, h), rot=(0, s * tilt, 0), bevel=0.15)
-        box(D(m, iris), (s * x - s * w * 0.08, fy - 0.17, z - h * 0.04), (w * 0.42, 0.2, h * 0.7), rot=(0, s * tilt, 0), bevel=0.1)
-        box(D(m, 'eyeb'), (s * x - s * w * 0.08, fy - 0.24, z - h * 0.04), (w * 0.14, 0.2, h * 0.5), rot=(0, s * tilt, 0), bevel=0.05)
-        box(D(m, brow), (s * (x - w * 0.05), fy - 0.12, z + h * 0.72), (w * 1.25, 0.5, h * 0.36), rot=(0, s * (tilt + 0.12), 0), bevel=0.1)
+        r = (0, -s * tilt * 0.6, 0)
+        rb = (0, -s * (tilt + 0.15), 0)
+        box(D(m, 'eyew'), (s * x, fy - 0.06, z), (w, 0.2, h), rot=r, bevel=0.15)
+        box(D(m, iris), (s * x - s * w * 0.06, fy - 0.17, z - h * 0.02), (w * 0.42, 0.2, h * 0.72), rot=r, bevel=0.1)
+        box(D(m, 'eyeb'), (s * x - s * w * 0.06, fy - 0.24, z - h * 0.02), (w * 0.14, 0.2, h * 0.52), rot=r, bevel=0.05)
+        box(D(m, 'shine'), (s * x + s * w * 0.05, fy - 0.27, z + h * 0.18), (w * 0.1, 0.2, h * 0.16), bevel=0.0)
+        box(D(m, brow), (s * (x - w * 0.08), fy - 0.12, z + h * 0.62), (w * 1.3, 0.5, h * 0.38), rot=rb, bevel=0.1)
 
 
 def teeth_row(m, x0, x1, y, z, n, length, radius, down=True, key='tooth'):
