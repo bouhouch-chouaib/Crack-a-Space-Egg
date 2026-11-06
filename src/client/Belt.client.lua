@@ -10,6 +10,8 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 
 local folder = workspace:WaitForChild("World"):WaitForChild("Belt")
 local FADE = 30 -- studs d'arc sur lesquels une roche apparaît ou disparaît en fondu
+-- Roche qu'on est en train de forer (posée par Controls.client) : elle tremble à chaque coup
+local drillTarget = game:GetService("Players").LocalPlayer:WaitForChild("DrillTarget", 10) :: ObjectValue?
 
 type Orbit = {
 	radius: number,
@@ -70,6 +72,11 @@ RunService.PreRender:Connect(function()
 	for _, o in pairs(orbits) do
 		local angle = o.angle0 + o.omega * (t - o.t0)
 		local pivot = CFrame.new(Config.OrbitPosition(o.radius, angle, o.height)) * o.yaw
+		if drillTarget and o.root and drillTarget.Value == o.root then
+			local j = 0.14
+			pivot = pivot * CFrame.new((math.random() - 0.5) * j, (math.random() - 0.5) * j, (math.random() - 0.5) * j)
+				* CFrame.Angles((math.random() - 0.5) * 0.02, 0, (math.random() - 0.5) * 0.02)
+		end
 		-- Apparition et disparition en fondu aux deux bouts du tapis (pas de roche qui « pop »)
 		local fade = 1 - math.clamp((Config.Belt.SpawnArc - math.abs(angle * o.radius)) / FADE, 0, 1)
 		local fadeChanged = math.abs(fade - o.fade) > 0.02 or (fade == 0 and o.fade ~= 0)

@@ -63,16 +63,6 @@ local targetValue = Instance.new("ObjectValue")
 targetValue.Name = "DrillTarget"
 targetValue.Parent = player
 
-local beam = Instance.new("Part")
-beam.Name = "DrillBeam"
-beam.Anchored = true
-beam.CanCollide = false
-beam.CanQuery = false
-beam.Material = Enum.Material.Neon
-beam.Color = Color3.fromRGB(255, 190, 90)
-beam.Transparency = 1
-beam.Parent = workspace
-
 local sparks = Instance.new("Attachment")
 local sparkEmitter = Instance.new("ParticleEmitter")
 sparkEmitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
@@ -97,7 +87,7 @@ local function findTarget(): (BasePart?, Vector3?)
 	if not character then
 		return nil, nil
 	end
-	rayParams.FilterDescendantsInstances = { character, beam }
+	rayParams.FilterDescendantsInstances = { character }
 	local ray = camera:ViewportPointToRay(pointer.X, pointer.Y)
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * 400, rayParams)
 	if not hit or hit.Instance.Name ~= "Asteroid" then
@@ -166,20 +156,13 @@ RunService.RenderStepped:Connect(function(dt)
 		hitPart, hitPos = findTarget()
 	end
 	target = hitPart
-	if hitPart and hitPos and (hitPart:GetAttribute("HP") or 0) > 0 then
-		local from = hrp.Position + Vector3.new(0, 0.5, 0)
-		local dist = (hitPos - from).Magnitude
-		beam.Size = Vector3.new(0.25, 0.25, dist)
-		beam.CFrame = CFrame.lookAt(from, hitPos) * CFrame.new(0, 0, -dist / 2)
-		beam.Transparency = 0.2
-		sparks.WorldPosition = hitPos
-		sparkEmitter:Emit(2)
-		if os.clock() - lastSent >= Config.DrillTick then
-			lastSent = os.clock()
-			Remotes.Drill:FireServer(hitPart)
-		end
-	else
-		beam.Transparency = 1
+	-- État lu par l'animation de forage (Drilling.client) : prêt à forer, et point d'impact
+	local active = hitPart ~= nil and hitPos ~= nil and (hitPart:GetAttribute("HP") or 0) > 0
+	player:SetAttribute("DrillReady", drilling)
+	player:SetAttribute("DrillAtLocal", if active then hitPos else nil)
+	if active and os.clock() - lastSent >= Config.DrillTick then
+		lastSent = os.clock()
+		Remotes.Drill:FireServer(hitPart, hitPos)
 	end
 	if targetValue.Value ~= target then
 		targetValue.Value = target

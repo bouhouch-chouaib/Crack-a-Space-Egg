@@ -95,7 +95,7 @@ end
 
 -- FORAGE ------------------------------------------------------------------
 
-local function onDrill(player: Player, target: any)
+local function onDrill(player: Player, target: any, at: any)
 	local d = DataService.Get(player)
 	if not d or typeof(target) ~= "Instance" then
 		return
@@ -119,6 +119,14 @@ local function onDrill(player: Player, target: any)
 	local reach = (hrp.Position - pos).Magnitude - a.part.Size.X / 2
 	if reach > Config.DrillRange + Config.DrillSlack then
 		return
+	end
+	-- État de forage pour l'animation chez tous les clients (le point d'impact n'est que visuel :
+	-- on le ramène sur l'astéroïde s'il en est trop loin)
+	local character = player.Character
+	if character then
+		local point = if typeof(at) == "Vector3" and (at - pos).Magnitude < a.part.Size.Magnitude then at else pos
+		character:SetAttribute("DrillAt", point)
+		character:SetAttribute("DrillingUntil", workspace:GetServerTimeNow() + Config.DrillTick * 2)
 	end
 	if a.ring > d.ring then
 		notice(player, "Unlock the " .. Config.Rings[a.ring].Name .. " at the Space Shop", "warn")
