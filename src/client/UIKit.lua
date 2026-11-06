@@ -57,6 +57,10 @@ UIKit.Art = {
 	FxRays = "rbxassetid://100803246971606",
 	FxGlow = "rbxassetid://103844906730878",
 	FxSparkle = "rbxassetid://138922153683020",
+	-- Particules des biomes (tools/fx/make_particles.py)
+	FxSnow = "rbxassetid://123520400213749",
+	FxShard = "rbxassetid://121742631956253",
+	FxShell = "rbxassetid://73009463028666",
 }
 
 -- THÈME ------------------------------------------------------------------

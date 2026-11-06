@@ -37,15 +37,15 @@ Config.Map = {
 	CorridorWidth = 90,
 	FirstRingGap = 12, -- vide entre le bout du quai et le bord de l'anneau 1
 	RingWidth = 64, -- épaisseur de l'anneau 1 : un vrai champ, pas une ligne
-	RingGap = 20, -- vide entre les anneaux 1 et 2 (bord à bord)
+	RingGap = 55, -- vide entre les anneaux 1 et 2 (bord à bord) : chaque biome bien séparé
 	RingGrowth = 1.22, -- épaisseur et vide grandissent de 22 % à chaque anneau
 	RelaySize = 30, -- relais de pression, au milieu des vides assez larges entre deux anneaux
 	RelayMinGap = 30, -- pas de relais dans un vide plus étroit
 	BuoySpacing = 60,
 	-- Champ de décor : roches du biome de chaque côté du tapis, sur toute l'épaisseur et la hauteur
 	DecorArc = 750, -- studs d'arc couverts de chaque côté du couloir (au-delà, la brume cache tout)
-	DecorDensity = 1 / 1100, -- roches par stud² de champ
-	DecorMax = 150, -- plafond par anneau (performances)
+	DecorDensity = 1 / 2600, -- roches par stud² de champ
+	DecorMax = 70, -- plafond par anneau (lisibilité et performances)
 	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
 }
 
@@ -69,7 +69,7 @@ Config.Events = {
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 260, -- environ 180 en temps normal, plus pendant une pluie de météores
+	MaxActive = 180, -- environ 120 en temps normal, plus pendant une pluie de météores
 	SpawnArc = 180, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
 	-- Hauteur : les astéroïdes s'étalent sur plusieurs étages, plus haut dans les grands anneaux
 	HeightBase = 10, -- ± studs au minimum
@@ -108,25 +108,25 @@ local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost,
 	}
 end
 Config.Rings = {
-	newRing("Dust Belt", 4.5, 18, 8, 1, 1.0, 0, 0, Color3.fromRGB(120, 108, 98), {
+	newRing("Dust Belt", 4.5, 12, 8, 1, 1.0, 0, 0, Color3.fromRGB(120, 108, 98), {
 		"Grey Quartz", "Calcite", "Amethyst", "Topaz", "Stellar Opal", "Pluto Diamond", "",
 	}),
-	newRing("Ice Ring", 4.1, 18, 40, 4, 1.3, 340, 5, Color3.fromRGB(150, 200, 230), {
+	newRing("Ice Ring", 4.1, 12, 40, 4, 1.3, 340, 5, Color3.fromRGB(150, 200, 230), {
 		"Frostite", "Snow Crystal", "Aquamarine", "Boreal Sapphire", "Comet Tear", "Aurora Heart", "",
 	}),
-	newRing("Magma Field", 3.7, 21, 180, 16, 1.8, 11000, 13, Color3.fromRGB(110, 50, 40), {
+	newRing("Magma Field", 3.7, 14, 180, 16, 1.8, 11000, 13, Color3.fromRGB(110, 50, 40), {
 		"Obsidian", "Red Basalt", "Garnet", "Volcanic Ruby", "Phoenix Eye", "Sun Blood", "",
 	}),
-	newRing("Nebula", 3.3, 24, 800, 64, 2.4, 350000, 21, Color3.fromRGB(120, 80, 170), {
+	newRing("Nebula", 3.3, 16, 800, 64, 2.4, 350000, 21, Color3.fromRGB(120, 80, 170), {
 		"Haze Quartz", "Mist Pearl", "Violet Flux", "Dreamstone", "Nova Shard", "Nebula Heart", "",
 	}),
-	newRing("Devourer Belt", 2.9, 27, 3600, 256, 3.2, 11000000, 30, Color3.fromRGB(70, 60, 60), {
+	newRing("Devourer Belt", 2.9, 18, 3600, 256, 3.2, 11000000, 30, Color3.fromRGB(70, 60, 60), {
 		"Bone Flint", "Fang Stone", "Maw Garnet", "Hunger Opal", "Devourer Eye", "Abyss Crown", "Void Pearl",
 	}),
-	newRing("The Rift", 2.6, 33, 16000, 1024, 4.2, 350000000, 39, Color3.fromRGB(60, 90, 120), {
+	newRing("The Rift", 2.6, 22, 16000, 1024, 4.2, 350000000, 39, Color3.fromRGB(60, 90, 120), {
 		"Rift Shale", "Split Jade", "Fracture Gem", "Warp Sapphire", "Paradox Prism", "Time Shard", "Rift Singularity",
 	}),
-	newRing("The Nest", 2.25, 39, 70000, 4096, 5.5, 11000000000, 48, Color3.fromRGB(150, 120, 80), {
+	newRing("The Nest", 2.25, 26, 70000, 4096, 5.5, 11000000000, 48, Color3.fromRGB(150, 120, 80), {
 		"Shell Quartz", "Nest Amber", "Brood Ruby", "Mother Opal", "Hatchling Star", "Queen's Tear", "Cosmic Yolk",
 	}),
 }
@@ -213,6 +213,143 @@ function Config.UpgradeCost(id: string, level: number): number
 	local u = Config.Upgrades[id]
 	return math.floor(u.Base * u.Growth ^ level + 0.5)
 end
+
+-- BIOMES : chaque anneau a sa lumière, sa brume, sa teinte et ses particules ---------
+-- Appliqués par Biomes.client quand le joueur entre dans l'anneau (le vaisseau garde
+-- l'éclairage réglé dans Studio). Particules : 3 couches par biome, autour du joueur.
+-- Texture : Glow, Sparkle, Snow, Shard, Shell (voir Biomes.client).
+local function rgb(r, g, b)
+	return Color3.fromRGB(r, g, b)
+end
+-- Couche de particules : texture, couleurs, taille (début, fin), nombre par seconde,
+-- durée de vie, vitesse, accélération (dérive), transparence (début, fin), lueur, rotation
+local function layer(texture, c1, c2, size, rate, life, speed, drift, transparency, light, spin)
+	return {
+		Texture = texture,
+		Colors = { c1, c2 },
+		Size = size,
+		Rate = rate,
+		Life = life,
+		Speed = speed,
+		Drift = drift,
+		Transparency = transparency,
+		Light = light,
+		Spin = spin or 0,
+	}
+end
+Config.BiomeFade = 2 -- secondes de transition entre deux biomes
+-- Nuages colorés posés dans le champ de chaque anneau : ils donnent sa couleur au biome
+-- sans voiler le ciel (une brume globale peindrait tout le bas du ciel d'une couleur unie)
+Config.BiomeClouds = {
+	Texture = "rbxassetid://103844906730878", -- halo doux (même image que UIKit.Art.FxGlow)
+	PerRing = 20, -- émetteurs de nuages par anneau, plus serrés autour du couloir
+	Gather = 1.4, -- > 1 : les nuages se resserrent vers le couloir (là où joue le joueur)
+	Size = { 30, 46 }, -- taille des nuages (studs), × la largeur relative de l'anneau
+	Transparency = 0.9, -- très légers : on voit à travers
+	Rate = 0.7,
+	Life = { 10, 14 },
+}
+Config.Biomes = {
+	{ -- 1. Dust Belt : poussière dorée
+		Title = "DUST BELT",
+		Icon = "✨",
+		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(255, 215, 160), Decay = rgb(255, 215, 160) },
+		Clouds = { rgb(230, 170, 110), rgb(200, 130, 80) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(255, 230, 195),
+		Saturation = 0.15,
+		Outdoor = rgb(190, 165, 130),
+		Particles = {
+			layer("Glow", rgb(255, 220, 140), rgb(255, 190, 110), { 0.35, 0.15 }, 70, { 6, 9 }, { 0.5, 1.5 }, Vector3.new(0.3, 0.2, 0), { 0.2, 1 }, 1),
+			layer("Glow", rgb(255, 210, 150), rgb(255, 170, 90), { 4, 6 }, 5, { 6, 9 }, { 0.2, 0.6 }, Vector3.zero, { 0.86, 1 }, 0.6),
+			layer("Sparkle", rgb(255, 245, 190), rgb(255, 220, 120), { 0.7, 0 }, 12, { 0.8, 1.4 }, { 0, 0.3 }, Vector3.zero, { 0, 1 }, 1, 90),
+		},
+	},
+	{ -- 2. Ice Ring : neige bleutée
+		Title = "ICE RING",
+		Icon = "❄️",
+		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(190, 225, 255), Decay = rgb(190, 225, 255) },
+		Clouds = { rgb(170, 205, 245), rgb(120, 165, 230) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(212, 232, 255),
+		Saturation = 0.1,
+		Outdoor = rgb(160, 185, 220),
+		Particles = {
+			layer("Snow", rgb(255, 255, 255), rgb(210, 235, 255), { 0.6, 0.45 }, 55, { 7, 10 }, { 0.3, 1 }, Vector3.new(0.4, -1.2, 0), { 0.1, 1 }, 0.4, 45),
+			layer("Sparkle", rgb(200, 245, 255), rgb(150, 220, 255), { 0.6, 0 }, 16, { 0.7, 1.2 }, { 0, 0.2 }, Vector3.zero, { 0, 1 }, 1, 120),
+			layer("Glow", rgb(170, 220, 255), rgb(120, 180, 255), { 5, 7 }, 4, { 6, 9 }, { 0.2, 0.5 }, Vector3.zero, { 0.88, 1 }, 0.7),
+		},
+	},
+	{ -- 3. Magma Field : braises qui montent et fumée rouge
+		Title = "MAGMA FIELD",
+		Icon = "🔥",
+		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(230, 150, 120), Decay = rgb(230, 150, 120) },
+		Clouds = { rgb(200, 90, 60), rgb(90, 40, 40) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(255, 212, 190),
+		Saturation = 0.2,
+		Outdoor = rgb(200, 130, 100),
+		Particles = {
+			layer("Glow", rgb(255, 200, 80), rgb(255, 80, 30), { 0.4, 0.1 }, 80, { 3, 5 }, { 0.5, 2 }, Vector3.new(0, 3, 0), { 0, 1 }, 1),
+			layer("Glow", rgb(90, 40, 40), rgb(50, 25, 25), { 6, 10 }, 6, { 6, 9 }, { 0.3, 0.8 }, Vector3.new(0, 0.8, 0), { 0.8, 1 }, 0),
+			layer("Sparkle", rgb(255, 240, 150), rgb(255, 150, 60), { 0.5, 0 }, 14, { 0.4, 0.8 }, { 1, 3 }, Vector3.new(0, 4, 0), { 0, 1 }, 1, 180),
+		},
+	},
+	{ -- 4. Nebula : nuages roses et étincelles
+		Title = "NEBULA",
+		Icon = "🌌",
+		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(230, 160, 255), Decay = rgb(230, 160, 255) },
+		Clouds = { rgb(255, 140, 220), rgb(160, 110, 255) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(248, 220, 255),
+		Saturation = 0.3,
+		Outdoor = rgb(190, 150, 220),
+		Particles = {
+			layer("Sparkle", rgb(255, 190, 250), rgb(190, 150, 255), { 0.8, 0 }, 30, { 0.8, 1.6 }, { 0, 0.4 }, Vector3.zero, { 0, 1 }, 1, 90),
+			layer("Glow", rgb(255, 140, 220), rgb(150, 110, 255), { 9, 14 }, 4, { 7, 10 }, { 0.2, 0.5 }, Vector3.zero, { 0.88, 1 }, 0.8),
+			layer("Glow", rgb(255, 255, 255), rgb(220, 200, 255), { 0.2, 0.2 }, 50, { 6, 9 }, { 0.1, 0.4 }, Vector3.zero, { 0.1, 1 }, 1),
+		},
+	},
+	{ -- 5. Devourer Belt : brume verte sombre et spores
+		Title = "DEVOURER BELT",
+		Icon = "👁️",
+		Atmosphere = { Density = 0.2, Haze = 0, Glare = 0, Color = rgb(110, 160, 115), Decay = rgb(110, 160, 115) },
+		Clouds = { rgb(90, 160, 100), rgb(30, 60, 40) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(205, 235, 208),
+		Saturation = -0.05,
+		Brightness = -0.04,
+		Outdoor = rgb(110, 140, 115),
+		Particles = {
+			layer("Glow", rgb(150, 255, 120), rgb(60, 200, 90), { 0.35, 0.2 }, 45, { 6, 9 }, { 0.2, 0.8 }, Vector3.new(0, 0.6, 0), { 0.1, 1 }, 1),
+			layer("Glow", rgb(40, 30, 50), rgb(20, 20, 30), { 1.2, 0.8 }, 30, { 6, 9 }, { 0.3, 1 }, Vector3.new(0, -0.3, 0), { 0.4, 1 }, 0),
+			layer("Glow", rgb(90, 255, 150), rgb(30, 120, 60), { 8, 12 }, 3, { 5, 8 }, { 0.1, 0.3 }, Vector3.zero, { 0.88, 1 }, 0.9),
+		},
+	},
+	{ -- 6. The Rift : éclats cyan et magenta qui clignotent
+		Title = "THE RIFT",
+		Icon = "🌀",
+		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(150, 190, 255), Decay = rgb(150, 190, 255) },
+		Clouds = { rgb(120, 220, 255), rgb(220, 90, 255) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(222, 232, 255),
+		Saturation = 0.2,
+		Outdoor = rgb(150, 160, 210),
+		Particles = {
+			layer("Shard", rgb(80, 240, 255), rgb(80, 240, 255), { 0.5, 0.5 }, 35, { 0.4, 1.2 }, { 0, 0.5 }, Vector3.zero, { 0, 1 }, 1),
+			layer("Shard", rgb(255, 80, 230), rgb(255, 80, 230), { 0.35, 0.35 }, 30, { 0.4, 1.2 }, { 0, 0.5 }, Vector3.zero, { 0, 1 }, 1),
+			layer("Glow", rgb(170, 120, 255), rgb(80, 200, 255), { 8, 12 }, 4, { 6, 9 }, { 0.1, 0.4 }, Vector3.zero, { 0.88, 1 }, 0.8),
+		},
+	},
+	{ -- 7. The Nest : pollen ambré et coquilles d'œufs qui flottent
+		Title = "THE NEST",
+		Icon = "🥚",
+		Atmosphere = { Density = 0.15, Haze = 0, Glare = 0, Color = rgb(255, 220, 160), Decay = rgb(255, 220, 160) },
+		Clouds = { rgb(255, 220, 150), rgb(255, 180, 90) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(255, 232, 195),
+		Saturation = 0.2,
+		Outdoor = rgb(200, 175, 130),
+		Particles = {
+			layer("Glow", rgb(255, 230, 130), rgb(255, 200, 90), { 0.3, 0.2 }, 60, { 6, 9 }, { 0.2, 0.8 }, Vector3.new(0.2, 0.3, 0), { 0.1, 1 }, 1),
+			layer("Shell", rgb(255, 248, 230), rgb(250, 225, 180), { 0.9, 0.8 }, 10, { 7, 10 }, { 0.3, 0.8 }, Vector3.new(0, -0.4, 0), { 0, 1 }, 0.2, 60),
+			layer("Glow", rgb(255, 200, 120), rgb(255, 160, 80), { 7, 10 }, 4, { 6, 9 }, { 0.1, 0.4 }, Vector3.zero, { 0.88, 1 }, 0.8),
+		},
+	},
+}
 
 -- CRÉATURES (docs/Mecaniques.md §9) ----------------------------------------------
 -- 6 espèces par anneau, une par rareté (fenêtre glissante) : anneaux 1 à 4 de Common à Mythic,

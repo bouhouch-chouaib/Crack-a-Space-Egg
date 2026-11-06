@@ -37,10 +37,22 @@ end
 -- MODÈLES FAITS DANS STUDIO (ReplicatedStorage.Assets) ----------------------------
 -- S'il manque un modèle, on garde la forme grise générée par code.
 
+-- Si « name » est un dossier de variantes (ex. Assets.Asteroids.Ring1 et ses 5 formes),
+-- on en tire une au hasard
+local pickRng = Random.new()
 local function asset(folder: string, name: string): Model?
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local f = assets and assets:FindFirstChild(folder)
 	local m = f and f:FindFirstChild(name)
+	if m and m:IsA("Folder") then
+		local variants = {}
+		for _, v in ipairs(m:GetChildren()) do
+			if v:IsA("Model") and v.PrimaryPart then
+				table.insert(variants, v)
+			end
+		end
+		m = if #variants > 0 then variants[pickRng:NextInteger(1, #variants)] else nil
+	end
 	return if m and m:IsA("Model") and m.PrimaryPart then m:Clone() else nil
 end
 WorldBuilder.Asset = asset
@@ -346,6 +358,59 @@ local function buildRingDecor(world: Folder)
 	folder.Parent = world
 end
 
+-- NUAGES DES BIOMES ----------------------------------------------------------------
+-- De grands nuages très légers, de la couleur du biome, flottent dans le champ de chaque anneau
+-- (autour du couloir et sur les côtés visibles) : chaque anneau a sa couleur sans voiler le ciel.
+
+local function buildRingClouds(world: Folder)
+	local C = Config.BiomeClouds
+	local folder = Instance.new("Folder")
+	folder.Name = "RingClouds"
+	for i, biome in ipairs(Config.Biomes) do
+		local radius = Config.RingRadius(i)
+		local width = Config.RingWidth(i)
+		local field = Config.FieldHeight(i)
+		local scale = width / Config.RingWidth(1)
+		local arc = (Config.Belt.SpawnArc + M.DecorArc) / radius
+		for k = 1, C.PerRing do
+			-- Réparti régulièrement le long de l'arc, avec un peu de hasard
+			local u = ((k - 0.5) / C.PerRing) * 2 - 1 + rng:NextNumber(-0.3, 0.3) / C.PerRing
+			local angle = math.sign(u) * math.abs(u) ^ C.Gather * arc
+			local r = radius + rng:NextNumber(-width * 0.35, width * 0.35)
+			local pos = Config.OrbitPosition(r, angle, rng:NextNumber(-field * 0.5, field * 0.5))
+			local box = decor({
+				Name = "Cloud",
+				Size = Vector3.new(width * 0.8, field * 1.4, width * 0.6),
+				CFrame = CFrame.new(pos),
+				Transparency = 1,
+				Parent = folder,
+			})
+			local e = Instance.new("ParticleEmitter")
+			e.Texture = C.Texture
+			e.Color = ColorSequence.new(biome.Clouds[1], biome.Clouds[2])
+			e.Size = NumberSequence.new(C.Size[1] * scale, C.Size[2] * scale)
+			e.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(0.3, C.Transparency),
+				NumberSequenceKeypoint.new(0.7, C.Transparency),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			e.Lifetime = NumberRange.new(C.Life[1], C.Life[2])
+			e.Rate = C.Rate
+			e.Speed = NumberRange.new(0.5, 1.5)
+			e.SpreadAngle = Vector2.new(180, 180)
+			e.Rotation = NumberRange.new(0, 360)
+			e.RotSpeed = NumberRange.new(-4, 4)
+			e.LightEmission = 0.4
+			e.LightInfluence = 0
+			e.Shape = Enum.ParticleEmitterShape.Box
+			e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+			e.Parent = box
+		end
+	end
+	folder.Parent = world
+end
+
 function WorldBuilder.Build(): Folder
 	local old = workspace:FindFirstChild("World")
 	if old then
@@ -358,6 +423,7 @@ function WorldBuilder.Build(): Folder
 	buildPlanet(world)
 	buildCorridor(world)
 	buildRingDecor(world)
+	buildRingClouds(world)
 	buildEventBanner(world)
 
 	local belt = Instance.new("Folder")
