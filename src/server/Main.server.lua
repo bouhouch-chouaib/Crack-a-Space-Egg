@@ -11,6 +11,7 @@ local MonetizationService = require(script.Parent.MonetizationService)
 local MachineService = require(script.Parent.MachineService)
 local HatchService = require(script.Parent.HatchService)
 local WindTunnelService = require(script.Parent.WindTunnelService)
+local ColdService = require(script.Parent.ColdService)
 
 WorldBuilder.Build()
 Bases.Start()
@@ -23,3 +24,4 @@ LeaderboardService.Start()
 MonetizationService.Start()
 MachineService.Start()
 WindTunnelService.Start() -- souffleries : on y farme le niveau du jetpack
+ColdService.Start() -- gel et manque d'oxygène hors du couloir

@@ -47,6 +47,27 @@ Config.Map = {
 	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
 }
 
+-- GEL HORS DU COULOIR (ColdService, ColdFx.client) ---------------------------------------------
+-- Hors du couloir (entre les bouées) et hors du vaisseau, il n'y a plus d'oxygène et le froid gagne :
+-- après quelques secondes de répit, le gel monte ; trop loin, il monte tout de suite et 2× plus vite.
+-- À 100 %, le joueur est pris dans un bloc de glace puis renvoyé à sa base (il perd ses œufs).
+Config.Cold = {
+	Margin = 6, -- studs de tolérance au-delà des bouées et du bord du vaisseau
+	Grace = 3, -- secondes hors zone avant que le gel commence
+	FreezeTime = 7, -- secondes pour geler complètement (après le répit)
+	FarDistance = 40, -- studs hors zone : au-delà, pas de répit et gel 2× plus rapide
+	Thaw = 0.6, -- dégel par seconde une fois revenu dans la zone
+	FrozenTime = 2.2, -- secondes dans le bloc de glace avant le retour à la base
+	SlowDown = 0.45, -- part de la vitesse perdue quand on est presque gelé
+	Art = {
+		FrostLight = "rbxassetid://104990694834643",
+		FrostHeavy = "rbxassetid://125100708027197",
+		Cracks = "rbxassetid://73942140990042",
+		Vignette = "rbxassetid://114352063755780",
+		Arrow = "rbxassetid://113480192157946",
+	},
+}
+
 -- Vitesse au sol et en vol : elle monte avec le NIVEAU DU JETPACK (Config.Jetpack), qu'on farme dans
 -- les souffleries du vaisseau (l'équivalent des tapis de course) et en volant pendant les missions.
 Config.Movement = {

@@ -277,6 +277,8 @@ RunService.RenderStepped:Connect(function(dt)
 	local state = 0
 	-- la vitesse de déplacement suit l'état : marche au sol, vol en l'air
 	local want = if airborne then air else ground
+	-- le froid hors du couloir engourdit (ColdService) : on ralentit en gelant
+	want *= 1 - Config.Cold.SlowDown * ((player:GetAttribute("Cold") or 0) :: number)
 	if math.abs(hum.WalkSpeed - want) > 0.01 then
 		hum.WalkSpeed = want
 	end
@@ -299,7 +301,7 @@ RunService.RenderStepped:Connect(function(dt)
 			state = 2
 		end
 		-- inertie : la vitesse horizontale rejoint la direction voulue en douceur
-		local wantH = hum.MoveDirection * air
+		local wantH = hum.MoveDirection * want
 		local curH = Vector3.new(v.X, 0, v.Z)
 		local h = curH:Lerp(wantH, 1 - math.exp(-MV.AirAccel * dt))
 		hrp.AssemblyLinearVelocity = Vector3.new(h.X, vy, h.Z)

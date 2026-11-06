@@ -139,6 +139,14 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 - ✅ Jetpack : Saut maintenu = poussée vers le haut (carburant, rechargé au sol) ; relâché = vol plané (chute freinée) ; on pilote la direction avec de l'inertie. Modèle 3D porté au dos, flammes, fumée, étincelles, traînée, lumière, poussière au décollage et à l'atterrissage ; le joueur se penche dans le sens du vol. Les autres joueurs voient les flammes (état relayé par le serveur).
 - La foreuse est maintenant accrochée sur le côté (le jetpack occupe le dos).
 
+### Gel hors du couloir (7 nov.)
+
+- ✅ On respire dans le couloir (entre les bouées, au-delà du quai) et sur le vaisseau (`SafeZone`). Ailleurs, il n'y a plus d'oxygène et le froid gagne (`ColdService`, réglages `Config.Cold`).
+- ✅ En sortant, on a 3 s de répit : bandeau « Leaving the corridor », compte à rebours et flèche verte vers la zone sûre. Ensuite, le gel monte en 7 s. Si on est à plus de 40 studs, il n'y a pas de répit et le gel va 2× plus vite. De retour dans la zone, on dégèle en moins de 2 s.
+- ✅ Effet plein écran : le givre envahit l'écran depuis les coins (deux couches), la vignette bleue bat comme un cœur, des flocons tombent, l'image devient bleue puis floue, la jauge d'O₂ se vide et la caméra frissonne. Le joueur ralentit jusqu'à −45 %. Les autres joueurs le voient se couvrir de givre.
+- ✅ À 100 %, le joueur est pris dans un bloc de glace hérissé de cristaux. Il voit un flash, de la glace fissurée sur tout l'écran et « FROZEN! ». 2,2 s plus tard, la glace éclate et il revient à sa base en perdant les œufs de sa soute, comme une chute dans le Vide.
+- Textures : `tools/fx/cold_textures.py` (givre léger et épais, fissures, vignette, flèche).
+
 ### (Ancien) Oxygène et caissons de pression
 
 C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, il ne s'achète pas.
