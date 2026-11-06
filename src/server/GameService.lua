@@ -228,6 +228,43 @@ local function buyUpgrade(player: Player, id: any)
 	sync(player)
 end
 
+-- FOREUSE TENUE ----------------------------------------------------------------
+-- Le modèle de la foreuse équipée est soudé au torse (visible par tous). Au repos il est
+-- porté sur le dos ; l'animation de forage (côté client) le ramène devant, à deux mains.
+local function equipDrill(player: Player)
+	local d = DataService.Get(player)
+	local character = player.Character
+	if not d or not character then
+		return
+	end
+	local torso = (character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")) :: BasePart?
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local drills = assets and assets:FindFirstChild("Drills")
+	local template = drills and drills:FindFirstChild("Drill" .. d.drill) :: Model?
+	if not torso or not template then
+		return
+	end
+	local old = character:FindFirstChild("EquippedDrill")
+	if old then
+		old:Destroy()
+	end
+	local model = template:Clone()
+	model.Name = "EquippedDrill"
+	model:SetAttribute("Tier", d.drill)
+	model:ScaleTo(Config.DrillHold.Scale)
+	local body = model.PrimaryPart :: BasePart
+	local handle = body:FindFirstChild("Handle") :: Attachment?
+	local weld = Instance.new("Weld")
+	weld.Name = "DrillWeld"
+	weld.Part0 = torso
+	weld.Part1 = body
+	weld.C0 = Config.DrillHold.Carry
+	weld.C1 = if handle then handle.CFrame else CFrame.new()
+	weld.Parent = body
+	model.Parent = character
+end
+GameService.EquipDrill = equipDrill
+
 -- Foreuse suivante, payée en $ (en Robux : MonetizationService)
 local function buyDrill(player: Player)
 	local d = DataService.Get(player)
@@ -245,6 +282,7 @@ local function buyDrill(player: Player)
 	d.credits -= nextDrill.Cost
 	d.drill += 1
 	sync(player)
+	equipDrill(player)
 	notice(player, nextDrill.Name .. " equipped!", "good")
 end
 
@@ -257,6 +295,7 @@ function GameService.GrantDrill(player: Player, tier: number): boolean
 	if tier > d.drill then
 		d.drill = tier
 		sync(player)
+		equipDrill(player)
 		notice(player, Config.Drills[tier].Name .. " equipped!", "good")
 	end
 	return true
@@ -361,11 +400,15 @@ function GameService.Start()
 		credits.Parent = ls
 		ls.Parent = player
 		sync(player)
+		equipDrill(player)
 	end)
 	Players.PlayerAdded:Connect(function(player)
-		player.CharacterAdded:Connect(function()
+		player.CharacterAdded:Connect(function(character)
+			-- Attend le torse (R15 ou R6) avant d'y souder la foreuse
+			character:WaitForChild("HumanoidRootPart", 10)
 			task.wait()
 			sync(player)
+			equipDrill(player)
 		end)
 	end)
 	Players.PlayerRemoving:Connect(function(player)

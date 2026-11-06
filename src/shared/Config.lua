@@ -213,6 +213,13 @@ Config.JetpackThrust = 55 -- vitesse verticale visée
 Config.JetpackRefill = 1.6 -- secondes de carburant regagnées par seconde au sol
 
 -- Statistiques dérivées des niveaux
+-- Foreuse tenue par le personnage (modèles : ReplicatedStorage.Assets.Drills.DrillN)
+-- Carry = position du guidon par rapport au torse quand on ne fore pas (sur le dos, en biais)
+Config.DrillHold = {
+	Scale = 0.85,
+	Carry = CFrame.new(0, 0.3, 0.85) * CFrame.Angles(0, 0, math.rad(-35)),
+}
+
 function Config.DrillPower(tier: number): number
 	local d = Config.Drills[math.clamp(tier, 1, #Config.Drills)]
 	return d.Power
