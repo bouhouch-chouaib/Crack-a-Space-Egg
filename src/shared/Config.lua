@@ -34,7 +34,7 @@ Config.Map = {
 	PlanetRadius = 500, -- au centre des anneaux, derrière le vaisseau ; le dessous du vaisseau reste du ciel
 	PlanetDrop = 150, -- centre un peu sous le plan des anneaux : ils tournent autour d'elle comme ceux de Saturne
 	AxisDistance = 1200, -- distance entre l'axe de rotation des anneaux et le bout du quai
-	CorridorWidth = 90,
+	CorridorWidth = 120, -- = largeur du quai (Ship.Deck.Dock), à garder identiques
 	FirstRingGap = 12, -- vide entre le bout du quai et le bord de l'anneau 1
 	RingWidth = 64, -- épaisseur de l'anneau 1 : un vrai champ, pas une ligne
 	RingGap = 55, -- vide entre les anneaux 1 et 2 (bord à bord) : chaque biome bien séparé
@@ -108,25 +108,25 @@ local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost,
 	}
 end
 Config.Rings = {
-	newRing("Dust Belt", 4.5, 12, 8, 1, 1.0, 0, 0, Color3.fromRGB(120, 108, 98), {
+	newRing("Dust Belt", 3.4, 12, 8, 1, 1.0, 0, 0, Color3.fromRGB(120, 108, 98), {
 		"Grey Quartz", "Calcite", "Amethyst", "Topaz", "Stellar Opal", "Pluto Diamond", "",
 	}),
-	newRing("Ice Ring", 4.1, 12, 40, 4, 1.3, 340, 5, Color3.fromRGB(150, 200, 230), {
+	newRing("Ice Ring", 3.1, 12, 40, 4, 1.3, 340, 5, Color3.fromRGB(150, 200, 230), {
 		"Frostite", "Snow Crystal", "Aquamarine", "Boreal Sapphire", "Comet Tear", "Aurora Heart", "",
 	}),
-	newRing("Magma Field", 3.7, 14, 180, 16, 1.8, 11000, 13, Color3.fromRGB(110, 50, 40), {
+	newRing("Magma Field", 2.8, 14, 180, 16, 1.8, 11000, 13, Color3.fromRGB(110, 50, 40), {
 		"Obsidian", "Red Basalt", "Garnet", "Volcanic Ruby", "Phoenix Eye", "Sun Blood", "",
 	}),
-	newRing("Nebula", 3.3, 16, 800, 64, 2.4, 350000, 21, Color3.fromRGB(120, 80, 170), {
+	newRing("Nebula", 2.5, 16, 800, 64, 2.4, 350000, 21, Color3.fromRGB(120, 80, 170), {
 		"Haze Quartz", "Mist Pearl", "Violet Flux", "Dreamstone", "Nova Shard", "Nebula Heart", "",
 	}),
-	newRing("Devourer Belt", 2.9, 18, 3600, 256, 3.2, 11000000, 30, Color3.fromRGB(70, 60, 60), {
+	newRing("Devourer Belt", 2.2, 18, 3600, 256, 3.2, 11000000, 30, Color3.fromRGB(70, 60, 60), {
 		"Bone Flint", "Fang Stone", "Maw Garnet", "Hunger Opal", "Devourer Eye", "Abyss Crown", "Void Pearl",
 	}),
-	newRing("The Rift", 2.6, 22, 16000, 1024, 4.2, 350000000, 39, Color3.fromRGB(60, 90, 120), {
+	newRing("The Rift", 1.95, 22, 16000, 1024, 4.2, 350000000, 39, Color3.fromRGB(60, 90, 120), {
 		"Rift Shale", "Split Jade", "Fracture Gem", "Warp Sapphire", "Paradox Prism", "Time Shard", "Rift Singularity",
 	}),
-	newRing("The Nest", 2.25, 26, 70000, 4096, 5.5, 11000000000, 48, Color3.fromRGB(150, 120, 80), {
+	newRing("The Nest", 1.7, 26, 70000, 4096, 5.5, 11000000000, 48, Color3.fromRGB(150, 120, 80), {
 		"Shell Quartz", "Nest Amber", "Brood Ruby", "Mother Opal", "Hatchling Star", "Queen's Tear", "Cosmic Yolk",
 	}),
 }
