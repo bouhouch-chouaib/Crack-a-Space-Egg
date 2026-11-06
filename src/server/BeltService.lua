@@ -104,6 +104,7 @@ local function spawn(ringIndex: number, age: number)
 	local margin = math.max(0, width / 2 - diameter / 2)
 	local field = Config.FieldHeight(ringIndex)
 	local t0 = now() - age
+	local eggs = math.ceil(rng:NextInteger(size.Eggs[1], size.Eggs[2]) * EventService.EggMult())
 	-- Place sur toute l'épaisseur et la hauteur du champ, sans chevaucher un voisin du même anneau
 	-- (même vitesse linéaire : deux voisins gardent à peu près leur écart en défilant)
 	local radius, height
@@ -138,9 +139,9 @@ local function spawn(ringIndex: number, age: number)
 		omega = ring.Speed / radius,
 		t0 = t0,
 		tEnd = t0 + travelTime(ringIndex),
-		stock = math.ceil(size.Eggs * EventService.EggMult()),
-		maxStock = math.ceil(size.Eggs * EventService.EggMult()),
-		hp = math.ceil(size.Eggs * EventService.EggMult()) * ring.EggHP,
+		stock = eggs,
+		maxStock = eggs,
+		hp = eggs * ring.EggHP,
 		progress = {},
 	}
 
@@ -164,6 +165,8 @@ local function spawn(ringIndex: number, age: number)
 	p:SetAttribute("MaxHP", a.hp)
 	p:SetAttribute("HP", a.hp)
 	p:SetAttribute("Eggs", a.stock)
+	p:SetAttribute("MaxEggs", a.maxStock)
+	p:SetAttribute("Size", size.Name)
 	a.part = p
 	a.model = model
 	active[p] = a
@@ -189,9 +192,10 @@ local function step()
 	end
 end
 
--- Coup de foreuse : renvoie le nombre d'œufs détachés pour ce joueur (0 si rien)
--- et si l'astéroïde vient de se briser. room = place libre dans la soute.
-function BeltService.Hit(a: Asteroid, player: Player, damage: number, room: number): (number, boolean)
+-- Coup de foreuse : renvoie le nombre d'œufs détachés pour ce joueur (0 si rien), si l'astéroïde
+-- vient de se briser, et l'avancée du joueur sur l'œuf en cours (0..EggHP). On fore œuf par œuf :
+-- chaque barre de vie correspond à un seul œuf. room = place libre dans la soute.
+function BeltService.Hit(a: Asteroid, player: Player, damage: number, room: number): (number, boolean, number)
 	local ring = Config.Rings[a.ring]
 	a.progress[player] = (a.progress[player] or 0) + damage
 	a.hp = math.max(0, a.hp - damage)
@@ -206,10 +210,10 @@ function BeltService.Hit(a: Asteroid, player: Player, damage: number, room: numb
 	a.part:SetAttribute("HP", a.hp)
 	a.part:SetAttribute("Eggs", a.stock)
 	if a.stock <= 0 then
-		-- Laisse le temps à l'événement de casse d'arriver chez les clients avant de supprimer
+		-- On ne cache pas la roche ici : chaque client la fait voler en éclats (Impact.client).
+		-- On la rend juste intraversable et non visable, et on la supprime un peu plus tard.
 		for _, d in ipairs(a.model:GetDescendants()) do
 			if d:IsA("BasePart") then
-				d.Transparency = 1
 				d.CanCollide = false
 				d.CanQuery = false
 			end
@@ -218,12 +222,12 @@ function BeltService.Hit(a: Asteroid, player: Player, damage: number, room: numb
 			active[a.part] = nil
 			count -= 1
 		end
-		task.delay(0.5, function()
+		task.delay(1, function()
 			a.model:Destroy()
 		end)
-		return eggs, true
+		return eggs, true, 0
 	end
-	return eggs, false
+	return eggs, false, a.progress[player] or 0
 end
 
 function BeltService.Start()

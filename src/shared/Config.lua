@@ -85,11 +85,15 @@ function Config.FieldHeight(i: number): number
 end
 
 -- Tailles d'astéroïdes : stock d'œufs, qui sortent un par un pendant le forage
+-- Eggs = { min, max } : nombre d'œufs tiré au hasard, selon la taille. Vie = œufs × EggHP de l'anneau.
 Config.AsteroidSizes = {
-	{ Name = "Small", Min = 10, Max = 13, Eggs = 3, Chance = 0.5 },
-	{ Name = "Medium", Min = 15, Max = 19, Eggs = 5, Chance = 0.35 },
-	{ Name = "Large", Min = 22, Max = 28, Eggs = 8, Chance = 0.15 },
+	{ Name = "Small", Min = 10, Max = 13, Eggs = { 2, 3 }, Chance = 0.46 },
+	{ Name = "Medium", Min = 15, Max = 19, Eggs = { 4, 5 }, Chance = 0.34 },
+	{ Name = "Large", Min = 22, Max = 28, Eggs = { 6, 8 }, Chance = 0.16 },
+	{ Name = "Colossal", Min = 34, Max = 42, Eggs = { 10, 12 }, Chance = 0.04 },
 }
+-- Fissures : de nouvelles fissures apparaissent quand la vie passe sous ces fractions
+Config.CrackStages = { 0.75, 0.5, 0.25 }
 
 -- Les 7 anneaux. Speed = vitesse de défilement (studs/s) : les anneaux intérieurs vont plus vite.
 -- Active = astéroïdes visibles en même temps. EggHP = dégâts de forage pour détacher un œuf.

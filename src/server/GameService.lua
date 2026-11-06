@@ -139,22 +139,22 @@ local function onDrill(player: Player, target: any, at: any)
 		return
 	end
 
-	local eggs, broken = BeltService.Hit(a, player, Config.DrillPower(d.drill) * Config.DrillTick, room)
+	local damage = Config.DrillPower(d.drill) * Config.DrillTick
+	local eggs, broken, progress = BeltService.Hit(a, player, damage, room)
+	local rarities = {}
 	if eggs > 0 then
-		local best = 0
 		for _ = 1, eggs do
 			local rarity = rollRarity(d, a.ring)
 			table.insert(d.cargo, { ring = a.ring, rarity = rarity })
-			best = math.max(best, rarity)
+			table.insert(rarities, rarity)
 		end
 		sync(player)
-		-- Message d'œuf : jamais filtré par la limite d'un message par seconde
-		local r = Config.Rarities[best]
-		Remotes.Notice:FireClient(player, string.format("+%d egg%s · best: %s", eggs, if eggs > 1 then "s" else "", r.Name), "good")
 	end
-	if broken then
-		Remotes.AsteroidBroken:FireAllClients(a.part, player, eggs)
-	end
+	-- Coup visible par tous : nombres de dégâts, œufs qui jaillissent (avec leur rareté), casse.
+	-- Les effets ne passent pas par la position du modèle (il défile) : on envoie la roche visée.
+	-- eggLeft : vie restante de l'œuf en cours pour ce joueur (sa barre), eggHP : vie d'un œuf
+	local eggHP = Config.Rings[a.ring].EggHP
+	Remotes.DrillHit:FireAllClients(a.part, player, damage, rarities, broken, eggHP - progress, eggHP)
 end
 
 -- CASSE DES ŒUFS -----------------------------------------------------------

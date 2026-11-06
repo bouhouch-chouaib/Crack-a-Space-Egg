@@ -3,7 +3,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -16,7 +15,6 @@ local player = Players.LocalPlayer
 
 local INK = Color3.fromRGB(235, 238, 248)
 local PANEL = Color3.fromRGB(22, 26, 46)
-local ACCENT = Color3.fromRGB(233, 131, 74)
 
 local function new(class: string, props: { [string]: any }, children: { Instance }?): any
 	local o = Instance.new(class)
@@ -88,29 +86,7 @@ Remotes.Announcement.OnClientEvent:Connect(function(who: string, crystal: string
 	end)
 end)
 
--- Barre de vie de l'astéroïde visé
-local hpGui = new("BillboardGui", {
-	Size = UDim2.fromOffset(120, 14),
-	StudsOffsetWorldSpace = Vector3.new(0, 14, 0),
-	AlwaysOnTop = true,
-	Enabled = false,
-	Parent = gui,
-})
-local hpBack = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = PANEL, Parent = hpGui }, { corner(6) })
-local hpFill = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = ACCENT, Parent = hpBack }, { corner(6) })
-local targetValue = player:WaitForChild("DrillTarget", 10) :: ObjectValue?
-
-RunService.RenderStepped:Connect(function()
-	local t = targetValue and targetValue.Value :: BasePart?
-	if t and t.Parent then
-		hpGui.Adornee = t
-		hpGui.StudsOffsetWorldSpace = Vector3.new(0, t.Size.Y / 2 + 3, 0)
-		hpGui.Enabled = true
-		hpFill.Size = UDim2.fromScale(math.clamp((t:GetAttribute("HP") or 0) / (t:GetAttribute("MaxHP") or 1), 0, 1), 1)
-	else
-		hpGui.Enabled = false
-	end
-end)
+-- La barre de vie de la roche visée est dans Impact.client.lua
 
 -- La boutique est dans Shop.client.lua
 

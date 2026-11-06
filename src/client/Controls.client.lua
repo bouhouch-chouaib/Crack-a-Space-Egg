@@ -63,18 +63,6 @@ local targetValue = Instance.new("ObjectValue")
 targetValue.Name = "DrillTarget"
 targetValue.Parent = player
 
-local sparks = Instance.new("Attachment")
-local sparkEmitter = Instance.new("ParticleEmitter")
-sparkEmitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-sparkEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 210, 120))
-sparkEmitter.Size = NumberSequence.new(0.6, 0)
-sparkEmitter.Lifetime = NumberRange.new(0.2, 0.5)
-sparkEmitter.Rate = 0
-sparkEmitter.Speed = NumberRange.new(10, 20)
-sparkEmitter.SpreadAngle = Vector2.new(60, 60)
-sparkEmitter.LightEmission = 1
-sparkEmitter.Parent = sparks
-sparks.Parent = workspace.Terrain
 
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -169,20 +157,4 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 end)
 
--- Petite explosion visuelle quand un astéroïde casse
-Remotes.AsteroidBroken.OnClientEvent:Connect(function(asteroid: BasePart, _by: Player, _gained: number)
-	if not asteroid or not asteroid.Parent then
-		return
-	end
-	local a = Instance.new("Attachment")
-	a.WorldPosition = asteroid.Position
-	a.Parent = workspace.Terrain
-	local e = sparkEmitter:Clone()
-	e.Color = ColorSequence.new(asteroid.Color)
-	e.Size = NumberSequence.new(1.5, 0)
-	e.Speed = NumberRange.new(20, 40)
-	e.SpreadAngle = Vector2.new(180, 180)
-	e.Parent = a
-	e:Emit(40)
-	game:GetService("Debris"):AddItem(a, 2)
-end)
+-- La casse des roches (éclats, morceaux) est dans Impact.client.lua
