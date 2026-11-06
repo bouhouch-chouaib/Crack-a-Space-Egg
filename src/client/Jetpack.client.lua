@@ -7,8 +7,6 @@
 -- par le serveur) : cœur de flamme, flamme, fumée, étincelles, traînée lumineuse, lumière ;
 -- poussière au décollage et à l'atterrissage. L'état (0 éteint, 1 poussée, 2 plané) passe par le
 -- serveur (Remotes.JetState -> attribut « Jet » du personnage) pour que tout le monde le voie.
--- PORTÉE : chaque anneau demande un niveau de jetpack (Config.Jetpack.RingLevel). Un mur de vent
--- (visible seulement par ce joueur) ferme l'entrée du premier anneau trop loin et le repousse.
 -- POSE (tous les joueurs) : en vol, le corps se penche dans le sens du déplacement, s'incline dans
 -- les virages, les jambes pendent et se balancent, les bras s'écartent (sauf foreuse ou œuf en main).
 
@@ -247,76 +245,6 @@ local fuel = Config.JetpackFuelBase
 local lastJump = 0
 local sentState = 0
 
--- PORTÉE DU JETPACK : mur de vent devant le premier anneau trop loin pour son niveau
-local MAP = Config.Map
-local AXIS = Vector3.new(0, 0, MAP.FrontZ - MAP.AxisDistance) -- axe de rotation des anneaux
-local STREAK = "rbxassetid://96887170089913"
-local WALL_COLOR = Color3.fromRGB(255, 150, 70)
-local wallLimit: number? = nil -- distance depuis le quai au-delà de laquelle on est repoussé
-local wall: Part? = nil
-local lastWallToast = 0
-local bounceUntil = 0 -- rebond du mur de vent en cours (ramène jusqu'au relais / à l'anneau d'avant)
-
--- Distance depuis le bout du quai, mesurée le long des anneaux (comme Config.RingDistance)
-local function ringDist(pos: Vector3): number
-	return Vector2.new(pos.X - AXIS.X, pos.Z - AXIS.Z).Magnitude - MAP.AxisDistance
-end
-
-local function refreshWall()
-	local level = (player:GetAttribute("JetLevel") or 1) :: number
-	local reach = Config.JetpackRingMax(level)
-	if wall then
-		wall:Destroy()
-		wall = nil
-	end
-	if reach >= #Config.Rings then
-		wallLimit = nil
-		return
-	end
-	local nextRing = reach + 1
-	local limit = Config.RingDistance(nextRing) - Config.RingWidth(nextRing) / 2 - Config.Jetpack.WallMargin
-	wallLimit = limit
-	local w = MAP.CorridorWidth * 1.6
-	local p = Instance.new("Part")
-	p.Name = "JetpackWall"
-	p.Anchored = true
-	p.CanCollide = false
-	p.CanQuery = false
-	p.CanTouch = false
-	p.CastShadow = false
-	p.Material = Enum.Material.ForceField
-	p.Color = WALL_COLOR
-	p.Transparency = 0.15
-	p.Size = Vector3.new(w, 90, 1)
-	p.CFrame = CFrame.new(0, 5, MAP.FrontZ + limit)
-	-- vent qui souffle vers le vaisseau
-	local wind = Instance.new("ParticleEmitter")
-	wind.Texture = STREAK
-	wind.Color = ColorSequence.new(Color3.new(1, 1, 1), WALL_COLOR)
-	wind.LightEmission = 1
-	wind.LightInfluence = 0
-	wind.Orientation = Enum.ParticleOrientation.VelocityParallel
-	wind.Size = NumberSequence.new({ kp(0, 0.5), kp(1, 0.15) })
-	wind.Transparency = NumberSequence.new({ kp(0, 0.2), kp(1, 1) })
-	wind.Lifetime = NumberRange.new(0.6, 1)
-	wind.Speed = NumberRange.new(25, 40)
-	wind.Rate = 60
-	wind.EmissionDirection = Enum.NormalId.Front
-	wind.Parent = p
-	local bb = Instance.new("BillboardGui")
-	bb.Size = UDim2.fromScale(40, 12)
-	bb.StudsOffsetWorldSpace = Vector3.new(0, 22, 0)
-	bb.LightInfluence = 0
-	bb.MaxDistance = 400
-	bb.Parent = p
-	UIKit.text({ Size = UDim2.fromScale(1, 0.55), Text = ("🔒 Jetpack Lv %d"):format(Config.Jetpack.RingLevel[nextRing]), TextColor3 = WALL_COLOR, Stroke = 4, Parent = bb })
-	UIKit.text({ Size = UDim2.fromScale(1, 0.4), Position = UDim2.fromScale(0, 0.58), Text = "to reach the " .. Config.Rings[nextRing].Name .. " · train in the Wind Tunnels", TextColor3 = Color3.new(1, 1, 1), Stroke = 3, Parent = bb })
-	p.Parent = workspace
-	wall = p
-end
-player:GetAttributeChangedSignal("JetLevel"):Connect(refreshWall)
-task.defer(refreshWall)
-
 local function maxFuel(): number
 	return Config.JetpackFuelBase + Config.JetpackFuelPerLevel * math.max(0, ((player:GetAttribute("JetLevel") or 1) :: number) - 1)
 end
@@ -353,29 +281,7 @@ RunService.RenderStepped:Connect(function(dt)
 		hum.WalkSpeed = want
 	end
 	local inTunnel = player:GetAttribute("InTunnel") == true
-	local pos = hrp.Position
-	local now = os.clock()
-	if wallLimit ~= nil and ringDist(pos) > (wallLimit :: number) then
-		if now > bounceUntil then
-			fuel = maxFuel() -- de quoi se rattraper après le rebond
-		end
-		bounceUntil = now + 0.8
-	end
-	if now < bounceUntil then
-		-- mur de vent : le jetpack cale et le vent renvoie le joueur vers le vaisseau, en cloche
-		local inward = Vector3.new(AXIS.X - pos.X, 0, AXIS.Z - pos.Z).Unit
-		local v = hrp.AssemblyLinearVelocity
-		hrp.AssemblyLinearVelocity = inward * 38 + Vector3.new(0, math.max(v.Y, 14), 0)
-		if not airborne then
-			hum:ChangeState(Enum.HumanoidStateType.Freefall)
-		end
-		if now - lastWallToast > 3 then
-			lastWallToast = now
-			local level = (player:GetAttribute("JetLevel") or 1) :: number
-			local nextRing = Config.JetpackRingMax(level) + 1
-			UIKit.toast(("🚀 Your jetpack is too weak! Lv %d needed for the %s"):format(Config.Jetpack.RingLevel[nextRing], Config.Rings[nextRing].Name), "warn")
-		end
-	elseif inTunnel then
+	if inTunnel then
 		-- soufflerie : le courant d'air porte le joueur (WindTunnel.client), effets en vol plané
 		fuel = math.min(maxFuel(), fuel + Config.JetpackRefill * dt)
 		state = 2

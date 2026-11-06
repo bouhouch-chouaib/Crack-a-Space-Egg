@@ -237,7 +237,7 @@ Config.DrillSlack = 12 -- marge de portée côté serveur (latence + défilement
 Config.RescueTime = 6
 
 -- Jetpack (côté client) : carburant en secondes de poussée, rechargé au sol
-Config.JetpackFuelBase = 4
+Config.JetpackFuelBase = 2 -- secondes de poussée au niveau 1 (de quoi rejoindre l'anneau 1)
 Config.JetpackFuelPerLevel = 0.05 -- secondes de plus par niveau de jetpack
 
 -- NIVEAU DU JETPACK -------------------------------------------------------------------
@@ -248,25 +248,20 @@ Config.Jetpack = {
 	XPGrowth = 1.12,
 	MaxLevel = 150,
 	FlightXP = 1, -- XP par seconde de vol réel (poussée ou plané, hors soufflerie)
-	-- Niveau de jetpack pour entrer dans chaque anneau : au niveau 1, on ne va que sur l'anneau 1.
-	-- Un mur de vent repousse le joueur à l'entrée d'un anneau trop loin pour son jetpack.
-	-- Temps visés dans la soufflerie de l'anneau (débloquée avec l'achat de l'anneau) : ~10 min pour
-	-- l'anneau 2, ~20 min, ~40 min, ~1 h 15, ~2 h, ~3 h pour l'anneau 7 (environ 7 h 30 en tout).
-	RingLevel = { 1, 30, 50, 70, 90, 110, 130 },
-	WallMargin = 4, -- le mur est à 4 studs avant le bord intérieur de l'anneau
-	-- Souffleries : une par anneau, débloquée avec l'anneau ; XP gagnée par seconde dans le courant d'air
+	-- Soufflerie personnelle : chaque joueur a la sienne devant sa base. On l'achète (Breeze Tunnel),
+	-- puis on l'améliore palier par palier ; XP gagnée par seconde dans le courant d'air, même AFK.
+	-- Prix calés sur les revenus (entre les prix des anneaux).
 	TunnelRadius = 4.5,
 	TunnelHeight = 20,
-	TunnelSpacing = 14, -- écart entre deux souffleries (studs)
-	TunnelZ = -22, -- ligne des souffleries au centre du pont, entre les bases
+	TunnelOffset = Vector3.new(11, 0, 24), -- position dans le repère du sol de la base (devant l'entrée, sur le côté)
 	Tunnels = {
-		{ Name = "Breeze Tunnel", Ring = 1, XP = 2, Color = Color3.fromRGB(150, 235, 255) },
-		{ Name = "Gale Tunnel", Ring = 2, XP = 8, Color = Color3.fromRGB(90, 200, 255) },
-		{ Name = "Storm Tunnel", Ring = 3, XP = 30, Color = Color3.fromRGB(255, 140, 60) },
-		{ Name = "Cyclone Tunnel", Ring = 4, XP = 150, Color = Color3.fromRGB(190, 120, 255) },
-		{ Name = "Hurricane Tunnel", Ring = 5, XP = 800, Color = Color3.fromRGB(255, 80, 120) },
-		{ Name = "Tempest Tunnel", Ring = 6, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
-		{ Name = "Supernova Vortex", Ring = 7, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
+		{ Name = "Breeze Tunnel", Cost = 1000, XP = 2, Color = Color3.fromRGB(150, 235, 255) },
+		{ Name = "Gale Tunnel", Cost = 30000, XP = 8, Color = Color3.fromRGB(90, 200, 255) },
+		{ Name = "Storm Tunnel", Cost = 1.5e6, XP = 30, Color = Color3.fromRGB(255, 140, 60) },
+		{ Name = "Cyclone Tunnel", Cost = 8e7, XP = 150, Color = Color3.fromRGB(190, 120, 255) },
+		{ Name = "Hurricane Tunnel", Cost = 4e9, XP = 800, Color = Color3.fromRGB(255, 80, 120) },
+		{ Name = "Tempest Tunnel", Cost = 2.2e11, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
+		{ Name = "Supernova Vortex", Cost = 1.1e13, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
 	},
 }
 
@@ -274,17 +269,6 @@ Config.Jetpack = {
 function Config.JetpackXPNeed(level: number): number
 	local j = Config.Jetpack
 	return math.floor(j.XPBase * j.XPGrowth ^ (level - 1) + 0.5)
-end
-
--- Anneau le plus loin que le jetpack de ce niveau peut atteindre
-function Config.JetpackRingMax(level: number): number
-	local best = 1
-	for i, need in ipairs(Config.Jetpack.RingLevel) do
-		if level >= need then
-			best = i
-		end
-	end
-	return best
 end
 
 -- Niveau atteint avec cette XP totale, XP déjà faite dans ce niveau, XP du niveau

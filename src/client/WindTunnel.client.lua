@@ -1,7 +1,8 @@
--- Souffleries (affichage et sensation) : hélices qui tournent, anneaux de vent qui montent,
--- panneaux (nom, XP/s, cadenas), et le courant d'air qui porte le joueur : il flotte sur place,
--- jetpack en vol plané (attribut InTunnel lu par Jetpack.client). Saut tenu = monter plus haut.
--- L'XP est donnée par le serveur (WindTunnelService) ; ici rien ne compte.
+-- Souffleries personnelles (affichage et sensation) : hélices qui tournent, anneaux de vent qui
+-- montent, panneaux (palier, XP/s, prochain palier ou prix d'achat), et le courant d'air qui porte
+-- le joueur dans SA soufflerie achetée : il flotte sur place, jetpack en vol plané (attribut
+-- InTunnel lu par Jetpack.client). Saut tenu = monter plus haut.
+-- Les achats et l'XP sont gérés par le serveur (WindTunnelService) ; ici rien ne compte.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,55 +21,70 @@ local HOVER_UP = 0.8 -- part de la colonne atteinte en tenant Saut
 local LIFT = 5 -- raideur du rappel vers la hauteur visée
 local SIDE = 14 -- vitesse horizontale dans le courant
 local FAN_SPEED = 9 -- tours d'hélice (rad/s)
+local GOLD = Color3.fromRGB(255, 240, 140)
+local GREY = Color3.fromRGB(200, 205, 220)
 
 type Tunnel = {
 	model: Model,
 	base: Vector3,
-	ring: number,
+	active: boolean, -- achetée (palier >= 1)
+	mine: boolean, -- c'est la soufflerie du joueur local
 	fan: { center: Vector3, rot: CFrame, parts: { { part: BasePart, offset: CFrame } } },
 	rings: { BasePart },
-	sign: BillboardGui?,
-	locked: boolean?,
-	lockLabel: TextLabel?,
 }
-local tunnels: { Tunnel } = {}
+local tunnels: { [Model]: Tunnel } = {}
 
-local function makeSign(t: Tunnel, title: string, xp: number, color: Color3)
-	local sign = t.model:FindFirstChild("Sign", true) :: BillboardGui?
+local function money(n: number): string
+	return "$" .. Format.Short(n)
+end
+
+-- Panneau au-dessus de la soufflerie, selon le palier et le propriétaire
+local function makeSign(m: Model, mine: boolean)
+	local sign = m:FindFirstChild("Sign", true) :: BillboardGui?
 	if not sign then
 		return
 	end
 	sign:ClearAllChildren()
-	UIKit.text({ Size = UDim2.fromScale(1, 0.42), Text = title, TextColor3 = color, Stroke = 3, Parent = sign })
-	UIKit.text({ Size = UDim2.fromScale(1, 0.32), Position = UDim2.fromScale(0, 0.42), Text = ("+%s XP/s"):format(Format.Short(xp)), TextColor3 = Color3.fromRGB(255, 240, 140), Stroke = 2.5, Parent = sign })
-	t.lockLabel = UIKit.text({ Size = UDim2.fromScale(1, 0.26), Position = UDim2.fromScale(0, 0.74), Text = "", TextColor3 = Color3.fromRGB(255, 120, 120), Stroke = 2.5, Parent = sign })
-	t.sign = sign
-end
-
-local function refreshLocks()
-	local ring = player:GetAttribute("Ring") or 1
-	for _, t in ipairs(tunnels) do
-		local locked = ring < t.ring
-		t.locked = locked
-		if t.lockLabel then
-			t.lockLabel.Text = if locked then ("🔒 Unlock ring %d"):format(t.ring) else ""
+	local tier = (m:GetAttribute("Tier") or 0) :: number
+	local color = (m:GetAttribute("Color") or Color3.new(1, 1, 1)) :: Color3
+	local owner = (m:GetAttribute("OwnerName") or "") :: string
+	local nextName = (m:GetAttribute("NextName") or "") :: string
+	local nextCost = (m:GetAttribute("NextCost") or 0) :: number
+	local title, line2, line3, c2, c3
+	if tier >= 1 then
+		title = (m:GetAttribute("Title") or "Wind Tunnel") :: string
+		line2 = ("+%s XP/s"):format(Format.Short((m:GetAttribute("XP") or 0) :: number))
+		c2 = GOLD
+		if mine then
+			line3 = if nextName ~= "" then ("⬆ %s · %s"):format(nextName, money(nextCost)) else "⭐ MAX LEVEL"
+			c3 = Color3.fromRGB(140, 255, 160)
+		else
+			line3 = if owner ~= "" then owner .. "'s tunnel" else ""
+			c3 = GREY
 		end
-		local column = t.model:FindFirstChild("Column") :: BasePart?
-		if column then
-			column.Transparency = if locked then 0.7 else 0.2
-		end
-		for _, d in ipairs(t.model:GetDescendants()) do
-			if d:IsA("ParticleEmitter") then
-				d.Enabled = not locked
-			end
-		end
+	elseif mine then
+		title = "🌪️ WIND TUNNEL"
+		color = Color3.fromRGB(150, 235, 255)
+		line2 = "Buy for " .. money(nextCost)
+		c2 = Color3.fromRGB(140, 255, 160)
+		line3 = "Train your jetpack here, even AFK!"
+		c3 = Color3.new(1, 1, 1)
+	else
+		title = "Wind Tunnel"
+		line2 = if owner ~= "" then owner .. "'s base" else ""
+		c2 = GREY
+		line3 = ""
+		c3 = GREY
 	end
+	UIKit.text({ Size = UDim2.fromScale(1, 0.42), Text = title, TextColor3 = color, Stroke = 3, Parent = sign })
+	UIKit.text({ Size = UDim2.fromScale(1, 0.32), Position = UDim2.fromScale(0, 0.42), Text = line2, TextColor3 = c2, Stroke = 2.5, Parent = sign })
+	UIKit.text({ Size = UDim2.fromScale(1, 0.24), Position = UDim2.fromScale(0, 0.76), Text = line3, TextColor3 = c3, Stroke = 2.5, Parent = sign })
 end
 
 local function register(m: Model)
 	local fanModel = m:WaitForChild("Fan", 10) :: Model?
 	local hub = fanModel and fanModel:WaitForChild("Hub", 10) :: BasePart?
-	if not fanModel or not hub then
+	if not fanModel or not hub or not m.Parent then
 		return
 	end
 	local fanParts = {}
@@ -83,22 +99,25 @@ local function register(m: Model)
 			table.insert(rings, p)
 		end
 	end
-	local x, z = hub.Position.X, hub.Position.Z
-	local t: Tunnel = {
+	local mine = m:GetAttribute("OwnerId") == player.UserId
+	tunnels[m] = {
 		model = m,
-		base = Vector3.new(x, (m:GetAttribute("BaseY") or hub.Position.Y) :: number, z),
-		ring = (m:GetAttribute("Ring") or 1) :: number,
+		base = Vector3.new(hub.Position.X, (m:GetAttribute("BaseY") or hub.Position.Y) :: number, hub.Position.Z),
+		active = ((m:GetAttribute("Tier") or 0) :: number) >= 1,
+		mine = mine,
 		fan = { center = hub.Position, rot = hub.CFrame - hub.Position, parts = fanParts },
 		rings = rings,
 	}
-	local def = J.Tunnels[(m:GetAttribute("Index") or 1) :: number]
-	makeSign(t, (m:GetAttribute("Title") or "Wind Tunnel") :: string, (m:GetAttribute("XP") or 1) :: number, def and def.Color or Color3.new(1, 1, 1))
-	table.insert(tunnels, t)
-	refreshLocks()
+	makeSign(m, mine)
+	-- l'invite d'achat / d'amélioration n'apparaît que chez le propriétaire
+	local prompt = m:FindFirstChild("BuyPrompt", true) :: ProximityPrompt?
+	if prompt then
+		prompt.Enabled = mine
+	end
 end
 
 local function tunnelAt(pos: Vector3): Tunnel?
-	for _, t in ipairs(tunnels) do
+	for _, t in pairs(tunnels) do
 		local d = Vector2.new(pos.X - t.base.X, pos.Z - t.base.Z).Magnitude
 		local up = pos.Y - t.base.Y
 		if d <= J.TunnelRadius and up > -1 and up < J.TunnelHeight + 4 then
@@ -120,30 +139,32 @@ task.spawn(function()
 			register(m)
 		end
 	end)
+	folder.ChildRemoved:Connect(function(m)
+		tunnels[m :: Model] = nil
+	end)
 end)
-player:GetAttributeChangedSignal("Ring"):Connect(refreshLocks)
 
 local spin = 0
 RunService.RenderStepped:Connect(function(dt)
 	spin += dt * FAN_SPEED
 	local now = os.clock()
-	-- hélices et anneaux de vent
-	for _, t in ipairs(tunnels) do
-		if not t.locked then
+	-- hélices et anneaux de vent (seulement sur les souffleries achetées)
+	for _, t in pairs(tunnels) do
+		if t.active then
 			-- rotation autour de l'axe vertical, en gardant l'orientation d'origine du moyeu (cylindre couché)
 			local hubCF = CFrame.new(t.fan.center) * CFrame.Angles(0, spin, 0) * t.fan.rot
 			for _, fp in ipairs(t.fan.parts) do
 				fp.part.CFrame = hubCF * fp.offset
 			end
-		end
-		for _, ring in ipairs(t.rings) do
-			local phase = ((ring:GetAttribute("Phase") or 0) :: number + now * (if t.locked then 0.08 else 0.45)) % 1
-			ring.CFrame = CFrame.new(t.base.X, t.base.Y + 0.5 + phase * J.TunnelHeight, t.base.Z) * CFrame.Angles(0, 0, math.pi / 2)
-			ring.Transparency = 0.35 + 0.65 * math.max(phase - 0.6, 0) / 0.4
+			for _, ring in ipairs(t.rings) do
+				local phase = ((ring:GetAttribute("Phase") or 0) :: number + now * 0.45) % 1
+				ring.CFrame = CFrame.new(t.base.X, t.base.Y + 0.5 + phase * J.TunnelHeight, t.base.Z) * CFrame.Angles(0, 0, math.pi / 2)
+				ring.Transparency = 0.35 + 0.65 * math.max(phase - 0.6, 0) / 0.4
+			end
 		end
 	end
 
-	-- le courant d'air porte le joueur
+	-- le courant d'air de sa propre soufflerie porte le joueur
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local hum = character and character:FindFirstChildOfClass("Humanoid")
@@ -152,19 +173,10 @@ RunService.RenderStepped:Connect(function(dt)
 		return
 	end
 	local t = tunnelAt(hrp.Position)
-	if not t then
+	if not t or not t.active or not t.mine then
 		if player:GetAttribute("InTunnel") then
 			player:SetAttribute("InTunnel", nil)
 		end
-		return
-	end
-	if t.locked then
-		-- soufflerie verrouillée : le vent repousse doucement vers l'extérieur
-		player:SetAttribute("InTunnel", nil)
-		local away = Vector3.new(hrp.Position.X - t.base.X, 0, hrp.Position.Z - t.base.Z)
-		away = if away.Magnitude > 0.1 then away.Unit else Vector3.new(0, 0, 1)
-		local v = hrp.AssemblyLinearVelocity
-		hrp.AssemblyLinearVelocity = Vector3.new(away.X * 18, math.max(v.Y, 6), away.Z * 18)
 		return
 	end
 	player:SetAttribute("InTunnel", true)
