@@ -6,18 +6,17 @@ local Config = {}
 Config.SaveKey = "Player_v1" -- ne pas changer : le schéma est versionné dans DataService
 Config.AutosaveSeconds = 60
 
--- Raretés : nom affiché, chance de base, valeur de base (crédits à l'anneau 1), couleur
+-- Raretés : nom affiché, valeur de base (crédits à l'anneau 1), couleur.
+-- Les chances sont par œuf et par anneau : voir Config.Eggs plus bas.
 Config.Rarities = {
-	{ Id = "Common", Name = "Common", Chance = 0.58, Value = 2, Color = Color3.fromRGB(170, 176, 190) },
-	{ Id = "Uncommon", Name = "Uncommon", Chance = 0.27, Value = 5, Color = Color3.fromRGB(80, 200, 110) },
-	{ Id = "Rare", Name = "Rare", Chance = 0.11, Value = 14, Color = Color3.fromRGB(70, 140, 255) },
-	{ Id = "Epic", Name = "Epic", Chance = 0.0375, Value = 50, Color = Color3.fromRGB(170, 90, 255) },
-	{ Id = "Legendary", Name = "Legendary", Chance = 0.0025, Value = 400, Color = Color3.fromRGB(255, 196, 40) },
-	{ Id = "Mythic", Name = "Mythic", Chance = 0.00025, Value = 5000, Color = Color3.fromRGB(255, 70, 160) },
-	{ Id = "Cosmic", Name = "Cosmic", Chance = 0.00001, Value = 150000, Color = Color3.fromRGB(120, 255, 240) },
+	{ Id = "Common", Name = "Common", Value = 2, Color = Color3.fromRGB(170, 176, 190) },
+	{ Id = "Uncommon", Name = "Uncommon", Value = 5, Color = Color3.fromRGB(80, 200, 110) },
+	{ Id = "Rare", Name = "Rare", Value = 14, Color = Color3.fromRGB(70, 140, 255) },
+	{ Id = "Epic", Name = "Epic", Value = 50, Color = Color3.fromRGB(170, 90, 255) },
+	{ Id = "Legendary", Name = "Legendary", Value = 400, Color = Color3.fromRGB(255, 196, 40) },
+	{ Id = "Mythic", Name = "Mythic", Value = 5000, Color = Color3.fromRGB(255, 70, 160) },
+	{ Id = "Cosmic", Name = "Cosmic", Value = 150000, Color = Color3.fromRGB(120, 255, 240) },
 }
--- Index (1..7) à partir duquel la chance est multipliée par le bonus de profondeur
-Config.DepthBonusFrom = 5
 -- Index à partir duquel le scanner augmente la chance
 Config.LuckFrom = 3
 -- Une annonce serveur à partir de cette rareté
@@ -559,28 +558,104 @@ function Config.MoneyPackAmount(base: number, ring: number): number
 	return base * r.ValueMult
 end
 
--- Probabilités d'une géode selon l'anneau et la chance du joueur
+-- ŒUFS ------------------------------------------------------------------------
+-- Chaque anneau a 6 œufs, indexés par rareté (anneaux 1-4 : Common -> Mythic ; anneaux 5-7 :
+-- Uncommon -> Cosmic). Modèles : ReplicatedStorage.Assets.Eggs.R<anneau>_T<rareté>.
+-- Chance = probabilité de tirer cet œuf à chaque œuf foré (total 1 par anneau).
+-- Le hasard décide beaucoup : l'œuf le plus rare d'un anneau sort environ 1 fois sur 500 à 1 000.
+-- Le scanner multiplie les chances à partir de Config.LuckFrom ; l'œuf le plus courant prend le reste.
+local function egg(name: string, chance: number)
+	return { Name = name, Chance = chance }
+end
+Config.Eggs = {
+	{ -- 1. Dust Belt
+		[1] = egg("Dusty", 0.60), --          1 sur 1,7
+		[2] = egg("Pebble", 0.26), --         1 sur 4
+		[3] = egg("Geode", 0.10), --          1 sur 10
+		[4] = egg("Sandstorm", 0.033), --     1 sur 30
+		[5] = egg("Desert King", 0.006), --   1 sur 167
+		[6] = egg("Stardust", 0.001), --      1 sur 1 000
+	},
+	{ -- 2. Ice Ring
+		[1] = egg("Frost", 0.58),
+		[2] = egg("Snowball", 0.27),
+		[3] = egg("Glacier", 0.105),
+		[4] = egg("Blizzard", 0.036),
+		[5] = egg("Frost King", 0.0075), --   1 sur 133
+		[6] = egg("Aurora", 0.0015), --       1 sur 667
+	},
+	{ -- 3. Magma Field
+		[1] = egg("Ember", 0.56),
+		[2] = egg("Cinder", 0.28),
+		[3] = egg("Magma", 0.11),
+		[4] = egg("Inferno", 0.04),
+		[5] = egg("Phoenix", 0.0082), --      1 sur 122
+		[6] = egg("Dragonheart", 0.0018), --  1 sur 556
+	},
+	{ -- 4. Nebula
+		[1] = egg("Haze", 0.55),
+		[2] = egg("Moon", 0.28),
+		[3] = egg("Ringed", 0.115),
+		[4] = egg("Nova", 0.044),
+		[5] = egg("Galaxy", 0.009), --        1 sur 111
+		[6] = egg("Supernova", 0.002), --     1 sur 500
+	},
+	{ -- 5. Devourer Belt
+		[2] = egg("Maw", 0.60),
+		[3] = egg("Tentacle", 0.26),
+		[4] = egg("Eye", 0.10),
+		[5] = egg("Void Fang", 0.033),
+		[6] = egg("Abyss", 0.0062), --        1 sur 161
+		[7] = egg("Devourer", 0.0008), --     1 sur 1 250
+	},
+	{ -- 6. The Rift
+		[2] = egg("Shard", 0.58),
+		[3] = egg("Portal", 0.27),
+		[4] = egg("Prism", 0.105),
+		[5] = egg("Rift Warden", 0.037),
+		[6] = egg("Paradox", 0.007), --       1 sur 143
+		[7] = egg("Singularity", 0.001), --   1 sur 1 000
+	},
+	{ -- 7. The Nest
+		[2] = egg("Twig", 0.56),
+		[3] = egg("Feather", 0.28),
+		[4] = egg("Golden", 0.11),
+		[5] = egg("Mother", 0.04),
+		[6] = egg("Celestial", 0.0085), --    1 sur 118
+		[7] = egg("Cosmic", 0.0015), --       1 sur 667
+	},
+}
+
+-- Nom affiché d'un œuf (« Desert King Egg »)
+function Config.EggName(ringIndex: number, rarity: number): string
+	local ring = Config.Eggs[ringIndex]
+	local e = ring and ring[rarity]
+	return (if e then e.Name else Config.Rarities[rarity].Name) .. " Egg"
+end
+
+-- Probabilités de chaque rareté (index 1..7, 0 si l'anneau n'a pas cet œuf) selon la chance du joueur
 function Config.Probabilities(ringIndex: number, luck: number): { number }
-	local ring = Config.Rings[ringIndex]
+	local eggs = Config.Eggs[ringIndex]
 	local p = {}
-	local others = 0
-	for i, r in ipairs(Config.Rarities) do
-		local c = r.Chance
-		if i >= Config.LuckFrom then
-			c *= luck
-		end
-		if i >= Config.DepthBonusFrom then
-			c *= ring.Depth
-		end
-		if i == 7 and ringIndex < Config.CosmicMinRing then
-			c = 0
+	local first: number? = nil
+	for i = 1, #Config.Rarities do
+		local e = eggs[i]
+		local c = 0
+		if e then
+			first = first or i
+			c = e.Chance
+			if i >= Config.LuckFrom then
+				c *= luck
+			end
 		end
 		p[i] = c
-		if i > 1 then
-			others += c
-		end
 	end
-	p[1] = 1 - others
+	local base = first or 1
+	local others = 0
+	for i = base + 1, #p do
+		others += p[i]
+	end
+	p[base] = math.max(0, 1 - others)
 	return p
 end
 

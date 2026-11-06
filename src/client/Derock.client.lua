@@ -3,7 +3,7 @@
 -- Déroulé d'un œuf (temps relatif au début du travail, durée totale T) :
 --   0 → 0,7 s  : les pinces se ferment, la tête de forage descend sur l'œuf de roche
 --   0,7 → T-0,8 : forage — la mèche tourne vite et tremble, la roche lâche des éclats et rétrécit
---   T-0,8      : la roche éclate en morceaux dans un flash, l'œuf apparaît (couleur de sa rareté)
+--   T-0,8      : la roche éclate en morceaux dans un flash, le vrai œuf apparaît (modèle de l'anneau et de la rareté)
 --   T-0,8 → T  : la foreuse remonte, les pinces s'ouvrent, l'œuf flotte en tournant
 --   après T    : l'œuf vole jusqu'au propriétaire (« +1 🥚 READY »)
 -- L'écran de la console suit les étapes (barre orange « REMOVING ROCK... », puis verte « EGG REVEALED! »).
@@ -17,6 +17,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local EggModel = require(script.Parent:WaitForChild("EggModel"))
 
 local camera = workspace.CurrentCamera
 
@@ -26,6 +27,7 @@ local HOVER = 1.1 -- secondes où l'œuf révélé flotte avant de s'envoler
 local DRILL_DOWN = 1.6 -- studs de descente de la tête de forage
 local CLAMP_OPEN = 0.8 -- studs d'ouverture des pinces au repos
 local EGG_H = 3.4 -- hauteur de l'œuf de roche
+local REVEAL_H = 2.6 -- hauteur de base de l'œuf révélé (corps, sans les ornements)
 local OUTLINE = Color3.fromRGB(22, 22, 32)
 
 local function smooth(x: number): number
@@ -176,32 +178,24 @@ local function makeShell(ring: number): Model
 	return shell
 end
 
-local function makeEgg(rarity: number): Part
+-- Le vrai œuf (modèle de l'anneau et de la rareté) avec lumière, halo et rayons (rayons à partir d'Épique)
+local function makeEgg(ring: number, rarity: number): Model
 	local r = Config.Rarities[rarity] or Config.Rarities[1]
-	local egg = Instance.new("Part")
+	local egg = EggModel.Make(ring, rarity, REVEAL_H * 0.3)
 	egg.Name = "RevealedEgg"
-	egg.Shape = Enum.PartType.Ball
-	egg.Size = Vector3.one * 2.4
-	egg.Material = Enum.Material.SmoothPlastic
-	egg.Color = r.Color
-	egg.Anchored = true
-	egg.CanCollide = false
-	egg.CanQuery = false
-	egg.CanTouch = false
-	local mesh = Instance.new("SpecialMesh")
-	mesh.MeshType = Enum.MeshType.Sphere
-	mesh.Scale = Vector3.new(1, 1.3, 1)
-	mesh.Parent = egg
-	local light = Instance.new("PointLight")
+	local core = EggModel.Core(egg)
+	if not core:FindFirstChildOfClass("PointLight") then
+		local light = Instance.new("PointLight")
+		light.Parent = core
+	end
+	local light = core:FindFirstChildOfClass("PointLight") :: PointLight
 	light.Color = r.Color
 	light.Range = 12
 	light.Brightness = 2.5
-	light.Parent = egg
-	-- Halo et rayons (rayons à partir d'Épique)
 	local b = Instance.new("BillboardGui")
 	b.Size = UDim2.fromScale(6 + rarity, 6 + rarity)
 	b.LightInfluence = 0
-	b.Parent = egg
+	b.Parent = core
 	local glow = Instance.new("ImageLabel")
 	glow.BackgroundTransparency = 1
 	glow.Size = UDim2.fromScale(1, 1)
@@ -222,6 +216,11 @@ local function makeEgg(rarity: number): Part
 		rays.Parent = b
 	end
 	return egg
+end
+
+-- Taille de l'œuf révélé : un peu plus gros quand il est rare
+local function revealHeight(rarity: number): number
+	return REVEAL_H * (0.85 + 0.05 * rarity)
 end
 
 local function emitter(parent: Instance, props: { [string]: any }): ParticleEmitter
@@ -365,7 +364,7 @@ type State = {
 	screen: Screen?,
 	job: number?, -- JobStart du travail affiché
 	shell: Model?,
-	egg: Part?,
+	egg: Model?,
 	fx: Fx?,
 	burst: boolean,
 	flown: boolean,
@@ -455,19 +454,19 @@ local function flyEgg(st: State, owner: Player?)
 	local character = owner and owner.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not root then
-		tween(egg, 0.4, { Size = Vector3.zero, Transparency = 1 })
-		Debris:AddItem(egg, 0.5)
+		Debris:AddItem(egg, 0)
 		return
 	end
-	local start = egg.Position
+	local start = egg:GetPivot().Position
+	local h = (egg:GetAttribute("RevealH") or REVEAL_H) :: number
 	local t0 = os.clock()
 	local conn
 	conn = RunService.RenderStepped:Connect(function()
 		local k = math.min(1, (os.clock() - t0) / 0.55)
 		local e = k * k
 		local goal = root.Position + Vector3.new(0, 1.5, 0)
-		egg.CFrame = CFrame.new(start:Lerp(goal, e) + Vector3.new(0, math.sin(k * math.pi) * 4, 0)) * CFrame.Angles(0, k * 12, 0)
-		egg.Size = Vector3.one * 2.4 * (1 - 0.7 * e)
+		EggModel.SetHeight(egg, h * (1 - 0.7 * e))
+		egg:PivotTo(CFrame.new(start:Lerp(goal, e) + Vector3.new(0, math.sin(k * math.pi) * 4, 0)) * CFrame.Angles(0, k * 12, 0))
 		if k >= 1 then
 			conn:Disconnect()
 			egg:Destroy()
@@ -545,19 +544,24 @@ RunService.RenderStepped:Connect(function(dt)
 				if st.fx then
 					setFx(st.fx, false)
 				end
-				local egg = makeEgg(rarity)
-				egg.CFrame = CFrame.new(eggCenter)
+				local egg = makeEgg(ring, rarity)
+				egg:SetAttribute("RevealH", revealHeight(rarity))
+				egg:SetAttribute("Born", os.clock())
+				egg:PivotTo(CFrame.new(eggCenter))
 				egg.Parent = machine
 				st.egg = egg
-				egg.Size = Vector3.one * 0.7
-				tween(egg, 0.35, { Size = Vector3.one * 2.4 }, Enum.EasingStyle.Back)
 			end
 			-- L'œuf révélé flotte en tournant
 			if st.egg then
 				st.spin += dt * 2.5
 				local lift = math.clamp((t - revealAt) / 0.6, 0, 1) * 1.2
-				st.egg.CFrame = CFrame.new(eggCenter + Vector3.new(0, lift + math.sin(now * 3) * 0.15, 0)) * CFrame.Angles(0, st.spin, 0)
-				local bb = st.egg:FindFirstChildOfClass("BillboardGui")
+				-- Apparition : il grandit avec un petit rebond (Back), puis flotte
+				local born = (st.egg:GetAttribute("Born") or 0) :: number
+				local g = math.clamp((os.clock() - born) / 0.35, 0, 1)
+				local back = 1 + 2.7 * (g - 1) ^ 3 + 1.7 * (g - 1) ^ 2
+				EggModel.SetHeight(st.egg, ((st.egg:GetAttribute("RevealH") or REVEAL_H) :: number) * (0.3 + 0.7 * back))
+				st.egg:PivotTo(CFrame.new(eggCenter + Vector3.new(0, lift + math.sin(now * 3) * 0.15, 0)) * CFrame.Angles(0, st.spin, 0))
+				local bb = EggModel.Core(st.egg):FindFirstChildOfClass("BillboardGui")
 				local rays = bb and bb:FindFirstChild("Rays") :: ImageLabel?
 				if rays then
 					rays.Rotation = (now * 60) % 360
@@ -623,7 +627,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 -- Message quand un de ses œufs est dégagé
-ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("EggRevealed").OnClientEvent:Connect(function(_ring: number, rarity: number)
+ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("EggRevealed").OnClientEvent:Connect(function(ring: number, rarity: number)
 	local r = Config.Rarities[rarity] or Config.Rarities[1]
-	UIKit.toast("🥚 " .. string.upper(r.Name) .. " egg ready to hatch!", "good")
+	UIKit.toast("🥚 " .. string.upper(Config.EggName(ring, rarity)) .. " (" .. r.Name .. ") ready to hatch!", "good")
 end)

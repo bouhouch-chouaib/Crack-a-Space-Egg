@@ -71,13 +71,17 @@ end
 local function pick(weights: { number }): number
 	local x = rng:NextNumber()
 	local acc = 0
+	local fallback = 1
 	for i, w in ipairs(weights) do
 		acc += w
+		if w > 0 and fallback == 1 and weights[1] <= 0 then
+			fallback = i -- premier œuf possible de l'anneau (anneaux 5-7 : pas de Common)
+		end
 		if x < acc then
 			return i
 		end
 	end
-	return 1
+	return fallback
 end
 
 -- Rareté d'un œuf, tirée au forage (ses veines brillent de cette couleur pendant le retour)

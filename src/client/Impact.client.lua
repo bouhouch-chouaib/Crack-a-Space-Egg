@@ -5,7 +5,7 @@
 -- - Les fissures, elles, suivent l'état de toute la roche (œufs déjà sortis compris).
 -- - Nombres de dégâts qui s'envolent à chaque coup (dorés quand un œuf sort).
 -- - Fissures qui apparaissent par stades (Config.CrackStages), de la couleur du biome.
--- - L'œuf jaillit de la roche dans la couleur de sa rareté, fait un arc, vole jusqu'au foreur.
+-- - Le vrai œuf (modèle de l'anneau et de la rareté) jaillit de la roche, fait un arc, vole jusqu'au foreur.
 -- - À la casse : flash, la roche vole en morceaux, nuage de poussière.
 -- Les coups arrivent du serveur (Remotes.DrillHit), pour tous les joueurs.
 
@@ -19,6 +19,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local EggModel = require(script.Parent:WaitForChild("EggModel"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -239,33 +240,24 @@ end
 
 -- ŒUF QUI JAILLIT ----------------------------------------------------------------
 
-local function eggPart(color: Color3, size: number): Part
-	local egg = Instance.new("Part")
-	egg.Name = "FlyingEgg"
-	egg.Shape = Enum.PartType.Ball
-	egg.Size = Vector3.one * size
-	egg.Anchored = true
-	egg.CanCollide = false
-	egg.CanQuery = false
-	egg.CanTouch = false
-	egg.Material = Enum.Material.SmoothPlastic
-	egg.Color = color
-	local mesh = Instance.new("SpecialMesh")
-	mesh.MeshType = Enum.MeshType.Sphere
-	mesh.Scale = Vector3.new(1, 1.3, 1)
-	mesh.Parent = egg
-	local light = Instance.new("PointLight")
-	light.Color = color
-	light.Range = 8
-	light.Brightness = 2
-	light.Parent = egg
+-- Le vrai œuf (modèle de l'anneau et de la rareté), avec lumière et traînée
+local function eggModel(ring: number, rarity: number, color: Color3, size: number): (Model, BasePart)
+	local m = EggModel.Make(ring, rarity, size)
+	local core = EggModel.Core(m)
+	if not core:FindFirstChildOfClass("PointLight") then
+		local light = Instance.new("PointLight")
+		light.Color = color
+		light.Range = 8
+		light.Brightness = 2
+		light.Parent = core
+	end
 	-- Traînée de lumière derrière l'œuf
 	local a0 = Instance.new("Attachment")
 	a0.Position = Vector3.new(0, size * 0.3, 0)
-	a0.Parent = egg
+	a0.Parent = core
 	local a1 = Instance.new("Attachment")
 	a1.Position = Vector3.new(0, -size * 0.3, 0)
-	a1.Parent = egg
+	a1.Parent = core
 	local trail = Instance.new("Trail")
 	trail.Attachment0 = a0
 	trail.Attachment1 = a1
@@ -274,12 +266,12 @@ local function eggPart(color: Color3, size: number): Part
 	trail.Lifetime = 0.35
 	trail.LightEmission = 1
 	trail.FaceCamera = true
-	trail.Parent = egg
-	return egg
+	trail.Parent = core
+	return m, core
 end
 
 -- Halo et rayons autour de l'œuf (plus la rareté est haute, plus c'est gros)
-local function eggAura(egg: Part, color: Color3, rarity: number)
+local function eggAura(egg: BasePart, color: Color3, rarity: number)
 	local b = Instance.new("BillboardGui")
 	b.Size = UDim2.fromScale(4 + rarity, 4 + rarity)
 	b.LightInfluence = 0
@@ -306,15 +298,16 @@ local function eggAura(egg: Part, color: Color3, rarity: number)
 	end
 end
 
-local function flyEgg(from: Vector3, rarity: number, to: () -> Vector3?, delay: number, isMine: boolean)
+local function flyEgg(from: Vector3, ring: number, rarity: number, to: () -> Vector3?, delay: number, isMine: boolean)
 	task.delay(delay, function()
 		local r = Config.Rarities[rarity] or Config.Rarities[1]
 		local color = r.Color
-		local size = 1.6 + rarity * 0.15
-		local egg = eggPart(color, size)
-		egg.CFrame = CFrame.new(from)
+		-- Les œufs rares sont plus gros, comme dans la base
+		local size = 2 + rarity * 0.3
+		local egg, core = eggModel(ring, rarity, color, size)
+		egg:PivotTo(CFrame.new(from))
 		egg.Parent = workspace
-		eggAura(egg, color, rarity)
+		eggAura(core, color, rarity)
 		-- Éclat de sortie
 		local burst = Instance.new("Attachment")
 		burst.WorldPosition = from
@@ -345,21 +338,21 @@ local function flyEgg(from: Vector3, rarity: number, to: () -> Vector3?, delay: 
 				local k = t / hang
 				local e = 1 - (1 - k) ^ 3
 				local pos = from:Lerp(up, e)
-				egg.CFrame = CFrame.new(pos) * spin
-				egg.Size = Vector3.one * size * (0.4 + 0.6 * math.min(1, k * 3))
+				EggModel.SetHeight(egg, size * (0.4 + 0.6 * math.min(1, k * 3)))
+				egg:PivotTo(CFrame.new(pos) * spin)
 			elseif t < hang + fly then
 				local k = (t - hang) / fly
 				local goal = to() or up
 				local e = k * k
 				local pos = up:Lerp(goal, e) + Vector3.new(0, math.sin(k * math.pi) * 3, 0)
-				egg.CFrame = CFrame.new(pos) * spin
-				egg.Size = Vector3.one * size * (1 - 0.7 * e)
+				EggModel.SetHeight(egg, size * (1 - 0.7 * e))
+				egg:PivotTo(CFrame.new(pos) * spin)
 			else
 				conn:Disconnect()
 				local goal = to() or up
 				egg:Destroy()
 				if isMine then
-					damageNumber(goal + Vector3.new(0, 2, 0), "+1 🥚 " .. string.upper(r.Name), color, true)
+					damageNumber(goal + Vector3.new(0, 2, 0), "+1 🥚 " .. string.upper(Config.EggName(ring, rarity)), color, true)
 				end
 			end
 		end)
@@ -519,8 +512,9 @@ Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, by: Player, dam
 		UIKit.bump(barBack, 0.2)
 	end
 	-- Œufs qui jaillissent et volent vers le foreur
+	local ring = (rock:GetAttribute("Ring") or 1) :: number
 	for i, rarity in ipairs(rarities) do
-		flyEgg(point, rarity, function()
+		flyEgg(point, ring, rarity, function()
 			local c = by.Character
 			local root = c and c:FindFirstChild("HumanoidRootPart") :: BasePart?
 			return if root then root.Position + Vector3.new(0, 1, 0) else nil
