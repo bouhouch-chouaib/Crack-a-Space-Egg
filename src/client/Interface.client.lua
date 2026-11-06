@@ -77,7 +77,7 @@ Remotes.Announcement.OnClientEvent:Connect(function(who: string, crystal: string
 	label({
 		Size = UDim2.new(1, -20, 1, -12),
 		Position = UDim2.fromOffset(10, 6),
-		Text = string.format("%s just cracked a %s %s!", who, r.Name:upper(), crystal),
+		Text = string.format("%s just hatched a %s %s!", who, r.Name:upper(), crystal),
 		TextColor3 = Color3.new(0.05, 0.05, 0.1),
 		FontFace = Theme.Font,
 		Parent = banner,

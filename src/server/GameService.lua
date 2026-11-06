@@ -44,6 +44,12 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("CargoRarities", table.concat(rarities, ","))
 	player:SetAttribute("ReadyEggs", #(d.ready or {}))
+	-- Œufs dérochés prêts à poser (« 1:5,2:3 » = anneau:rareté), pour la barre des œufs (Hatchery.client)
+	local ready = {}
+	for _, egg in ipairs(d.ready or {}) do
+		table.insert(ready, egg.ring .. ":" .. egg.rarity)
+	end
+	player:SetAttribute("ReadyList", table.concat(ready, ","))
 	player:SetAttribute("Ring", d.ring)
 	player:SetAttribute("Drill", d.drill)
 	player:SetAttribute("OxygenMax", d.oxygenMax or Config.Oxygen.Start)

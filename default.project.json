@@ -20,6 +20,12 @@
         "EggRevealed": {
           "$className": "RemoteEvent"
         },
+        "PlaceEgg": {
+          "$className": "RemoteEvent"
+        },
+        "Hatched": {
+          "$className": "RemoteEvent"
+        },
         "CrackAll": {
           "$className": "RemoteEvent"
         },

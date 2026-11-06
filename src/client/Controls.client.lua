@@ -169,7 +169,8 @@ local function isPointer(input: InputObject): boolean
 end
 
 UserInputService.InputBegan:Connect(function(input, processed)
-	if processed or not isPointer(input) then
+	-- Pendant qu'il pose un œuf dans sa base (Hatchery.client), le clic sert à poser, pas à forer
+	if processed or not isPointer(input) or player:GetAttribute("PlacingEgg") then
 		return
 	end
 	drilling = true

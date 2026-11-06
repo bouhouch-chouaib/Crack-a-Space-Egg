@@ -8,7 +8,7 @@ local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 
 local DataService = {}
 
-local VERSION = 3 -- v2 : la soute contient des œufs { ring, rarity } ; v3 : foreuses achetées une par une
+local VERSION = 4 -- v2 : soute { ring, rarity } ; v3 : foreuses une par une ; v4 : œufs et créatures dans la base
 local store: DataStore? = nil
 local ok, err = pcall(function()
 	store = DataStoreService:GetDataStore(Config.SaveKey)
@@ -31,6 +31,10 @@ local function default()
 		ring = 1, -- plus haut anneau débloqué
 		cargo = {}, -- un œuf par entrée : { ring = anneau d'origine, rarity = rareté } (encore pris dans la roche)
 		ready = {}, -- œufs dérochés par la machine, prêts à couver : { ring, rarity }
+		-- Base : œufs en incubation et créatures posées. Position (x, z) dans le repère du sol de la base.
+		--   œuf      : { kind = "egg", ring, rarity, x, z, hatchAt = os.time() de fin }
+		--   créature : { kind = "pet", ring, rarity, x, z, name, size, weight, income }
+		base = {},
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
 		pity = 0,
 		stats = { geodes = 0, best = 0 },

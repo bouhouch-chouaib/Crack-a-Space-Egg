@@ -9,12 +9,14 @@ local DataService = require(script.Parent.DataService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
 local MonetizationService = require(script.Parent.MonetizationService)
 local MachineService = require(script.Parent.MachineService)
+local HatchService = require(script.Parent.HatchService)
 
 WorldBuilder.Build()
 Bases.Start()
 EventService.Start()
 BeltService.Start()
 GameService.Start() -- branche DataService.Loaded avant que les parties se chargent
+HatchService.Start() -- idem : reconstruit les œufs et créatures de la base au chargement
 DataService.Start()
 LeaderboardService.Start()
 MonetizationService.Start()

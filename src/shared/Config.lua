@@ -633,6 +633,42 @@ function Config.EggName(ringIndex: number, rarity: number): string
 	return (if e then e.Name else Config.Rarities[rarity].Name) .. " Egg"
 end
 
+-- ÉCLOSION (docs/Mecaniques.md §7) ---------------------------------------------
+-- Le joueur pose ses œufs dérochés où il veut dans sa base ; ils éclosent au bout d'un temps
+-- qui dépend de la rareté (le temps passe aussi hors ligne). La créature née reste dans la base
+-- et rapporte des $ chaque seconde, d'autant plus qu'elle est rare et grande.
+Config.Hatch = {
+	-- Secondes d'incubation par rareté (Common -> Cosmic)
+	Time = { 20, 45, 90, 180, 420, 900, 1800 },
+	-- Œufs en incubation + créatures posées en même temps dans une base
+	Slots = 10,
+	-- Hauteur du corps de l'œuf posé (studs) selon la rareté : les rares sont plus gros
+	EggHeight = { 2.4, 2.7, 3.0, 3.4, 3.9, 4.5, 5.2 },
+	-- Écart minimal entre deux objets posés, et marge le long des murs (studs)
+	Gap = 4.5,
+	Margin = 2.5,
+	-- Zones interdites autour de la machine et du point d'apparition (rayon en studs)
+	KeepOut = { DerockMachine = 8.5, Spawn = 4 },
+	-- Revenu d'une créature en $/s = valeur de la rareté × multiplicateur de l'anneau × IncomeFactor × taille
+	IncomeFactor = 0.5,
+	-- Secondes entre l'appui sur « Hatch » et l'éclatement (l'œuf tremble et se fissure)
+	Burst = 1.6,
+}
+
+-- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté
+function Config.CreatureFor(ringIndex: number, rarity: number): any
+	local list = Config.Creatures[ringIndex]
+	local slot = if ringIndex >= Config.CosmicMinRing then rarity - 1 else rarity
+	return list and list[math.clamp(slot, 1, #list)]
+end
+
+-- Revenu d'une créature en $/s
+function Config.CreatureIncome(ringIndex: number, rarity: number, size: number): number
+	local r = Config.Rarities[rarity] or Config.Rarities[1]
+	local ring = Config.Rings[ringIndex] or Config.Rings[1]
+	return r.Value * ring.ValueMult * Config.Hatch.IncomeFactor * size
+end
+
 -- Probabilités de chaque rareté (index 1..7, 0 si l'anneau n'a pas cet œuf) selon la chance du joueur
 function Config.Probabilities(ringIndex: number, luck: number): { number }
 	local eggs = Config.Eggs[ringIndex]
