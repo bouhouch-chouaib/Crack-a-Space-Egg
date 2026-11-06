@@ -149,3 +149,19 @@ Commun aux deux :
    - [ ] Les budgets sont respectés.
 3. Si un point échoue, on corrige avant de passer à la suite.
 4. **Chouaib valide** sur la capture.
+
+## Ciel et planète géante (7 nov.)
+
+La planète est **peinte dans le ciel** (`Lighting.PlanetSky`). Le brouillard du vaisseau s'arrête à
+300 studs et cache toute pièce plus loin, billboards compris. Le ciel, lui, n'est jamais dans le brouillard.
+
+- Les 6 faces sont calculées par `tools/sky/render_sky.py`, direction par direction, sans raccord :
+  nébuleuses violet, rose et bleu, étoiles, deux lunes, et une géante gazeuse corail et crème
+  de 76° de diamètre vers -Z. On la voit derrière le vaisseau depuis le pont et depuis les anneaux.
+  Elle a des bandes cartoon cernées, un grand cyclone, un croissant de nuit violet et un halo cyan-rose.
+- Refaire le ciel : `python tools/sky/render_sky.py <dossier> 1024 preview` (deux vues en perspective),
+  puis sans `preview` pour les 6 faces (`sky_ft.png`…), à importer et à mettre dans `Sky.SkyboxFt`… .
+  Orientation mesurée : Ft = -Z, Bk = +Z, Lf = +X, Rt = -X (détail en tête du script).
+- Réglages en tête du script : `PLANET_DIR`, `PLANET_ANG` (taille), `LIGHT`, `BANDS` (couleurs), `STORM`, `MOONS`.
+- Ancien ciel (nébuleuse, non modifiable) : faces 603495955 (Bk), 603494072 (Dn), 603498814 (Ft),
+  603493194 (Lf), 603494693 (Rt), 603500172 (Up).

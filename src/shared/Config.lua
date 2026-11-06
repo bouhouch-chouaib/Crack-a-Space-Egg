@@ -27,11 +27,10 @@ Config.PityLegendary = 1000
 -- CARTE V2 (docs/Mecaniques.md §2) ---------------------------------------------
 -- Le vaisseau (Workspace.Ship, construit dans Studio) a son centre en (0, 0, 0) et son quai en
 -- z = FrontZ ; le couloir part du quai vers +Z.
--- Les anneaux sont des cercles horizontaux autour d'un axe vertical placé derrière le vaisseau.
+-- Les anneaux sont des cercles horizontaux autour d'un axe vertical placé derrière le vaisseau,
+-- là où la planète géante est peinte dans le ciel (tools/sky/render_sky.py).
 Config.Map = {
 	FrontZ = 64, -- position du repère Ship.Deck.Dock.DockEnd (bout du quai, début du couloir)
-	PlanetRadius = 500, -- au centre des anneaux, derrière le vaisseau ; le dessous du vaisseau reste du ciel
-	PlanetDrop = 150, -- centre un peu sous le plan des anneaux : ils tournent autour d'elle comme ceux de Saturne
 	AxisDistance = 1200, -- distance entre l'axe de rotation des anneaux et le bout du quai
 	CorridorWidth = 120, -- = largeur du quai (Ship.Deck.Dock), à garder identiques
 	FirstRingGap = 12, -- vide entre le bout du quai et le bord de l'anneau 1

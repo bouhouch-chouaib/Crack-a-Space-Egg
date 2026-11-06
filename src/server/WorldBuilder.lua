@@ -149,28 +149,9 @@ local function prepareShip(): ({ Model }, { BasePart })
 end
 
 -- PLANÈTE -------------------------------------------------------------------
-
-local function buildPlanet(world: Folder)
-	local model = Instance.new("Model")
-	model.Name = "Planet"
-	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent -- toujours visible, même de loin
-	-- Une pièce ne dépasse pas 2 048 studs : la sphère est agrandie par un maillage
-	local ball = decor({
-		Name = "Globe",
-		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(2048, 2048, 2048),
-		CFrame = CFrame.new(0, -M.PlanetDrop, M.FrontZ - M.AxisDistance),
-		Material = Enum.Material.Sand,
-		Color = Color3.fromRGB(196, 120, 82),
-		Parent = model,
-	})
-	local mesh = Instance.new("SpecialMesh")
-	mesh.MeshType = Enum.MeshType.Sphere
-	mesh.Scale = Vector3.one * (M.PlanetRadius * 2 / 2048)
-	mesh.Parent = ball
-	model.PrimaryPart = ball
-	model.Parent = world
-end
+-- La planète géante est peinte dans le ciel (Lighting.PlanetSky, faces faites par
+-- tools/sky/render_sky.py) : le brouillard cache toute pièce au-delà de quelques centaines de
+-- studs, alors que le ciel reste toujours visible.
 
 -- COULOIR ------------------------------------------------------------------
 -- Les distances sont mesurées depuis le quai (z = FrontZ)
@@ -471,7 +452,6 @@ function WorldBuilder.Build(): Folder
 	world.Name = "World"
 
 	WorldBuilder.Bases, WorldBuilder.ShopPoints = prepareShip()
-	buildPlanet(world)
 	buildCorridor(world)
 	buildRingDecor(world)
 	buildRingClouds(world)
