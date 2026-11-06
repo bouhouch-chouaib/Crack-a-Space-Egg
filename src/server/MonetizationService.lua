@@ -1,6 +1,6 @@
 -- Achats Robux (produits de développeur). Un seul ProcessReceipt pour tout le jeu :
 -- chaque produit connu dans Config est relié ici à ce qu'il donne.
--- Pour l'instant : les foreuses (Config.Drills[i].ProductId). Les potions, packs et l'offre du jour
+-- Pour l'instant : les foreuses (Config.Drills[i].ProductId) et « Hatch now » (Config.Hatch.Skip[rareté]). Les potions, packs et l'offre du jour
 -- s'ajouteront dans HANDLERS quand leurs produits seront créés sur Roblox.
 -- Règle : jamais d'œufs ni de créatures contre des Robux.
 
@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
+local HatchService = require(script.Parent.HatchService)
 
 local MonetizationService = {}
 
@@ -38,6 +39,14 @@ function MonetizationService.Start()
 		if d.ProductId ~= 0 then
 			HANDLERS[d.ProductId] = function(player)
 				return GameService.GrantDrill(player, tier)
+			end
+		end
+	end
+	-- Faire éclore tout de suite : du temps gagné, pas un œuf ni une créature
+	for rarity, s in ipairs(Config.Hatch.Skip) do
+		if s.ProductId ~= 0 then
+			HANDLERS[s.ProductId] = function(player)
+				return HatchService.SkipEgg(player, rarity)
 			end
 		end
 	end

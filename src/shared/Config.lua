@@ -653,6 +653,21 @@ Config.Hatch = {
 	IncomeFactor = 0.5,
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement (l'œuf tremble et se fissure)
 	Burst = 1.6,
+	-- Œuf tenu dans les mains en sortant de la machine : hauteur selon la rareté (studs),
+	-- et délai avant qu'il apparaisse (le temps que l'œuf révélé vole jusqu'au joueur)
+	HeldHeight = { 1.7, 1.85, 2.0, 2.15, 2.35, 2.55, 2.8 },
+	HandDelay = 1.4,
+	-- Faire éclore tout de suite contre des Robux (du temps, jamais des œufs ni des créatures).
+	-- Un produit de développeur par rareté ; ProductId = 0 tant qu'il n'est pas créé sur Roblox.
+	Skip = {
+		{ Price = 9, ProductId = 0 }, -- Common
+		{ Price = 15, ProductId = 0 }, -- Uncommon
+		{ Price = 25, ProductId = 0 }, -- Rare
+		{ Price = 45, ProductId = 0 }, -- Epic
+		{ Price = 79, ProductId = 0 }, -- Legendary
+		{ Price = 129, ProductId = 0 }, -- Mythic
+		{ Price = 199, ProductId = 0 }, -- Cosmic
+	},
 }
 
 -- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté

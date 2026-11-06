@@ -78,12 +78,13 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 2. ✅ **Couver dans la base** : le joueur pose l'œuf dégagé dans sa base, et il **éclot au bout d'un certain temps**.
 
 - ✅ La créature obtenue a la rareté de l'œuf et vient de l'anneau d'où il sort.
-- ✅ Pose : une barre en bas montre les œufs prêts (en 3D). On en choisit un, un fantôme suit la souris sur le sol de sa base (cercle vert = libre, rouge = mur, machine, point d'apparition ou autre œuf trop près), clic pour poser, Q pour annuler.
+- ✅ Pose : l'œuf qui sort de la machine atterrit dans les mains du joueur. Un fantôme de l'œuf suit la souris sur le sol de sa base (cercle vert = libre, rouge = mur, machine, point d'apparition ou autre œuf trop près), clic pour poser. S'il en a plusieurs, le suivant arrive dans ses mains dès que le premier est posé ; base pleine = les œufs attendent.
+- ✅ « Hatch now ⚡ » (touche R) : faire éclore tout de suite contre des Robux, prix selon la rareté (`Config.Hatch.Skip`, 9 à 199 R$). On paie du temps, jamais un œuf ni une créature. Produits à créer sur Roblox (ProductId = 0 → « Coming soon! »).
 - ✅ Temps d'éclosion selon la rareté (`Config.Hatch.Time`) : 20 s (Common) → 30 min (Cosmic). Le temps passe aussi hors ligne. Compte à rebours au-dessus de l'œuf, puis « READY! Press F ».
 - ✅ Éclosion (touche F, E étant pris par la machine) : l'œuf tremble et blanchit, éclate en coquilles et en lumière ; bannière « YOU HATCHED » avec la créature, sa rareté et ses $/s ; annonce au serveur à partir de Mythic.
 - ✅ La créature reste dans la base et rapporte des $ chaque seconde : valeur de la rareté × multiplicateur de l'anneau × 0,5 × taille (`Config.CreatureIncome`). 10 places par base (œufs + créatures).
 - ⏳ En attendant les modèles 3D des créatures, chacune est une carte (image, nom, $/s) au-dessus d'un socle de la couleur de sa rareté.
-- ❓ Encore à trancher : vendre ou ranger une créature pour libérer une place, agrandir la base, accélérer l'éclosion avec des $ (jamais de Robux pour les œufs).
+- ❓ Encore à trancher : vendre ou ranger une créature pour libérer une place, agrandir la base, accélérer aussi l'éclosion avec des $.
 
 ## 8. Monnaie : les dollars ($)
 

@@ -1,8 +1,9 @@
 -- Éclosion dans la base, côté joueur (serveur : HatchService).
--- - Barre des œufs prêts (en bas) : chaque œuf dérroché, en 3D qui tourne, avec son nom et sa rareté.
---   Un clic dessus lance la pose : un fantôme de l'œuf suit la souris sur le sol de sa base,
---   cercle vert = place libre, rouge = interdit. Clic = poser, Q ou clic droit = annuler.
+-- - L'œuf qui sort de la machine atterrit dans les mains du joueur (le serveur le soude au torse,
+--   ici on lève les bras). Tant qu'il le tient, un fantôme de l'œuf suit la souris sur le sol de
+--   sa base : cercle vert = place libre, rouge = interdit. Clic (ou doigt) = poser.
 -- - Au-dessus de chaque œuf qui incube : nom, barre de progression, temps restant, puis « READY! ».
+--   Bouton « Hatch now ⚡ » (R) pour faire éclore tout de suite contre des Robux (serveur).
 -- - Éclosion : l'œuf tremble de plus en plus fort et blanchit, puis éclate en lumière ;
 --   le propriétaire voit une grande bannière avec la créature née et ses $/s.
 -- - Créatures posées : leur carte (image, nom, $/s) flotte au-dessus de leur socle,
@@ -51,154 +52,30 @@ local function artOf(ring: number, name: string): string?
 	return nil
 end
 
--- BARRE DES ŒUFS PRÊTS ------------------------------------------------------------------
+-- ŒUF DANS LES MAINS : POSE DIRECTE ------------------------------------------------------
+-- Le serveur soude l'œuf tenu au torse et pose l'attribut HeldEgg (« anneau:rareté »).
+-- Tant qu'on le tient : un fantôme montre où il ira sur le sol de sa base, clic (ou doigt) = poser.
 
 local gui = new("ScreenGui", { Name = "Hatchery", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 4, Parent = player:WaitForChild("PlayerGui") })
-local root = new("Frame", {
-	Name = "Bar",
-	AnchorPoint = Vector2.new(0.5, 1),
-	Position = UDim2.new(0.5, 0, 1, -64),
-	Size = UDim2.fromOffset(700, 150),
-	BackgroundTransparency = 1,
-	Visible = false,
-	Parent = gui,
-})
-UIKit.autoScale(root)
-local title = UIKit.text({ Size = UDim2.new(1, 0, 0, 30), Text = "🥚 PLACE YOUR EGGS", TextColor3 = GOLD, Stroke = 3, Parent = root })
-local slots = UIKit.text({ Size = UDim2.new(1, 0, 0, 20), Position = UDim2.fromOffset(0, 28), Text = "", TextColor3 = Color3.fromRGB(200, 240, 255), Parent = root })
-local row = new("Frame", { Size = UDim2.new(1, 0, 0, 100), Position = UDim2.fromOffset(0, 50), BackgroundTransparency = 1, Parent = root }, {
-	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 10) }),
-})
 
--- Bandeau de pose (« Click to place · Q to cancel »)
 local banner = new("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
 	Position = UDim2.new(0.5, 0, 0, 110),
-	Size = UDim2.fromOffset(520, 56),
+	Size = UDim2.fromOffset(560, 62),
 	BackgroundColor3 = Color3.new(1, 1, 1),
 	Visible = false,
 	Parent = gui,
 }, { UIKit.corner(), UIKit.stroke(3), UIKit.gradient(UIKit.Colors.Gold[1], UIKit.Colors.Gold[2]) })
 UIKit.autoScale(banner)
-local bannerText = UIKit.text({ Size = UDim2.new(1, -90, 0.7, 0), Position = UDim2.new(0, 14, 0.15, 0), Text = "", Parent = banner })
-local cancel = new("TextButton", {
-	AnchorPoint = Vector2.new(1, 0.5),
-	Position = UDim2.new(1, -8, 0.5, 0),
-	Size = UDim2.fromOffset(70, 40),
-	BackgroundColor3 = Color3.new(1, 1, 1),
-	Text = "",
-	Parent = banner,
-}, { UIKit.corner(), UIKit.stroke(3), UIKit.gradient(UIKit.Colors.Red[1], UIKit.Colors.Red[2]) })
-UIKit.text({ Size = UDim2.fromScale(0.8, 0.7), Position = UDim2.fromScale(0.1, 0.15), Text = "✖", Parent = cancel })
-
--- Œuf 3D qui tourne dans une vignette
-local spinners: { [ViewportFrame]: Model } = {}
-local function eggViewport(parent: GuiObject, ring: number, rarity: number): ViewportFrame
-	local vp = new("ViewportFrame", {
-		Size = UDim2.fromScale(1, 0.72),
-		BackgroundTransparency = 1,
-		Ambient = Color3.fromRGB(200, 200, 210),
-		LightColor = Color3.new(1, 1, 1),
-		LightDirection = Vector3.new(-1, -1.5, -1),
-		Parent = parent,
-	})
-	local egg = EggModel.Make(ring, rarity, 2)
-	egg:PivotTo(CFrame.new())
-	egg.Parent = vp
-	local cam = new("Camera", { FieldOfView = 30, Parent = vp })
-	local _, size = egg:GetBoundingBox()
-	local dist = math.max(size.X, size.Y, size.Z) * 2.1
-	cam.CFrame = CFrame.lookAt(Vector3.new(0, size.Y * 0.1, -dist), Vector3.zero)
-	vp.CurrentCamera = cam
-	spinners[vp] = egg
-	return vp
-end
+local bannerText = UIKit.text({ Size = UDim2.new(1, -24, 0.56, 0), Position = UDim2.new(0, 12, 0.08, 0), Text = "", Parent = banner })
+local bannerSub = UIKit.text({ Size = UDim2.new(1, -24, 0.32, 0), Position = UDim2.new(0, 12, 0.62, 0), Text = "", TextColor3 = Color3.fromRGB(255, 250, 220), Parent = banner })
 
 local placing: { ring: number, rarity: number }? = nil
-local startPlacing: (number, number) -> ()
-
-local function parseReady(): { { ring: number, rarity: number, count: number } }
-	local list = {}
-	local byKey = {}
-	for pair in string.gmatch(player:GetAttribute("ReadyList") or "", "[^,]+") do
-		local ring, rarity = pair:match("(%d+):(%d+)")
-		local k = pair
-		if ring and rarity then
-			if byKey[k] then
-				byKey[k].count += 1
-			else
-				byKey[k] = { ring = tonumber(ring) :: number, rarity = tonumber(rarity) :: number, count = 1 }
-				table.insert(list, byKey[k])
-			end
-		end
-	end
-	table.sort(list, function(a, b)
-		return if a.rarity ~= b.rarity then a.rarity > b.rarity else a.ring > b.ring
-	end)
-	return list
-end
-
-local function refreshBar()
-	for vp in pairs(spinners) do
-		spinners[vp] = nil
-	end
-	for _, c in ipairs(row:GetChildren()) do
-		if c:IsA("GuiObject") then
-			c:Destroy()
-		end
-	end
-	local list = parseReady()
-	local used, max = player:GetAttribute("BaseUsed") or 0, player:GetAttribute("BaseSlots") or H.Slots
-	local income = player:GetAttribute("Income") or 0
-	slots.Text = ("🏠 Base %d/%d   ·   💰 %s/s"):format(used, max, Format.Short(income))
-	root.Visible = #list > 0 and not placing
-	for i, e in ipairs(list) do
-		if i > 6 then
-			break
-		end
-		local r = rarityOf(e.rarity)
-		local b = new("TextButton", {
-			Name = "Egg" .. i,
-			Size = UDim2.fromOffset(100, 100),
-			BackgroundColor3 = Color3.new(1, 1, 1),
-			Text = "",
-			AutoButtonColor = false,
-			LayoutOrder = i,
-			Parent = row,
-		}, { UIKit.corner(), UIKit.stroke(3), UIKit.gradient(r.Color:Lerp(Color3.new(1, 1, 1), 0.35), r.Color:Lerp(Color3.new(0, 0, 0), 0.35)) })
-		if e.rarity >= 4 then
-			UIKit.rays(b, { color = r.Color, size = 1.6, transparency = 0.45, z = 0 })
-		end
-		eggViewport(b, e.ring, e.rarity)
-		UIKit.text({ Size = UDim2.new(1, -6, 0.2, 0), Position = UDim2.new(0, 3, 0.72, 0), Text = Config.EggName(e.ring, e.rarity):gsub(" Egg$", ""), Parent = b })
-		if e.count > 1 then
-			UIKit.text({ AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(40, 24), Position = UDim2.new(1, -3, 0, 2), Text = "x" .. e.count, TextColor3 = GOLD, Parent = b })
-		end
-		UIKit.juice(b)
-		UIKit.popIn(b, i * 0.04)
-		b.Activated:Connect(function()
-			if used >= max then
-				UIKit.toast("🏠 Your base is full!", "warn")
-				return
-			end
-			startPlacing(e.ring, e.rarity)
-		end)
-	end
-	if #list > 0 then
-		UIKit.bump(title, 0.15)
-	end
-end
-
-for _, a in ipairs({ "ReadyList", "BaseUsed", "Income" }) do
-	player:GetAttributeChangedSignal(a):Connect(refreshBar)
-end
-
--- POSE DE L'ŒUF -------------------------------------------------------------------------
-
 local ghost: Model? = nil
 local ring3d: Part? = nil
 local placeX, placeZ, placeOk = 0, 0, false
 local pointer: Vector2? = nil
+local touch = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 
 local function myBase(): Model?
 	local index = player:GetAttribute("Base")
@@ -253,24 +130,19 @@ local function stopPlacing()
 		ring3d = nil
 	end
 	banner.Visible = false
-	refreshBar()
 end
 
-startPlacing = function(ring: number, rarity: number)
+local function startPlacing(ring: number, rarity: number)
 	stopPlacing()
-	local base = myBase()
-	if not base or not base:FindFirstChild("Floor") then
-		UIKit.toast("Go back to your base first 🏠", "warn")
-		return
-	end
 	placing = { ring = ring, rarity = rarity }
 	player:SetAttribute("PlacingEgg", true)
 	local g = EggModel.Make(ring, rarity, H.EggHeight[rarity] or 3)
 	for _, d in ipairs(g:GetDescendants()) do
 		if d:IsA("BasePart") and d.Transparency < 1 then
-			d.Transparency = 0.35
+			d.Transparency = 0.45
 		end
 	end
+	g:PivotTo(CFrame.new(0, -500, 0))
 	g.Parent = workspace
 	ghost = g
 	ring3d = new("Part", {
@@ -283,16 +155,32 @@ startPlacing = function(ring: number, rarity: number)
 		CanCollide = false,
 		CanQuery = false,
 		CanTouch = false,
+		CFrame = CFrame.new(0, -500, 0),
 		Parent = workspace,
 	})
-	bannerText.Text = (if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then "Tap your base floor to place" else "Click to place  ·  Q to cancel")
 	banner.Visible = true
 	UIKit.popIn(banner)
-	root.Visible = false
-	pointer = UserInputService:GetMouseLocation()
+	pointer = nil
 end
 
-cancel.Activated:Connect(stopPlacing)
+-- L'œuf tenu change (nouvel œuf sorti de la machine, œuf posé) : on suit
+local function onHeld()
+	local key = player:GetAttribute("HeldEgg")
+	local ring, rarity = nil, nil
+	if type(key) == "string" then
+		local a, b = key:match("(%d+):(%d+)")
+		ring, rarity = tonumber(a), tonumber(b)
+	end
+	if ring and rarity then
+		if not placing or placing.ring ~= ring or placing.rarity ~= rarity then
+			startPlacing(ring, rarity)
+		end
+	elseif placing then
+		stopPlacing()
+	end
+end
+player:GetAttributeChangedSignal("HeldEgg"):Connect(onHeld)
+task.defer(onHeld)
 
 local floorParams = RaycastParams.new()
 floorParams.FilterType = Enum.RaycastFilterType.Include
@@ -301,36 +189,50 @@ RunService.RenderStepped:Connect(function()
 	if not placing or not ghost or not ring3d then
 		return
 	end
-	local base = myBase()
-	local floor = base and base:FindFirstChild("Floor") :: BasePart?
-	if not base or not floor then
-		return
-	end
-	local screen = if UserInputService.MouseEnabled then UserInputService:GetMouseLocation() else pointer
-	if not screen then
-		return
-	end
-	floorParams.FilterDescendantsInstances = { floor }
-	-- Souris : position dans la fenêtre ; doigt : position dans l'interface (sans la barre du haut)
-	local ray = if UserInputService.MouseEnabled then camera:ViewportPointToRay(screen.X, screen.Y) else camera:ScreenPointToRay(screen.X, screen.Y)
-	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, floorParams)
-	if not hit then
+	local current = placing :: { ring: number, rarity: number }
+	local waiting = (player:GetAttribute("WaitingEggs") or 0) :: number
+	local name = Config.EggName(current.ring, current.rarity)
+	bannerSub.Text = ("🏠 Base %d/%d"):format((player:GetAttribute("BaseUsed") or 0) :: number, (player:GetAttribute("BaseSlots") or H.Slots) :: number)
+		.. (if waiting > 0 then ("   ·   🥚 +%d waiting"):format(waiting) else "")
+	local hide = function(text: string)
 		ghost:PivotTo(CFrame.new(0, -500, 0))
 		ring3d.CFrame = CFrame.new(0, -500, 0)
 		placeOk = false
-		return
+		bannerText.Text = text
+	end
+	local base = myBase()
+	local floor = base and base:FindFirstChild("Floor") :: BasePart?
+	if not base or not floor then
+		return hide("🏠 Bring your " .. name .. " to your base!")
+	end
+	-- Loin de sa base : on lui dit d'y retourner
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if hrp and (hrp.Position - floor.Position).Magnitude > math.max(floor.Size.X, floor.Size.Z) * 1.2 then
+		return hide("🏠 Bring your " .. name .. " to your base!")
+	end
+	local screen = if touch then pointer else UserInputService:GetMouseLocation()
+	if not screen then
+		return hide("👆 Tap your base floor to place your " .. name)
+	end
+	floorParams.FilterDescendantsInstances = { floor }
+	-- Souris : position dans la fenêtre ; doigt : position dans l'interface (sans la barre du haut)
+	local ray = if touch then camera:ScreenPointToRay(screen.X, screen.Y) else camera:ViewportPointToRay(screen.X, screen.Y)
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, floorParams)
+	if not hit then
+		return hide("🖱️ Point at your base floor to place your " .. name)
 	end
 	local p = floor.CFrame:PointToObjectSpace(hit.Position)
 	placeX, placeZ = p.X, p.Z
 	local ok, why = canPlace(base, floor, placeX, placeZ)
 	placeOk = ok
-	local h = H.EggHeight[placing.rarity] or 3
+	local h = H.EggHeight[current.rarity] or 3
 	local top = floor.CFrame * CFrame.new(placeX, floor.Size.Y / 2, placeZ)
 	local t = os.clock()
 	ghost:PivotTo(CFrame.new(top.Position + Vector3.new(0, h / 2 + 0.6 + math.sin(t * 4) * 0.15, 0)) * CFrame.Angles(0, t, 0))
 	ring3d.CFrame = CFrame.new(top.Position + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 	ring3d.Color = if ok then GOOD else BAD
-	bannerText.Text = if ok then (if UserInputService.MouseEnabled then "Click to place  ·  Q to cancel" else "Tap to place") else "❌ " .. (why or "Not here")
+	bannerText.Text = if ok then (if touch then "👆 Tap to place your " else "🖱️ Click to place your ") .. name else "❌ " .. (why or "Not here")
 end)
 
 local function tryPlace()
@@ -341,25 +243,26 @@ local function tryPlace()
 		UIKit.shake(banner)
 		return
 	end
-	Remotes.PlaceEgg:FireServer(placing.ring, placing.rarity, placeX, placeZ)
-	stopPlacing()
+	local current = placing :: { ring: number, rarity: number }
+	Remotes.PlaceEgg:FireServer(current.ring, current.rarity, placeX, placeZ)
+	-- Le fantôme disparaît tout de suite ; le serveur pose l'œuf et met le suivant dans les mains
+	if ghost then
+		ghost:PivotTo(CFrame.new(0, -500, 0))
+	end
 end
 
 UserInputService.InputBegan:Connect(function(input, processed)
-	if not placing then
-		return
-	end
-	if input.KeyCode == Enum.KeyCode.Q or input.UserInputType == Enum.UserInputType.MouseButton2 then
-		stopPlacing()
-		return
-	end
-	if processed then
+	if not placing or processed then
 		return
 	end
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		tryPlace()
 	elseif input.UserInputType == Enum.UserInputType.Touch then
-		-- Doigt : le fantôme va où l'on touche, on pose au relâchement
+		pointer = Vector2.new(input.Position.X, input.Position.Y)
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if placing and input.UserInputType == Enum.UserInputType.Touch then
 		pointer = Vector2.new(input.Position.X, input.Position.Y)
 	end
 end)
@@ -371,9 +274,56 @@ UserInputService.InputEnded:Connect(function(input, processed)
 	end
 end)
 
+-- Bras qui portent l'œuf (tous les joueurs qui tiennent un œuf, R15)
+local DOWN = Vector3.new(0, -1, 0)
+local function rotFromTo(a: Vector3, b: Vector3): CFrame
+	local axis = a:Cross(b)
+	if axis.Magnitude < 1e-5 then
+		return CFrame.new()
+	end
+	return CFrame.fromAxisAngle(axis.Unit, math.acos(math.clamp(a:Dot(b), -1, 1)))
+end
+local function aimArm(character: Model, upper: string, shoulderName: string, lower: string, elbowName: string, grip: Vector3)
+	local up = character:FindFirstChild(upper)
+	local shoulder = up and up:FindFirstChild(shoulderName) :: Motor6D?
+	if not shoulder or not shoulder.Part0 then
+		return
+	end
+	local joint = shoulder.Part0.CFrame * shoulder.C0
+	local d = grip - joint.Position
+	if d.Magnitude < 0.05 then
+		return
+	end
+	shoulder.Transform = rotFromTo(DOWN, joint:VectorToObjectSpace(d.Unit))
+	local low = character:FindFirstChild(lower)
+	local elbow = low and low:FindFirstChild(elbowName) :: Motor6D?
+	if elbow then
+		elbow.Transform = CFrame.Angles(0.35, 0, 0)
+	end
+end
+RunService.PreSimulation:Connect(function()
+	local camPos = camera.CFrame.Position
+	for _, p in ipairs(Players:GetPlayers()) do
+		local character = p.Character
+		local egg = character and character:FindFirstChild("HeldEgg") :: Model?
+		local core = egg and egg.PrimaryPart
+		if character and core and (core.Position - camPos).Magnitude < 150 then
+			local h = (egg:GetAttribute("BodyHeight") or 2) :: number
+			local side = core.CFrame.RightVector * h * 0.42
+			local right = character:FindFirstChild("RightUpperArm") :: BasePart?
+			local a, b = core.Position + side, core.Position - side
+			if right and (b - right.Position).Magnitude < (a - right.Position).Magnitude then
+				a, b = b, a
+			end
+			aimArm(character, "RightUpperArm", "RightShoulder", "RightLowerArm", "RightElbow", a)
+			aimArm(character, "LeftUpperArm", "LeftShoulder", "LeftLowerArm", "LeftElbow", b)
+		end
+	end
+end)
+
 -- ŒUFS QUI INCUBENT ---------------------------------------------------------------------
 
-type Incub = { model: Model, gui: BillboardGui, fill: Frame, time: TextLabel, ready: boolean }
+type Incub = { model: Model, gui: BillboardGui, fill: Frame, time: TextLabel, ready: boolean, prompts: { ProximityPrompt } }
 local incubating: { [Model]: Incub } = {}
 
 local function trackIncubating(m: Instance)
@@ -401,7 +351,13 @@ local function trackIncubating(m: Instance)
 	local bar = new("Frame", { Size = UDim2.new(1, -20, 0, 18), Position = UDim2.fromOffset(10, 24), BackgroundColor3 = Color3.fromRGB(30, 32, 44), Parent = b }, { UIKit.corner(), UIKit.stroke(2) })
 	local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = bar }, { UIKit.gradient(r.Color:Lerp(Color3.new(1, 1, 1), 0.4), r.Color) })
 	local time = UIKit.text({ Size = UDim2.new(1, 0, 0, 22), Position = UDim2.fromOffset(0, 44), Text = "", Parent = b })
-	incubating[m] = { model = m, gui = b, fill = fill, time = time, ready = false }
+	local prompts = {}
+	for _, d in ipairs(m:GetDescendants()) do
+		if d:IsA("ProximityPrompt") then
+			table.insert(prompts, d)
+		end
+	end
+	incubating[m] = { model = m, gui = b, fill = fill, time = time, ready = false, prompts = prompts }
 end
 
 local function untrackIncubating(m: Instance)
@@ -438,6 +394,14 @@ RunService.RenderStepped:Connect(function()
 		if not m.Parent then
 			untrackIncubating(m)
 			continue
+		end
+		-- Les boutons « Hatch » et « Hatch now » ne s'affichent que chez le propriétaire de l'œuf
+		if m:GetAttribute("Owner") ~= player.UserId then
+			for _, pr in ipairs(st.prompts) do
+				if pr.Enabled then
+					pr.Enabled = false
+				end
+			end
 		end
 		local at = (m:GetAttribute("HatchAt") or 0) :: number
 		local total = (m:GetAttribute("HatchTime") or 1) :: number
@@ -599,17 +563,3 @@ CollectionService:GetInstanceRemovedSignal("Creature"):Connect(untrackCreature)
 for _, m in ipairs(CollectionService:GetTagged("Creature")) do
 	task.spawn(trackCreature, m)
 end
-
--- Vignettes 3D qui tournent
-RunService.RenderStepped:Connect(function()
-	local t = os.clock()
-	for vp, egg in pairs(spinners) do
-		if vp.Parent then
-			egg:PivotTo(CFrame.Angles(0, t * 1.2, 0))
-		else
-			spinners[vp] = nil
-		end
-	end
-end)
-
-refreshBar()

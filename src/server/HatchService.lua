@@ -1,14 +1,19 @@
 -- Éclosion dans la base (docs/Mecaniques.md §7).
--- 1. Le joueur pose un œuf dérroché (Remotes.PlaceEgg) où il veut sur le sol de sa base.
+-- 1. L'œuf dérroché atterrit dans les mains du joueur (modèle « HeldEgg » soudé au torse) ;
+--    il le pose où il veut sur le sol de sa base (Remotes.PlaceEgg). S'il en a plusieurs,
+--    le suivant arrive dans ses mains dès que le premier est posé.
 -- 2. L'œuf (vrai modèle, animé par Eggs.client) incube : HatchAt = fin, en temps Unix (le temps
 --    passe aussi hors ligne). Le client affiche le compte à rebours (Hatchery.client).
 -- 3. Quand il est prêt, le propriétaire appuie sur « Hatch » : l'œuf tremble et éclate,
 --    la créature de l'anneau et de la rareté naît à sa place (Remotes.Hatched pour les effets).
 -- 4. Chaque créature rapporte des $ chaque seconde (Config.CreatureIncome).
+-- 5. Pendant l'incubation, le propriétaire peut payer des Robux pour faire éclore tout de suite
+--    (bouton « Hatch now », un produit par rareté : Config.Hatch.Skip, reçu dans MonetizationService).
 -- Les positions sont gardées dans le repère du sol de la base : tout se reconstruit au retour du joueur,
 -- même s'il obtient une autre base.
 
 local CollectionService = game:GetService("CollectionService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -26,6 +31,9 @@ local HatchService = {}
 local rng = Random.new()
 local models: { [Player]: { [string]: Model } } = {}
 local remainder: { [Player]: number } = {}
+local held: { [Player]: Model } = {}
+local readyCount: { [Player]: number } = {}
+local pendingSkip: { [Player]: string } = {}
 local nextId = 0
 
 local function floorOf(base: Model): BasePart?
@@ -120,6 +128,32 @@ local function buildEgg(player: Player, floor: BasePart, item): Model?
 	prompt.Triggered:Connect(function(who)
 		HatchService.Hatch(who, item.id)
 	end)
+	-- Faire éclore tout de suite (Robux) : visible seulement pendant l'incubation
+	local skip = Config.Hatch.Skip[item.rarity]
+	if skip then
+		local sp = Instance.new("ProximityPrompt")
+		sp.Name = "SkipPrompt"
+		sp.ActionText = "Hatch now ⚡"
+		sp.ObjectText = "R$ " .. skip.Price
+		sp.KeyboardKeyCode = Enum.KeyCode.R
+		sp.GamepadKeyCode = Enum.KeyCode.ButtonX
+		sp.HoldDuration = 0
+		sp.MaxActivationDistance = 10 + h
+		sp.RequiresLineOfSight = false
+		sp.Enabled = os.time() < item.hatchAt
+		sp.Parent = core
+		sp.Triggered:Connect(function(who)
+			if who.UserId ~= player.UserId then
+				return
+			end
+			if skip.ProductId == 0 then
+				GameService.Notice(who, "Coming soon!", "info")
+				return
+			end
+			pendingSkip[who] = item.id
+			MarketplaceService:PromptProductPurchase(who, skip.ProductId)
+		end)
+	end
 	m.Parent = folderOf(floor.Parent :: Model)
 	return m
 end
@@ -264,7 +298,9 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	}
 	table.insert(d.base, item)
 	build(player, item)
+	readyCount[player] = #d.ready
 	syncBase(player)
+	HatchService.UpdateHeld(player)
 end
 
 -- ÉCLOSION ------------------------------------------------------------------------------
@@ -328,6 +364,133 @@ function HatchService.Hatch(player: Player, id: string)
 	end)
 end
 
+-- ŒUF DANS LES MAINS --------------------------------------------------------------------
+
+-- Copie de l'œuf soudée devant le torse (visible par tous ; Hatchery.client lève les bras)
+local function makeHeld(character: Model, ring: number, rarity: number): Model?
+	local torso = (character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")) :: BasePart?
+	local eggs = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Eggs")
+	local template = eggs and eggs:FindFirstChild(("R%d_T%d"):format(ring, rarity)) :: Model?
+	if not torso or not template then
+		return nil
+	end
+	local m = template:Clone()
+	CollectionService:RemoveTag(m, "Egg")
+	local h = H.HeldHeight[rarity] or 2
+	m:ScaleTo(m:GetScale() * h / ((m:GetAttribute("BodyHeight") or 1) :: number))
+	m:SetAttribute("BodyHeight", h)
+	local core = m.PrimaryPart :: BasePart
+	local offset = CFrame.new(0, 0.15, -(1.0 + h * 0.35))
+	m:PivotTo(torso.CFrame * offset)
+	for _, d in ipairs(m:GetDescendants()) do
+		if (d:IsA("ParticleEmitter") and d.Name ~= "Sparkles") or d:IsA("BillboardGui") then
+			d:Destroy()
+		elseif d:IsA("ParticleEmitter") then
+			d.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.3), NumberSequenceKeypoint.new(1, 0) })
+		elseif d:IsA("BasePart") then
+			d.Anchored = false
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+			d.Massless = true
+			if d ~= core then
+				local w = Instance.new("WeldConstraint")
+				w.Part0 = core
+				w.Part1 = d
+				w.Parent = d
+			end
+		end
+	end
+	local weld = Instance.new("Weld")
+	weld.Name = "HoldWeld"
+	weld.Part0 = torso
+	weld.Part1 = core
+	weld.C0 = offset
+	weld.Parent = core
+	m.Name = "HeldEgg"
+	m:SetAttribute("Key", ring .. ":" .. rarity)
+	m.Parent = character
+	return m
+end
+
+-- L'œuf à tenir : le premier œuf dérroché, s'il reste une place dans la base
+function HatchService.UpdateHeld(player: Player)
+	local d = DataService.Get(player)
+	local character = player.Character
+	local want = nil
+	if d and #d.ready > 0 then
+		if #d.base < H.Slots then
+			want = d.ready[1]
+		else
+			GameService.Notice(player, ("🏠 Base full! %d egg(s) waiting"):format(#d.ready), "warn")
+		end
+	end
+	local key = if want then want.ring .. ":" .. want.rarity else nil
+	player:SetAttribute("HeldEgg", key)
+	player:SetAttribute("WaitingEggs", if d then math.max(0, #d.ready - (if key then 1 else 0)) else 0)
+	local cur = held[player]
+	if cur and cur.Parent and character and cur:IsDescendantOf(character) and cur:GetAttribute("Key") == key then
+		return
+	end
+	if cur then
+		cur:Destroy()
+		held[player] = nil
+	end
+	if want and character then
+		held[player] = makeHeld(character, want.ring, want.rarity)
+	end
+end
+
+-- Un nouvel œuf sort de la machine : il apparaît dans les mains quand l'œuf révélé y arrive
+local function onReadyChanged(player: Player)
+	local d = DataService.Get(player)
+	local n = if d then #d.ready else 0
+	local before = readyCount[player] or 0
+	readyCount[player] = n
+	if n > before then
+		task.delay(H.HandDelay, HatchService.UpdateHeld, player)
+	else
+		HatchService.UpdateHeld(player)
+	end
+end
+
+-- ACCÉLÉRER L'ÉCLOSION (Robux) --------------------------------------------------------------
+
+-- Appelé par MonetizationService quand l'achat est payé : l'œuf visé (ou, à défaut, l'œuf de cette
+-- rareté qui a le plus longtemps à attendre) devient prêt tout de suite. Renvoie false si aucun œuf
+-- ne peut le recevoir (Roblox redemandera plus tard).
+function HatchService.SkipEgg(player: Player, rarity: number): boolean
+	local d = DataService.Get(player)
+	if not d then
+		return false
+	end
+	local now = os.time()
+	local target = nil
+	for _, item in ipairs(d.base) do
+		if item.kind == "egg" and item.id == pendingSkip[player] and item.hatchAt > now then
+			target = item
+		end
+	end
+	if not target then
+		for _, item in ipairs(d.base) do
+			if item.kind == "egg" and item.rarity == rarity and item.hatchAt > now and (not target or item.hatchAt > target.hatchAt) then
+				target = item
+			end
+		end
+	end
+	if not target then
+		return false
+	end
+	pendingSkip[player] = nil
+	target.hatchAt = now
+	local m = models[player] and models[player][target.id]
+	if m then
+		m:SetAttribute("HatchAt", now)
+	end
+	GameService.Notice(player, "⚡ Ready to hatch! Press F", "good")
+	return true
+end
+
 -- REVENUS --------------------------------------------------------------------------------
 
 local function payIncome()
@@ -362,6 +525,10 @@ local function refreshPrompts()
 					if prompt and not prompt.Enabled then
 						prompt.Enabled = true
 					end
+					local sp = m:FindFirstChild("SkipPrompt", true) :: ProximityPrompt?
+					if sp and sp.Enabled then
+						sp.Enabled = false
+					end
 				end
 			end
 		end
@@ -387,10 +554,22 @@ function HatchService.Start()
 			build(player, item)
 		end
 		syncBase(player)
+		readyCount[player] = #d.ready
+		HatchService.UpdateHeld(player)
+		player:GetAttributeChangedSignal("ReadyList"):Connect(function()
+			onReadyChanged(player)
+		end)
+		player.CharacterAdded:Connect(function(character)
+			character:WaitForChild("UpperTorso", 5)
+			HatchService.UpdateHeld(player)
+		end)
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		clear(player)
 		remainder[player] = nil
+		held[player] = nil
+		readyCount[player] = nil
+		pendingSkip[player] = nil
 	end)
 	-- Studio seulement : point d'accès de test (donner des œufs prêts, finir les incubations, lire l'état)
 	if RunService:IsStudio() then
@@ -406,6 +585,8 @@ function HatchService.Start()
 				for _, e in ipairs(arg) do
 					table.insert(d.ready, { ring = e[1], rarity = e[2] })
 				end
+			elseif cmd == "skip" then
+				return tostring(HatchService.SkipEgg(player, arg))
 			elseif cmd == "finish" then
 				for _, item in ipairs(d.base) do
 					if item.kind == "egg" then
