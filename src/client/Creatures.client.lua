@@ -1,8 +1,12 @@
 -- Créatures qui vivent dans les bases (tag « Creature », modèle 3D « Body » posé par HatchService).
--- Chaque créature se promène autour de son socle : elle choisit un point, y va en sautillant,
--- se pose, regarde autour d'elle, puis repart. Le trajet dépend seulement de l'heure du serveur
--- et de l'identifiant de la créature : tous les joueurs la voient au même endroit, sans réseau.
--- Ses pièces animées bougent aussi : Tail (balance), WingL / WingR (battent), Orbit (tourne).
+-- Chaque espèce a sa façon de bouger (Config.CreatureMotion) :
+--   trot, hop, waddle, slither, scuttle, stomp, fly, swim, float, flop
+-- et une figure qu'elle fait de temps en temps (spin, flip, roar, pounce, charge, sit, pulse, glitch,
+-- flame, dive, strike, slide, stomp), avec étirement et écrasement du corps (squash & stretch).
+-- Elle se promène autour de son socle : va vers un point, s'arrête, regarde autour d'elle, repart.
+-- Tout dépend de l'heure du serveur et de l'identifiant de la créature : tous les joueurs la voient
+-- faire la même chose au même endroit, sans réseau.
+-- Les anciennes créatures en pièces gardent leurs groupes animés (Tail, WingL / WingR, Orbit).
 -- Les rares brillent : lumière et étincelles (Epic+), aura (Legendary+), particules qui montent (Mythic+).
 
 local CollectionService = game:GetService("CollectionService")
@@ -16,12 +20,17 @@ local H = Config.Hatch
 local MAX_DISTANCE = 160
 local SPARKLE = "rbxassetid://138922153683020"
 local GLOW = "rbxassetid://103844906730878"
+local TAU = math.pi * 2
+local WALK = 0.45 -- part d'un cycle passée à se déplacer (le reste : pause, figure)
+local DEFAULT = { Style = "trot", Trick = "spin", Speed = 1 }
 
 local function kp(t: number, v: number): NumberSequenceKeypoint
 	return NumberSequenceKeypoint.new(t, v)
 end
 
--- Effets à la taille de la créature (au centre de son corps, ils la suivent quand elle se promène)
+-- EFFETS ------------------------------------------------------------------------------------
+
+-- Effets permanents à la taille de la créature (au centre du corps, ils la suivent)
 local function addFx(core: BasePart, rarity: number, h: number)
 	if rarity < 4 or core:FindFirstChild("PetFx") then
 		return
@@ -80,10 +89,87 @@ local function addFx(core: BasePart, rarity: number, h: number)
 		up.Parent = at
 	end
 end
-local WALK = 0.45 -- part de la période passée à marcher (le reste : pause)
+
+-- Particules ponctuelles des figures (éclat, flammes, glitch, poussière au sol)
+local function makeBursts(core: BasePart, rarity: number, h: number): { [string]: ParticleEmitter }
+	local color = (Config.Rarities[rarity] or Config.Rarities[1]).Color
+	local at = Instance.new("Attachment")
+	at.Name = "TrickFx"
+	at.Position = Vector3.new(0, h * 0.45, 0)
+	at.Parent = core
+	local foot = Instance.new("Attachment")
+	foot.Name = "FootFx"
+	foot.Parent = core
+	local function emitter(parent: Attachment, props: { [string]: any }): ParticleEmitter
+		local e = Instance.new("ParticleEmitter")
+		e.Enabled = false
+		e.LightInfluence = 0
+		for k, v in pairs(props) do
+			(e :: any)[k] = v
+		end
+		e.Parent = parent
+		return e
+	end
+	return {
+		burst = emitter(at, {
+			Texture = SPARKLE,
+			Color = ColorSequence.new(Color3.new(1, 1, 1), color),
+			LightEmission = 1,
+			Size = NumberSequence.new({ kp(0, 0), kp(0.2, h * 0.18), kp(1, 0) }),
+			Lifetime = NumberRange.new(0.4, 0.8),
+			Speed = NumberRange.new(h * 1.5, h * 3),
+			SpreadAngle = Vector2.new(180, 180),
+		}),
+		flame = emitter(at, {
+			Texture = GLOW,
+			Color = ColorSequence.new(Color3.fromRGB(255, 220, 80), Color3.fromRGB(255, 70, 20)),
+			LightEmission = 1,
+			Size = NumberSequence.new({ kp(0, h * 0.25), kp(1, 0) }),
+			Lifetime = NumberRange.new(0.5, 0.9),
+			Speed = NumberRange.new(h * 1.5, h * 2.5),
+			SpreadAngle = Vector2.new(25, 25),
+			EmissionDirection = Enum.NormalId.Front,
+		}),
+		glitch = emitter(at, {
+			Texture = GLOW,
+			Color = ColorSequence.new(Color3.fromRGB(60, 255, 255), Color3.fromRGB(255, 60, 240)),
+			LightEmission = 1,
+			Size = NumberSequence.new({ kp(0, h * 0.12), kp(1, 0) }),
+			Lifetime = NumberRange.new(0.3, 0.6),
+			Speed = NumberRange.new(h, h * 2),
+			SpreadAngle = Vector2.new(180, 180),
+		}),
+		dust = emitter(foot, {
+			Texture = GLOW,
+			Color = ColorSequence.new(Color3.fromRGB(230, 225, 240)),
+			LightInfluence = 0.6,
+			Size = NumberSequence.new({ kp(0, h * 0.15), kp(1, h * 0.45) }),
+			Transparency = NumberSequence.new({ kp(0, 0.4), kp(1, 1) }),
+			Lifetime = NumberRange.new(0.5, 0.8),
+			Speed = NumberRange.new(h * 0.8, h * 1.4),
+			SpreadAngle = Vector2.new(180, 10),
+			Acceleration = Vector3.new(0, -h, 0),
+		}),
+	}
+end
+
+-- SUIVI -------------------------------------------------------------------------------------
 
 type Group = { model: Model, offset: CFrame, root: CFrame, kind: string, side: number }
-type Pet = { body: Model, home: CFrame, seed: number, height: number, groups: { Group } }
+type Mesh = { part: BasePart, offset: CFrame, size: Vector3 }
+type Pet = {
+	body: Model,
+	core: BasePart,
+	home: CFrame,
+	seed: number,
+	height: number,
+	motion: any,
+	groups: { Group },
+	meshes: { Mesh },
+	fx: { [string]: ParticleEmitter },
+	lastTrick: number,
+	lastStep: number,
+}
 
 local pets: { [Model]: Pet } = {}
 
@@ -101,13 +187,18 @@ local function seedOf(id: string): number
 	return h
 end
 
--- Point visé pendant le k-ième aller (k = 0 : le socle)
+local function smooth(x: number): number
+	x = math.clamp(x, 0, 1)
+	return x * x * (3 - 2 * x)
+end
+
+-- Point visé pendant le k-ième aller (k multiple de 4 : retour au socle)
 local function spot(p: Pet, k: number): Vector3
 	if k % 4 == 0 then
-		return Vector3.zero -- revient régulièrement sur son socle
+		return Vector3.zero
 	end
-	local a = hash(p.seed + k * 7.1) * math.pi * 2
-	local r = H.WanderRadius * (0.45 + 0.55 * hash(p.seed * 3 + k))
+	local a = hash(p.seed + k * 7.1) * TAU
+	local r = H.WanderRadius * (0.45 + 0.55 * hash(p.seed * 3 + k)) * math.clamp(p.motion.Speed, 0.6, 1.5)
 	return Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
 end
 
@@ -120,32 +211,50 @@ local function track(m: Instance)
 	if not body or not core or pets[m] then
 		return
 	end
-	task.wait(0.2) -- laisse arriver les pièces animées
+	task.wait(0.2) -- laisse arriver toutes les pièces
+	local h = (body:GetAttribute("Height") or 3) :: number
+	local rarity = (m:GetAttribute("Rarity") or 1) :: number
 	local p: Pet = {
 		body = body,
+		core = core,
 		home = core.CFrame,
 		seed = seedOf((m:GetAttribute("ItemId") or m.Name) :: string),
-		height = (body:GetAttribute("Height") or 3) :: number,
+		height = h,
+		motion = Config.CreatureMotion[(m:GetAttribute("Creature") or "") :: string] or DEFAULT,
 		groups = {},
+		meshes = {},
+		fx = {},
+		lastTrick = -1,
+		lastStep = -1,
 	}
+	local ANIMATED = { Tail = true, WingL = true, WingR = true, Orbit = true }
+	-- Pièces du corps (étirées avec lui) : toutes celles qui ne sont pas dans un groupe animé,
+	-- même rangées dans un sous-modèle (les modèles générés par l'IA le sont)
+	for _, d in ipairs(body:GetDescendants()) do
+		if d:IsA("BasePart") and d ~= core then
+			local group = d:FindFirstAncestorWhichIsA("Model")
+			if group == body or not ANIMATED[(group :: Model).Name] then
+				table.insert(p.meshes, { part = d, offset = core.CFrame:ToObjectSpace(d.CFrame), size = d.Size })
+			end
+		end
+	end
 	for _, child in ipairs(body:GetChildren()) do
-		if child:IsA("Model") then
+		if child:IsA("Model") and ANIMATED[child.Name] then
 			local cf, size = child:GetBoundingBox()
 			local rel = core.CFrame:ToObjectSpace(cf)
 			local g: Group = { model = child, offset = core.CFrame:ToObjectSpace(child:GetPivot()), root = CFrame.new(), kind = child.Name, side = 1 }
 			if child.Name == "WingL" or child.Name == "WingR" then
-				-- l'aile bat autour de son bord le plus proche du corps
 				g.side = if rel.Position.X >= 0 then 1 else -1
 				g.root = CFrame.new(rel.Position - Vector3.new(g.side * size.X * 0.45, 0, 0))
 			elseif child.Name == "Tail" then
-				-- la queue balance autour de son attache (le bout le plus proche du centre du corps)
-				local toBody = (Vector3.new(0, p.height * 0.45, 0) - rel.Position)
+				local toBody = (Vector3.new(0, h * 0.45, 0) - rel.Position)
 				g.root = CFrame.new(rel.Position + (if toBody.Magnitude > 0 then toBody.Unit else Vector3.zero) * size.Magnitude * 0.4)
 			end
 			table.insert(p.groups, g)
 		end
 	end
-	addFx(core, (m:GetAttribute("Rarity") or 1) :: number, p.height)
+	addFx(core, rarity, h)
+	p.fx = makeBursts(core, rarity, h)
 	pets[m] = p
 end
 
@@ -157,9 +266,204 @@ for _, m in ipairs(CollectionService:GetTagged("Creature")) do
 	task.spawn(track, m)
 end
 
+-- POSES -------------------------------------------------------------------------------------
+-- Position (x, z) dans le repère du socle, hauteur y, cap (yaw), tangage (pitch, + = nez en l'air),
+-- roulis (roll), étirement (sx, sy, sz : largeur, hauteur, longueur)
+type Pose = { x: number, y: number, z: number, yaw: number, pitch: number, roll: number, sx: number, sy: number, sz: number }
+
+local function walkPose(p: Pet, pose: Pose, w: number, from: Vector3, to: Vector3, now: number)
+	local mo = p.motion
+	local h = p.height
+	local style = mo.Style
+	local dir = to - from
+	local dist = dir.Magnitude
+	local side = if dist > 0.01 then Vector3.new(-dir.Z, 0, dir.X) / dist else Vector3.zero
+	local pos = from:Lerp(to, smooth(w))
+	local stride = math.max(0.3, h * 0.35)
+	local sp = w * dist / stride * math.pi -- phase des pas
+	if style == "trot" then
+		pose.y = math.abs(math.sin(sp)) * h * 0.06
+		pose.pitch = math.sin(sp * 2) * 0.05
+		pose.roll = math.sin(sp) * 0.04
+		pose.sy = 1 + math.sin(sp * 2) * 0.03
+	elseif style == "hop" then
+		local hops = math.max(1, math.ceil(dist / (h * 0.6)))
+		local hw = w * hops
+		local i = math.floor(hw)
+		local fr = hw - i
+		pos = from:Lerp(to, math.clamp((i + smooth(fr)) / hops, 0, 1))
+		pose.y = math.sin(fr * math.pi) * h * (mo.HopHeight or 0.35)
+		local sq = mo.Squash or 1
+		if fr < 0.12 or fr > 0.88 then
+			pose.sy, pose.sx, pose.sz = 1 - 0.14 * sq, 1 + 0.08 * sq, 1 + 0.08 * sq
+		else
+			pose.sy, pose.sx, pose.sz = 1 + 0.1 * sq, 1 - 0.05 * sq, 1 - 0.05 * sq
+		end
+		pose.pitch = (0.5 - fr) * 0.3
+	elseif style == "waddle" then
+		pose.y = math.abs(math.sin(sp * 1.6)) * h * 0.03
+		pose.roll = math.sin(sp * 1.6) * 0.2
+		pose.yaw += math.sin(sp * 1.6) * 0.12
+	elseif style == "slither" then
+		local wave = w * dist / (h * 0.5) * math.pi
+		pos += side * math.sin(wave) * h * 0.18
+		pose.yaw += math.cos(wave) * 0.35
+		pose.sz = 1 + math.sin(now * 6) * 0.07
+		pose.sy = 1 - math.sin(now * 6) * 0.04
+	elseif style == "scuttle" then
+		pose.y = math.abs(math.sin(sp * 3)) * h * 0.035
+		pose.roll = math.sin(sp * 3) * 0.06
+		pose.pitch = -0.04
+	elseif style == "stomp" then
+		local s = math.sin(sp * 0.8)
+		pose.y = math.max(0, s) * h * 0.07
+		pose.roll = s * 0.07
+		pose.pitch = -0.06
+		pose.sy = 1 - 0.05 * (1 - math.abs(s)) ^ 6
+	elseif style == "flop" then
+		local flops = math.max(1, math.ceil(dist / (h * 0.4)))
+		local fw = w * flops
+		local fr = fw - math.floor(fw)
+		pos = from:Lerp(to, math.clamp((math.floor(fw) + smooth(fr)) / flops, 0, 1))
+		pose.y = math.sin(fr * math.pi) * h * 0.12
+		pose.pitch = math.sin(fr * TAU) * 0.16
+		pose.sz = 1 + math.sin(fr * math.pi) * 0.08
+	elseif style == "fly" then
+		-- penche vers l'avant, s'incline dans le virage, monte un peu en milieu de trajet
+		pose.pitch = -0.18
+		pose.roll = math.sin(w * math.pi) * 0.25 * (if hash(p.seed + math.floor(now / 30)) > 0.5 then 1 else -1)
+		pose.y = math.sin(w * math.pi) * h * 0.15
+	elseif style == "swim" then
+		pose.yaw += math.sin(now * 4 + p.seed) * 0.15
+		pose.roll = math.sin(now * 2 + p.seed) * 0.1
+		pose.pitch = math.sin(w * TAU) * 0.08
+	elseif style == "float" then
+		pose.y = math.max(0, math.sin(now * 3 + p.seed)) * h * 0.08
+	end
+	pose.x, pose.z = pos.X, pos.Z
+end
+
+local function idlePose(p: Pet, pose: Pose, g: number, now: number)
+	local style = p.motion.Style
+	-- regarde autour d'elle, respire
+	pose.yaw += math.sin(g * 9) * 0.3 * math.sin(math.min(1, g * 4) * math.pi)
+	pose.sy = 1 + math.sin(now * 2.2 + p.seed) * 0.025
+	if style == "float" then
+		local pulse = math.sin(now * 3 + p.seed)
+		pose.sy = 1 + pulse * 0.08
+		pose.sx, pose.sz = 1 - pulse * 0.05, 1 - pulse * 0.05
+	elseif style == "slither" then
+		pose.roll = math.sin(now * 1.6 + p.seed) * 0.06
+	end
+end
+
+-- Figure (pendant la pause d'un cycle sur trois). g : avancée de la figure, 0 -> 1
+local function trickPose(p: Pet, pose: Pose, g: number, now: number)
+	local h = p.height
+	local trick = p.motion.Trick
+	local up = math.sin(g * math.pi)
+	local fwdX, fwdZ = -math.sin(pose.yaw), -math.cos(pose.yaw)
+	if trick == "spin" then
+		pose.yaw += smooth(g) * TAU
+		pose.y += up * h * 0.25
+	elseif trick == "flip" then
+		pose.pitch += smooth(g) * TAU
+		pose.y += up * h * 0.6
+		pose.sy = 1 + up * 0.1
+	elseif trick == "roar" then
+		local a = smooth(g / 0.25) * (1 - smooth((g - 0.75) / 0.25))
+		pose.pitch += a * 0.32
+		pose.sx, pose.sy, pose.sz = 1 + a * 0.06, 1 + a * 0.1, 1 + a * 0.06
+		if g > 0.25 and g < 0.75 then
+			pose.roll += math.sin(now * 40) * 0.03
+		end
+	elseif trick == "pounce" then
+		local crouch = smooth(g / 0.3) * (1 - smooth((g - 0.3) / 0.1))
+		local leap = math.clamp((g - 0.35) / 0.4, 0, 1)
+		local back = smooth((g - 0.75) / 0.25)
+		pose.sy = 1 - crouch * 0.15
+		pose.y += math.sin(leap * math.pi) * h * 0.5
+		local d = smooth(leap) * (1 - back) * h * 0.8
+		pose.x += fwdX * d
+		pose.z += fwdZ * d
+		pose.pitch += (0.5 - leap) * 0.4 * math.sin(leap * math.pi)
+	elseif trick == "charge" then
+		local d = (smooth(g / 0.35) - smooth((g - 0.5) / 0.5)) * h * 1.2
+		pose.x += fwdX * d
+		pose.z += fwdZ * d
+		pose.pitch -= 0.12 * math.sin(math.clamp(g / 0.5, 0, 1) * math.pi)
+	elseif trick == "sit" then
+		local a = smooth(g / 0.2) * (1 - smooth((g - 0.8) / 0.2))
+		pose.pitch += a * 0.3
+		pose.sy = 1 - a * 0.1
+		pose.y -= a * h * 0.03
+	elseif trick == "pulse" then
+		local pulse = math.sin(g * TAU * 3) * up
+		pose.sy = 1 + pulse * 0.25
+		pose.sx, pose.sz = 1 - pulse * 0.15, 1 - pulse * 0.15
+		pose.y += math.max(0, pulse) * h * 0.1
+	elseif trick == "glitch" then
+		if g > 0.1 and g < 0.9 then
+			local tick = math.floor(now * 12)
+			pose.x += (hash(tick + p.seed) - 0.5) * h * 0.6
+			pose.z += (hash(tick * 3 + p.seed) - 0.5) * h * 0.6
+			pose.yaw += (hash(tick * 7 + p.seed) - 0.5) * 1.5
+			pose.sx = 1 + (hash(tick * 5) - 0.5) * 0.4
+		end
+	elseif trick == "flame" then
+		local a = smooth(g / 0.2) * (1 - smooth((g - 0.7) / 0.3))
+		pose.pitch += a * 0.25
+		pose.sy = 1 + a * 0.06
+	elseif trick == "dive" then
+		pose.y -= up * h * (p.motion.Hover or 0.4) * 0.9
+		pose.pitch -= math.cos(g * math.pi) * 0.4 * up
+	elseif trick == "strike" then
+		local a = math.clamp((g - 0.3) / 0.15, 0, 1) * (1 - smooth((g - 0.5) / 0.3))
+		local coil = smooth(g / 0.3) * (1 - a)
+		pose.sz = 1 - coil * 0.2 + a * 0.25
+		pose.x += fwdX * a * h * 0.5
+		pose.z += fwdZ * a * h * 0.5
+		pose.pitch += coil * 0.2
+	elseif trick == "slide" then
+		local a = smooth(g / 0.2) * (1 - smooth((g - 0.8) / 0.2))
+		pose.pitch -= a * 1.3
+		pose.y += a * h * 0.15
+		local d = smooth((g - 0.15) / 0.65) * (1 - smooth((g - 0.85) / 0.15)) * h * 1.2
+		pose.x += fwdX * d
+		pose.z += fwdZ * d
+	elseif trick == "stomp" then
+		local jump = math.clamp(g / 0.6, 0, 1)
+		pose.y += math.sin(jump * math.pi) * h * 0.8
+		local land = math.clamp((g - 0.6) / 0.15, 0, 1) * (1 - smooth((g - 0.75) / 0.25))
+		pose.sy = 1 - land * 0.25 + (if jump < 1 then math.sin(jump * math.pi) * 0.1 else 0)
+		pose.sx, pose.sz = 1 + land * 0.15, 1 + land * 0.15
+	end
+end
+
+local function fireTrick(p: Pet)
+	local trick = p.motion.Trick
+	local fx = p.fx
+	if trick == "flame" and fx.flame then
+		fx.flame:Emit(30)
+	elseif trick == "glitch" and fx.glitch then
+		fx.glitch:Emit(25)
+	elseif (trick == "charge" or trick == "stomp" or trick == "pounce") and fx.dust then
+		fx.dust:Emit(16)
+	elseif fx.burst then
+		fx.burst:Emit(if trick == "roar" then 30 else 14)
+	end
+end
+
+-- BOUCLE ------------------------------------------------------------------------------------
+
+local moveParts: { BasePart } = {}
+local moveCFrames: { CFrame } = {}
+
 RunService.RenderStepped:Connect(function()
 	local now = workspace:GetServerTimeNow()
 	local camPos = camera.CFrame.Position
+	table.clear(moveParts)
+	table.clear(moveCFrames)
 	for m, p in pairs(pets) do
 		if not m.Parent or not p.body.Parent then
 			pets[m] = nil
@@ -168,45 +472,84 @@ RunService.RenderStepped:Connect(function()
 		if (p.home.Position - camPos).Magnitude > MAX_DISTANCE then
 			continue
 		end
-		local period = H.WanderPeriod * (0.85 + 0.3 * hash(p.seed))
+		local mo = p.motion
+		local h = p.height
+		local period = H.WanderPeriod * (0.85 + 0.3 * hash(p.seed)) / math.clamp(mo.Speed, 0.3, 2)
 		local t = now / period + hash(p.seed + 1)
 		local k = math.floor(t)
 		local f = t - k
 		local from, to = spot(p, k - 1), spot(p, k)
-		local walking = f < WALK
-		local w = math.clamp(f / WALK, 0, 1)
-		local e = w * w * (3 - 2 * w)
-		local pos = from:Lerp(to, e)
-		-- Direction : vers où elle va ; à l'arrêt, elle tourne un peu la tête de gauche à droite
-		local dir = to - from
-		local yaw = if dir.Magnitude > 0.05 then math.atan2(-dir.X, -dir.Z) else 0
-		if not walking then
-			yaw += math.sin((f - WALK) * 9) * 0.35 * math.sin(math.min(1, (f - WALK) * 4) * math.pi)
+		local pose: Pose = { x = from.X, y = 0, z = from.Z, yaw = 0, pitch = 0, roll = 0, sx = 1, sy = 1, sz = 1 }
+		-- cap : celui du trajet en cours (on le garde pendant la pause)
+		local d = to - from
+		if d.Magnitude > 0.05 then
+			pose.yaw = math.atan2(-d.X, -d.Z) + (if mo.Sideways then math.pi / 2 else 0)
 		end
-		-- Sautillements en marchant, respiration à l'arrêt
-		local hop = if walking then math.abs(math.sin(w * math.pi * 5)) * p.height * 0.07 else 0
-		local squash = if walking then 1 else 1 + math.sin(now * 3 + p.seed) * 0.02
-		local base = p.home * CFrame.new(pos.X, hop, pos.Z) * CFrame.Angles(0, yaw, 0)
-		if dir.Magnitude <= 0.05 then
-			-- Sur place (aller vers le socle depuis le socle) : garde l'orientation d'origine
-			base = p.home * CFrame.new(pos.X, hop, pos.Z) * CFrame.Angles(0, if not walking then math.sin((f - WALK) * 9) * 0.3 else 0, 0)
-		end
-		base *= CFrame.Angles(if walking then math.sin(w * math.pi * 10) * 0.05 else 0, 0, 0)
-		p.body:PivotTo(base * CFrame.new(0, (squash - 1) * p.height, 0))
-		for _, g in ipairs(p.groups) do
-			local cf
-			if g.kind == "Orbit" then
-				cf = base * CFrame.Angles(0, now * 1.2, 0) * g.offset
-			elseif g.kind == "WingL" or g.kind == "WingR" then
-				local a = math.sin(now * (if walking then 9 else 4) + p.seed) * 0.35 * g.side
-				cf = base * g.root * CFrame.Angles(0, 0, a) * g.root:Inverse() * g.offset
-			elseif g.kind == "Tail" then
-				local a = math.sin(now * (if walking then 8 else 3) + p.seed) * (if walking then 0.35 else 0.18)
-				cf = base * g.root * CFrame.Angles(0, a, 0) * g.root:Inverse() * g.offset
-			else
-				cf = base * g.offset
+		if f < WALK then
+			walkPose(p, pose, f / WALK, from, to, now)
+			-- poussière à chaque pas lourd
+			if mo.Style == "stomp" and p.fx.dust then
+				local step = math.floor((f / WALK) * d.Magnitude / math.max(0.3, h * 0.35) * 0.8)
+				if step ~= p.lastStep then
+					p.lastStep = step
+					p.fx.dust:Emit(4)
+				end
 			end
-			g.model:PivotTo(cf)
+		else
+			pose.x, pose.z = to.X, to.Z
+			local g = (f - WALK) / (1 - WALK)
+			idlePose(p, pose, g, now)
+			if (k + math.floor(p.seed)) % 3 == 1 then
+				local tg = math.clamp((g - 0.15) / 0.6, 0, 1)
+				if tg > 0 and tg < 1 then
+					trickPose(p, pose, tg, now)
+					if p.lastTrick ~= k and tg > 0.25 then
+						p.lastTrick = k
+						fireTrick(p)
+					end
+				end
+			end
 		end
+		-- vol / nage / flottement : en l'air, avec un battement
+		local style = mo.Style
+		if style == "fly" or style == "swim" or style == "float" then
+			local hover = (mo.Hover or 0.4) * h
+			local beat = if style == "fly" then (if mo.Flutter then 14 else 7) else 1.6
+			pose.y += hover + math.sin(now * beat + p.seed) * h * (if style == "fly" then 0.04 else 0.06)
+		end
+		-- tangage et roulis autour du milieu du corps ; étirement depuis les pieds
+		local base = p.home * CFrame.new(pose.x, pose.y, pose.z) * CFrame.Angles(0, pose.yaw, 0)
+		local center = CFrame.new(0, h * 0.5, 0)
+		local pivot = base * center * CFrame.Angles(pose.pitch, 0, pose.roll) * center:Inverse()
+		local scale = Vector3.new(pose.sx, pose.sy, pose.sz)
+		table.insert(moveParts, p.core)
+		table.insert(moveCFrames, pivot)
+		for _, mesh in ipairs(p.meshes) do
+			local o = mesh.offset
+			table.insert(moveParts, mesh.part)
+			table.insert(moveCFrames, pivot * CFrame.new(o.Position * scale) * o.Rotation)
+			local want = mesh.size * scale
+			if (mesh.part.Size - want).Magnitude > 1e-3 then
+				mesh.part.Size = want
+			end
+		end
+		for _, gr in ipairs(p.groups) do
+			local cf
+			if gr.kind == "Orbit" then
+				cf = pivot * CFrame.Angles(0, now * 1.2, 0) * gr.offset
+			elseif gr.kind == "WingL" or gr.kind == "WingR" then
+				local a = math.sin(now * 9 + p.seed) * 0.35 * gr.side
+				cf = pivot * gr.root * CFrame.Angles(0, 0, a) * gr.root:Inverse() * gr.offset
+			elseif gr.kind == "Tail" then
+				local a = math.sin(now * 6 + p.seed) * 0.3
+				cf = pivot * gr.root * CFrame.Angles(0, a, 0) * gr.root:Inverse() * gr.offset
+			else
+				cf = pivot * gr.offset
+			end
+			gr.model:PivotTo(cf)
+		end
+	end
+	if #moveParts > 0 then
+		workspace:BulkMoveTo(moveParts, moveCFrames, Enum.BulkMoveMode.FireCFrameChanged)
 	end
 end)

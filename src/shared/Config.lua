@@ -677,6 +677,72 @@ Config.Hatch = {
 	},
 }
 
+-- MOUVEMENTS DES CRÉATURES (Creatures.client) ----------------------------------------
+-- Chaque créature a sa façon de se déplacer (Style) et une figure qu'elle fait de temps en temps (Trick).
+-- Styles : trot (quadrupède), hop (bonds), waddle (se dandine), slither (rampe en ondulant),
+--   scuttle (trottine vite, Sideways = de côté comme un crabe), stomp (pas lourds), fly (vole),
+--   swim (nage dans l'air), float (flotte en pulsant), flop (avance par à-coups comme un phoque).
+-- Figures : spin, flip, roar, pounce, charge, sit, pulse, glitch, flame, dive, strike, slide, stomp.
+-- Speed : multiplie la vitesse (1 = normal) ; Hover : hauteur de vol en fraction de la taille.
+local function motion(style: string, trick: string, speed: number?, extra: { [string]: any }?)
+	local m = { Style = style, Trick = trick, Speed = speed or 1 }
+	for k, v in pairs(extra or {}) do
+		m[k] = v
+	end
+	return m
+end
+Config.CreatureMotion = {
+	-- 1. Dust Belt
+	["Pebblepup"] = motion("trot", "sit", 1.1),
+	["Dust Bunny"] = motion("hop", "flip", 1.2),
+	["Craterhog"] = motion("scuttle", "spin", 0.9),
+	["Orbitoad"] = motion("hop", "stomp", 0.8, { HopHeight = 0.5 }),
+	["Meteor Fox"] = motion("trot", "pounce", 1.5),
+	["Stardust Dragon"] = motion("fly", "roar", 1.0, { Hover = 0.45 }),
+	-- 2. Ice Ring
+	["Frostling"] = motion("waddle", "slide", 0.8),
+	["Snow Moth"] = motion("fly", "spin", 1.3, { Hover = 0.6, Flutter = true }),
+	["Glacier Otter"] = motion("waddle", "spin", 1.0),
+	["Comet Seal"] = motion("flop", "roar", 0.8),
+	["Aurora Owl"] = motion("fly", "dive", 1.0, { Hover = 0.5 }),
+	["Crystal Yeti"] = motion("stomp", "roar", 0.7),
+	-- 3. Magma Field
+	["Cinder Slug"] = motion("slither", "pulse", 0.5),
+	["Lava Crab"] = motion("scuttle", "spin", 1.3, { Sideways = true }),
+	["Blaze Newt"] = motion("scuttle", "flame", 1.4),
+	["Obsidian Rhino"] = motion("stomp", "charge", 0.8),
+	["Solar Phoenix"] = motion("fly", "flame", 1.1, { Hover = 0.55 }),
+	["Magma Wyrm"] = motion("slither", "roar", 0.6),
+	-- 4. Nebula
+	["Nebula Jelly"] = motion("float", "pulse", 0.6, { Hover = 0.35 }),
+	["Haze Kitten"] = motion("trot", "pounce", 1.3),
+	["Dreamfin"] = motion("swim", "flip", 0.8, { Hover = 0.4 }),
+	["Prism Ray"] = motion("swim", "spin", 1.1, { Hover = 0.5 }),
+	["Nova Lion"] = motion("trot", "roar", 1.1),
+	["Galaxy Unicorn"] = motion("fly", "roar", 1.0, { Hover = 0.35 }),
+	-- 5. Devourer Belt
+	["Fang Beetle"] = motion("scuttle", "spin", 1.2),
+	["Gloom Bat"] = motion("fly", "flip", 1.4, { Hover = 0.7, Flutter = true }),
+	["Void Shark"] = motion("swim", "charge", 1.2, { Hover = 0.35 }),
+	["Hunger Hound"] = motion("trot", "roar", 1.4),
+	["Abyss Serpent"] = motion("slither", "strike", 0.7),
+	["Eclipse Devourer"] = motion("stomp", "roar", 0.6),
+	-- 6. The Rift
+	["Chrono Snail"] = motion("slither", "glitch", 0.4),
+	["Glitch Cat"] = motion("trot", "glitch", 1.3),
+	["Paradox Panda"] = motion("stomp", "sit", 0.8),
+	["Hourglass Tortoise"] = motion("stomp", "spin", 0.4),
+	["Rift Griffin"] = motion("fly", "dive", 1.1, { Hover = 0.4 }),
+	["Quasar Kraken"] = motion("float", "pulse", 0.5, { Hover = 0.2 }),
+	-- 7. The Nest
+	["Hatchling"] = motion("hop", "spin", 1.0, { HopHeight = 0.25 }),
+	["Yolk Slime"] = motion("hop", "pulse", 0.8, { HopHeight = 0.3, Squash = 1.8 }),
+	["Brood Raptor"] = motion("trot", "roar", 1.6),
+	["Nest Drake"] = motion("trot", "roar", 0.9),
+	["Hive Queen"] = motion("fly", "spin", 1.0, { Hover = 0.35, Flutter = true }),
+	["Cosmic Mother"] = motion("fly", "roar", 0.8, { Hover = 0.35 }),
+}
+
 -- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté
 function Config.CreatureFor(ringIndex: number, rarity: number): any
 	local list = Config.Creatures[ringIndex]
