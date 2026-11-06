@@ -155,7 +155,7 @@ local goHome = UIKit.text({
 local lastCargo = -1
 local function refreshCargo()
 	local cargo = player:GetAttribute("Cargo") or 0
-	local max = player:GetAttribute("CargoMax") or 4
+	local max = player:GetAttribute("CargoMax") or 1
 	cargoText.Text = string.format("%d/%d", cargo, max)
 	local full = cargo >= max
 	local grad = cargoPill:FindFirstChildOfClass("UIGradient")

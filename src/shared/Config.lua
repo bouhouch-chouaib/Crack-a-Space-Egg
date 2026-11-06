@@ -176,11 +176,10 @@ end
 -- Améliorations : coût = Base * Growth^niveau
 Config.Upgrades = {
 	-- Coût du niveau n = Base × Growth^n (de quelques centaines de $ aux milliers de milliards)
-	Cargo = { Name = "Cargo", Base = 250, Growth = 2.3, Max = 30 },
 	Thruster = { Name = "Thruster", Base = 200, Growth = 2.6, Max = 25 },
 	Scanner = { Name = "Scanner", Base = 800, Growth = 3.1, Max = 20 },
 }
-Config.UpgradeOrder = { "Cargo", "Thruster", "Scanner" }
+Config.UpgradeOrder = { "Thruster", "Scanner" }
 
 -- MACHINE À DÉROCHER (docs/Mecaniques.md §7) ---------------------------------------
 -- Les œufs sortent des astéroïdes encore pris dans la roche ; la machine de la base la retire.
@@ -252,8 +251,10 @@ function Config.DrillPower(tier: number): number
 	return d.Power
 end
 
-function Config.CargoSlots(level: number): number
-	return 4 + level
+-- Un seul œuf par voyage : on fore un œuf, on le ramène à sa base, on repart (pas d'amélioration de soute)
+Config.CargoMax = 1
+function Config.CargoSlots(_level: number?): number
+	return Config.CargoMax
 end
 
 function Config.Speed(level: number): number
@@ -529,7 +530,6 @@ Config.Shop = {
 		Was = 249, -- prix barré
 	},
 	Passes = {
-		{ Key = "CargoXL", Name = "Cargo XL", Text = "+50% cargo slots", Art = "PassCargoXL", Id = 0, Price = 149 },
 		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "x2 fuel, faster flight", Art = "PassTurboJetpack", Id = 0, Price = 99 },
 		{ Key = "AutoCrack", Name = "Auto Crack", Text = "Eggs crack by themselves", Art = "PassAutoCrack", Id = 0, Price = 199, Ribbon = "BEST SELLER!" },
 		{ Key = "Money2x", Name = "x2 Money", Text = "Double money forever", Art = "PassMoney2x", Id = 0, Price = 299, Ribbon = "BEST VALUE!" },

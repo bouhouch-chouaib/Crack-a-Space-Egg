@@ -71,7 +71,7 @@ local function blocked(rock: BasePart): string?
 		return "Loading your save..."
 	end
 	if (player:GetAttribute("Cargo") or 0) >= (player:GetAttribute("CargoMax") or 1) then
-		return "🎒 Cargo full! Go back to your base 🏠"
+		return "🥚 You carry an egg! Bring it back to your base 🏠"
 	end
 	if (rock:GetAttribute("Ring") or 1) > (player:GetAttribute("Ring") or 1) then
 		return "🔒 Locked ring! Unlock it at the shop"

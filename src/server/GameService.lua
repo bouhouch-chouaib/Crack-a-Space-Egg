@@ -37,7 +37,7 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("Credits", d.credits)
 	player:SetAttribute("Cargo", #d.cargo)
-	player:SetAttribute("CargoMax", Config.CargoSlots(d.levels.Cargo))
+	player:SetAttribute("CargoMax", Config.CargoSlots())
 	-- Raretés des œufs de la soute (« 1,3,2 »), pour les pastilles de couleur du HUD
 	local rarities = {}
 	for _, egg in ipairs(d.cargo) do
@@ -147,10 +147,10 @@ local function onDrill(player: Player, target: any, at: any)
 		notice(player, "Unlock the " .. Config.Rings[a.ring].Name .. " at the Space Shop", "warn")
 		return
 	end
-	local max = Config.CargoSlots(d.levels.Cargo)
+	local max = Config.CargoSlots()
 	local room = max - #d.cargo
 	if room <= 0 then
-		notice(player, "Cargo full! Go back to your base to crack your space eggs", "warn")
+		notice(player, "You already carry an egg! Bring it back to your base 🏠", "warn")
 		return
 	end
 
