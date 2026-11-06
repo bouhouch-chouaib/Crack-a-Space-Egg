@@ -338,7 +338,7 @@ Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, _by: Player, _d
 		fuel = maxFuel()
 		local v = hrp.AssemblyLinearVelocity
 		hrp.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, 45), v.Z)
-		UIKit.toast("🚀 Your rock broke! Fly to the next one", "info")
+		UIKit.toast("{Jetpack} Your rock broke! Fly to the next one", "info")
 	end
 end)
 

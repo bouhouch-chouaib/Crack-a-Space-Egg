@@ -15,6 +15,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local SafeZone = require(ReplicatedStorage.Shared:WaitForChild("SafeZone"))
+local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 
 local player = Players.LocalPlayer
@@ -137,7 +138,7 @@ local frozenText = UIKit.text({
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.45),
 	Size = UDim2.fromScale(0.6, 0.18),
-	Text = "🥶 FROZEN!",
+	Text = "{Freezing} FROZEN!",
 	TextColor3 = Color3.fromRGB(200, 240, 255),
 	TextTransparency = 1,
 	Stroke = 6,
@@ -256,11 +257,11 @@ RunService.RenderStepped:Connect(function(dt)
 	panel.Visible = alert
 	if alert then
 		if c > 0.01 then
-			title.Text = "🥶 FREEZING! NO OXYGEN"
+			Icons.Apply(title, "{Freezing} FREEZING! NO OXYGEN")
 			title.TextColor3 = Color3.fromRGB(255, 255, 255):Lerp(Color3.fromRGB(255, 90, 90), beat * c)
 			subtitle.Text = "Get back to the corridor!"
 		else
-			title.Text = "⚠️ LEAVING THE CORRIDOR"
+			Icons.Apply(title, "{Warning} LEAVING THE CORRIDOR")
 			title.TextColor3 = Color3.fromRGB(255, 230, 120)
 			subtitle.Text = ("Freezing in %.1f s"):format(grace or 0)
 		end

@@ -17,6 +17,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
@@ -201,35 +202,35 @@ RunService.RenderStepped:Connect(function()
 	local current = placing :: { ring: number, rarity: number }
 	local waiting = (player:GetAttribute("WaitingEggs") or 0) :: number
 	local name = Config.EggName(current.ring, current.rarity)
-	bannerSub.Text = ("🏠 Base %d/%d"):format((player:GetAttribute("BaseUsed") or 0) :: number, (player:GetAttribute("BaseSlots") or H.Slots) :: number)
-		.. (if waiting > 0 then ("   ·   🥚 +%d waiting"):format(waiting) else "")
+	Icons.Apply(bannerSub, ("{Home} Base %d/%d"):format((player:GetAttribute("BaseUsed") or 0) :: number, (player:GetAttribute("BaseSlots") or H.Slots) :: number)
+		.. (if waiting > 0 then ("   ·   +%d egg%s waiting"):format(waiting, if waiting > 1 then "s" else "") else ""))
 	local hide = function(text: string)
 		ghost:PivotTo(CFrame.new(0, -500, 0))
 		ring3d.CFrame = CFrame.new(0, -500, 0)
 		placeOk = false
-		bannerText.Text = text
+		Icons.Apply(bannerText, text)
 	end
 	local base = myBase()
 	local floor = base and base:FindFirstChild("Floor") :: BasePart?
 	if not base or not floor then
-		return hide("🏠 Bring your " .. name .. " to your base!")
+		return hide("{Home} Bring your " .. name .. " to your base!")
 	end
 	-- Loin de sa base : on lui dit d'y retourner
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if hrp and (hrp.Position - floor.Position).Magnitude > math.max(floor.Size.X, floor.Size.Z) * 1.2 then
-		return hide("🏠 Bring your " .. name .. " to your base!")
+		return hide("{Home} Bring your " .. name .. " to your base!")
 	end
 	local screen = if touch then pointer else UserInputService:GetMouseLocation()
 	if not screen then
-		return hide("👆 Tap your base floor to place your " .. name)
+		return hide("{Tap} Tap your base floor to place your " .. name)
 	end
 	floorParams.FilterDescendantsInstances = { floor }
 	-- Souris : position dans la fenêtre ; doigt : position dans l'interface (sans la barre du haut)
 	local ray = if touch then camera:ScreenPointToRay(screen.X, screen.Y) else camera:ViewportPointToRay(screen.X, screen.Y)
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, floorParams)
 	if not hit then
-		return hide("🖱️ Point at your base floor to place your " .. name)
+		return hide("{Mouse} Point at your base floor to place your " .. name)
 	end
 	local p = floor.CFrame:PointToObjectSpace(hit.Position)
 	placeX, placeZ = p.X, p.Z
@@ -241,7 +242,7 @@ RunService.RenderStepped:Connect(function()
 	ghost:PivotTo(CFrame.new(top.Position + Vector3.new(0, h / 2 + 0.6 + math.sin(t * 4) * 0.15, 0)) * CFrame.Angles(0, t, 0))
 	ring3d.CFrame = CFrame.new(top.Position + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 	ring3d.Color = if ok then GOOD else BAD
-	bannerText.Text = if ok then (if touch then "👆 Tap to place your " else "🖱️ Click to place your ") .. name else "❌ " .. (why or "Not here")
+	Icons.Apply(bannerText, if ok then (if touch then "{Tap} Tap to place your " else "{Mouse} Click to place your ") .. name else "{Cross} " .. (why or "Not here"))
 end)
 
 local function tryPlace()
@@ -418,7 +419,7 @@ RunService.RenderStepped:Connect(function()
 		local f = math.clamp(1 - left / total, 0, 1)
 		st.fill.Size = UDim2.fromScale(f, 1)
 		if m:GetAttribute("Hatching") then
-			st.time.Text = "🐣 HATCHING!"
+			Icons.Apply(st.time, "{Hatch} HATCHING!")
 			st.time.TextColor3 = GOLD
 			startShake(m)
 		elseif left <= 0 then
@@ -427,10 +428,10 @@ RunService.RenderStepped:Connect(function()
 				UIKit.bump(st.time, 0.3)
 			end
 			local own = m:GetAttribute("Owner") == player.UserId
-			st.time.Text = if own then "READY! Press F 🐣" else "READY!"
+			Icons.Apply(st.time, if own then "{Hatch} READY! Press F" else "{Hatch} READY!")
 			st.time.TextColor3 = GOLD:Lerp(Color3.new(1, 1, 1), 0.5 + 0.5 * math.sin(t * 6))
 		else
-			st.time.Text = "⏳ " .. timeText(left)
+			Icons.Apply(st.time, "{Hourglass} " .. timeText(left))
 			st.time.TextColor3 = Color3.new(1, 1, 1)
 		end
 	end
@@ -524,12 +525,12 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 		img = UIKit.icon(art or "Creatures", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(190, 190), ZIndex = 32, Parent = frame })
 	end
 	UIKit.float(img, 6, 4, 2)
-	UIKit.text({ Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, -6), Text = "🐣 YOU HATCHED", ZIndex = 33, Stroke = 3, Parent = frame })
+	UIKit.text({ Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, -6), Text = "{Hatch} YOU HATCHED", ZIndex = 33, Stroke = 3, Parent = frame })
 	local nameLabel = UIKit.text({ Size = UDim2.new(1, 0, 0, 46), Position = UDim2.new(0, 0, 1, -86), Text = name:upper(), TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), ZIndex = 33, Stroke = 4, Parent = frame })
 	if rarity >= 5 then
 		UIKit.shinyText(nameLabel, r.Color)
 	end
-	UIKit.text({ Size = UDim2.new(1, 0, 0, 34), Position = UDim2.new(0, 0, 1, -40), Text = r.Name:upper() .. "  ·  💰 " .. money(income) .. "/s", TextColor3 = UIKit.Money, ZIndex = 33, Stroke = 3, Parent = frame })
+	UIKit.text({ Size = UDim2.new(1, 0, 0, 34), Position = UDim2.new(0, 0, 1, -40), Text = "{Cash} " .. money(income) .. "/s  ·  " .. r.Name:upper(), TextColor3 = UIKit.Money, ZIndex = 33, Stroke = 3, Parent = frame })
 	UIKit.popIn(frame)
 	task.delay(3.2, function()
 		local s = frame:FindFirstChild("AnimScale") :: UIScale?
@@ -578,7 +579,7 @@ local function trackCreature(m: Instance)
 			Parent = gui,
 		})
 		UIKit.text({ Size = UDim2.fromScale(1, 0.55), Text = (m:GetAttribute("Creature") or "?") :: string, TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), Parent = tag })
-		UIKit.text({ Size = UDim2.fromScale(1, 0.45), Position = UDim2.fromScale(0, 0.55), Text = "💰 " .. money((m:GetAttribute("Income") or 0) :: number) .. "/s", TextColor3 = UIKit.Money, Parent = tag })
+		UIKit.text({ Size = UDim2.fromScale(1, 0.45), Position = UDim2.fromScale(0, 0.55), Text = "{Cash} " .. money((m:GetAttribute("Income") or 0) :: number) .. "/s", TextColor3 = UIKit.Money, Parent = tag })
 		creatures[m] = tag
 		return
 	end
@@ -614,7 +615,7 @@ local function trackCreature(m: Instance)
 	end
 	UIKit.float(img, 4, 3, 1.6, math.random() * 6)
 	UIKit.text({ Size = UDim2.fromScale(1, 0.13), Position = UDim2.fromScale(0, 0.74), Text = name, TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), Parent = holder })
-	UIKit.text({ Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 0.87), Text = "💰 " .. money(income) .. "/s", TextColor3 = UIKit.Money, Parent = holder })
+	UIKit.text({ Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 0.87), Text = "{Cash} " .. money(income) .. "/s", TextColor3 = UIKit.Money, Parent = holder })
 	creatures[m] = b
 end
 

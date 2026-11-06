@@ -103,9 +103,9 @@ local function freeze(player: Player, st: State)
 			d.cargo = {}
 			GameService.Sync(player)
 			if lost > 0 then
-				GameService.Notice(player, ("🥶 You froze in space and lost %d egg%s"):format(lost, if lost > 1 then "s" else ""), "bad")
+				GameService.Notice(player, ("{Freezing} You froze in space and lost %d egg%s"):format(lost, if lost > 1 then "s" else ""), "bad")
 			else
-				GameService.Notice(player, "🥶 You froze in space! Stay inside the corridor", "bad")
+				GameService.Notice(player, "{Freezing} You froze in space! Stay inside the corridor", "bad")
 			end
 		end
 		st.cold, st.outside, st.frozen = 0, 0, false

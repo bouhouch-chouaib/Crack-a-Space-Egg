@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Theme = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Theme"))
+local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
 
 local UIKit = {}
 
@@ -62,6 +63,14 @@ UIKit.Art = {
 	FxShard = "rbxassetid://121742631956253",
 	FxShell = "rbxassetid://73009463028666",
 }
+
+-- Icônes dessinées partagées (src/shared/Icons.lua), utilisables aussi par UIKit.icon
+for name, id in pairs(Icons.Ids) do
+	if UIKit.Art[name] == nil then
+		UIKit.Art[name] = id
+	end
+end
+UIKit.setIconText = Icons.Apply
 
 -- THÈME ------------------------------------------------------------------
 UIKit.Font = Theme.Font
@@ -143,6 +152,10 @@ function UIKit.text(props: { [string]: any }): TextLabel
 	end
 	new("UIStroke", { Thickness = strokeSize, Color = UIKit.Outline, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, LineJoinMode = Enum.LineJoinMode.Round, Parent = t })
 	t.Parent = props.Parent
+	-- « {Egg} texte » : icône dessinée devant le texte
+	if type(props.Text) == "string" and string.find(props.Text, "^{%w+}") then
+		Icons.Apply(t, props.Text)
+	end
 	return t
 end
 

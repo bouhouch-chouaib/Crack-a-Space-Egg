@@ -31,10 +31,10 @@ local function blocked(rock: BasePart): string?
 		return "Loading your save..."
 	end
 	if (player:GetAttribute("Cargo") or 0) >= (player:GetAttribute("CargoMax") or 1) then
-		return "🥚 You carry an egg! Bring it back to your base 🏠"
+		return "{Egg} You carry an egg! Bring it back to your base"
 	end
 	if (rock:GetAttribute("Ring") or 1) > (player:GetAttribute("Ring") or 1) then
-		return "🔒 Locked ring! Unlock it at the shop"
+		return "{Lock} Locked ring! Unlock it at the shop"
 	end
 	return nil
 end
@@ -164,7 +164,7 @@ RunService.RenderStepped:Connect(function()
 		hitPart, hitPos, tooFar = findTarget(pointer)
 		if not hitPart and os.clock() - lastWarn > 2.5 then
 			lastWarn = os.clock()
-			UIKit.toast(if tooFar then "Too far! Jump closer 🚀" else "No asteroid in reach! Jump on a rock 🚀", "warn")
+			UIKit.toast(if tooFar then "{Jetpack} Too far! Jump closer" else "{Jetpack} No asteroid in reach! Jump on a rock", "warn")
 		end
 	elseif UserInputService.MouseEnabled then
 		-- Survol à la souris : on montre déjà si la roche est à portée

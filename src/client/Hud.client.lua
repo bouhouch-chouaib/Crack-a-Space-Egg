@@ -172,7 +172,7 @@ local dots = new("Frame", {
 local goHome = UIKit.text({
 	Size = UDim2.fromOffset(240, 34),
 	Position = UDim2.fromOffset(0, 84),
-	Text = "🏠 GO HOME!",
+	Text = "{Home} GO HOME!",
 	TextColor3 = Color3.fromRGB(255, 120, 110),
 	Visible = false,
 	Stroke = 3,
@@ -234,7 +234,7 @@ UIKit.text({
 	AnchorPoint = Vector2.new(0.5, 1),
 	Size = UDim2.new(0.6, 0, 0, 26),
 	Position = UDim2.new(0.5, 0, 1, -12),
-	Text = "🖱️ Hold click on an asteroid to drill   ·   ⬆️ Hold jump to fly, steer to glide",
+	Text = "{Mouse} Hold click on an asteroid to drill   ·   Hold jump to fly, steer to glide",
 	TextColor3 = Color3.fromRGB(230, 235, 255),
 	Stroke = 2,
 	Parent = gui,

@@ -56,14 +56,14 @@ local function makeSign(m: Model, mine: boolean)
 		line2 = ("+%s XP/s"):format(Format.Short((m:GetAttribute("XP") or 0) :: number))
 		c2 = GOLD
 		if mine then
-			line3 = if nextName ~= "" then ("⬆ %s · %s"):format(nextName, money(nextCost)) else "⭐ MAX LEVEL"
+			line3 = if nextName ~= "" then ("{ArrowUp} %s · %s"):format(nextName, money(nextCost)) else "{Star} MAX LEVEL"
 			c3 = Color3.fromRGB(140, 255, 160)
 		else
 			line3 = if owner ~= "" then owner .. "'s tunnel" else ""
 			c3 = GREY
 		end
 	elseif mine then
-		title = "🌪️ WIND TUNNEL"
+		title = "{WindTunnel} WIND TUNNEL"
 		color = Color3.fromRGB(150, 235, 255)
 		line2 = "Buy for " .. money(nextCost)
 		c2 = Color3.fromRGB(140, 255, 160)

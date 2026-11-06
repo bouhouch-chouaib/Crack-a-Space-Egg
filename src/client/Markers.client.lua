@@ -3,6 +3,7 @@
 -- - la bannière d'événement au-dessus du portique LAUNCH, avec son compte à rebours.
 
 local Players = game:GetService("Players")
+local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -24,12 +25,12 @@ local function buildMarker(adornee: BasePart): BillboardGui
 	gui.MaxDistance = 2000
 	gui.LightInfluence = 0
 
-	local icon = Instance.new("TextLabel")
+	local icon = Instance.new("ImageLabel")
 	icon.Name = "Icon"
 	icon.Size = UDim2.fromScale(1, 0.72)
 	icon.BackgroundTransparency = 1
-	icon.Text = "🏠"
-	icon.TextScaled = true
+	icon.Image = Icons.Ids.Home
+	icon.ScaleType = Enum.ScaleType.Fit
 	icon.Parent = gui
 
 	local text = Instance.new("TextLabel")
@@ -109,16 +110,16 @@ task.spawn(function()
 	while true do
 		local now = workspace:GetServerTimeNow()
 		local name = workspace:GetAttribute("EventName") or "Event"
-		local icon = workspace:GetAttribute("EventIcon") or "⭐"
+		local icon = "{" .. (workspace:GetAttribute("EventIcon") or "Star") .. "}"
 		if workspace:GetAttribute("EventActive") then
-			title.Text = string.format("%s %s!", icon, string.upper(name))
+			Icons.Apply(title, string.format("%s %s!", icon, string.upper(name)))
 			timer.Text = "ENDS IN " .. clock((workspace:GetAttribute("EventEndsAt") or now) - now)
 			-- Le cadre clignote doucement en or pendant l'événement
 			if stroke then
 				stroke.Color = if math.floor(now * 2) % 2 == 0 then Color3.fromRGB(255, 196, 60) else Color3.fromRGB(63, 201, 216)
 			end
 		else
-			title.Text = string.format("%s %s", icon, string.upper(name))
+			Icons.Apply(title, string.format("%s %s", icon, string.upper(name)))
 			timer.Text = "IN " .. clock((workspace:GetAttribute("EventStartsAt") or now) - now)
 			if stroke then
 				stroke.Color = Color3.fromRGB(63, 201, 216)

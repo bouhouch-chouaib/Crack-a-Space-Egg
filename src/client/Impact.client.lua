@@ -16,6 +16,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
@@ -133,7 +134,7 @@ local function showBar(rock: BasePart)
 		local ring = rock:GetAttribute("Ring") or 1
 		local biome = Config.Biomes[ring]
 		local size = string.upper(tostring(rock:GetAttribute("Size") or ""))
-		barTitle.Text = (if biome then biome.Icon .. " " else "") .. size .. (if size ~= "" then " " else "") .. "ROCK"
+		Icons.Apply(barTitle, (if biome then "{" .. biome.Icon .. "} " else "") .. size .. (if size ~= "" then " " else "") .. "ROCK")
 		barTitle.TextColor3 = biomeColor(rock):Lerp(Color3.new(1, 1, 1), 0.35)
 		UIKit.bump(barBack, 0.15)
 	end
@@ -159,7 +160,7 @@ RunService.RenderStepped:Connect(function(dt)
 	local c1, c2 = barColors(f)
 	barGrad.Color = ColorSequence.new(c1, c2)
 	barText.Text = Format.Short(math.max(0, shownHp)) .. "/" .. Format.Short(eggHP) .. " HP"
-	barEggs.Text = "🥚 " .. (rock:GetAttribute("Eggs") or 0) .. "/" .. (rock:GetAttribute("MaxEggs") or 0) .. " left"
+	Icons.Apply(barEggs, "{Egg} " .. (rock:GetAttribute("Eggs") or 0) .. "/" .. (rock:GetAttribute("MaxEggs") or 0) .. " left")
 	bar.StudsOffsetWorldSpace = Vector3.new(0, rock.Size.Y / 2 + 4, 0)
 end)
 
@@ -181,7 +182,8 @@ local function damageNumber(at: Vector3, text: string, color: Color3, big: boole
 	b.LightInfluence = 0
 	b.MaxDistance = 120
 	b.Parent = holder
-	local t = label({ Size = UDim2.fromScale(1, 1), Text = text, TextColor3 = color, Stroke = if big then 3.5 else 2.5, Parent = b })
+	local t = label({ Size = UDim2.fromScale(1, 1), Text = "", TextColor3 = color, Stroke = if big then 3.5 else 2.5, Parent = b })
+	Icons.Apply(t, text)
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.3
 	scale.Parent = t
@@ -352,7 +354,7 @@ local function flyEgg(from: Vector3, ring: number, rarity: number, to: () -> Vec
 				local goal = to() or up
 				egg:Destroy()
 				if isMine then
-					damageNumber(goal + Vector3.new(0, 2, 0), "+1 🥚 " .. string.upper(Config.EggName(ring, rarity)), color, true)
+					damageNumber(goal + Vector3.new(0, 2, 0), "{Egg} +1 " .. string.upper(Config.EggName(ring, rarity)), color, true)
 				end
 			end
 		end)

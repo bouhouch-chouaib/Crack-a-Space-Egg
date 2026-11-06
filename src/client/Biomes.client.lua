@@ -146,7 +146,7 @@ local function showTitle(index: number)
 	local title = UIKit.text({
 		Size = UDim2.new(1, 0, 0, 84),
 		Position = UDim2.fromOffset(0, 8),
-		Text = biome.Icon .. " " .. biome.Title,
+		Text = "{" .. biome.Icon .. "} " .. biome.Title,
 		ZIndex = 3,
 		Stroke = 5,
 		Parent = box,
@@ -156,7 +156,7 @@ local function showTitle(index: number)
 	local sub = UIKit.text({
 		Size = UDim2.new(1, 0, 0, 40),
 		Position = UDim2.fromOffset(0, 96),
-		Text = if locked then "🔒 Locked! Unlock it at the shop" else "RING " .. index,
+		Text = if locked then "{Lock} Locked! Unlock it at the shop" else "RING " .. index,
 		TextColor3 = if locked then Color3.fromRGB(255, 110, 110) else Color3.fromRGB(255, 250, 220),
 		ZIndex = 3,
 		Stroke = 3.5,

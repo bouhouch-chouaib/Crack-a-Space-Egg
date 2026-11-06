@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local Icons = require(ReplicatedStorage.Shared.Icons)
 local DataService = require(script.Parent.DataService)
 
 local LeaderboardService = {}
@@ -22,14 +23,14 @@ local STATS = {
 	-- Les $ montent jusqu'aux quadrillions : on classe log10($) × 10^6 (entier), relu avec Decode
 	Credits = {
 		Title = "RICHEST",
-		Icon = "💰",
+		Icon = "Cash",
 		Read = function(d) return d.credits end,
 		Encode = function(v: number): number return math.floor(math.log10(math.max(1, v)) * 1e6) end,
 		Decode = function(x: number): number return 10 ^ (x / 1e6) end,
 		Key = "LB_Credits_v2",
 	},
-	Eggs = { Title = "EGGS CRACKED", Icon = "🥚", Read = function(d) return d.stats.geodes end },
-	Best = { Title = "BEST FIND", Icon = "⭐", Read = function(d) return d.stats.best end },
+	Eggs = { Title = "EGGS CRACKED", Icon = "Egg", Read = function(d) return d.stats.geodes end },
+	Best = { Title = "BEST FIND", Icon = "Star", Read = function(d) return d.stats.best end },
 }
 
 local stores: { [string]: OrderedDataStore? } = {}
@@ -88,14 +89,24 @@ local function buildScreen(board: Model, stat: string)
 	gui.LightInfluence = 0
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
-	title.Size = UDim2.fromScale(0.94, 0.12)
-	title.Position = UDim2.fromScale(0.03, 0.02)
+	title.Size = UDim2.fromScale(0.78, 0.12)
+	title.Position = UDim2.fromScale(0.19, 0.02)
+	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.BackgroundTransparency = 1
 	title.FontFace = Theme.FontHeavy
 	title.TextScaled = true
 	title.TextColor3 = Color3.new(1, 1, 1)
-	title.Text = STATS[stat].Icon .. " " .. STATS[stat].Title
+	title.Text = STATS[stat].Title
 	title.Parent = gui
+	-- icône dessinée à gauche du titre (src/shared/Icons.lua)
+	local icon = Instance.new("ImageLabel")
+	icon.Name = "TitleIcon"
+	icon.BackgroundTransparency = 1
+	icon.Image = Icons.Ids[STATS[stat].Icon] or ""
+	icon.ScaleType = Enum.ScaleType.Fit
+	icon.Size = UDim2.fromScale(0.15, 0.13)
+	icon.Position = UDim2.fromScale(0.03, 0.015)
+	icon.Parent = gui
 	local rows = {}
 	for i = 1, ROWS do
 		local row = Instance.new("Frame")

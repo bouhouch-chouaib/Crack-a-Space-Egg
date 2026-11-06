@@ -84,7 +84,7 @@ Config.Movement = {
 Config.Events = {
 	MeteorShower = {
 		Name = "Meteor Shower",
-		Icon = "☄️",
+		Icon = "Comet",
 		Every = 20 * 60, -- secondes entre deux pluies
 		Duration = 3 * 60,
 		SpawnMult = 1.5, -- le défilement accélère
@@ -422,7 +422,7 @@ Config.BiomeClouds = {
 Config.Biomes = {
 	{ -- 1. Dust Belt : poussière dorée
 		Title = "DUST BELT",
-		Icon = "✨",
+		Icon = "Sparkles",
 		Fog = rgb(60, 42, 30), -- couleur du brouillard lointain
 		Clouds = { rgb(230, 170, 110), rgb(200, 130, 80) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(255, 230, 195),
@@ -436,7 +436,7 @@ Config.Biomes = {
 	},
 	{ -- 2. Ice Ring : neige bleutée
 		Title = "ICE RING",
-		Icon = "❄️",
+		Icon = "Snowflake",
 		Fog = rgb(30, 42, 66), -- couleur du brouillard lointain
 		Clouds = { rgb(170, 205, 245), rgb(120, 165, 230) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(212, 232, 255),
@@ -450,7 +450,7 @@ Config.Biomes = {
 	},
 	{ -- 3. Magma Field : braises qui montent et fumée rouge
 		Title = "MAGMA FIELD",
-		Icon = "🔥",
+		Icon = "Fire",
 		Fog = rgb(58, 22, 20), -- couleur du brouillard lointain
 		Clouds = { rgb(200, 90, 60), rgb(90, 40, 40) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(255, 212, 190),
@@ -464,7 +464,7 @@ Config.Biomes = {
 	},
 	{ -- 4. Nebula : nuages roses et étincelles
 		Title = "NEBULA",
-		Icon = "🌌",
+		Icon = "Galaxy",
 		Fog = rgb(52, 28, 70), -- couleur du brouillard lointain
 		Clouds = { rgb(255, 140, 220), rgb(160, 110, 255) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(248, 220, 255),
@@ -478,7 +478,7 @@ Config.Biomes = {
 	},
 	{ -- 5. Devourer Belt : brume verte sombre et spores
 		Title = "DEVOURER BELT",
-		Icon = "👁️",
+		Icon = "Eye",
 		Fog = rgb(16, 30, 22), -- couleur du brouillard lointain
 		Clouds = { rgb(90, 160, 100), rgb(30, 60, 40) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(205, 235, 208),
@@ -493,7 +493,7 @@ Config.Biomes = {
 	},
 	{ -- 6. The Rift : éclats cyan et magenta qui clignotent
 		Title = "THE RIFT",
-		Icon = "🌀",
+		Icon = "Rift",
 		Fog = rgb(24, 28, 62), -- couleur du brouillard lointain
 		Clouds = { rgb(120, 220, 255), rgb(220, 90, 255) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(222, 232, 255),
@@ -507,7 +507,7 @@ Config.Biomes = {
 	},
 	{ -- 7. The Nest : pollen ambré et coquilles d'œufs qui flottent
 		Title = "THE NEST",
-		Icon = "🥚",
+		Icon = "Egg",
 		Fog = rgb(62, 44, 22), -- couleur du brouillard lointain
 		Clouds = { rgb(255, 220, 150), rgb(255, 180, 90) }, -- nuages du champ (WorldBuilder)
 		Tint = rgb(255, 232, 195),

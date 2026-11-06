@@ -133,7 +133,7 @@ local function buildEgg(player: Player, floor: BasePart, item): Model?
 	if skip then
 		local sp = Instance.new("ProximityPrompt")
 		sp.Name = "SkipPrompt"
-		sp.ActionText = "Hatch now ⚡"
+		sp.ActionText = "Hatch now"
 		sp.ObjectText = "R$ " .. skip.Price
 		sp.KeyboardKeyCode = Enum.KeyCode.R
 		sp.GamepadKeyCode = Enum.KeyCode.ButtonX
@@ -446,7 +446,7 @@ function HatchService.UpdateHeld(player: Player)
 		if #d.base < H.Slots then
 			want = d.ready[1]
 		else
-			GameService.Notice(player, ("🏠 Base full! %d egg(s) waiting"):format(#d.ready), "warn")
+			GameService.Notice(player, ("{Home} Base full! %d egg(s) waiting"):format(#d.ready), "warn")
 		end
 	end
 	local key = if want then want.ring .. ":" .. want.rarity else nil
@@ -511,7 +511,7 @@ function HatchService.SkipEgg(player: Player, rarity: number): boolean
 	if m then
 		m:SetAttribute("HatchAt", now)
 	end
-	GameService.Notice(player, "⚡ Ready to hatch! Press F", "good")
+	GameService.Notice(player, "{Hatch} Ready to hatch! Press F", "good")
 	return true
 end
 

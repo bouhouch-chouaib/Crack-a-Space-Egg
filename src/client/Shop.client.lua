@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 
@@ -317,14 +318,14 @@ local function refreshUpgrades()
 	local current, nextDrill = Config.Drills[tier], Config.Drills[tier + 1]
 	drillCard.level.Text = if current then current.Name else ""
 	if current and nextDrill then
-		drillCard.effect.Text = "⚡" .. Format.Short(current.Power) .. " → " .. Format.Short(nextDrill.Power)
+		Icons.Apply(drillCard.effect, "{Lightning} " .. Format.Short(current.Power) .. " → " .. Format.Short(nextDrill.Power))
 		drillCard.price.Text = "$" .. Format.Short(nextDrill.Cost)
 		drillCard.affordable, drillCard.why = credits >= nextDrill.Cost, "Not enough $!"
 		UIKit.recolor(drillCard.grad, if drillCard.affordable then "Green" else "Grey")
 		drillRobuxText.Text = tostring(nextDrill.Robux)
 		drillRobux.Visible = true
 	else
-		drillCard.effect.Text = "⚡" .. Format.Short(current and current.Power or 0)
+		Icons.Apply(drillCard.effect, "{Lightning} " .. Format.Short(current and current.Power or 0))
 		drillCard.price.Text = "MAX"
 		UIKit.recolor(drillCard.grad, "Gold")
 		drillCard.affordable, drillCard.why = false, "Best drill already!"

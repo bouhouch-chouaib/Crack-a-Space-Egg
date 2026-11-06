@@ -151,7 +151,7 @@ local function onDrill(player: Player, target: any, at: any)
 	local max = Config.CargoSlots()
 	local room = max - #d.cargo
 	if room <= 0 then
-		notice(player, "You already carry an egg! Bring it back to your base 🏠", "warn")
+		notice(player, "{Egg} You already carry an egg! Bring it back to your base", "warn")
 		return
 	end
 
@@ -420,7 +420,7 @@ local function watchFalls()
 					-- Sa roche a cassé ou disparu sous lui : on le sauve, il garde ses œufs
 					BeltService.Grace[player] = nil
 					character:SetPrimaryPartCFrame(CFrame.new(0, 4, Config.Map.FrontZ - 6))
-					notice(player, "🛟 Saved! Your rock broke, your eggs are safe", "info")
+					notice(player, "{Lifebuoy} Saved! Your rock broke, your eggs are safe", "info")
 				else
 					local lost = #d.cargo
 					d.cargo = {}

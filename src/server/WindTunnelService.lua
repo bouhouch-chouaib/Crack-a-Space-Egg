@@ -255,7 +255,7 @@ buy = function(player: Player, index: number)
 	end
 	local nextDef = J.Tunnels[(d.tunnel or 0) + 1]
 	if not nextDef then
-		GameService.Notice(player, "🌪️ Your wind tunnel is already at max level!", "info")
+		GameService.Notice(player, "{WindTunnel} Your wind tunnel is already at max level!", "info")
 		return
 	end
 	if d.credits < nextDef.Cost then
@@ -266,7 +266,7 @@ buy = function(player: Player, index: number)
 	d.tunnel = (d.tunnel or 0) + 1
 	GameService.Sync(player)
 	refresh(index)
-	GameService.Notice(player, ("🌪️ %s ready! +%s XP/s"):format(nextDef.Name, Format.Short(nextDef.XP)), "good")
+	GameService.Notice(player, ("{WindTunnel} %s ready! +%s XP/s"):format(nextDef.Name, Format.Short(nextDef.XP)), "good")
 end
 WindTunnelService.Buy = buy
 
@@ -289,7 +289,7 @@ local function addXP(player: Player, d, xp: number)
 	local after = Config.JetpackLevel(d.jetXP)
 	GameService.Sync(player)
 	if after > before then
-		GameService.Notice(player, ("🚀 Jetpack level %d! You are faster"):format(after), "good")
+		GameService.Notice(player, ("{Jetpack} Jetpack level %d! You are faster"):format(after), "good")
 	end
 end
 

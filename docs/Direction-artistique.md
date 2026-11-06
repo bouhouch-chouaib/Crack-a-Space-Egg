@@ -169,3 +169,17 @@ La planète est **peinte dans le ciel** (`Lighting.PlanetSky`). Le brouillard du
   silhouettes devant ce ciel clair. Ils deviennent maintenant transparents entre 72 % et 97 % de la
   distance du brouillard (`Config.FarFade`) : `FarFade.client` pour le décor, les relais et le vaisseau,
   `Belt.client` pour les astéroïdes.
+
+## Icônes à la place des emojis (7 nov.)
+
+- Aucun emoji à l'écran : tous les textes utilisent des icônes dessinées dans le style du jeu
+  (3D cartoon brillant, contour sombre épais), générées avec `ropilot_generate_ui_art`, style « simulator ».
+- Les identifiants sont dans `src/shared/Icons.lua` et sont aussi recopiés dans `UIKit.Art`.
+- Écriture : `"{Egg} You carry an egg"`. Un jeton `{Nom}` en tête de texte devient une image collée
+  devant le texte. `UIKit.text` le fait à la création ; pour un texte qui change, utiliser
+  `Icons.Apply(label, texte)`. Les notifications du serveur utilisent la même écriture.
+- Icônes : Home, Lock, Warning, Freezing, Snowflake, WindTunnel, Lightning, Star, Hourglass, Hatch,
+  Mouse, Tap, ArrowUp, Cross, Lifebuoy, Fire, Galaxy, Eye, Rift, Sparkles, plus Egg, Cash, Jetpack et
+  Comet, qui existaient déjà.
+- Biomes et événement : `Icon` dans `Config` est un nom d'icône (Sparkles, Snowflake, Fire, Galaxy, Eye,
+  Rift, Egg, Comet).
