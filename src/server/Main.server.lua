@@ -10,6 +10,7 @@ local LeaderboardService = require(script.Parent.LeaderboardService)
 local MonetizationService = require(script.Parent.MonetizationService)
 local MachineService = require(script.Parent.MachineService)
 local HatchService = require(script.Parent.HatchService)
+local BoostService = require(script.Parent.BoostService)
 local WindTunnelService = require(script.Parent.WindTunnelService)
 local ColdService = require(script.Parent.ColdService)
 
@@ -17,6 +18,7 @@ WorldBuilder.Build()
 Bases.Start()
 EventService.Start()
 BeltService.Start()
+BoostService.Start() -- passes et potions (avant le chargement des parties)
 GameService.Start() -- branche DataService.Loaded avant que les parties se chargent
 HatchService.Start() -- idem : reconstruit les œufs et créatures de la base au chargement
 DataService.Start()

@@ -246,7 +246,9 @@ local lastJump = 0
 local sentState = 0
 
 local function maxFuel(): number
-	return Config.JetpackFuelBase + Config.JetpackFuelPerLevel * math.max(0, ((player:GetAttribute("JetLevel") or 1) :: number) - 1)
+	local base = Config.JetpackFuelBase + Config.JetpackFuelPerLevel * math.max(0, ((player:GetAttribute("JetLevel") or 1) :: number) - 1)
+	-- passe Turbo Jetpack : réservoir plus grand
+	return base * (if player:GetAttribute("Pass_TurboJetpack") then Config.Shop.PassEffects.TurboJetpack else 1)
 end
 
 -- JumpRequest se répète tant que Saut est tenu (clavier, manette, bouton tactile)

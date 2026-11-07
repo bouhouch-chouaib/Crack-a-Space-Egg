@@ -1,7 +1,7 @@
 -- Achats Robux (produits de développeur). Un seul ProcessReceipt pour tout le jeu :
 -- chaque produit connu dans Config est relié ici à ce qu'il donne.
--- Pour l'instant : les foreuses (Config.Drills[i].ProductId) et « Hatch now » (Config.Hatch.Skip[rareté]). Les potions, packs et l'offre du jour
--- s'ajouteront dans HANDLERS quand leurs produits seront créés sur Roblox.
+-- Foreuses (Config.Drills[i].ProductId), « Hatch now » (Config.Hatch.Skip[rareté]), potions,
+-- paquets d'argent et offre du moment (Config.Shop). Les passes sont lus par BoostService.
 -- Règle : jamais d'œufs ni de créatures contre des Robux.
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -12,6 +12,9 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local HatchService = require(script.Parent.HatchService)
+local BoostService = require(script.Parent.BoostService)
+local EventService = require(script.Parent.EventService)
+local Format = require(ReplicatedStorage.Shared.Format)
 
 local MonetizationService = {}
 
@@ -48,6 +51,57 @@ function MonetizationService.Start()
 			HANDLERS[s.ProductId] = function(player)
 				return HatchService.SkipEgg(player, rarity)
 			end
+		end
+	end
+	local shop = Config.Shop
+	local minutes = shop.PotionMinutes
+	-- Potions : 15 min de bonus (Meteor Shower : pluie de météores pour tout le serveur)
+	for _, potion in ipairs(shop.Potions) do
+		if potion.Id ~= 0 then
+			HANDLERS[potion.Id] = function(player)
+				if potion.Key == "Meteor" then
+					EventService.StartNow(minutes * 60)
+					for _, p in ipairs(Players:GetPlayers()) do
+						GameService.Notice(p, ("{Comet} %s started a Meteor Shower!"):format(player.DisplayName), "good")
+					end
+					return true
+				end
+				local ok = BoostService.Add(player, potion.Key, minutes)
+				if ok then
+					GameService.Notice(player, ("{Lightning} %s active for %d min!"):format(potion.Name, minutes), "good")
+				end
+				return ok
+			end
+		end
+	end
+	-- Paquets d'argent : montant selon l'anneau le plus loin débloqué
+	local function giveMoney(player: Player, base: number): boolean
+		local d = DataService.Get(player)
+		if not d then
+			return false
+		end
+		local amount = Config.MoneyPackAmount(base, d.ring)
+		d.credits += amount
+		GameService.Sync(player)
+		GameService.Notice(player, "{Cash} +$" .. Format.Short(amount) .. "!", "good")
+		return true
+	end
+	for _, pack in ipairs(shop.MoneyPacks) do
+		if pack.Id ~= 0 then
+			HANDLERS[pack.Id] = function(player)
+				return giveMoney(player, pack.Base)
+			end
+		end
+	end
+	-- Offre du moment : gros paquet d'argent + potions x2 Luck et x2 Money
+	if shop.Featured.Id ~= 0 then
+		HANDLERS[shop.Featured.Id] = function(player)
+			if not giveMoney(player, shop.Featured.PackBase) then
+				return false
+			end
+			BoostService.Add(player, "Luck", minutes)
+			BoostService.Add(player, "Money", minutes)
+			return true
 		end
 	end
 	MarketplaceService.ProcessReceipt = processReceipt

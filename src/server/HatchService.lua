@@ -22,6 +22,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local Bases = require(script.Parent.Bases)
+local BoostService = require(script.Parent.BoostService)
 
 local Remotes = ReplicatedStorage.Remotes
 local H = Config.Hatch
@@ -73,8 +74,8 @@ local function syncBase(player: Player)
 		return
 	end
 	player:SetAttribute("BaseUsed", #d.base)
-	player:SetAttribute("BaseSlots", H.Slots)
-	player:SetAttribute("Income", totalIncome(d))
+	player:SetAttribute("BaseSlots", BoostService.BaseSlots(player))
+	player:SetAttribute("Income", totalIncome(d) * BoostService.IncomeMult(player))
 	GameService.Sync(player)
 end
 
@@ -290,8 +291,9 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	if not d or not base then
 		return
 	end
-	if #d.base >= H.Slots then
-		GameService.Notice(player, "Your base is full! (" .. H.Slots .. " max)", "warn")
+	local slots = BoostService.BaseSlots(player)
+	if #d.base >= slots then
+		GameService.Notice(player, "{Home} Your base is full! (" .. slots .. " max)", "warn")
 		return
 	end
 	local index = nil
@@ -318,7 +320,7 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 		rarity = rarity,
 		x = x,
 		z = z,
-		hatchAt = os.time() + (H.Time[rarity] or 60),
+		hatchAt = os.time() + math.ceil((H.Time[rarity] or 60) * BoostService.HatchTimeMult(player)),
 	}
 	table.insert(d.base, item)
 	build(player, item)
@@ -443,7 +445,7 @@ function HatchService.UpdateHeld(player: Player)
 	local character = player.Character
 	local want = nil
 	if d and #d.ready > 0 then
-		if #d.base < H.Slots then
+		if #d.base < BoostService.BaseSlots(player) then
 			want = d.ready[1]
 		else
 			GameService.Notice(player, ("{Home} Base full! %d egg(s) waiting"):format(#d.ready), "warn")
@@ -521,7 +523,11 @@ local function payIncome()
 	for _, player in ipairs(Players:GetPlayers()) do
 		local d = DataService.Get(player)
 		if d and d.base then
-			local inc = totalIncome(d)
+			local inc = totalIncome(d) * BoostService.IncomeMult(player)
+			-- revenu affiché à jour (passe ou potion achetés, potion terminée)
+			if player:GetAttribute("Income") ~= inc then
+				player:SetAttribute("Income", inc)
+			end
 			if inc > 0 then
 				-- Les $ sont entiers : on garde les fractions pour la seconde suivante
 				local total = (remainder[player] or 0) + inc

@@ -223,6 +223,35 @@ settings.MouseButton1Click:Connect(function()
 	UIKit.toast("Coming soon!", "info")
 end)
 
+-- POTIONS ACTIVES (sous l'horloge, en haut à droite) : icône qui flotte et temps restant ---------
+local boostGroup = group("Boosts", Vector2.new(1, 0), UDim2.new(1, -18, 0, 84), UDim2.fromOffset(260, 84))
+new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, Padding = UDim.new(0, 6), Parent = boostGroup })
+local boostCards: { [string]: { frame: Frame, time: TextLabel } } = {}
+for i, potion in ipairs(Config.Shop.Potions) do
+	if potion.Key ~= "Meteor" then
+		local f = new("Frame", { Name = potion.Key, Size = UDim2.fromOffset(70, 84), BackgroundTransparency = 1, LayoutOrder = i, Visible = false, Parent = boostGroup })
+		local icon = UIKit.icon(potion.Art, { Size = UDim2.fromOffset(62, 62), Position = UDim2.fromOffset(4, 0), Parent = f })
+		UIKit.float(icon, 3, 4, 1.4, i)
+		UIKit.glow(f, { color = Color3.fromRGB(255, 230, 120), size = 80, transparency = 0.6, position = UDim2.fromOffset(35, 31), z = 0, pulse = 1.5 })
+		local t = UIKit.text({ Size = UDim2.fromOffset(70, 24), Position = UDim2.fromOffset(0, 60), Text = "", Stroke = 2.5, Parent = f })
+		boostCards[potion.Key] = { frame = f, time = t }
+	end
+end
+task.spawn(function()
+	while true do
+		local now = os.time()
+		for key, card in pairs(boostCards) do
+			local ends = player:GetAttribute("Boost_" .. key) :: number?
+			local left = if ends then ends - now else 0
+			card.frame.Visible = left > 0
+			if left > 0 then
+				card.time.Text = ("%d:%02d"):format(left // 60, left % 60)
+			end
+		end
+		task.wait(1)
+	end
+end)
+
 -- JAUGES (bord droit) ---------------------------------------------------------
 local gauges = group("Gauges", Vector2.new(1, 0.5), UDim2.new(1, -18, 0.5, 0), UDim2.fromOffset(160, 200))
 new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, Padding = UDim.new(0, 8), Parent = gauges })

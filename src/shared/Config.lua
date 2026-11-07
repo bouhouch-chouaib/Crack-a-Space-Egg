@@ -609,24 +609,34 @@ Config.Shop = {
 		Name = "Starter Pack",
 		Text = "Big money pack + x2 Luck + x2 Money potions",
 		Art = "Money4",
+		PackBase = 45000, -- comme le 3e paquet d'argent
 		Id = 0,
 		Price = 99,
 		Was = 249, -- prix barré
 	},
+	-- Passes (achat définitif). Effets appliqués par BoostService.
 	Passes = {
-		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "x2 fuel, faster flight", Art = "PassTurboJetpack", Id = 0, Price = 99 },
-		{ Key = "AutoCrack", Name = "Auto Crack", Text = "Eggs crack by themselves", Art = "PassAutoCrack", Id = 0, Price = 199, Ribbon = "BEST SELLER!" },
-		{ Key = "Money2x", Name = "x2 Money", Text = "Double money forever", Art = "PassMoney2x", Id = 0, Price = 299, Ribbon = "BEST VALUE!" },
-		{ Key = "Speed2x", Name = "Speed Boots", Text = "+50% speed on ground and in the air", Art = "PassTraining2x", Id = 0, Price = 149 },
-		{ Key = "PetSlot", Name = "+1 Creature", Text = "Equip one more creature", Art = "PassPetSlot", Id = 0, Price = 249 },
-		{ Key = "VIP", Name = "VIP", Text = "VIP tag, +10% money, chat color", Art = "PassVIP", Id = 0, Price = 399 },
+		{ Key = "JetXP2x", Name = "x2 Jetpack XP", Text = "Train your jetpack twice as fast", Art = "PassTraining2x", Id = 0, Price = 149 },
+		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "x2 jetpack fuel", Art = "PassTurboJetpack", Id = 0, Price = 99 },
+		{ Key = "FastHatch", Name = "Fast Hatch", Text = "Eggs hatch 2x faster", Art = "PassAutoCrack", Id = 0, Price = 199, Ribbon = "BEST SELLER!" },
+		{ Key = "Money2x", Name = "x2 Money", Text = "Creatures earn double, forever", Art = "PassMoney2x", Id = 0, Price = 299, Ribbon = "BEST VALUE!" },
+		{ Key = "BaseSlots", Name = "+5 Base Slots", Text = "Room for 5 more eggs and creatures", Art = "PassPetSlot", Id = 0, Price = 249 },
+		{ Key = "VIP", Name = "VIP", Text = "VIP chat tag, +10% money", Art = "PassVIP", Id = 0, Price = 399 },
 	},
-	-- Potions de 15 minutes (produits Robux)
+	PassEffects = {
+		JetXP2x = 2, -- × XP de jetpack
+		TurboJetpack = 2, -- × carburant
+		FastHatch = 0.5, -- × temps d'éclosion
+		Money2x = 2, -- × revenus des créatures
+		BaseSlots = 5, -- emplacements en plus dans la base
+		VIP = 1.1, -- × revenus
+	},
+	-- Potions de 15 minutes (produits Robux), cumulables dans le temps
 	PotionMinutes = 15,
 	Potions = {
 		{ Key = "Luck", Name = "x2 Luck", Art = "PotionLuck", Id = 0, Price = 39 },
 		{ Key = "Money", Name = "x2 Money", Art = "PotionMoney", Id = 0, Price = 39 },
-		{ Key = "Speed", Name = "x2 Speed", Art = "PotionSuit", Id = 0, Price = 25 },
+		{ Key = "JetXP", Name = "x2 Jetpack XP", Art = "PotionSuit", Id = 0, Price = 25 },
 		{ Key = "Meteor", Name = "Meteor Shower", Text = "For the whole server!", Art = "PotionMeteor", Id = 0, Price = 99 },
 	},
 	-- Boost gratuit contre une pub récompensée

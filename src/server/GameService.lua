@@ -10,6 +10,7 @@ local DataService = require(script.Parent.DataService)
 local BeltService = require(script.Parent.BeltService)
 local Bases = require(script.Parent.Bases)
 local WorldBuilder = require(script.Parent.WorldBuilder)
+local BoostService = require(script.Parent.BoostService)
 
 local Remotes = ReplicatedStorage.Remotes
 
@@ -94,7 +95,7 @@ end
 
 -- Rareté d'un œuf, tirée au forage (ses veines brillent de cette couleur pendant le retour)
 local function rollRarity(d, ringIndex: number): number
-	local probs = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner))
+	local probs = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner) * BoostService.LuckMult(d))
 	local rarity = pick(probs)
 	-- Compteur de veine
 	d.pity += 1
@@ -202,7 +203,7 @@ local function crackEgg(d, egg)
 		Size = size.Name,
 		Shiny = shiny,
 		Value = value,
-		Chance = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner))[rarity],
+		Chance = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner) * BoostService.LuckMult(d))[rarity],
 	}
 end
 

@@ -16,6 +16,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local WorldBuilder = require(script.Parent.WorldBuilder)
+local BoostService = require(script.Parent.BoostService)
 
 local J = Config.Jetpack
 local STREAK = "rbxassetid://96887170089913"
@@ -285,7 +286,7 @@ WindTunnelService.TunnelAt = tunnelAt
 
 local function addXP(player: Player, d, xp: number)
 	local before = Config.JetpackLevel(d.jetXP or 0)
-	d.jetXP = (d.jetXP or 0) + xp
+	d.jetXP = (d.jetXP or 0) + xp * BoostService.JetXPMult(player)
 	local after = Config.JetpackLevel(d.jetXP)
 	GameService.Sync(player)
 	if after > before then
