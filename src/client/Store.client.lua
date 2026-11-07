@@ -1,7 +1,8 @@
 -- STORE : tout ce qui s'achète en Robux, et seulement ça (docs/Boutique.md).
--- Ouvert par le bouton STORE du HUD (UIKit.Open "Store"). Menu de catégories à gauche, une seule
--- liste qui défile à droite : Starter Pack (vedette, offre de bienvenue de 3 jours), Passes, Cash,
--- Boosts. Les prix sont lus sur Roblox (Prices) ; le serveur accorde les achats (ProcessReceipt).
+-- Ouvert par le bouton STORE du HUD (UIKit.Open "Store"). Une seule liste pleine largeur qui défile :
+-- Starter Pack (vedette, offre de bienvenue de 3 jours), Passes, Cash, Boosts ; les catégories sont
+-- des icônes flottantes accrochées à droite de la fenêtre (docs/Analyse-menus-references.md).
+-- Les prix sont lus sur Roblox (Prices) ; le serveur accorde les achats (ProcessReceipt).
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -18,31 +19,15 @@ local Shop = Config.Shop
 
 local W_SIZE = Vector2.new(1060, 650)
 local win = UIKit.window({ name = "Store", title = "{Cash} STORE", color = "Green", size = W_SIZE })
-win.body.Visible = false -- on construit notre propre mise en page (menu à gauche + liste)
+win.body.Visible = false -- on construit notre propre mise en page (liste + navigation flottante)
 
-local SIDE_W = 184
 local GAP = 14
 
--- MENU DE CATÉGORIES (à gauche) ---------------------------------------------------------
-local side = new("Frame", {
-	Name = "Categories",
-	Size = UDim2.new(0, SIDE_W, 1, -110),
-	Position = UDim2.fromOffset(GAP, 98),
-	BackgroundColor3 = Color3.fromRGB(30, 32, 42),
-	BackgroundTransparency = 0.25,
-	ZIndex = 2,
-	Parent = win.frame,
-}, {
-	UIKit.corner(14),
-	new("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }),
-	new("UIPadding", { PaddingTop = UDim.new(0, 12) }),
-})
-
--- LISTE QUI DÉFILE (à droite) -------------------------------------------------------------
+-- LISTE QUI DÉFILE (toute la largeur) -----------------------------------------------------
 local content = new("ScrollingFrame", {
 	Name = "Content",
-	Size = UDim2.new(1, -(SIDE_W + GAP * 3), 1, -106),
-	Position = UDim2.fromOffset(SIDE_W + GAP * 2, 94),
+	Size = UDim2.new(1, -GAP * 2, 1, -106),
+	Position = UDim2.fromOffset(GAP, 94),
 	BackgroundTransparency = 1,
 	BorderSizePixel = 0,
 	ScrollBarThickness = 10,
@@ -56,7 +41,7 @@ local content = new("ScrollingFrame", {
 	new("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }),
 	new("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 24), PaddingRight = UDim.new(0, 16) }),
 })
-local CONTENT_W = W_SIZE.X - SIDE_W - GAP * 3 - 26
+local CONTENT_W = W_SIZE.X - GAP * 2 - 26
 
 local order = 0
 local function nextOrder(): number
@@ -123,10 +108,12 @@ local function grid(cell: Vector2): Frame
 	return g
 end
 
--- Illustration de carte avec un halo doux derrière (les rayons sont réservés à la vedette)
-local function art(card: Frame, image: string, size: number, y: number): ImageLabel
-	local holder = new("Frame", { Size = UDim2.fromOffset(size, size), Position = UDim2.new(0.5, -size / 2, 0, y), BackgroundTransparency = 1, ZIndex = 3, Parent = card })
-	UIKit.glow(holder, { color = Color3.new(1, 1, 1), size = size * 1.15, transparency = 0.45, z = 3 })
+-- Illustration de carte sur un soleil de rayons lent (comme toutes les cartes des jeux d'œufs) ;
+-- x absent = centrée. La carte s'éclaircit et grossit au survol.
+local function art(card: Frame, image: string, size: number, y: number, x: number?): ImageLabel
+	local pos = if x then UDim2.fromOffset(x, y) else UDim2.new(0.5, -size / 2, 0, y)
+	local holder = new("Frame", { Size = UDim2.fromOffset(size, size), Position = pos, BackgroundTransparency = 1, ZIndex = 3, Parent = card })
+	UIKit.sunburst(card, pos + UDim2.fromOffset(size / 2, size / 2), size * 2.3)
 	local icon = UIKit.icon(image, { Size = UDim2.fromScale(1, 1), ZIndex = 4, Parent = holder })
 	UIKit.float(icon, 3, 3, 2)
 	UIKit.hoverCard(card)
@@ -173,16 +160,19 @@ end
 
 -- 2. PASSES -------------------------------------------------------------------------------
 section("Passes", "Game Passes", Color3.fromRGB(120, 215, 255))
-local passGrid = grid(Vector2.new(250, 292))
+-- Cartes larges, deux par ligne : grosse icône à gauche, nom, effet, prix (Break and Steal an Egg)
+local PASS_W = math.floor((CONTENT_W - 12) / 2)
+local passGrid = grid(Vector2.new(PASS_W, 196))
 local PASS_COLORS = { "Blue", "Orange", "Purple", "Green", "Teal", "Gold" }
 type PassCard = { button: TextButton, text: TextLabel, grad: UIGradient }
 local passCards: { [string]: PassCard } = {}
 for i, pass in ipairs(Shop.Passes) do
 	local c = UIKit.card({ parent = passGrid, color = PASS_COLORS[(i - 1) % #PASS_COLORS + 1], order = i, name = pass.Key })
-	label(c, string.upper(pass.Name), 8, 10, 234, 34, 28)
-	art(c, pass.Art, 130, 46)
-	label(c, pass.Text, 12, 182, 226, 40, 18, Color3.fromRGB(255, 250, 225))
-	local b, t, g = robuxButton(c, pass.Id, true, pass.Price, UDim2.new(1, -24, 0, 52), UDim2.new(0, 12, 1, -64))
+	art(c, pass.Art, 156, 20, 12)
+	local right = PASS_W - 186
+	label(c, string.upper(pass.Name), 176, 12, right, 38, 30)
+	label(c, pass.Text, 176, 54, right, 64, 22, Color3.fromRGB(255, 250, 225))
+	local b, t, g = robuxButton(c, pass.Id, true, pass.Price, UDim2.fromOffset(right, 54), UDim2.new(0, 176, 1, -66))
 	passCards[pass.Key] = { button = b, text = t, grad = g }
 	if pass.Key == "VIP" then
 		UIKit.shinyStroke(c, UIKit.Rainbow, 5)
@@ -216,18 +206,30 @@ end
 
 -- 3. CASH -----------------------------------------------------------------------------------
 section("Cash", "Cash", Color3.fromRGB(150, 245, 80))
-local cashGrid = grid(Vector2.new(152, 236))
+-- Trois petits paquets, puis les deux plus gros en grand sur la ligne suivante
+local SMALL = math.floor((CONTENT_W - 24) / 3)
+local BIG = math.floor((CONTENT_W - 12) / 2)
+local cashSmall = grid(Vector2.new(SMALL, 236))
+local cashBig = grid(Vector2.new(BIG, 290))
+-- de l'air au-dessus : le ruban « BEST VALUE! » dépasse du haut de la carte
+local bigPadding = cashBig:FindFirstChildOfClass("UIPadding") :: UIPadding
+bigPadding.PaddingTop = UDim.new(0, 24)
 local cashAmounts: { TextLabel } = {}
+local nPacks = #Shop.MoneyPacks
 for i, pack in ipairs(Shop.MoneyPacks) do
-	local best = i == #Shop.MoneyPacks
-	local c = UIKit.card({ parent = cashGrid, color = if best then "Gold" else "Green", order = i, name = "Cash" .. i })
-	art(c, pack.Art, 112, 14)
-	cashAmounts[i] = label(c, "", 6, 128, 140, 36, 30, UIKit.Money)
-	robuxButton(c, pack.Id, false, pack.Price, UDim2.new(1, -16, 0, 48), UDim2.new(0, 8, 1, -58))
+	local best = i == nPacks
+	local big = i > nPacks - 2
+	local w = if big then BIG else SMALL
+	local c = UIKit.card({ parent = if big then cashBig else cashSmall, color = if best then "Gold" else "Green", order = i, name = "Cash" .. i })
+	local artSize = if big then 150 else 124
+	art(c, pack.Art, artSize, 10)
+	cashAmounts[i] = label(c, "", 6, artSize + 8, w - 12, 38, 32, UIKit.Money)
+	local _, _, grad = robuxButton(c, pack.Id, false, pack.Price, UDim2.new(1, -24, 0, 52), UDim2.new(0, 12, 1, -62))
 	if best then
-		-- le plus gros paquet est vraiment le plus avantageux ($ par Robux)
+		-- le plus gros paquet est vraiment le plus avantageux ($ par Robux) : prix arc-en-ciel
 		UIKit.shinyStroke(c, UIKit.GoldShine, 5)
 		UIKit.ribbon(c, "BEST VALUE!", "Red")
+		UIKit.rainbowButton(grad)
 	end
 	if pack.Id ~= 0 then
 		robuxCards[pack.Id] = c
@@ -236,28 +238,27 @@ end
 
 -- 4. BOOSTS -----------------------------------------------------------------------------------
 section("Boosts", "Boosts", Color3.fromRGB(255, 150, 210))
-local boostGrid = grid(Vector2.new(250, 272))
+local boostGrid = grid(Vector2.new(SMALL, 272))
 local BOOST_COLORS = { "Purple", "Green", "Teal" }
 local boostTimers: { [string]: TextLabel } = {}
 for i, potion in ipairs(Shop.Potions) do
 	local c = UIKit.card({ parent = boostGrid, color = BOOST_COLORS[i] or "Blue", order = i, name = potion.Key })
-	label(c, string.upper(potion.Name), 8, 10, 234, 34, 28)
+	label(c, string.upper(potion.Name), 8, 10, SMALL - 16, 34, 28)
 	art(c, potion.Art, 124, 46)
-	boostTimers[potion.Key] = label(c, "", 12, 172, 226, 30, 20, Color3.fromRGB(255, 245, 150))
+	boostTimers[potion.Key] = label(c, "", 12, 172, SMALL - 24, 30, 20, Color3.fromRGB(255, 245, 150))
 	robuxButton(c, potion.Id, false, potion.Price, UDim2.new(1, -24, 0, 52), UDim2.new(0, 12, 1, -64))
 	if potion.Id ~= 0 then
 		robuxCards[potion.Id] = c
 	end
 end
 
--- MENU : un bouton par catégorie, celui de la section visible s'éclaire --------------------------
+-- NAVIGATION : icônes flottantes à droite de la fenêtre, nom en couleur pour la section affichée ---
 local CATEGORIES = {
-	{ key = "Starter", text = "STARTER", art = F.Art, color = "Orange" },
-	{ key = "Passes", text = "PASSES", art = "PassVIP", color = "Blue" },
-	{ key = "Cash", text = "CASH", art = "Money3", color = "Green" },
-	{ key = "Boosts", text = "BOOSTS", art = "PotionLuck", color = "Purple" },
+	{ key = "Starter", text = "STARTER", art = F.Art, color = Color3.fromRGB(255, 214, 70) },
+	{ key = "Passes", text = "PASSES", art = "PassVIP", color = Color3.fromRGB(120, 215, 255) },
+	{ key = "Cash", text = "CASH", art = "Money3", color = Color3.fromRGB(150, 245, 80) },
+	{ key = "Boosts", text = "BOOSTS", art = "PotionLuck", color = Color3.fromRGB(255, 150, 210) },
 }
-local catButtons: { [string]: { button: TextButton, stroke: UIStroke } } = {}
 
 local function scrollTo(key: string, instant: boolean?)
 	local target = sections[key]
@@ -274,29 +275,9 @@ local function scrollTo(key: string, instant: boolean?)
 	end
 end
 
-for i, cat in ipairs(CATEGORIES) do
-	local colors = UIKit.Colors[cat.color]
-	local b = new("TextButton", {
-		Name = cat.key,
-		Size = UDim2.fromOffset(SIDE_W - 20, 64),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		AutoButtonColor = false,
-		Text = "",
-		LayoutOrder = i,
-		ZIndex = 3,
-		Parent = side,
-	}, { UIKit.corner(14), UIKit.gradient(colors[1], colors[2]) })
-	local stroke = UIKit.stroke(3.5)
-	stroke.Parent = b
-	UIKit.studs(b, 0.45, "Weld", 22)
-	UIKit.icon(cat.art, { Size = UDim2.fromOffset(58, 58), Position = UDim2.new(0, -4, 0.5, -30), ZIndex = 4, Parent = b })
-	label(b, cat.text, 54, 14, SIDE_W - 80, 36, 24, nil, Enum.TextXAlignment.Left)
-	UIKit.juice(b)
-	b.MouseButton1Click:Connect(function()
-		scrollTo(cat.key)
-	end)
-	catButtons[cat.key] = { button = b, stroke = stroke }
-end
+local nav = UIKit.sideNav(win, CATEGORIES, function(key)
+	scrollTo(key)
+end)
 
 -- La catégorie dont la section est en haut de la liste est mise en avant
 local function highlight()
@@ -307,13 +288,7 @@ local function highlight()
 			current = cat.key
 		end
 	end
-	current = current or "Starter"
-	for key, c in pairs(catButtons) do
-		local on = key == current
-		c.stroke.Thickness = if on then 5 else 3.5
-		c.stroke.Color = if on then Color3.fromRGB(255, 240, 150) else UIKit.Outline
-		c.button.Size = UDim2.fromOffset(if on then SIDE_W - 12 else SIDE_W - 20, 64)
-	end
+	nav.set(current or (if sections.Starter.Visible then "Starter" else "Passes"))
 end
 content:GetPropertyChangedSignal("CanvasPosition"):Connect(highlight)
 
@@ -328,7 +303,7 @@ local function refreshStarter()
 	local show = starterAvailable()
 	featured.Visible = show
 	sections.Starter.Visible = show
-	catButtons.Starter.button.Visible = show
+	nav.show("Starter", show)
 	local ring = (player:GetAttribute("Ring") or 1) :: number
 	starterCash.Text = "$" .. Format.Short(Config.MoneyPackAmount(F.PackBase, ring))
 end

@@ -1,6 +1,8 @@
 # Crack a Space Egg : les interfaces prévues
 
-Contenu de chaque écran, avant de passer à la création. Le style suit le kit tiré des jeux d'œufs (captures du 6 nov.) :
+Contenu de chaque écran, avant de passer à la création. Analyse détaillée des menus de Break and Steal an Egg (HUD, fenêtres, animations mesurées image par image, boutique, Index) : `docs/Analyse-menus-references.md`.
+
+Le style suit le kit tiré des jeux d'œufs (captures du 6 nov.) :
 - fenêtres à épais contour noir, bandeau de titre en dégradé avec reflets, fond sombre à picots ;
 - grosse croix rouge, boutons de prix verts avec l'icône Robux, bouton cadeau violet ;
 - cartes en dégradés vifs avec une illustration peinte, pastilles penchées.

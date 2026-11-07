@@ -697,23 +697,57 @@ function UIKit.burst(parent: GuiObject, at: UDim2?, color: Color3?)
 	Debris:AddItem(rays, 0.8)
 end
 
--- Carte qui grossit et s'illumine au survol de la souris
+-- Carte qui grossit et s'éclaircit au survol de la souris (voile blanc sur le fond, sous l'image
+-- et le texte, comme dans Break and Steal an Egg)
 -- (pas de rotation : elle désactiverait le rognage des rayons de la carte)
 function UIKit.hoverCard(card: GuiObject)
+	if card:FindFirstChild("HoverLight") then
+		return
+	end
 	local s = scaleOf(card)
 	local stroke = card:FindFirstChildOfClass("UIStroke")
 	local thickness = if stroke then stroke.Thickness else 0
+	local light = new("Frame", {
+		Name = "HoverLight",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = card.ZIndex + 1,
+		Parent = card,
+	}, { UIKit.corner() })
 	card.MouseEnter:Connect(function()
-		tween(s, 0.18, { Scale = 1.06 }, Enum.EasingStyle.Back)
+		tween(s, 0.18, { Scale = 1.05 }, Enum.EasingStyle.Back)
+		tween(light, 0.1, { BackgroundTransparency = 0.78 })
 		if stroke then
 			tween(stroke, 0.15, { Thickness = thickness + 2 })
 		end
 	end)
 	card.MouseLeave:Connect(function()
 		tween(s, 0.2, { Scale = 1 })
+		tween(light, 0.2, { BackgroundTransparency = 1 })
 		if stroke then
 			tween(stroke, 0.2, { Thickness = thickness })
 		end
+	end)
+end
+
+-- Soleil de rayons lent derrière l'illustration d'une carte (rogné par la carte)
+-- center : position du centre dans la carte
+function UIKit.sunburst(card: GuiObject, center: UDim2, size: number, color: Color3?): ImageLabel
+	local layer = UIKit.fxLayer(card)
+	-- le calque est décalé de 4 px dans la carte
+	local pos = center - UDim2.fromOffset(4, 4)
+	UIKit.glow(layer, { color = color or Color3.new(1, 1, 1), size = size * 0.75, transparency = 0.35, position = pos, z = layer.ZIndex, pulse = 0.05 })
+	return UIKit.rays(layer, { color = color or Color3.new(1, 1, 1), size = size, speed = 7, transparency = 0.42, position = pos, z = layer.ZIndex })
+end
+
+-- Bouton arc-en-ciel qui défile lentement (l'offre la plus grosse)
+function UIKit.rainbowButton(grad: UIGradient)
+	grad.Color = UIKit.Rainbow
+	grad.Rotation = 0
+	UIKit.every(grad, function(t)
+		grad.Offset = Vector2.new(math.sin(t * 0.8) * 0.25, 0)
 	end)
 end
 
@@ -800,6 +834,9 @@ export type Window = {
 	frame: Frame,
 	body: ScrollingFrame,
 	header: Frame,
+	holder: Frame, -- support à l'échelle de l'écran (on peut le décaler)
+	rig: Frame, -- ce qui s'anime à l'ouverture : la fenêtre et ce qu'on accroche autour (navigation)
+	onOpen: { () -> () }, -- lancés à chaque ouverture, après la mise en place (ex. icônes en cascade)
 	open: (prepare: (() -> ())?) -> (),
 	close: () -> (),
 	isOpen: () -> boolean,
@@ -836,11 +873,14 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		Parent = gui,
 	})
 	UIKit.autoScale(holder)
+	-- Le support porte l'échelle écran ; le « rig » porte l'animation (un seul UIScale par objet)
+	local rig = new("Frame", { Name = "Rig", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = holder })
+	local motion = new("UIScale", { Name = "Motion", Parent = rig })
 	local frame = new("Frame", {
 		Name = "Window",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = UIKit.Panel,
-		Parent = holder,
+		Parent = rig,
 	}, { UIKit.corner(18), UIKit.stroke(5) })
 	UIKit.studs(frame, 0.47, "Inlets", 30)
 	-- Fond vivant : poussières lumineuses qui montent
@@ -934,6 +974,7 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		}),
 	})
 	local opened = false
+	local onOpen: { () -> () } = {}
 	-- prepare : lancé une fois la mise en page faite, avant l'animation (ex. sauter à une section)
 	local function open(prepare: (() -> ())?)
 		if opened then
@@ -942,18 +983,22 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		opened = true
 		gui.Enabled = true
 		Sfx.Play("Open")
-		scaleOf(frame).Scale = 1
 		if prepare then
 			task.wait()
 			prepare()
 		end
 		dim.BackgroundTransparency = 1
-		tween(dim, 0.25, { BackgroundTransparency = 0.5 })
+		tween(dim, 0.2, { BackgroundTransparency = 0.6 })
 		UIKit.setBlur(true)
-		-- Arrivée en rebond depuis le bas (pas de rotation : elle désactiverait le rognage du défilement)
-		frame.Position = UDim2.fromOffset(0, 60)
-		tween(frame, 0.45, { Position = UDim2.new() }, Enum.EasingStyle.Back)
-		UIKit.popIn(frame)
+		-- Ouverture éclair, comme les jeux d'œufs : 90 % → 100 % en 0,15 s avec un petit rebond
+		-- (pas de rotation : elle désactiverait le rognage du défilement)
+		rig.Position = UDim2.fromOffset(0, 14)
+		motion.Scale = 0.9
+		tween(rig, 0.15, { Position = UDim2.new() }, Enum.EasingStyle.Back)
+		tween(motion, 0.15, { Scale = 1 }, Enum.EasingStyle.Back)
+		for _, fn in ipairs(onOpen) do
+			task.spawn(fn)
+		end
 	end
 	local function closeWindow()
 		if not opened then
@@ -961,11 +1006,14 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		end
 		opened = false
 		UIKit.setBlur(false)
-		tween(dim, 0.2, { BackgroundTransparency = 1 })
-		tween(frame, 0.18, { Position = UDim2.fromOffset(0, 40) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-		tween(scaleOf(frame), 0.18, { Scale = 0.6 }, Enum.EasingStyle.Back, Enum.EasingDirection.In).Completed:Connect(function()
+		tween(dim, 0.16, { BackgroundTransparency = 1 })
+		-- Fermeture : la fenêtre rétrécit en glissant un peu vers le bas, puis disparaît
+		tween(rig, 0.16, { Position = UDim2.fromOffset(0, 30) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		tween(motion, 0.16, { Scale = 0.72 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In).Completed:Connect(function()
 			if not opened then
 				gui.Enabled = false
+				rig.Position = UDim2.new()
+				motion.Scale = 1
 			end
 		end)
 	end
@@ -976,6 +1024,9 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		frame = frame,
 		body = body,
 		header = header,
+		holder = holder,
+		rig = rig,
+		onOpen = onOpen,
 		open = open,
 		close = closeWindow,
 		isOpen = function()
@@ -984,12 +1035,119 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 	}
 end
 
--- Titre de section « ~ Potions ~ » en couleur, épais contour
+export type NavItem = { key: string, text: string, art: string, color: Color3 }
+export type Nav = { frame: Frame, set: (key: string) -> (), show: (key: string, visible: boolean) -> () }
+
+-- Navigation par catégories accrochée à l'extérieur de la fenêtre, à droite (Break and Steal an Egg) :
+-- grandes icônes sans bouton derrière, nom dessous, nom en couleur pour la section affichée,
+-- arrivée en cascade à chaque ouverture. La fenêtre est décalée à gauche pour garder l'ensemble centré.
+function UIKit.sideNav(win: Window, items: { NavItem }, onClick: (key: string) -> ()): Nav
+	local W = 124
+	win.holder.Position = win.holder.Position - UDim2.fromOffset(W / 2, 0)
+	local nav = new("Frame", {
+		Name = "Nav",
+		Size = UDim2.new(0, W, 1, -96),
+		Position = UDim2.new(1, 6, 0, 96),
+		BackgroundTransparency = 1,
+		ZIndex = 5,
+		Parent = win.rig,
+	}, {
+		new("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }),
+	})
+	type Entry = { button: TextButton, icon: ImageLabel, label: TextLabel, color: Color3 }
+	local entries: { [string]: Entry } = {}
+	local order: { Entry } = {}
+	for i, item in ipairs(items) do
+		local b = new("TextButton", {
+			Name = item.key,
+			Size = UDim2.fromOffset(W, 112),
+			BackgroundTransparency = 1,
+			Text = "",
+			AutoButtonColor = false,
+			LayoutOrder = i,
+			ZIndex = 5,
+			Parent = nav,
+		})
+		-- l'icône flotte dans un support fixe, pour que la cascade et le flottement ne se gênent pas
+		local slot = new("Frame", { Size = UDim2.fromOffset(84, 84), Position = UDim2.new(0.5, -42, 0, 0), BackgroundTransparency = 1, ZIndex = 5, Parent = b })
+		local icon = UIKit.icon(item.art, { Size = UDim2.fromScale(1, 1), ZIndex = 6, Parent = slot })
+		UIKit.float(icon, 3, 4, 1.8, i * 1.3)
+		local label = UIKit.text({
+			Size = UDim2.new(1, 0, 0, 28),
+			Position = UDim2.fromOffset(0, 80),
+			Text = item.text,
+			ZIndex = 7,
+			Stroke = 3,
+			Parent = b,
+		})
+		new("UITextSizeConstraint", { MaxTextSize = 24, MinTextSize = 10, Parent = label })
+		local s = scaleOf(b)
+		b.MouseEnter:Connect(function()
+			tween(s, 0.15, { Scale = 1.12 }, Enum.EasingStyle.Back)
+		end)
+		b.MouseLeave:Connect(function()
+			tween(s, 0.15, { Scale = 1 })
+		end)
+		b.MouseButton1Down:Connect(function()
+			tween(s, 0.08, { Scale = 0.92 })
+		end)
+		b.MouseButton1Up:Connect(function()
+			tween(s, 0.25, { Scale = 1.12 }, Enum.EasingStyle.Back)
+		end)
+		b.MouseButton1Click:Connect(function()
+			Sfx.Play("Click")
+			onClick(item.key)
+		end)
+		local e = { button = b, icon = icon, label = label, color = item.color }
+		entries[item.key] = e
+		table.insert(order, e)
+	end
+	-- Cascade : les icônes apparaissent l'une après l'autre après la fenêtre
+	table.insert(win.onOpen, function()
+		local k = 0
+		for _, e in ipairs(order) do
+			if e.button.Visible then
+				local s = scaleOf(e.button)
+				s.Scale = 0
+				task.delay(0.08 + k * 0.07, function()
+					tween(s, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+				end)
+				k += 1
+			end
+		end
+	end)
+	local current: string? = nil
+	return {
+		frame = nav,
+		set = function(key: string)
+			if key == current then
+				return
+			end
+			current = key
+			for k, e in pairs(entries) do
+				local on = k == key
+				e.label.TextColor3 = if on then e.color else UIKit.Ink
+				e.icon.ImageTransparency = if on then 0 else 0.15
+				if on then
+					UIKit.bump(e.icon, 0.12)
+				end
+			end
+		end,
+		show = function(key: string, visible: boolean)
+			local e = entries[key]
+			if e then
+				e.button.Visible = visible
+			end
+		end,
+	}
+end
+
+-- Titre de section « -- Potions -- » en couleur, épais contour
 function UIKit.sectionTitle(parent: Instance, text: string, color: Color3, order: number): TextLabel
 	local t = UIKit.text({
 		Name = "Title_" .. text,
 		Size = UDim2.new(1, 0, 0, 48),
-		Text = "~ " .. text .. " ~",
+		Text = "-- " .. text .. " --",
 		LayoutOrder = order,
 		Stroke = 4,
 		Parent = parent,
