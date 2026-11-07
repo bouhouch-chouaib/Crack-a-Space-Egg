@@ -864,6 +864,34 @@ function Config.CreatureFor(ringIndex: number, rarity: number): any
 end
 
 -- Revenu d'une créature en $/s
+-- CRÉATURES : sac, vente, fusion (CreatureService, CreaturesUI.client) ------------------------
+-- (Config.Creatures est la liste des espèces par anneau ; ici, les règles)
+Config.PetRules = {
+	InventoryMax = 100, -- places dans le sac
+	-- Stades : 3 créatures identiques du même stade fusionnent en une du stade suivant
+	Stages = {
+		{ Name = "", Mult = 1, Scale = 1 },
+		{ Name = "Adult", Mult = 3.5, Scale = 1.25 },
+		{ Name = "Elder", Mult = 12, Scale = 1.5 },
+	},
+	SellSeconds = 300, -- prix de vente = revenu par seconde × 5 min
+	ConfirmFrom = 4, -- confirmation avant de vendre à partir d'Épique
+	StandRange = 26, -- studs : il faut être près du stand pour vendre ou fusionner
+}
+
+-- Nom affiché (« Elder Pyrolynx ») et revenu d'une créature, stade compris
+function Config.PetName(item): string
+	local st = Config.PetRules.Stages[item.stage or 1]
+	return if st and st.Name ~= "" then st.Name .. " " .. (item.name or "?") else (item.name or "?")
+end
+function Config.PetIncome(item): number
+	local st = Config.PetRules.Stages[item.stage or 1] or Config.PetRules.Stages[1]
+	return Config.CreatureIncome(item.ring, item.rarity, (item.size or 1)) * st.Mult
+end
+function Config.PetPrice(item): number
+	return math.floor((item.income or Config.PetIncome(item)) * Config.PetRules.SellSeconds)
+end
+
 function Config.CreatureIncome(ringIndex: number, rarity: number, size: number): number
 	local h = Config.Hatch
 	local r = h.RarityIncome[math.clamp(rarity, 1, #h.RarityIncome)]

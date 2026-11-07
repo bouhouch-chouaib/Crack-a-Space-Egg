@@ -464,9 +464,9 @@ local function bindShopPoint(point: BasePart)
 		if point.Name == "ShopPoint" then
 			Remotes.OpenShop:FireClient(p)
 		elseif point.Name == "SellPoint" then
-			notice(p, "The Trading Post opens soon!", "info")
+			Remotes.OpenCreatures:FireClient(p, "sell")
 		else
-			notice(p, "The Fusion Machine opens soon!", "info")
+			Remotes.OpenCreatures:FireClient(p, "fuse")
 		end
 	end)
 end

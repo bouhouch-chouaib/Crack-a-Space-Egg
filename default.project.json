@@ -29,6 +29,12 @@
         "JetState": {
           "$className": "RemoteEvent"
         },
+        "Creatures": {
+          "$className": "RemoteFunction"
+        },
+        "OpenCreatures": {
+          "$className": "RemoteEvent"
+        },
         "CrackAll": {
           "$className": "RemoteEvent"
         },

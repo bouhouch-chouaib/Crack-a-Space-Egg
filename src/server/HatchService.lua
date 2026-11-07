@@ -187,7 +187,8 @@ local function buildPet(player: Player, floor: BasePart, item): Model
 	if template then
 		local body = template:Clone()
 		body.Name = "Body"
-		local h = (H.PetHeight[item.rarity] or 3.5) * (item.size or 1)
+		local stage = Config.PetRules.Stages[item.stage or 1] or Config.PetRules.Stages[1]
+		local h = (H.PetHeight[item.rarity] or 3.5) * (item.size or 1) * stage.Scale
 		body:ScaleTo(body:GetScale() * h / ((body:GetAttribute("Height") or 1) :: number))
 		body:SetAttribute("Height", h)
 		-- Il regarde vers le centre de la base, un peu de travers
@@ -214,7 +215,7 @@ local function buildPet(player: Player, floor: BasePart, item): Model
 	m:SetAttribute("ItemId", item.id)
 	m:SetAttribute("Ring", item.ring)
 	m:SetAttribute("Rarity", item.rarity)
-	m:SetAttribute("Creature", item.name)
+	m:SetAttribute("Creature", Config.PetName(item))
 	m:SetAttribute("Size", item.size)
 	m:SetAttribute("Income", item.income)
 	CollectionService:AddTag(m, "Creature")
@@ -237,6 +238,67 @@ local function build(player: Player, item)
 	if m then
 		models[player][item.id] = m
 	end
+end
+
+-- Sortir une créature de la base (rangée dans le sac, vendue ou fusionnée) : renvoie la créature
+function HatchService.TakePet(player: Player, id: string): any?
+	local d = DataService.Get(player)
+	if not d then
+		return nil
+	end
+	for i, item in ipairs(d.base) do
+		if item.id == id and item.kind == "pet" then
+			table.remove(d.base, i)
+			local m = models[player] and models[player][id]
+			if m then
+				m:Destroy()
+				models[player][id] = nil
+			end
+			syncBase(player)
+			return item
+		end
+	end
+	return nil
+end
+
+-- Poser une créature dans la base, à la première place libre (en partant de l'entrée)
+function HatchService.PlacePet(player: Player, item): boolean
+	local d = DataService.Get(player)
+	local base = Bases.Get(player)
+	local floor = base and floorOf(base)
+	if not d or not base or not floor then
+		return false
+	end
+	if #d.base >= BoostService.BaseSlots(player) then
+		return false
+	end
+	local hx, hz = floor.Size.X / 2, floor.Size.Z / 2
+	local best
+	for z = hz, -hz, -1.5 do
+		for x = 0, hx, 1.5 do
+			for _, sx in ipairs(if x == 0 then { 0 } else { x, -x }) do
+				if HatchService.CanPlace(base, d, sx, z, item.rarity) then
+					best = Vector2.new(sx, z)
+					break
+				end
+			end
+			if best then
+				break
+			end
+		end
+		if best then
+			break
+		end
+	end
+	if not best then
+		return false
+	end
+	item.kind = "pet"
+	item.x, item.z = best.X, best.Y
+	table.insert(d.base, item)
+	build(player, item)
+	syncBase(player)
+	return true
 end
 
 local function clear(player: Player)
@@ -582,7 +644,7 @@ function HatchService.Start()
 		end
 		for _, item in ipairs(d.base) do
 			if item.kind == "pet" then
-				item.income = Config.CreatureIncome(item.ring, item.rarity, item.size or 1)
+				item.income = Config.PetIncome(item)
 			end
 			build(player, item)
 		end

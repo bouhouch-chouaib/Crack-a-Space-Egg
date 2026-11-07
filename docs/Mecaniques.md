@@ -103,7 +103,10 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 - ✅ **Pouvoirs** : des bonus passifs (forage, chance, soute, combinaison) et des pouvoirs actifs avec temps de recharge (bouclier, silence, aimant à œufs…). 💡 Les communes à épiques n'ont qu'un passif ; les légendaires et au-dessus ont aussi un pouvoir actif.
 - ✅ **Évolution par fusion** : 3 créatures identiques donnent le stade suivant. 💡 Il y a 3 stades (bébé, adulte, ancien), et la taille du résultat est la moyenne des trois.
 - ✅ Volume d'art : Alex part de squelettes communs (quadrupède, volant, serpent…), génère les modèles avec l'IA puis les retouche. **Les 42 doivent être prêts pour la sortie.**
-- 💡 L'inventaire contient 100 créatures au maximum, et un verrou protège les favorites.
+- ✅ **Sac** (7 nov.) : 100 places. On range une créature de la base dans le sac, ou on la renvoie dans la base, où elle se pose seule à la première place libre. Un cadenas protège les favorites : on ne peut ni les vendre ni les fusionner. Bouton **PETS** du menu (`CreatureService`, `CreaturesUI.client`, règles dans `Config.PetRules`).
+- ✅ **Trading Post** (stand SELL) : on vend la sélection, ou « Sell duplicates », qui garde le meilleur exemplaire de chaque espèce et stade. Le prix vaut 5 min du revenu de la créature. Une confirmation est demandée pour les Épiques et au-delà, et pour les stades évolués. Il faut être près du stand.
+- ✅ **Fusion** (machine à fusion) : 3 créatures identiques (même espèce, même stade) donnent le stade suivant : bébé → **Adult** (revenu ×3,5, taille ×1,25) → **Elder** (×12, ×1,5). Leur taille est la moyenne des trois. « Auto-fill » choisit le groupe le plus précieux, en sacrifiant les moins rentables. Le résultat retourne dans la base si l'une des trois y était.
+- Pas encore fait : équiper 3 créatures qui suivent le joueur, et leurs pouvoirs.
 
 ## 10. Objets spéciaux et reliques
 
