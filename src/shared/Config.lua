@@ -260,7 +260,7 @@ end
 -- Prix en $ calés sur les revenus des créatures : chaque foreuse vaut à peu près le déblocage d'un demi-anneau
 Config.Drills = {
 	drill("Starter Drill", 5, 0, 0, Color3.fromRGB(170, 176, 190)),
-	drill("Rusty Drill", 14, 5000, 25, Color3.fromRGB(196, 120, 70)),
+	drill("Rusty Drill", 14, 2000, 25, Color3.fromRGB(196, 120, 70)), -- 2K (retour de test du 7 nov. : 5K trop cher)
 	drill("Steel Drill", 40, 65000, 49, Color3.fromRGB(150, 170, 200)),
 	drill("Turbo Drill", 110, 850000, 79, Color3.fromRGB(80, 170, 255)),
 	drill("Laser Drill", 320, 1.1e7, 129, Color3.fromRGB(90, 230, 120)),
@@ -804,6 +804,9 @@ end
 Config.IndexReward = {
 	Luck = 0.1, -- +10 % de chance par anneau complété (cumulable)
 	Money = 2500, -- × revenu de base de l'anneau (Config.Hatch.RingIncome) : 12,5 K$ (anneau 1) à 25 000 Md$ (anneau 7)
+	-- chaque NOUVELLE espèce (HatchService) : NewSeconds secondes de ses revenus, au moins NewMin $
+	NewSeconds = 60,
+	NewMin = 250,
 }
 
 -- BOUTIQUE (docs/Interfaces.md §9) ---------------------------------------------
@@ -1139,22 +1142,23 @@ end
 -- GUIDE DE LA PREMIÈRE MINUTE (Guide.client) ------------------------------------------
 -- Fait pour qu'un enfant suive sans lire : bulles de 3 à 5 mots, grosses icônes, flèche au sol,
 -- main qui montre le geste, petite fête à chaque réussite. Il accompagne le joueur pendant toute la
--- première boucle (et ses détours) jusqu'à l'anneau 2. Étapes enregistrées (d.guide) :
+-- première boucle (et ses détours). Pas d'étape « va à l'anneau 2 » : le joueur ira de lui-même.
+-- Étapes enregistrées (d.guide) :
 --   0 voler jusqu'à une roche et forer   1 rapporter l'œuf à la machine   2 poser l'œuf
 --   3 faire éclore (et aller chercher un 2e œuf pendant l'incubation)   4 « ta créature rapporte des $ »
---   5 avoir Pets créatures   6 acheter la foreuse n° Drill   7 acheter sa soufflerie
---   8 jetpack au niveau JetLevel (de quoi atteindre l'anneau 2)   9 sortir un œuf de l'anneau Ring
---   10 (= Steps) terminé
+--   5 avoir Pets créatures   6 acheter sa soufflerie   7 jetpack au niveau JetLevel
+--   8 acheter la foreuse n° Drill   9 acheter un niveau de Scanner (la chance)   10 (= Steps) terminé
+-- (ordre et niveaux revus après un test du 7 nov. : soufflerie avant la foreuse, niveau 3 suffit)
 Config.Guide = {
 	Steps = 10,
 	Pets = 3,
 	Drill = 2,
-	JetLevel = Config.Jetpack.Tiers[2].Level,
-	Ring = 2,
+	JetLevel = 3,
 	Arrow = "rbxassetid://111578532993258", -- chevrons blancs à contour sombre (poutre au sol)
 	MachineNear = 14, -- studs : assez près de la machine pour appuyer sur E
 	PetCheer = 5, -- secondes de « ta créature rapporte des $ »
 }
+
 
 -- Téléphones et tablettes (Mobile.client) : part des particules gardée en mode allégé
 Config.Mobile = {

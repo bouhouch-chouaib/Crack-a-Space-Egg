@@ -5,7 +5,7 @@
 -- Il suit l'état réel du joueur, pas un script figé : s'il tombe, perd son œuf ou part ailleurs, la
 -- bulle s'adapte (« Fly to a rock! », « Bring it home! »...). Il l'accompagne pendant toute la première
 -- boucle et ses détours : premier œuf, machine, pose, deuxième œuf pendant l'incubation, éclosion,
--- 3 créatures, meilleure foreuse, soufflerie, entraînement du jetpack, puis l'anneau 2.
+-- 3 créatures, soufflerie, entraînement du jetpack (niveau 3), meilleure foreuse, puis la chance (Scanner).
 -- Étape atteinte : attribut GuideStep (sauvegardé par le serveur via Remotes.Guide).
 -- Publie l'attribut local Guide (texte en cours) : l'aide du bas (Hud) se cache pendant le guide.
 
@@ -403,6 +403,12 @@ local function myPets(): number
 	return n
 end
 
+-- Ship.Shop est un dossier : on vise le kiosque (sinon le point de l'invite)
+local function shopKiosk(): Instance?
+	local folder = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Shop")
+	return folder and (folder:FindFirstChild("ShopKiosk") or folder:FindFirstChild("ShopPoint"))
+end
+
 local function attr(name: string): number
 	local v = player:GetAttribute(name)
 	return if type(v) == "number" then v else 0
@@ -477,20 +483,20 @@ local function decide(step: number): Hint?
 		advance(6)
 		step = 6
 	end
-	if step == 6 and attr("Drill") >= G.Drill then
+	local tunnel = myTunnel()
+	if step == 6 and tunnel and tunnel:GetAttribute("OwnerId") == player.UserId and (tunnel:GetAttribute("Tier") or 0) >= 1 then
 		advance(7)
 		step = 7
 	end
-	local tunnel = myTunnel()
-	if step == 7 and tunnel and tunnel:GetAttribute("OwnerId") == player.UserId and (tunnel:GetAttribute("Tier") or 0) >= 1 then
+	if step == 7 and attr("JetLevel") >= G.JetLevel then
 		advance(8)
 		step = 8
 	end
-	if step == 8 and attr("JetLevel") >= G.JetLevel then
+	if step == 8 and attr("Drill") >= G.Drill then
 		advance(9)
 		step = 9
 	end
-	if step == 9 and attr("Ring") >= G.Ring then
+	if step == 9 and attr("Lvl_Scanner") >= 1 then
 		advance(G.Steps)
 		step = G.Steps
 	end
@@ -534,28 +540,30 @@ local function decide(step: number): Hint?
 	elseif step == 5 then
 		return goRock(nil, ("Get %d pets!  %d/%d"):format(G.Pets, pets, G.Pets))
 	elseif step == 6 then
-		local cost = Config.Drills[G.Drill].Cost
-		if attr("Credits") >= cost then
-			-- Ship.Shop est un dossier : on vise le kiosque (sinon le point de l'invite)
-			local folder = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Shop")
-			local shop = folder and (folder:FindFirstChild("ShopKiosk") or folder:FindFirstChild("ShopPoint"))
-			return { icon = "Lightning", text = "Buy a new drill!", sub = "It drills much faster", target = shop }
-		end
-		return goRock(nil, ("Save $%s for a new drill  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
-	elseif step == 7 then
 		local cost = Config.Jetpack.Tunnels[1].Cost
 		if attr("Credits") >= cost then
 			return { icon = "WindTunnel", text = "Buy your wind tunnel!", sub = "It makes your jetpack stronger", target = tunnel }
 		end
 		return goRock(nil, ("Save $%s for a wind tunnel  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
-	elseif step == 8 then
+	elseif step == 7 then
 		local level = ("Jetpack level %d/%d"):format(attr("JetLevel"), G.JetLevel)
 		if player:GetAttribute("InTunnel") then
 			return { icon = "WindTunnel", text = "Train in the wind!", sub = level }
 		end
 		return { icon = "WindTunnel", text = "Stand in the wind!", sub = level, target = tunnel }
+	elseif step == 8 then
+		local cost = Config.Drills[G.Drill].Cost
+		if attr("Credits") >= cost then
+			return { icon = "Lightning", text = "Buy a new drill!", sub = "It drills much faster", target = shopKiosk() }
+		end
+		return goRock(nil, ("Save $%s for a new drill  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
 	elseif step == 9 then
-		return goRock(G.Ring, "Rarer eggs out there!")
+		-- la chance : le Scanner (atelier des foreuses, onglet UPGRADES) donne des œufs plus rares
+		local cost = Config.UpgradeCost("Scanner", attr("Lvl_Scanner"))
+		if attr("Credits") >= cost then
+			return { icon = "Sparkles", text = "Boost your luck!", sub = "Shop > UPGRADES > Scanner: rarer eggs!", target = shopKiosk() }
+		end
+		return goRock(nil, ("Save $%s for more luck  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
 	end
 	return nil
 end

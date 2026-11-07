@@ -208,6 +208,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 ## 15. Progression à long terme
 
 - ✅ **Index** des créatures : compléter un anneau donne un bonus de chance permanent.
+- ✅ (7 nov.) Chaque nouvelle créature découverte rapporte une petite récompense : l'équivalent d'1 min de ses revenus, au moins 250 $ (`Config.IndexReward.NewSeconds`), avec le message « New in your Index: … +$… » juste après sa sortie de l'œuf.
 - ✅ **Supernova** (rebirth), **dès la sortie** : tout repart à zéro sauf l'index, les créatures et les reliques, avec +50 % de $ pour toujours.
 
 ## 16. Fidélisation (tout est prévu dès la sortie)
@@ -218,8 +219,8 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
   - Chaîne de grosses flèches vertes posées au sol tous les 5 studs, du joueur jusqu'au but, avec une vague de lumière qui file vers le but ; flèche au sol (chevrons qui filent vers le but), flèche qui rebondit au-dessus du but, contour vert qui le fait briller même derrière un mur, grosse flèche au bord de l'écran quand le but est hors champ.
   - Main qui montre le geste : clic maintenu sur la roche (ordinateur), appui sur le bouton DRILL (téléphone).
   - Fête à chaque étape (« Great! », étincelles, son), « You did it! » à la fin.
-  - Étapes enregistrées (`d.guide`) : forer un œuf → le rapporter à la machine → poser l'œuf → pendant qu'il couve, aller chercher le suivant → faire éclore → « ta créature rapporte des $ » → 3 créatures → acheter la Rusty Drill → acheter sa soufflerie → jetpack niveau 10 → un œuf de l'anneau 2.
-  - Il suit l'état réel : s'il tombe, perd son œuf, porte un œuf ou en a un prêt, la bulle le ramène à ce qu'il faut faire (« Bring it home! », « Press F to hatch! »...), même pendant les objectifs suivants. Pas assez d'argent : « Save $5K for a new drill » avec la somme actuelle, et la flèche vers les roches.
+  - Étapes enregistrées (`d.guide`) : forer un œuf → le rapporter à la machine → poser l'œuf → pendant qu'il couve, aller chercher le suivant → faire éclore → « ta créature rapporte des $ » → 3 créatures → acheter sa soufflerie (1K) → jetpack niveau 3 → acheter la Rusty Drill (2K) → acheter un niveau de Scanner (la chance). Pas d'étape « va à l'anneau 2 » : le joueur y va de lui-même (ordre et niveaux revus après un test du 7 nov.).
+  - Il suit l'état réel : s'il tombe, perd son œuf, porte un œuf ou en a un prêt, la bulle le ramène à ce qu'il faut faire (« Bring it home! », « Press F to hatch! »...), même pendant les objectifs suivants. Pas assez d'argent : « Save $2K for a new drill » avec la somme actuelle, et la flèche vers les roches.
   - Les anciens joueurs qui ont déjà des créatures ne le voient pas.
 - ✅ Une récompense de connexion quotidienne, sur 7 jours qui reprennent au début.
 - ✅ 3 quêtes du jour.

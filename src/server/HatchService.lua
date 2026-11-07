@@ -20,6 +20,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local Bases = require(script.Parent.Bases)
@@ -450,6 +451,8 @@ function HatchService.Hatch(player: Player, id: string)
 	item.income = Config.CreatureIncome(item.ring, item.rarity, item.size)
 	item.hatchAt = nil
 	local key = item.ring .. ":" .. item.rarity
+	-- nouvelle espèce dans l'Index : petite récompense en $ (donnée quand elle sort de l'œuf)
+	local newSpecies = (d.index[key] or 0) == 0
 	d.index[key] = (d.index[key] or 0) + 1
 	d.seen = d.seen or {}
 	d.seen[key] = true -- l'Index la montre (plus de silhouette)
@@ -480,6 +483,19 @@ function HatchService.Hatch(player: Player, id: string)
 			Remotes.Hatched:FireAllClients(player, pos, item.ring, item.rarity, item.name, item.income, item.size)
 			if item.rarity >= Config.AnnounceFrom then
 				Remotes.Announcement:FireAllClients(player.DisplayName, item.name, item.rarity)
+			end
+			if newSpecies then
+				-- laisse le temps de voir la créature sortir avant le message
+				task.delay(1.5, function()
+					local dd = DataService.Get(player)
+					if not dd or not player.Parent then
+						return
+					end
+					local reward = math.max(Config.IndexReward.NewMin, math.floor(item.income * Config.IndexReward.NewSeconds))
+					dd.credits += reward
+					GameService.Sync(player)
+					GameService.Notice(player, ("{Star} New in your Index: %s! +$%s"):format(item.name, Format.Short(reward)), "good")
+				end)
 			end
 		end
 	end)
