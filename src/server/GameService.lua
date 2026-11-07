@@ -479,15 +479,17 @@ local function bindBase(base: Model)
 	end)
 end
 
--- Points de service du pont : la boutique ouvre les améliorations ;
--- la vente et la fusion arrivent avec les créatures (semaine 2)
+-- Points de service du pont (stands de Ship.Shops, tools/build-shops.lua) : STORE ouvre la boutique
+-- Robux, ITEMS l'atelier des foreuses, SELL la vente des créatures, la machine la fusion
 local function bindShopPoint(point: BasePart)
 	local pp = point:FindFirstChildOfClass("ProximityPrompt")
 	if not pp then
 		return
 	end
 	pp.Triggered:Connect(function(p)
-		if point.Name == "ShopPoint" then
+		if point.Name == "StorePoint" then
+			Remotes.OpenShop:FireClient(p, "Store")
+		elseif point.Name == "ShopPoint" then
 			Remotes.OpenShop:FireClient(p)
 		elseif point.Name == "SellPoint" then
 			Remotes.OpenCreatures:FireClient(p, "sell")

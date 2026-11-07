@@ -18,7 +18,7 @@ Légende : ✅ décidé · 💡 détail proposé, à ajuster en jeu · ❓ reste
 | Lieu | Détail |
 | --- | --- |
 | Planète | ✅ Décor géant de 1 200 studs de rayon, centre de rotation des anneaux |
-| Vaisseau-base | ✅ 240 × 140, fixe au-dessus du bord de la planète, protégé par une bulle de pression. On y apparaît, et on y trouve la boutique et le classement |
+| Vaisseau-base | ✅ 240 × 140, fixe au-dessus du bord de la planète, protégé par une bulle de pression. On y apparaît, et on y trouve les boutiques et le classement. Le 8 nov., les deux coins à côté du quai sont comblés par un quart de disque à rambarde arrondie (`tools/build-shops.lua`) : à gauche, trois stands en arc tournés vers le coin, **STORE** (Robux, vert), **ITEMS** (foreuses, skins, scanner, bleu) et **SELL** (vente, doré), chacun avec comptoir, auvent rayé, enseigne, icône holographique et un vendeur astronaute (personnage Roblox de base à tête jaune, combinaison blanche aux couleurs du stand, qui respire et fait coucou : `ShipShops.client`) ; à droite, les trois tableaux de classement en arc. Le passage central vers le quai est dégagé. La vente (créatures, et plus tard géodes à pierres précieuses) reste à faire |
 | 8 bases joueurs | ✅ 36 × 28 chacune, sur le pourtour du vaisseau. **Une base est toujours sûre** : sa bulle repousse les monstres |
 | Quai de départ | ✅ La sortie de chaque base vers le couloir |
 | Couloir de sécurité | ✅ 90 de large, balisé de bouées lumineuses ; la combinaison y est protégée. Environ **2 500 studs** de long pour 7 anneaux |

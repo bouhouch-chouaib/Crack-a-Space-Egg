@@ -103,7 +103,8 @@ end
 
 -- Repère -> texte de l'invite (action, objet)
 local SERVICES = {
-	ShopPoint = { "Shop", "Space Shop" },
+	StorePoint = { "Shop", "Robux Store" },
+	ShopPoint = { "Shop", "Item Shop" },
 	SellPoint = { "Sell", "Trading Post" },
 	FusionPoint = { "Fuse", "Fusion Machine" },
 }

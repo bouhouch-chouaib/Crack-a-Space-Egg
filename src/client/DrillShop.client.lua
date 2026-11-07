@@ -555,7 +555,12 @@ local function open(tab: string?)
 	end)
 end
 
-Remotes.OpenShop.OnClientEvent:Connect(function()
+Remotes.OpenShop.OnClientEvent:Connect(function(which: string?)
+	-- stand STORE du vaisseau : c'est la boutique Robux (Store.client) qui s'ouvre
+	if which == "Store" then
+		UIKit.Open:Fire("Store")
+		return
+	end
 	if not win.isOpen() then
 		open()
 	end
