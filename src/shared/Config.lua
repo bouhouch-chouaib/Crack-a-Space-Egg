@@ -38,7 +38,7 @@ Config.Map = {
 	RingGap = 55, -- vide entre les anneaux 1 et 2 (bord à bord) : chaque biome bien séparé
 	RingGrowth = 1.22, -- épaisseur et vide grandissent de 22 % à chaque anneau
 	RelaySize = 30, -- relais de pression, au milieu des vides assez larges entre deux anneaux
-	RelayMinGap = 30, -- pas de relais dans un vide plus étroit
+	RelayMinGap = math.huge, -- relais retirés (7 nov.) : c'est le carburant du jetpack qui décide quels vides on traverse
 	BuoySpacing = 60,
 	-- Champ de décor : roches du biome de chaque côté du tapis, sur toute l'épaisseur et la hauteur
 	DecorArc = 750, -- studs d'arc couverts de chaque côté du couloir (au-delà, la brume cache tout)
@@ -74,7 +74,7 @@ Config.Monsters = {
 	NoEgg = 5,
 	Emerge = 1.4, -- secondes où il sort (on a le temps de fuir)
 	CatchRadius = 6, -- en plus de son rayon
-	MinSpeed = 28, -- studs/s au minimum (sinon vitesse en vol du joueur × Speed)
+	MinSpeed = 18, -- studs/s au minimum (sinon vitesse en vol du joueur × Speed)
 	Cooldown = 12, -- secondes de répit après une poursuite
 	RingMargin = 30, -- studs autour de l'épaisseur de l'anneau où il règne
 }
@@ -100,9 +100,11 @@ Config.Cold = {
 -- les souffleries du vaisseau (l'équivalent des tapis de course) et en volant pendant les missions.
 Config.Movement = {
 	Walk = 16, -- vitesse au sol au niveau 1 (studs/s)
-	Air = 30, -- vitesse horizontale en vol au niveau 1
+	PerLevel = 0.005, -- +0,5 % de vitesse au sol par niveau de jetpack
+	Air = 20, -- vitesse horizontale en vol au niveau 1
+	AirPerLevel = 0.15, -- + studs/s en vol par niveau (42 au niveau 150)
 	Climb = 32, -- vitesse de montée maximale quand on pousse
-	PerLevel = 0.03, -- +3 % de vitesse par niveau de jetpack
+	Gravity = 70, -- = Workspace.Gravity (sert au calcul de la portée d'un vol)
 	AirAccel = 5, -- réactivité en vol (plus haut = virages plus secs)
 	ClimbAccel = 90, -- accélération verticale de la poussée (studs/s²)
 	FallBrake = 0.35, -- en vol plané (Saut relâché), la chute est freinée de ce facteur
@@ -292,9 +294,11 @@ Config.DrillSlack = 12 -- marge de portée côté serveur (latence + défilement
 -- s'il tombe quand même dans le Vide, il est ramené au bout du quai SANS perdre ses œufs
 Config.RescueTime = 6
 
--- Jetpack (côté client) : carburant en secondes de poussée, rechargé au sol
-Config.JetpackFuelBase = 2 -- secondes de poussée au niveau 1 (de quoi rejoindre l'anneau 1)
-Config.JetpackFuelPerLevel = 0.05 -- secondes de plus par niveau de jetpack
+-- Jetpack (côté client) : carburant en secondes de poussée, rechargé au sol. Le vol plané en
+-- consomme aussi, moins vite (GlideCost × la poussée). Le carburant de chaque niveau est calculé
+-- pour atteindre la PORTÉE voulue (Config.Jetpack.Tiers) : au départ on ne dépasse pas l'anneau 1 ;
+-- chaque palier de jetpack permet de franchir le vide jusqu'à l'anneau suivant. Tomber = mourir.
+Config.JetpackGlideCost = 0.5
 
 -- NIVEAU DU JETPACK -------------------------------------------------------------------
 -- On gagne de l'XP de jetpack en restant dans une soufflerie (même AFK) et en volant en mission.
@@ -304,6 +308,22 @@ Config.Jetpack = {
 	XPGrowth = 1.12,
 	MaxLevel = 150,
 	FlightXP = 1, -- XP par seconde de vol réel (poussée ou plané, hors soufflerie)
+	-- Paliers de jetpack : un modèle de plus en plus impressionnant (Assets.Jetpacks.<Model>) et une
+	-- jauge de carburant de plus en plus stylée (Hud). Reach = portée d'un vol à ce niveau (studs, d'un
+	-- bord à l'autre, en poussant tout le carburant) ; entre deux paliers elle monte petit à petit.
+	-- Le vide entre l'anneau k-1 et l'anneau k fait 55 × 1,22^(k-2) studs : le palier k le franchit
+	-- avec 15 % de marge (le palier 1 ne quitte pas l'anneau 1).
+	Tiers = {
+		{ Level = 1, Name = "Rusty Starter", Model = "Jet1", Reach = 44, Color = Color3.fromRGB(205, 130, 80) },
+		{ Level = 10, Name = "Scout Booster", Model = "Jet2", Reach = 63, Color = Color3.fromRGB(90, 190, 255) },
+		{ Level = 25, Name = "Comet Pack", Model = "Jet3", Reach = 77, Color = Color3.fromRGB(150, 235, 255) },
+		{ Level = 45, Name = "Blaze Thruster", Model = "Jet4", Reach = 94, Color = Color3.fromRGB(255, 120, 40) },
+		{ Level = 65, Name = "Nebula Wings", Model = "Jet5", Reach = 115, Color = Color3.fromRGB(190, 100, 255) },
+		{ Level = 90, Name = "Rift Striker", Model = "Jet6", Reach = 140, Color = Color3.fromRGB(60, 240, 230) },
+		{ Level = 115, Name = "Nova Titan", Model = "Jet7", Reach = 171, Color = Color3.fromRGB(255, 200, 60) },
+		{ Level = 140, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
+	},
+	MaxReach = 215, -- portée au niveau 150
 	-- Soufflerie personnelle : chaque joueur a la sienne devant sa base. On l'achète (Breeze Tunnel),
 	-- puis on l'améliore palier par palier ; XP gagnée par seconde dans le courant d'air, même AFK.
 	-- Prix calés sur les revenus (entre les prix des anneaux).
@@ -370,7 +390,51 @@ function Config.GroundSpeed(level: number): number
 	return Config.Movement.Walk * Config.Speed(level)
 end
 function Config.AirSpeed(level: number): number
-	return Config.Movement.Air * Config.Speed(level)
+	return Config.Movement.Air + Config.Movement.AirPerLevel * math.max(0, (level or 1) - 1)
+end
+
+-- Palier de jetpack d'un niveau (index dans Config.Jetpack.Tiers, et le palier)
+function Config.JetpackTier(level: number)
+	local tiers = Config.Jetpack.Tiers
+	local index = 1
+	for i, t in ipairs(tiers) do
+		if (level or 1) >= t.Level then
+			index = i
+		end
+	end
+	return index, tiers[index]
+end
+
+-- Portée d'un vol à ce niveau : elle monte en ligne droite d'un palier à l'autre
+function Config.JetpackReach(level: number): number
+	local tiers = Config.Jetpack.Tiers
+	local i, t = Config.JetpackTier(level)
+	local nextLevel = if tiers[i + 1] then tiers[i + 1].Level else Config.Jetpack.MaxLevel
+	local nextReach = if tiers[i + 1] then tiers[i + 1].Reach else Config.Jetpack.MaxReach
+	local k = math.clamp(((level or 1) - t.Level) / math.max(1, nextLevel - t.Level), 0, 1)
+	return t.Reach + (nextReach - t.Reach) * k
+end
+
+-- Carburant (secondes de poussée) qui donne cette portée : on monte à Climb studs/s pendant F s
+-- en avançant à la vitesse de vol, puis on retombe à la hauteur de départ. Temps en l'air :
+-- T(F) = F + c/g + sqrt(2(cF + c²/2g)/g) ; on cherche F tel que vitesse × T(F) = portée.
+function Config.JetpackFuel(level: number): number
+	local mv = Config.Movement
+	local c, g = mv.Climb, mv.Gravity
+	local want = Config.JetpackReach(level) / Config.AirSpeed(level)
+	local function airtime(f: number): number
+		return f + c / g + math.sqrt(2 * (c * f + c * c / (2 * g)) / g)
+	end
+	local lo, hi = 0, 20
+	for _ = 1, 30 do
+		local mid = (lo + hi) / 2
+		if airtime(mid) < want then
+			lo = mid
+		else
+			hi = mid
+		end
+	end
+	return math.max(0.3, (lo + hi) / 2)
 end
 
 function Config.Luck(level: number): number

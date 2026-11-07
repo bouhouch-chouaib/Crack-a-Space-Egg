@@ -253,10 +253,146 @@ task.spawn(function()
 end)
 
 -- JAUGES (bord droit) ---------------------------------------------------------
-local gauges = group("Gauges", Vector2.new(1, 0.5), UDim2.new(1, -18, 0.5, 0), UDim2.fromOffset(160, 200))
-new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, Padding = UDim.new(0, 8), Parent = gauges })
+local gauges = group("Gauges", Vector2.new(1, 0.5), UDim2.new(1, -18, 0.5, 0), UDim2.fromOffset(200, 300))
+new("UIListLayout", {
+	FillDirection = Enum.FillDirection.Horizontal,
+	HorizontalAlignment = Enum.HorizontalAlignment.Right,
+	VerticalAlignment = Enum.VerticalAlignment.Center,
+	SortOrder = Enum.SortOrder.LayoutOrder,
+	Padding = UDim.new(0, 8),
+	Parent = gauges,
+})
 local noiseGauge, noiseFill = UIKit.gauge({ name = "Noise", art = "Noise", color = "Purple", parent = gauges })
-local _, fuelFill = UIKit.gauge({ name = "Jetpack", art = "Jetpack", color = "Orange", parent = gauges })
+
+-- JAUGE DU JETPACK : elle grandit et devient plus stylée à chaque palier (Config.Jetpack.Tiers) :
+-- couleur du palier, contour coloré (palier 2), halo qui pulse (3), reflet qui balaie (4),
+-- étincelles (5), rayons qui tournent (6), contour brillant (7), contour arc-en-ciel (8).
+-- Elle clignote en rouge quand le carburant passe sous 25 %.
+local ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII" }
+local jetHolder = new("Frame", { Name = "Jetpack", BackgroundTransparency = 1, LayoutOrder = 2, Size = UDim2.fromOffset(70, 212), Parent = gauges })
+local fuelFill: Frame = new("Frame")
+local lowFlash: Frame = new("Frame")
+local function buildJetGauge(tier: number)
+	for _, c in ipairs(jetHolder:GetChildren()) do
+		c:Destroy()
+	end
+	local tiers = Config.Jetpack.Tiers
+	local t = tiers[tier] or tiers[1]
+	local k = (tier - 1) / math.max(1, #tiers - 1) -- 0 au palier 1, 1 au dernier
+	local w, h = math.floor(26 + 14 * k), math.floor(150 + 80 * k)
+	local W = w + 46
+	jetHolder.Size = UDim2.fromOffset(W, h + 68)
+	local mid = UDim2.fromOffset(W / 2, 30 + h / 2)
+	local dark = t.Color:Lerp(Color3.new(0, 0, 0), 0.35)
+	-- derrière la jauge
+	if tier >= 6 then
+		UIKit.rays(jetHolder, { color = t.Color, size = h * 1.25, speed = 20 + 6 * tier, transparency = 0.55, position = mid, z = 0 })
+	end
+	if tier >= 3 then
+		UIKit.glow(jetHolder, { color = t.Color, size = h * (0.9 + 0.3 * k), transparency = 0.6 - 0.15 * k, position = mid, z = 0, pulse = 1.4 })
+	end
+	local back = new("Frame", {
+		Name = "Back",
+		Size = UDim2.fromOffset(w, h),
+		Position = UDim2.fromOffset((W - w) / 2, 30),
+		BackgroundColor3 = UIKit.Colors.Dark[2],
+		ZIndex = 2,
+		Parent = jetHolder,
+	}, { UIKit.corner(), UIKit.stroke(3 + 2 * k, if tier >= 2 then dark else nil) })
+	fuelFill = new("Frame", {
+		Name = "Fill",
+		AnchorPoint = Vector2.new(0, 1),
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		ZIndex = 3,
+		Parent = back,
+	}, { UIKit.corner(), UIKit.gradient(t.Color:Lerp(Color3.new(1, 1, 1), 0.45), t.Color:Lerp(Color3.new(0, 0, 0), 0.2)) })
+	lowFlash = new("Frame", { Name = "Low", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(255, 50, 50), BackgroundTransparency = 1, ZIndex = 5, Parent = back }, { UIKit.corner() })
+	-- graduations : un quart, une moitié, trois quarts
+	for i = 1, 3 do
+		new("Frame", {
+			Size = UDim2.new(0.5, 0, 0, 2),
+			Position = UDim2.new(0.25, 0, i / 4, -1),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 0.55,
+			BorderSizePixel = 0,
+			ZIndex = 4,
+			Parent = back,
+		})
+	end
+	if tier >= 4 then
+		UIKit.shine(fuelFill, 3)
+	end
+	if tier >= 5 then
+		UIKit.sparkles(jetHolder, { count = tier - 2, color = t.Color:Lerp(Color3.new(1, 1, 1), 0.4), size = 14 + 2 * tier, z = 7 })
+	end
+	if tier >= 8 then
+		UIKit.shinyStroke(back, UIKit.Rainbow, 5, 120)
+	elseif tier >= 7 then
+		UIKit.shinyStroke(back, UIKit.GoldShine, 5, 90)
+	end
+	-- palier en chiffres romains (en haut), icône du jetpack (en bas)
+	local badge = new("Frame", {
+		Name = "Tier",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Size = UDim2.fromOffset(math.max(40, w + 14), 26),
+		Position = UDim2.fromOffset(W / 2, 0),
+		BackgroundColor3 = t.Color,
+		ZIndex = 6,
+		Parent = jetHolder,
+	}, { UIKit.corner(), UIKit.stroke(3), UIKit.gradient(t.Color:Lerp(Color3.new(1, 1, 1), 0.35), dark) })
+	UIKit.text({ Text = ROMAN[tier] or tostring(tier), Size = UDim2.new(1, -6, 1, -4), Position = UDim2.fromOffset(3, 2), ZIndex = 7, Parent = badge })
+	local size = math.floor(48 + 18 * k)
+	local icon = UIKit.icon("Jetpack", { Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromOffset(W / 2, 30 + h - size * 0.35), ZIndex = 8, Parent = jetHolder })
+	if tier >= 5 then
+		UIKit.float(icon, 2 + k * 2, 4, 2.2)
+	end
+	UIKit.popIn(back)
+end
+local shownTier = 0
+local function refreshJetGauge()
+	local tier = (player:GetAttribute("JetTier") or 1) :: number
+	if tier ~= shownTier then
+		local upgraded = shownTier > 0 and tier > shownTier
+		shownTier = tier
+		buildJetGauge(tier)
+		if upgraded then
+			UIKit.burst(jetHolder, UDim2.fromScale(0.5, 0.5), Config.Jetpack.Tiers[tier].Color)
+		end
+	end
+end
+refreshJetGauge()
+player:GetAttributeChangedSignal("JetTier"):Connect(refreshJetGauge)
+
+-- CHUTE DANS LE VIDE : l'écran devient noir, « LOST IN THE VOID », puis on réapparaît à la base
+local voidScreen = new("Frame", { Name = "Void", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, Visible = false, ZIndex = 50, Parent = gui })
+local voidText = UIKit.text({
+	Text = "LOST IN THE VOID",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.45),
+	Size = UDim2.fromOffset(700, 80),
+	TextColor3 = Color3.fromRGB(255, 90, 110),
+	TextTransparency = 1,
+	ZIndex = 51,
+	Parent = voidScreen,
+})
+local function watchVoid(character: Model)
+	voidScreen.Visible = false
+	voidScreen.BackgroundTransparency = 1
+	voidText.TextTransparency = 1
+	character:GetAttributeChangedSignal("VoidDead"):Connect(function()
+		if character:GetAttribute("VoidDead") then
+			voidScreen.Visible = true
+			TweenService:Create(voidScreen, TweenInfo.new(0.8), { BackgroundTransparency = 0.15 }):Play()
+			TweenService:Create(voidText, TweenInfo.new(0.8), { TextTransparency = 0 }):Play()
+		end
+	end)
+end
+if player.Character then
+	watchVoid(player.Character)
+end
+player.CharacterAdded:Connect(watchVoid)
 
 -- AIDE (en bas au centre, en attendant le guide de la première minute) -------------------
 UIKit.text({
@@ -293,7 +429,10 @@ local function clock(seconds: number): string
 end
 
 RunService.RenderStepped:Connect(function()
-	fuelFill.Size = UDim2.fromScale(1, math.clamp(player:GetAttribute("Fuel") or 1, 0, 1))
+	local fuel = math.clamp(player:GetAttribute("Fuel") or 1, 0, 1)
+	fuelFill.Size = UDim2.fromScale(1, fuel)
+	-- presque vide : la jauge clignote en rouge
+	lowFlash.BackgroundTransparency = if fuel < 0.25 then 0.45 + 0.35 * math.sin(os.clock() * 14) else 1
 	-- Le bruit n'apparaît que lorsque le serveur le publie
 	local noise = player:GetAttribute("Noise")
 	noiseGauge.Visible = noise ~= nil

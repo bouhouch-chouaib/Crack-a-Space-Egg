@@ -63,6 +63,8 @@ local function sync(player: Player)
 	player:SetAttribute("JetXPNeed", jn)
 	player:SetAttribute("GroundSpeed", Config.GroundSpeed(jl))
 	player:SetAttribute("AirSpeed", Config.AirSpeed(jl))
+	-- palier du jetpack (modèle porté, jauge) : un changement rééquipe le joueur (Start)
+	player:SetAttribute("JetTier", (Config.JetpackTier(jl)))
 	for id in pairs(Config.Upgrades) do
 		player:SetAttribute("Lvl_" .. id, d.levels[id])
 	end
@@ -308,13 +310,16 @@ end
 GameService.EquipDrill = equipDrill
 
 -- JETPACK PORTÉ ----------------------------------------------------------------------
--- Le modèle ReplicatedStorage.Assets.Jetpack est soudé au dos (visible par tous). Ses tuyères
--- (attachements NozzleL / NozzleR) portent les flammes, gérées par Jetpack.client.
+-- Le modèle du palier (ReplicatedStorage.Assets.Jetpacks.JetN, sinon Assets.Jetpack) est soudé au
+-- dos (visible par tous). Ses tuyères (attachements NozzleL / NozzleR) portent les flammes,
+-- gérées par Jetpack.client.
 local function equipJetpack(player: Player)
 	local character = player.Character
 	local torso = character and (character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")) :: BasePart?
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local template = assets and assets:FindFirstChild("Jetpack") :: Model?
+	local _, tier = Config.JetpackTier((player:GetAttribute("JetLevel") or 1) :: number)
+	local tiers = assets and assets:FindFirstChild("Jetpacks")
+	local template = (tiers and tiers:FindFirstChild(tier.Model) or assets and assets:FindFirstChild("Jetpack")) :: Model?
 	if not character or not torso or not template then
 		return
 	end
@@ -340,6 +345,10 @@ local function equipJetpack(player: Player)
 	weld.Part1 = handle
 	-- au dos, plaque contre le torse, tuyères vers l'arrière et le bas
 	weld.C0 = CFrame.new(0, 0.05, torso.Size.Z / 2 + handle.Size.Z * 0.42) * CFrame.Angles(0, math.pi, 0)
+	-- modèles générés à l'envers (plaque de dos vers -Z) : on les retourne
+	if template:GetAttribute("Flip") then
+		weld.C1 = CFrame.Angles(0, math.pi, 0)
+	end
 	weld.Parent = handle
 	model.Parent = character
 end
@@ -419,7 +428,8 @@ end
 
 -- CHUTE DANS LE VIDE ---------------------------------------------------------
 
--- Tomber dans le Vide ramène à sa base avec une soute vide (docs/Mecaniques.md §13)
+-- Tomber dans le Vide tue le joueur : il réapparaît à sa base et perd l'œuf porté (§13).
+-- Le carburant du jetpack (Config.Jetpack.Tiers) décide jusqu'où on peut aller sans tomber.
 local function watchFalls()
 	while true do
 		task.wait(0.5)
@@ -435,15 +445,20 @@ local function watchFalls()
 					BeltService.Grace[player] = nil
 					character:SetPrimaryPartCFrame(CFrame.new(0, 4, Config.Map.FrontZ - 6))
 					notice(player, "{Lifebuoy} Saved! Your rock broke, your eggs are safe", "info")
-				else
+				elseif not character:GetAttribute("VoidDead") then
 					local lost = #d.cargo
 					d.cargo = {}
-					local cf = Bases.SpawnCFrame(player) or CFrame.new(0, 4, -40)
-					character:SetPrimaryPartCFrame(cf)
 					sync(player)
-					if lost > 0 then
-						notice(player, "You drifted into the Void and lost " .. lost .. " eggs", "bad")
+					-- mort : le client montre la chute (VoidDead), puis réapparition à la base
+					character:SetAttribute("VoidDead", true)
+					local hum = character:FindFirstChildOfClass("Humanoid")
+					hrp.Anchored = true
+					if hum then
+						hum.Health = 0
 					end
+					notice(player, if lost > 0
+						then "{Warning} You fell into the Void and lost your egg! Train your jetpack to fly further"
+						else "{Warning} You fell into the Void! Train your jetpack to fly further", "bad")
 				end
 			end
 		end
@@ -523,6 +538,20 @@ function GameService.Start()
 		equipJetpack(player)
 	end)
 	Players.PlayerAdded:Connect(function(player)
+		-- nouveau palier de jetpack : nouveau modèle sur le dos, et l'anneau qu'il permet d'atteindre
+		local tierShown = nil :: number?
+		player:GetAttributeChangedSignal("JetTier"):Connect(function()
+			local tier = player:GetAttribute("JetTier") :: number?
+			if tierShown and tier and tier > tierShown then
+				equipJetpack(player)
+				local t = Config.Jetpack.Tiers[tier]
+				local ring = Config.Rings[math.min(tier, #Config.Rings)]
+				notice(player, if tier <= #Config.Rings
+					then ("{Jetpack} New jetpack: %s! You can now fly to the %s"):format(t.Name, ring.Name)
+					else ("{Jetpack} New jetpack: %s!"):format(t.Name), "good")
+			end
+			tierShown = tier
+		end)
 		player.CharacterAdded:Connect(function(character)
 			-- Attend le torse (R15 ou R6) avant d'y souder la foreuse
 			character:WaitForChild("HumanoidRootPart", 10)
@@ -538,6 +567,25 @@ function GameService.Start()
 		lastJet[player] = nil
 	end)
 	task.spawn(watchFalls)
+	-- Studio seulement : mettre le jetpack d'un joueur à un niveau (tests des paliers)
+	if game:GetService("RunService"):IsStudio() then
+		local bf = Instance.new("BindableFunction")
+		bf.Name = "JetDebug"
+		bf.OnInvoke = function(player: Player, level: number)
+			local d = DataService.Get(player)
+			if not d then
+				return "pas de données"
+			end
+			local xp = 0
+			for l = 1, level - 1 do
+				xp += Config.JetpackXPNeed(l)
+			end
+			d.jetXP = xp
+			sync(player)
+			return ("niveau %d, palier %s, carburant %.2f s, vitesse %.1f"):format(level, tostring(player:GetAttribute("JetTier")), Config.JetpackFuel(level), Config.AirSpeed(level))
+		end
+		bf.Parent = game:GetService("ServerStorage")
+	end
 end
 
 return GameService

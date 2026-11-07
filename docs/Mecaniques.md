@@ -22,7 +22,7 @@ Légende : ✅ décidé · 💡 détail proposé, à ajuster en jeu · ❓ reste
 | 8 bases joueurs | ✅ 36 × 28 chacune, sur le pourtour du vaisseau. **Une base est toujours sûre** : sa bulle repousse les monstres |
 | Quai de départ | ✅ La sortie de chaque base vers le couloir |
 | Couloir de sécurité | ✅ 90 de large, balisé de bouées lumineuses ; la combinaison y est protégée. Environ **2 500 studs** de long pour 7 anneaux |
-| Relais de pression | ✅ Bulles de 30 studs dans le couloir, entre deux anneaux, pour recharger la combinaison. 💡 Ils ne protègent pas des monstres : seule la base protège |
+| Relais de pression | ❌ Retirés le 7 nov. : c'est le carburant du jetpack qui décide quels vides on traverse |
 | Le Vide | ✅ Tout ce qui est hors du couloir. Aucun monstre n'y vit, mais il use très vite la combinaison |
 
 **Taille des anneaux** ✅ : l'écart entre deux anneaux et leur épaisseur augmentent de **+35 % par anneau**. Le trajet de l'anneau 1 au 2 est court ; celui du 6 au 7 est très long. La difficulté monte aussi à chaque anneau : PV, usure de la combinaison, vitesse de défilement. Le joueur ne peut pas sauter un anneau, il doit s'améliorer.
@@ -137,7 +137,11 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 
 ### Niveau du jetpack et souffleries (remplace l'oxygène, 7 nov.)
 
-- ✅ L'oxygène est retiré, et la vitesse ne s'achète plus. Elle vient du **niveau du jetpack** (HUD : « Jetpack Lv N » + barre d'XP). Chaque niveau donne +3 % de vitesse au sol et en vol et +0,05 s de carburant (`Config.Movement`, `Config.Jetpack`). Au niveau 1, le réservoir ne contient que 2 s de poussée (de quoi rejoindre l'anneau 1).
+- ✅ L'oxygène est retiré, et la vitesse ne s'achète plus. Elle vient du **niveau du jetpack** (HUD : « Jetpack Lv N » + barre d'XP).
+- ✅ (7 nov.) **Portée du jetpack** : le carburant de chaque niveau est calculé pour une portée de vol (`Config.Jetpack.Tiers`, `Config.JetpackFuel`). Au niveau 1, un vol porte à 44 studs : on va sur l'anneau 1, mais le vide jusqu'à l'anneau 2 (55 studs) est trop large. **Tomber dans le Vide = mourir** (écran « LOST IN THE VOID », réapparition à la base, œuf perdu). Les relais entre les anneaux sont retirés : seul le niveau du jetpack décide jusqu'où on va.
+- ✅ **8 paliers de jetpack**, chacun avec son modèle 3D (généré par l'IA de Studio, `ReplicatedStorage.Assets.Jetpacks.Jet1..Jet8`) et sa jauge : Rusty Starter (niv. 1, anneau 1), Scout Booster (10, anneau 2), Comet Pack (25, anneau 3), Blaze Thruster (45, anneau 4), Nebula Wings (65, anneau 5), Rift Striker (90, anneau 6), Nova Titan (115, anneau 7), Supernova X (140). Entre deux paliers, portée, carburant et vitesse montent petit à petit : vitesse en vol 20 → 42 studs/s, carburant 0,8 → 2,9 s, vitesse au sol +0,5 % par niveau. Message « New jetpack: … You can now fly to the … » à chaque palier.
+- ✅ **Jauge de carburant** (bord droit) : elle grandit et change de couleur avec le palier, chiffre romain au-dessus ; halo qui pulse (III), reflet (IV), étincelles et icône qui flotte (V), rayons (VI), contour doré (VII), contour arc-en-ciel (VIII). Elle clignote en rouge sous 25 %.
+- ✅ Le vol plané consomme aussi du carburant (moitié moins vite que la poussée).
 - ✅ **Soufflerie personnelle** (l'équivalent des tapis de course) : chaque base a son emplacement devant l'entrée. Le joueur l'achète (Breeze Tunnel, 1 K$), puis l'améliore palier par palier avec l'invite du socle : Gale 30 K$, Storm 1,5 M$, Cyclone 80 M$, Hurricane 4 Md$, Tempest 220 Md$, Supernova Vortex 11 T$. Dans le courant d'air de SA soufflerie, il flotte sur place (Saut tenu = monter plus haut) et gagne de l'XP chaque seconde, même AFK : 2, 8, 30, 150, 800, 5 000, 30 000 XP/s. Les autres joueurs ne peuvent pas s'en servir et ne voient pas l'invite.
 - ✅ Voler en mission (poussée ou plané, hors soufflerie) rapporte 1 XP/s.
 - ✅ XP pour passer au niveau suivant : 20 × 1,12^(niveau − 1), niveau max 150. Le serveur compte l'XP (`WindTunnelService`) et la sauvegarde (`jetXP`).
@@ -181,7 +185,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 - ✅ **Poursuite** : le monstre sort en grandissant (1,4 s pour fuir), puis vole vers le joueur à 85 / 90 / 95 % de sa vitesse en vol (au moins 28 studs/s). **Il abandonne au bout d'un temps qui dépend de la rareté de l'œuf porté** : 8 s (Commun), 10, 13, 16, 20, 25, 30 s (Cosmique), 5 s sans œuf. Le vaisseau le fait fuir aussitôt. 12 s de répit ensuite.
 - ✅ **S'il attrape le joueur** : l'œuf porté est perdu et le joueur revient à sa base.
 - ✅ **À l'écran** pour le joueur poursuivi : bandeau « NOM! ESCAPE 12s » avec une barre (en bas), bord rouge qui bat plus fort quand il approche, icône de danger au bord de l'écran de son côté, contour du monstre visible à travers les roches, musique de poursuite, rugissement, grondement près de lui, secousses. Les autres joueurs voient et entendent aussi le monstre.
-- ✅ Mourir, ou tomber dans le Vide, ramène au vaisseau avec une soute vide.
+- ✅ Tomber dans le Vide tue le joueur : il réapparaît à sa base et perd l'œuf porté.
 
 ## 14. Événements
 

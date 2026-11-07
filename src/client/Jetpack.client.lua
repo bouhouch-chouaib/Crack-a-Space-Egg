@@ -205,6 +205,15 @@ local function setup(character: Model)
 			rigs[character] = nil
 		end
 	end)
+	-- nouveau palier : le serveur change le jetpack porté, on rebranche les flammes sur ses tuyères
+	pack.AncestryChanged:Connect(function()
+		if not pack.Parent and rigs[character] and rigs[character].light == light then
+			rigs[character] = nil
+			light:Destroy()
+			feet:Destroy()
+			task.spawn(setup, character)
+		end
+	end)
 end
 
 local function watch(p: Player)
@@ -241,12 +250,13 @@ end
 
 -- VOL DU JOUEUR LOCAL ----------------------------------------------------------------------
 
-local fuel = Config.JetpackFuelBase
+local fuel = Config.JetpackFuel(1)
 local lastJump = 0
 local sentState = 0
 
 local function maxFuel(): number
-	local base = Config.JetpackFuelBase + Config.JetpackFuelPerLevel * math.max(0, ((player:GetAttribute("JetLevel") or 1) :: number) - 1)
+	-- carburant calculé pour la portée du niveau (Config.Jetpack.Tiers)
+	local base = Config.JetpackFuel((player:GetAttribute("JetLevel") or 1) :: number)
 	-- passe Turbo Jetpack : réservoir plus grand
 	return base * (if player:GetAttribute("Pass_TurboJetpack") then Config.Shop.PassEffects.TurboJetpack else 1)
 end
@@ -298,7 +308,8 @@ RunService.RenderStepped:Connect(function(dt)
 			vy = math.min(MV.Climb * (0.85 + 0.15 * (air / MV.Air)), math.max(vy, 0) + MV.ClimbAccel * dt)
 			state = 1
 		elseif fuel > 0 and vy < 0 then
-			-- vol plané : la chute est freinée
+			-- vol plané : la chute est freinée, et ça consomme aussi (moins vite)
+			fuel = math.max(0, fuel - dt * Config.JetpackGlideCost)
 			vy += workspace.Gravity * MV.FallBrake * dt
 			state = 2
 		end
