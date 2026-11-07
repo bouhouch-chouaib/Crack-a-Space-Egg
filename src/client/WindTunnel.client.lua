@@ -3,6 +3,8 @@
 -- le joueur dans SA soufflerie achetée : il flotte sur place, jetpack en vol plané (attribut
 -- InTunnel lu par Jetpack.client). Saut tenu = monter plus haut.
 -- Les achats et l'XP sont gérés par le serveur (WindTunnelService) ; ici rien ne compte.
+-- Chaque seconde d'entraînement, des « +XP » jaillissent du joueur : d'autant plus nombreux, gros et
+-- dorés que la soufflerie est haut de gamme (Remotes.TunnelXP : XP gagnée, boosts compris, et palier).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +14,8 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
+local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 local J = Config.Jetpack
@@ -191,5 +195,82 @@ RunService.RenderStepped:Connect(function(dt)
 	hrp.AssemblyLinearVelocity = v:Lerp(goal, math.min(1, dt * 8))
 	if hum:GetState() ~= Enum.HumanoidStateType.Freefall and hum:GetState() ~= Enum.HumanoidStateType.Jumping then
 		hum:ChangeState(Enum.HumanoidStateType.Freefall)
+	end
+end)
+
+-- « +XP » QUI JAILLISSENT DU JOUEUR ------------------------------------------------------------
+
+local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
+local OUTLINE = Color3.fromRGB(22, 22, 32)
+local XP_COLORS = { Color3.fromRGB(150, 235, 255), Color3.fromRGB(110, 210, 255), Color3.fromRGB(140, 255, 200), Color3.fromRGB(255, 200, 90), Color3.fromRGB(255, 140, 220), Color3.fromRGB(190, 150, 255), Color3.fromRGB(255, 225, 90) }
+
+local function popXP(amount: number, tier: number, i: number)
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not hrp then
+		return
+	end
+	local color = XP_COLORS[math.clamp(tier, 1, #XP_COLORS)]
+	local big = 1 + (tier - 1) * 0.12
+	-- part du corps du joueur dans une direction au hasard, monte en s'écartant
+	local a = math.random() * math.pi * 2
+	local out = Vector3.new(math.cos(a), 0, math.sin(a))
+	local start = hrp.Position + out * 1.2 + Vector3.new(0, math.random() * 2 - 0.5, 0)
+	local holder = Instance.new("Part")
+	holder.Anchored = true
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.CanTouch = false
+	holder.Transparency = 1
+	holder.Size = Vector3.one * 0.2
+	holder.Position = start
+	holder.Parent = workspace
+	local b = Instance.new("BillboardGui")
+	b.Size = UDim2.fromOffset(150 * big, 46 * big)
+	b.AlwaysOnTop = false -- les BillboardGui « toujours devant » ne s'affichent pas dans ce jeu
+	b.LightInfluence = 0
+	b.MaxDistance = 120
+	b.Parent = holder
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.fromScale(1, 1)
+	t.FontFace = Theme.FontHeavy
+	t.TextScaled = true
+	t.TextColor3 = color
+	t.Text = "+" .. Format.Short(amount) .. " XP"
+	t.Rotation = math.random(-12, 12)
+	t.Parent = b
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 2.5 + tier * 0.25
+	stroke.Color = OUTLINE
+	stroke.Parent = t
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.2
+	scale.Parent = t
+	TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	TweenService:Create(holder, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = start + out * 2.5 + Vector3.new(0, 4 + math.random() * 2, 0) }):Play()
+	task.delay(0.65, function()
+		TweenService:Create(t, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+		TweenService:Create(stroke, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+	end)
+	Debris:AddItem(holder, 1.2)
+	-- petit « pop » qui monte d'un ton à chaque bulle de la seconde
+	Sfx.Play("Pop", { volume = 0.18, pitch = 1 + i * 0.06 })
+end
+
+ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TunnelXP").OnClientEvent:Connect(function(gain: number, tier: number)
+	if type(gain) ~= "number" or gain <= 0 then
+		return
+	end
+	tier = if type(tier) == "number" then tier else 1
+	-- plus la soufflerie est haut de gamme, plus il y a de bulles dans la seconde (2 à 9)
+	-- nombres entiers qui, additionnés, font l'XP gagnée
+	gain = math.max(1, math.floor(gain + 0.5))
+	local count = math.min(math.clamp(1 + tier, 2, 9), gain)
+	local base = gain // count
+	local extra = gain - base * count
+	for i = 0, count - 1 do
+		task.delay(i / count, popXP, base + (if i < extra then 1 else 0), tier, i)
 	end
 end)

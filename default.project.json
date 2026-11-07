@@ -64,6 +64,9 @@
         },
         "Guide": {
           "$className": "RemoteEvent"
+        },
+        "TunnelXP": {
+          "$className": "RemoteEvent"
         }
       }
     },

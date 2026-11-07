@@ -18,6 +18,8 @@ local GameService = require(script.Parent.GameService)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 local BoostService = require(script.Parent.BoostService)
 
+local Remotes = ReplicatedStorage.Remotes
+
 local J = Config.Jetpack
 local STREAK = "rbxassetid://96887170089913"
 local GLOW = "rbxassetid://103844906730878"
@@ -284,14 +286,16 @@ local function tunnelAt(pos: Vector3): Tunnel?
 end
 WindTunnelService.TunnelAt = tunnelAt
 
-local function addXP(player: Player, d, xp: number)
+local function addXP(player: Player, d, xp: number): number
 	local before = Config.JetpackLevel(d.jetXP or 0)
-	d.jetXP = (d.jetXP or 0) + xp * BoostService.JetXPMult(player)
+	local gain = xp * BoostService.JetXPMult(player)
+	d.jetXP = (d.jetXP or 0) + gain
 	local after = Config.JetpackLevel(d.jetXP)
 	GameService.Sync(player)
 	if after > before then
 		GameService.Notice(player, ("{Jetpack} Jetpack level %d! You are faster"):format(after), "good")
 	end
+	return gain
 end
 
 local function tick()
@@ -305,7 +309,8 @@ local function tick()
 			if t then
 				-- seulement dans sa propre soufflerie, une fois achetée
 				if t.owner == player and t.tier >= 1 then
-					addXP(player, d, J.Tunnels[t.tier].XP)
+					-- XP gagnée (boosts compris) et palier : le client fait jaillir des « +XP » du joueur
+					Remotes.TunnelXP:FireClient(player, addXP(player, d, J.Tunnels[t.tier].XP), t.tier)
 				end
 			elseif hum.FloorMaterial == Enum.Material.Air and (character:GetAttribute("Jet") or 0) ~= 0 then
 				addXP(player, d, J.FlightXP)
