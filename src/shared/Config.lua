@@ -603,7 +603,7 @@ end
 -- Récompense quand on a trouvé les 6 espèces d'un anneau : chance permanente et $
 Config.IndexReward = {
 	Luck = 0.1, -- +10 % de chance par anneau complété (cumulable)
-	Money = 2500, -- × multiplicateur de valeur de l'anneau
+	Money = 2500, -- × revenu de base de l'anneau (Config.Hatch.RingIncome) : 12,5 K$ (anneau 1) à 25 000 Md$ (anneau 7)
 }
 
 -- BOUTIQUE (docs/Interfaces.md §9) ---------------------------------------------

@@ -120,13 +120,12 @@ local function refreshMoney()
 end
 
 -- GROS BOUTONS (à gauche) : la boutique (améliorations, passes, potions, récompenses…
--- tout s'y trouve en faisant défiler), ses créatures (sac) et l'index
-local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -20), UDim2.fromOffset(220, 3 * 76))
+-- tout s'y trouve en faisant défiler) et l'index des créatures
+local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -20), UDim2.fromOffset(220, 2 * 76))
 new("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = menu })
 local buttons = {}
 for i, b in ipairs({
 	{ "Shop", "SHOP", "Shop", "Green" },
-	{ "Creatures", "PETS", "Creatures", "Purple" },
 	{ "Index", "INDEX", "Index", "Blue" },
 }) do
 	local button, badge = UIKit.menuButton({ name = b[1], text = b[2], art = b[3], color = b[4], parent = menu })
@@ -136,10 +135,8 @@ for i, b in ipairs({
 	button.MouseButton1Click:Connect(function()
 		if b[1] == "Shop" then
 			UIKit.Open:Fire("Shop")
-		elseif b[1] == "Creatures" then
-			UIKit.Open:Fire("Creatures")
 		else
-			UIKit.toast("Coming soon!", "info")
+			UIKit.Open:Fire("Index")
 		end
 	end)
 end

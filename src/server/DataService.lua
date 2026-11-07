@@ -35,6 +35,8 @@ local function default()
 		tunnel = 0, -- palier de la soufflerie personnelle (0 = pas encore achetée)
 		boosts = {}, -- potions actives : [clé] = os.time() de fin (BoostService)
 		inventory = {}, -- sac de créatures (CreatureService), 100 places
+		seen = {}, -- ["anneau:rareté"] = true : créature déjà eue dans la base (Index)
+		indexClaimed = {}, -- ["anneau"] = true : récompense d'anneau de l'Index réclamée
 		-- Base : œufs en incubation et créatures posées. Position (x, z) dans le repère du sol de la base.
 		--   œuf      : { kind = "egg", ring, rarity, x, z, hatchAt = os.time() de fin }
 		--   créature : { kind = "pet", ring, rarity, x, z, name, size, weight, income }

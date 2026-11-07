@@ -106,6 +106,8 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 - ✅ **Sac** (7 nov.) : 100 places. On range une créature de la base dans le sac, ou on la renvoie dans la base, où elle se pose seule à la première place libre. Un cadenas protège les favorites : on ne peut ni les vendre ni les fusionner. Bouton **PETS** du menu (`CreatureService`, `CreaturesUI.client`, règles dans `Config.PetRules`).
 - ✅ **Trading Post** (stand SELL) : on vend la sélection, ou « Sell duplicates », qui garde le meilleur exemplaire de chaque espèce et stade. Le prix vaut 5 min du revenu de la créature. Une confirmation est demandée pour les Épiques et au-delà, et pour les stades évolués. Il faut être près du stand.
 - ✅ **Fusion** (machine à fusion) : 3 créatures identiques (même espèce, même stade) donnent le stade suivant : bébé → **Adult** (revenu ×3,5, taille ×1,25) → **Elder** (×12, ×1,5). Leur taille est la moyenne des trois. « Auto-fill » choisit le groupe le plus précieux, en sacrifiant les moins rentables. Le résultat retourne dans la base si l'une des trois y était.
+- ✅ **Index** (bouton INDEX, dans l'esprit des jeux d'œufs) : un onglet par anneau, avec ses 6 créatures. Celles qu'on n'a **jamais eues dans sa base** sont des silhouettes noires « ??? ». À droite, la créature choisie : nom, rareté, chance de l'obtenir et revenu. On voit la progression x/6 et la collection x/42. Un anneau complet se réclame (Claim!) : +10 % de chance pour toujours et 2 500 × le revenu de base de l'anneau en $ (`d.seen`, `d.indexClaimed`).
+- Il n'y a pas de bouton PETS : le sac s'ouvre aux stands (Trading Post, Fusion Machine).
 - Pas encore fait : équiper 3 créatures qui suivent le joueur, et leurs pouvoirs.
 
 ## 10. Objets spéciaux et reliques

@@ -428,6 +428,8 @@ function HatchService.Hatch(player: Player, id: string)
 	item.hatchAt = nil
 	local key = item.ring .. ":" .. item.rarity
 	d.index[key] = (d.index[key] or 0) + 1
+	d.seen = d.seen or {}
+	d.seen[key] = true -- l'Index la montre (plus de silhouette)
 	d.stats.best = math.max(d.stats.best, item.rarity)
 	-- L'œuf tremble et se fissure chez tous les clients, puis éclate
 	local prompt = m:FindFirstChild("HatchPrompt", true) :: ProximityPrompt?

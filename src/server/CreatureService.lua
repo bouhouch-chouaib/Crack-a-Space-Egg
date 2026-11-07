@@ -124,6 +124,63 @@ end
 
 local ACTIONS = {}
 
+-- INDEX : créatures déjà eues dans la base (les autres restent des silhouettes) -----------------
+
+-- Les créatures possédées aujourd'hui (base et sac) comptent aussi (anciennes sauvegardes)
+local function markSeen(d)
+	d.seen = d.seen or {}
+	for _, item in ipairs(d.base) do
+		if item.kind == "pet" then
+			d.seen[item.ring .. ":" .. item.rarity] = true
+		end
+	end
+	for _, item in ipairs(d.inventory) do
+		d.seen[item.ring .. ":" .. item.rarity] = true
+	end
+end
+
+local function ringComplete(d, ring: number): boolean
+	local species = Config.Creatures[ring]
+	for slot = 1, #species do
+		if not d.seen[ring .. ":" .. Config.CreatureRarity(ring, slot)] then
+			return false
+		end
+	end
+	return true
+end
+
+function ACTIONS.index(_player, d)
+	markSeen(d)
+	local seen, claimed = {}, {}
+	for key in pairs(d.seen) do
+		table.insert(seen, key)
+	end
+	for ring in pairs(d.indexClaimed or {}) do
+		table.insert(claimed, tonumber(ring))
+	end
+	return true, nil, { seen = seen, claimed = claimed }
+end
+
+function ACTIONS.claim(player, d, ring)
+	markSeen(d)
+	d.indexClaimed = d.indexClaimed or {}
+	if type(ring) ~= "number" or not Config.Creatures[ring] then
+		return false, "Unknown ring"
+	end
+	if d.indexClaimed[tostring(ring)] then
+		return false, "Already claimed"
+	end
+	if not ringComplete(d, ring) then
+		return false, "Find all 6 creatures of this ring first"
+	end
+	d.indexClaimed[tostring(ring)] = true -- clé texte : la sauvegarde refuse les tableaux à trous
+	local money = Config.IndexReward.Money * Config.Hatch.RingIncome[ring]
+	d.credits += money
+	GameService.Sync(player)
+	GameService.Notice(player, ("{Star} %s complete! +$%s and +%d%% luck forever"):format(Config.Rings[ring].Name, Format.Short(money), math.floor(Config.IndexReward.Luck * 100)), "good")
+	return ACTIONS.index(player, d)
+end
+
 function ACTIONS.list(_player, _d)
 	return true
 end

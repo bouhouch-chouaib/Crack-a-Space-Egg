@@ -109,7 +109,13 @@ end
 -- Chance des œufs rares (multiplie celle du scanner), à partir de la sauvegarde du joueur
 function BoostService.LuckMult(d): number
 	local t = d and d.boosts and d.boosts.Luck
-	return if t and t > os.time() then 2 else 1
+	local m = if t and t > os.time() then 2 else 1
+	-- récompenses de l'Index : +10 % de chance par anneau complété
+	local claimed = 0
+	for _ in pairs(d and d.indexClaimed or {}) do
+		claimed += 1
+	end
+	return m * (1 + Config.IndexReward.Luck * claimed)
 end
 
 -- XP du jetpack (soufflerie et vol)
