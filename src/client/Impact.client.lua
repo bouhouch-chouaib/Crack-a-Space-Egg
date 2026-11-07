@@ -245,8 +245,8 @@ end
 -- ŒUF QUI JAILLIT ----------------------------------------------------------------
 
 -- Le vrai œuf (modèle de l'anneau et de la rareté), avec lumière et traînée
-local function eggModel(ring: number, rarity: number, color: Color3, size: number): (Model, BasePart)
-	local m = EggModel.Make(ring, rarity, size)
+local function eggModel(ring: number, rarity: number, color: Color3, size: number, kind: string?): (Model, BasePart)
+	local m = EggModel.Make(ring, rarity, size, if kind == "geode" then "geode" else nil)
 	local core = EggModel.Core(m)
 	if not core:FindFirstChildOfClass("PointLight") then
 		local light = Instance.new("PointLight")
@@ -302,13 +302,13 @@ local function eggAura(egg: BasePart, color: Color3, rarity: number)
 	end
 end
 
-local function flyEgg(from: Vector3, ring: number, rarity: number, to: () -> Vector3?, delay: number, isMine: boolean)
+local function flyEgg(from: Vector3, ring: number, rarity: number, to: () -> Vector3?, delay: number, isMine: boolean, kind: string?)
 	task.delay(delay, function()
 		local r = Config.Rarities[rarity] or Config.Rarities[1]
 		local color = r.Color
 		-- Les œufs rares sont plus gros, comme dans la base
 		local size = 2 + rarity * 0.3
-		local egg, core = eggModel(ring, rarity, color, size)
+		local egg, core = eggModel(ring, rarity, color, size, kind)
 		egg:PivotTo(CFrame.new(from))
 		egg.Parent = workspace
 		eggAura(core, color, rarity)
@@ -356,7 +356,9 @@ local function flyEgg(from: Vector3, ring: number, rarity: number, to: () -> Vec
 				local goal = to() or up
 				egg:Destroy()
 				if isMine then
-					damageNumber(goal + Vector3.new(0, 2, 0), "{Egg} +1 " .. string.upper(Config.EggName(ring, rarity)), color, true)
+					damageNumber(goal + Vector3.new(0, 2, 0), if kind == "geode"
+						then "{Sparkles} +1 " .. string.upper(r.Name) .. " GEODE"
+						else "{Egg} +1 " .. string.upper(Config.EggName(ring, rarity)), color, true)
 				end
 			end
 		end)
@@ -459,7 +461,7 @@ end
 
 -- COUPS DU SERVEUR ---------------------------------------------------------------
 
-Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, by: Player, damage: number, rarities: { number }, broken: boolean, left: number?, perEgg: number?)
+Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, by: Player, damage: number, rarities: { number }, broken: boolean, left: number?, perEgg: number?, kinds: { string }?)
 	if not rock or not rock.Parent then
 		return
 	end
@@ -522,7 +524,7 @@ Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, by: Player, dam
 			local c = by.Character
 			local root = c and c:FindFirstChild("HumanoidRootPart") :: BasePart?
 			return if root then root.Position + Vector3.new(0, 1, 0) else nil
-		end, (i - 1) * 0.12, isMine)
+		end, (i - 1) * 0.12, isMine, kinds and kinds[i])
 	end
 	if broken then
 		task.delay(if #rarities > 0 then 0.15 else 0, function()

@@ -31,6 +31,7 @@ local function default()
 		ring = 1, -- plus haut anneau débloqué
 		cargo = {}, -- un œuf par entrée : { ring = anneau d'origine, rarity = rareté } (encore pris dans la roche)
 		ready = {}, -- œufs dérochés par la machine, prêts à couver : { ring, rarity }
+		gems = {}, -- sac de minerais (géodes ouvertes) : { ring, rarity, size, mult, shiny, value }
 		jetXP = 0, -- XP totale du jetpack (niveau : Config.JetpackLevel)
 		tunnel = 0, -- palier de la soufflerie personnelle (0 = pas encore achetée)
 		boosts = {}, -- potions actives : [clé] = os.time() de fin (BoostService)

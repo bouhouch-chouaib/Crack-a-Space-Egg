@@ -576,9 +576,9 @@ end
 Remotes:WaitForChild("OpenCreatures").OnClientEvent:Connect(function(m: string)
 	open(if m == "sell" or m == "fuse" then m else "bag")
 end)
-UIKit.Open.Event:Connect(function(what: string)
+UIKit.Open.Event:Connect(function(what: string, wanted: string?)
 	if what == "Creatures" then
-		open("bag")
+		open(if wanted == "sell" or wanted == "fuse" then wanted else "bag")
 	elseif what == "Close" and W.isOpen() then
 		W.close()
 	end

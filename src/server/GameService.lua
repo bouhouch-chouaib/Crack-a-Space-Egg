@@ -46,6 +46,19 @@ local function sync(player: Player)
 		table.insert(rarities, tostring(if type(egg) == "table" then egg.rarity or 1 else 1))
 	end
 	player:SetAttribute("CargoRarities", table.concat(rarities, ","))
+	-- « egg » ou « geode » pour chaque entrée de la soute (HUD)
+	local kinds = {}
+	for _, egg in ipairs(d.cargo) do
+		table.insert(kinds, if type(egg) == "table" and egg.kind == "geode" then "geode" else "egg")
+	end
+	player:SetAttribute("CargoKinds", table.concat(kinds, ","))
+	-- sac de minerais (stand SELL)
+	local gemValue = 0
+	for _, g in ipairs(d.gems or {}) do
+		gemValue += g.value
+	end
+	player:SetAttribute("GemCount", #(d.gems or {}))
+	player:SetAttribute("GemValue", gemValue)
 	player:SetAttribute("ReadyEggs", #(d.ready or {}))
 	-- Œufs dérochés prêts à poser (« 1:5,2:3 » = anneau:rareté), pour la barre des œufs (Hatchery.client)
 	local ready = {}
@@ -178,6 +191,7 @@ local function onDrill(player: Player, target: any, at: any)
 		GameService.Quest(player, "break", 1)
 	end
 	local rarities = {}
+	local kinds = {}
 	if eggs > 0 then
 		for _ = 1, eggs do
 			local rarity = rollRarity(d, a.ring)
@@ -185,8 +199,11 @@ local function onDrill(player: Player, target: any, at: any)
 				-- astéroïde gardé : la rareté est tirée deux fois, on garde la meilleure
 				rarity = math.max(rarity, rollRarity(d, a.ring))
 			end
-			table.insert(d.cargo, { ring = a.ring, rarity = rarity })
+			-- une fois sur 3 : une géode à la place de l'œuf (Config.Geodes)
+			local kind = if rng:NextNumber() < Config.Geodes.Chance then "geode" else "egg"
+			table.insert(d.cargo, { ring = a.ring, rarity = rarity, kind = kind })
 			table.insert(rarities, rarity)
+			table.insert(kinds, kind)
 		end
 		-- tous les anneaux sont ouverts (on y va à ses risques) : d.ring retient le plus lointain
 		-- où l'on a déjà sorti un œuf (onglets de l'Index, montant des paquets d'argent)
@@ -200,7 +217,7 @@ local function onDrill(player: Player, target: any, at: any)
 	-- Les effets ne passent pas par la position du modèle (il défile) : on envoie la roche visée.
 	-- eggLeft : vie restante de l'œuf en cours pour ce joueur (sa barre), eggHP : vie d'un œuf
 	local eggHP = Config.Rings[a.ring].EggHP
-	Remotes.DrillHit:FireAllClients(a.part, player, damage, rarities, broken, eggHP - progress, eggHP)
+	Remotes.DrillHit:FireAllClients(a.part, player, damage, rarities, broken, eggHP - progress, eggHP, kinds)
 end
 
 -- CASSE DES ŒUFS -----------------------------------------------------------
@@ -492,7 +509,8 @@ local function bindShopPoint(point: BasePart)
 		elseif point.Name == "ShopPoint" then
 			Remotes.OpenShop:FireClient(p)
 		elseif point.Name == "SellPoint" then
-			Remotes.OpenCreatures:FireClient(p, "sell")
+			-- comptoir de vente : minerais et créatures (SellUI.client)
+			Remotes.OpenShop:FireClient(p, "Sell")
 		else
 			Remotes.OpenCreatures:FireClient(p, "fuse")
 		end

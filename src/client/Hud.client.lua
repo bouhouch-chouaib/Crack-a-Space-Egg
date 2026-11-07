@@ -174,6 +174,7 @@ local carrying = nil :: boolean?
 local function refreshCargo()
 	local has = (player:GetAttribute("Cargo") or 0) > 0
 	local r = tonumber(string.split(player:GetAttribute("CargoRarities") or "", ",")[1] or "")
+	local geode = string.split(player:GetAttribute("CargoKinds") or "", ",")[1] == "geode"
 	local rarity = Config.Rarities[r or 1] or Config.Rarities[1]
 	if has then
 		local c = rarity.Color
@@ -182,7 +183,8 @@ local function refreshCargo()
 		eggIcon.ImageColor3 = Color3.new(1, 1, 1)
 		eggRays.ImageColor3, eggGlow.ImageColor3 = c, c
 		eggFx.Visible = true
-		eggTitle.Text = string.upper(rarity.Name) .. " EGG!"
+		eggTitle.Text = string.upper(rarity.Name) .. (if geode then " GEODE!" else " EGG!")
+		eggIcon.Image = UIKit.Art[if geode then "Sparkles" else "Egg"] or eggIcon.Image
 		eggTitle.TextColor3 = Color3.new(1, 1, 1)
 		UIKit.setIconText(eggSub, "{Home} Bring it home!")
 		eggSub.TextColor3 = Color3.fromRGB(255, 245, 200)
@@ -192,6 +194,7 @@ local function refreshCargo()
 		eggIcon.ImageColor3 = Color3.fromRGB(150, 150, 170)
 		eggFx.Visible = false
 		eggTitle.Text = "NO EGG"
+		eggIcon.Image = UIKit.Art.Egg
 		eggTitle.TextColor3 = Color3.fromRGB(190, 195, 215)
 		UIKit.setIconText(eggSub, "Drill an asteroid")
 		eggSub.TextColor3 = Color3.fromRGB(160, 165, 185)
@@ -461,7 +464,7 @@ player.AttributeChanged:Connect(function(name)
 		refreshBadges()
 	elseif name == "JetLevel" or name == "JetXP" or name == "JetXPNeed" then
 		refreshSpeed()
-	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" then
+	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" or name == "CargoKinds" then
 		refreshCargo()
 	elseif name == "StarterBought" or name == "StarterEnds" or name == "RewardsReady" then
 		refreshBadges()

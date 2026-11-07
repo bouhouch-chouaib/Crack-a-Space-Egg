@@ -73,6 +73,14 @@ Légende : ✅ décidé · 💡 détail proposé, à ajuster en jeu · ❓ reste
 - ✅ La soute a une place limitée, qu'on agrandit avec l'amélioration. Un œuf colossal se porte à deux.
 - 💡 L'œuf le plus rare de la soute se voit sur le dos du joueur.
 
+## 6 bis. Géodes et minerais (8 nov.)
+
+- ✅ Quand on fore, **une fois sur 3** c'est une **géode** au lieu d'un œuf (même rareté tirée, même chance du scanner). Elle jaillit de la roche comme un œuf (boule de roche de la couleur de l'anneau, pointes de cristal de la couleur de la rareté) ; l'emplacement en haut à droite affiche « RARE GEODE! ». On la ramène au vaisseau comme un œuf (oxygène compris).
+- ✅ La **machine de la base** la fend (« CRACKING GEODE... » puis « GEM FOUND! ») et révèle un **minerai** de l'anneau (`Config.Rings[anneau].Crystals[rareté]` : Grey Quartz, Calcite, Amethyst... jusqu'à Cosmic Yolk), d'une taille tirée au hasard (Small, normal, Large) et parfois **brillant** (×3). Il va dans le **sac de minerais** (200 au plus).
+- ✅ On le vend au stand **SELL** : fenêtre **TRADING POST** (`SellUI.client`, serveur `GemService`) avec le sac (aperçu 3D qui tourne, nom, rareté, taille, valeur, SELL), **SELL ALL** et **SELL PETS** (vente des créatures).
+- ✅ Prix = revenu d'une créature de même anneau et même rareté × 60 s × taille × brillant (`Config.Geodes`, `Config.GemValue`).
+- 💡 Modèles : en attendant ceux faits avec Ropilot, géodes et minerais sont faits de pièces (`GemModel.lua`). Les modèles rangés dans `ReplicatedStorage.Assets.Gems.R<anneau>_T<rareté>` et `Assets.Geodes.R<anneau>_T<rareté>` (ou `Geodes.R<anneau>`, ou `Geodes.Geode`) sont pris automatiquement.
+
 ## 7. De la roche à l'éclosion (décision du 7 nov.)
 
 La casse instantanée à la machine est remplacée par un parcours en deux temps :

@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
@@ -182,9 +183,10 @@ local function makeShell(ring: number): Model
 end
 
 -- Le vrai œuf (modèle de l'anneau et de la rareté) avec lumière, halo et rayons (rayons à partir d'Épique)
-local function makeEgg(ring: number, rarity: number): Model
+local function makeEgg(ring: number, rarity: number, kind: string?): Model
 	local r = Config.Rarities[rarity] or Config.Rarities[1]
-	local egg = EggModel.Make(ring, rarity, REVEAL_H * 0.3)
+	-- géode : c'est le minerai qui apparaît (grappe de cristaux sur sa demi-coque)
+	local egg = EggModel.Make(ring, rarity, REVEAL_H * 0.3, if kind == "geode" then "gem" else nil)
 	egg.Name = "RevealedEgg"
 	local core = EggModel.Core(egg)
 	if not core:FindFirstChildOfClass("PointLight") then
@@ -697,6 +699,7 @@ RunService.RenderStepped:Connect(function(dt)
 		local je = machine:GetAttribute("JobEnd") :: number?
 		local ring = (machine:GetAttribute("EggRing") or 1) :: number
 		local rarity = (machine:GetAttribute("EggRarity") or 1) :: number
+		local kind = (machine:GetAttribute("EggKind") or "egg") :: string
 		local queue = (machine:GetAttribute("Queue") or 0) :: number
 		local owner = Players:GetPlayerByUserId((machine:GetAttribute("Owner") or 0) :: number)
 		local spot = st.spot and st.spot.WorldPosition or pivot.Position
@@ -832,7 +835,7 @@ RunService.RenderStepped:Connect(function(dt)
 				if rarity >= Config.Sounds.RareFrom then
 					Sfx.Play("HatchRare", { at = eggCenter })
 				end
-				local egg = makeEgg(ring, rarity)
+				local egg = makeEgg(ring, rarity, kind)
 				egg:SetAttribute("RevealH", revealHeight(rarity))
 				egg:SetAttribute("Born", os.clock())
 				egg:PivotTo(CFrame.new(eggCenter))
@@ -863,13 +866,13 @@ RunService.RenderStepped:Connect(function(dt)
 			if st.screen then
 				local s = st.screen
 				if t < revealAt then
-					s.title.Text = "REMOVING ROCK..."
+					s.title.Text = if kind == "geode" then "CRACKING GEODE..." else "REMOVING ROCK..."
 					s.title.TextColor3 = Color3.fromRGB(255, 205, 90)
 					setBar(s, t / revealAt, false)
 					s.icon.ImageColor3 = Color3.fromRGB(150, 230, 255)
 				else
 					local r = Config.Rarities[rarity] or Config.Rarities[1]
-					s.title.Text = "EGG REVEALED!"
+					s.title.Text = if kind == "geode" then "GEM FOUND!" else "EGG REVEALED!"
 					s.title.TextColor3 = Color3.fromRGB(150, 255, 110)
 					setBar(s, 1, true)
 					s.icon.ImageColor3 = r.Color
@@ -890,7 +893,7 @@ RunService.RenderStepped:Connect(function(dt)
 				local s = st.screen
 				s.title.Text = "DEROCK MACHINE"
 				s.title.TextColor3 = Color3.new(1, 1, 1)
-				s.sub.Text = "Bring your rock eggs here!"
+				s.sub.Text = "Bring your eggs and geodes here!"
 				s.sub.TextColor3 = Color3.fromRGB(190, 235, 255)
 				s.icon.ImageColor3 = Color3.fromRGB(150, 230, 255)
 				setBar(s, 0, false)
@@ -915,7 +918,12 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 -- Message quand un de ses œufs est dégagé
-ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("EggRevealed").OnClientEvent:Connect(function(ring: number, rarity: number)
+ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("EggRevealed").OnClientEvent:Connect(function(ring: number, rarity: number, kind: string?, gem: any?)
 	local r = Config.Rarities[rarity] or Config.Rarities[1]
+	if kind == "geode" and type(gem) == "table" then
+		local name = (if gem.shiny then "SHINY " else "") .. (if gem.size ~= "" then string.upper(gem.size) .. " " else "") .. string.upper(Config.GemName(ring, rarity))
+		UIKit.toast(("{Sparkles} %s (%s) · $%s! Sell it at the SELL stand"):format(name, r.Name, Format.Short(gem.value)), "good")
+		return
+	end
 	UIKit.toast("{Egg} " .. string.upper(Config.EggName(ring, rarity)) .. " (" .. r.Name .. ") ready to hatch!", "good")
 end)

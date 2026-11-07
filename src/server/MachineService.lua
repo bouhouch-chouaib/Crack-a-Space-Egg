@@ -9,6 +9,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local Bases = require(script.Parent.Bases)
@@ -19,9 +20,26 @@ local Remotes = ReplicatedStorage.Remotes
 local MachineService = {}
 
 local busy: { [Model]: boolean } = {}
+local rng = Random.new()
+
+-- Taille d'un minerai (Config.Sizes, pondérée par Chance)
+local function pickSize()
+	local total = 0
+	for _, s in ipairs(Config.Sizes) do
+		total += s.Chance
+	end
+	local x = rng:NextNumber() * total
+	for _, s in ipairs(Config.Sizes) do
+		x -= s.Chance
+		if x <= 0 then
+			return s
+		end
+	end
+	return Config.Sizes[1]
+end
 
 local function clearJob(machine: Model)
-	for _, k in ipairs({ "JobStart", "JobEnd", "EggRing", "EggRarity", "Owner" }) do
+	for _, k in ipairs({ "JobStart", "JobEnd", "EggRing", "EggRarity", "EggKind", "Owner" }) do
 		machine:SetAttribute(k, nil)
 	end
 	machine:SetAttribute("Queue", 0)
@@ -44,8 +62,10 @@ local function run(player: Player, base: Model, machine: Model)
 		end
 		local duration = Config.Derock.Time + Config.Derock.PerRarity * (rarity - 1)
 		local now = workspace:GetServerTimeNow()
+		local geode = type(egg) == "table" and egg.kind == "geode"
 		machine:SetAttribute("EggRing", ring)
 		machine:SetAttribute("EggRarity", rarity)
+		machine:SetAttribute("EggKind", if geode then "geode" else "egg")
 		machine:SetAttribute("Queue", #d.cargo - 1)
 		machine:SetAttribute("Owner", player.UserId)
 		machine:SetAttribute("JobStart", now)
@@ -59,9 +79,36 @@ local function run(player: Player, base: Model, machine: Model)
 			break
 		end
 		table.remove(d.cargo, 1)
-		table.insert(d.ready, { ring = ring, rarity = rarity })
-		GameService.Sync(player)
-		Remotes.EggRevealed:FireClient(player, ring, rarity)
+		if geode then
+			-- la géode s'ouvre : un minerai de l'anneau, d'une taille tirée au hasard, parfois brillant
+			local size = pickSize()
+			local shiny = rng:NextNumber() < Config.ShinyChance
+			local gem = {
+				ring = ring,
+				rarity = rarity,
+				size = size.Name,
+				mult = size.Mult,
+				shiny = shiny,
+				value = Config.GemValue(ring, rarity, size.Mult, shiny),
+			}
+			d.gems = d.gems or {}
+			if #d.gems >= Config.Geodes.BagMax then
+				d.credits += gem.value
+				GameService.Notice(player, "{Cash} Gem bag full! Sold for $" .. Format.Short(gem.value), "info")
+			else
+				table.insert(d.gems, gem)
+			end
+			d.stats.best = math.max(d.stats.best, rarity)
+			GameService.Sync(player)
+			Remotes.EggRevealed:FireClient(player, ring, rarity, "geode", gem)
+			if rarity >= Config.AnnounceFrom then
+				Remotes.Announcement:FireAllClients(player.DisplayName, Config.GemName(ring, rarity), rarity)
+			end
+		else
+			table.insert(d.ready, { ring = ring, rarity = rarity })
+			GameService.Sync(player)
+			Remotes.EggRevealed:FireClient(player, ring, rarity)
+		end
 		task.wait(Config.Derock.Gap)
 	end
 	clearJob(machine)
@@ -78,7 +125,7 @@ local function bind(base: Model)
 	clearJob(machine)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "DerockPrompt"
-	prompt.ActionText = "Derock eggs"
+	prompt.ActionText = "Derock"
 	prompt.ObjectText = "Derock Machine"
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.HoldDuration = 0
@@ -96,7 +143,7 @@ local function bind(base: Model)
 		end
 		local d = DataService.Get(player)
 		if not d or #d.cargo == 0 then
-			GameService.Notice(player, "No eggs in your cargo. Drill asteroids out there!", "warn")
+			GameService.Notice(player, "Nothing to derock. Drill asteroids out there!", "warn")
 			return
 		end
 		task.spawn(run, player, base, machine)

@@ -1217,4 +1217,33 @@ Config.Codes = {
 	DRILLTIME = { JetXP = 15, MoneyBoost = 10 },
 }
 
+-- GÉODES (GameService, MachineService, GemService) -------------------------------------
+-- Quand on fore, une fois sur 3 c'est une géode au lieu d'un œuf (même rareté tirée, même chance du
+-- scanner). On la ramène au vaisseau comme un œuf (oxygène compris) ; la machine de la base la fend
+-- et révèle un minerai de l'anneau (Config.Rings[anneau].Crystals[rareté]) qui va dans le sac de
+-- minerais. On le vend au stand SELL.
+-- Prix = revenu d'une créature de même anneau et même rareté (Config.CreatureIncome) × SellSeconds
+-- × taille (Config.Sizes) × ShinyMult s'il est brillant (Config.ShinyChance).
+Config.Geodes = {
+	Chance = 1 / 3,
+	SellSeconds = 60,
+	BagMax = 200, -- minerais gardés au plus ; au-delà, le nouveau est vendu tout de suite
+}
+
+-- Nom du minerai d'un anneau et d'une rareté
+function Config.GemName(ringIndex: number, rarity: number): string
+	local ring = Config.Rings[math.clamp(ringIndex, 1, #Config.Rings)]
+	local name = ring.Crystals[rarity]
+	if not name or name == "" then
+		name = ring.Crystals[#ring.Crystals - 1] or "Gem"
+	end
+	return name
+end
+
+-- Valeur d'un minerai en $
+function Config.GemValue(ringIndex: number, rarity: number, sizeMult: number, shiny: boolean): number
+	local v = Config.CreatureIncome(ringIndex, rarity, 1) * Config.Geodes.SellSeconds * sizeMult * (if shiny then Config.ShinyMult else 1)
+	return math.max(1, math.floor(v + 0.5))
+end
+
 return Config

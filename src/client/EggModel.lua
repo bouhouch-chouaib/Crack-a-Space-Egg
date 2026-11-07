@@ -8,6 +8,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local GemModel = require(script.Parent:WaitForChild("GemModel"))
 
 local EggModel = {}
 
@@ -35,12 +36,15 @@ local function fallback(rarity: number): Model
 	return m
 end
 
--- Nouvelle copie de l'œuf, haute de height studs (hauteur du corps, sans les ornements)
-function EggModel.Make(ring: number, rarity: number, height: number): Model
+-- Nouvelle copie de l'œuf, haute de height studs (hauteur du corps, sans les ornements).
+-- kind = « geode » ou « gem » : géode fermée ou minerai (GemModel) au lieu de l'œuf.
+function EggModel.Make(ring: number, rarity: number, height: number, kind: string?, shiny: boolean?): Model
 	local f = folder()
 	local template = f and f:FindFirstChild(("R%d_T%d"):format(ring, rarity))
 	local m: Model
-	if template and template:IsA("Model") and template.PrimaryPart then
+	if kind == "geode" or kind == "gem" then
+		m = GemModel.Make(kind, ring, rarity, shiny)
+	elseif template and template:IsA("Model") and template.PrimaryPart then
 		m = template:Clone()
 		CollectionService:RemoveTag(m, "Egg")
 		for _, d in ipairs(m:GetDescendants()) do
