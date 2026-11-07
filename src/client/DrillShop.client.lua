@@ -137,6 +137,7 @@ for i, tab in ipairs(TABS) do
 	}, { UIKit.corner(14), UIKit.gradient(colors[1], colors[2]) })
 	local stroke = UIKit.stroke(3.5)
 	stroke.Parent = b
+	UIKit.studs(b, 0.45, "Weld", 22)
 	UIKit.icon(tab.art, { Size = UDim2.fromOffset(52, 52), Position = UDim2.fromOffset(4, 1), ZIndex = 4, Parent = b })
 	label(b, tab.text, 58, 10, 146, 34, 26, nil, Enum.TextXAlignment.Left)
 	UIKit.juice(b)
@@ -239,6 +240,7 @@ for tier, drill in ipairs(Config.Drills) do
 	grad.Parent = b
 	local stroke = UIKit.stroke(3)
 	stroke.Parent = b
+	UIKit.studs(b, 0.55, "Inlets", 22)
 	-- pastille de la couleur du palier
 	new("Frame", { Size = UDim2.fromOffset(8, 56), Position = UDim2.fromOffset(8, 10), BackgroundColor3 = drill.Color, ZIndex = 4, Parent = b }, { UIKit.corner(4) })
 	local vp = viewport(b, 70, 18, 3, 4)
@@ -383,6 +385,7 @@ for i, s in ipairs(Config.DrillSkins) do
 	})
 	local stroke = UIKit.stroke(4, rarity.Color:Lerp(Color3.new(0, 0, 0), 0.25))
 	stroke.Parent = c
+	UIKit.studs(c, 0.55, "Studs", 24)
 	UIKit.hoverCard(c)
 	if s.Robux then
 		UIKit.shinyStroke(c, if s.Key == "Rainbow" then UIKit.Rainbow else UIKit.GoldShine, 4)

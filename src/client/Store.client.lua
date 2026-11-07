@@ -288,6 +288,7 @@ for i, cat in ipairs(CATEGORIES) do
 	}, { UIKit.corner(14), UIKit.gradient(colors[1], colors[2]) })
 	local stroke = UIKit.stroke(3.5)
 	stroke.Parent = b
+	UIKit.studs(b, 0.45, "Weld", 22)
 	UIKit.icon(cat.art, { Size = UDim2.fromOffset(58, 58), Position = UDim2.new(0, -4, 0.5, -30), ZIndex = 4, Parent = b })
 	label(b, cat.text, 54, 14, SIDE_W - 80, 36, 24, nil, Enum.TextXAlignment.Left)
 	UIKit.juice(b)

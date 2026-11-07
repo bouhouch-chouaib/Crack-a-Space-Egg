@@ -270,7 +270,7 @@ refresh = function()
 			UIKit.gradient(r.Color:Lerp(Color3.new(1, 1, 1), if known then 0.35 else 0.1), r.Color:Lerp(Color3.new(0, 0, 0), if known then 0.25 else 0.6)),
 		})
 		UIKit.stroke(if slot == pick then 6 else 4, if slot == pick then Color3.fromRGB(255, 235, 120) else nil).Parent = c
-		UIKit.studs(c, 0.85)
+		UIKit.studs(c, 0.6)
 		portrait(c, ring, rarity, known, UDim2.fromOffset(134, 124), UDim2.new(0.5, 0, 0, 74), 3)
 		if not known then
 			UIKit.text({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 74), Size = UDim2.fromOffset(60, 60), Text = "?", TextColor3 = Color3.fromRGB(230, 235, 255), ZIndex = 4, Stroke = 4, Parent = c })

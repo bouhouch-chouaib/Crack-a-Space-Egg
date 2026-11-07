@@ -31,7 +31,10 @@ UIKit.Art = {
 	Comet = "rbxassetid://97641885073649",
 	Noise = "rbxassetid://98491956885523",
 	Supernova = "rbxassetid://83408422703072",
-	Studs = "rbxassetid://99589690361139", -- picots carrés transparents, en fond de panneau
+	-- Les trois motifs de surface de Roblox (tirés de studs.dds de Studio), en calques transparents
+	Studs = "rbxassetid://99589690361139", -- picots en relief : cartes et boutons
+	Inlets = "rbxassetid://111117400172519", -- picots en creux : fonds de fenêtres et panneaux sombres
+	Weld = "rbxassetid://73960786080130", -- croisillons : bandeaux de titre, onglets, rubans
 	Robux = "rbxasset://textures/ui/common/robux.png", -- icône Robux intégrée à Roblox
 	-- Boutique
 	UpDrill = "rbxassetid://86154871998620",
@@ -350,6 +353,7 @@ function UIKit.menuButton(props: { name: string, text: string, art: string, colo
 		Text = "",
 		Parent = holder,
 	}, { UIKit.corner(16), UIKit.stroke(3.5), UIKit.gradient(colors[1], colors[2]) })
+	UIKit.studs(b, 0.37, "Studs", 20)
 	-- Reflet clair sur le haut
 	new("Frame", {
 		Name = "Gloss",
@@ -378,6 +382,7 @@ function UIKit.roundButton(props: { name: string, art: string, color: string?, s
 		Text = "",
 		Parent = props.parent,
 	}, { UIKit.corner(size / 2), UIKit.stroke(3), UIKit.gradient(colors[1], colors[2]) })
+	UIKit.studs(b, 0.45, "Studs", 16).UICorner.CornerRadius = UDim.new(0.5, 0)
 	UIKit.icon(props.art, { Size = UDim2.fromScale(0.82, 0.82), Position = UDim2.fromScale(0.09, 0.07), ZIndex = 2, Parent = b })
 	UIKit.juice(b)
 	return b
@@ -773,16 +778,18 @@ end
 
 -- FENÊTRES ET CARTES ---------------------------------------------------------
 
--- Fond à picots discret, en mosaïque, posé sur un panneau
-function UIKit.studs(parent: GuiObject, transparency: number?): ImageLabel
+-- Motif de surface Roblox discret, en mosaïque, posé sur un panneau ou un bouton.
+-- pattern : "Studs" (relief, par défaut), "Inlets" (creux) ou "Weld" (croisillons) ; tile : taille d'une tuile
+function UIKit.studs(parent: GuiObject, transparency: number?, pattern: string?, tile: number?): ImageLabel
+	local size = tile or 28
 	return new("ImageLabel", {
 		Name = "Studs",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
-		Image = UIKit.Art.Studs,
+		Image = UIKit.Art[pattern or "Studs"],
 		ImageTransparency = transparency or 0.55,
 		ScaleType = Enum.ScaleType.Tile,
-		TileSize = UDim2.fromOffset(28, 28),
+		TileSize = UDim2.fromOffset(size, size),
 		ZIndex = parent.ZIndex,
 		Parent = parent,
 	}, { UIKit.corner(14) })
@@ -835,7 +842,7 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		BackgroundColor3 = UIKit.Panel,
 		Parent = holder,
 	}, { UIKit.corner(18), UIKit.stroke(5) })
-	UIKit.studs(frame, 0.75)
+	UIKit.studs(frame, 0.47, "Inlets", 30)
 	-- Fond vivant : poussières lumineuses qui montent
 	UIKit.dust(frame, 16)
 	-- Bandeau de titre
@@ -863,6 +870,7 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 			band.Position = UDim2.fromScale(x + math.sin(t * 0.8) * 0.04, -0.4)
 		end)
 	end
+	UIKit.studs(header, 0.53, "Weld", 34)
 	-- Lueur derrière le titre et éclat qui balaie le bandeau
 	UIKit.glow(header, { size = 260, position = UDim2.new(0, 110, 0.5, 0), transparency = 0.6, z = 2 })
 	UIKit.shine(header, 3)
@@ -1022,7 +1030,7 @@ function UIKit.card(props: { parent: Instance, color: string, order: number?, na
 		LayoutOrder = props.order or 0,
 		Parent = props.parent,
 	}, { UIKit.corner(14), UIKit.stroke(4), UIKit.gradient(colors[1], colors[2]) })
-	UIKit.studs(c, 0.8)
+	UIKit.studs(c, 0.55)
 	return c
 end
 
@@ -1047,6 +1055,7 @@ function UIKit.priceButton(props: {
 		ZIndex = 4,
 		Parent = props.parent,
 	}, { UIKit.corner(10), UIKit.stroke(3.5), grad })
+	UIKit.studs(b, 0.41, "Studs", 18)
 	local row = new("Frame", { Name = "Row", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 4, Parent = b }, {
 		new("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
@@ -1101,6 +1110,7 @@ function UIKit.giftButton(parent: Instance, position: UDim2?): TextButton
 		ZIndex = 4,
 		Parent = parent,
 	}, { UIKit.corner(10), UIKit.stroke(3.5), UIKit.gradient(UIKit.Colors.Purple[1], UIKit.Colors.Purple[2]) })
+	UIKit.studs(b, 0.41, "Studs", 18)
 	UIKit.icon("Rewards", { Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), ZIndex = 5, Parent = b })
 	UIKit.juice(b)
 	return b
@@ -1119,6 +1129,7 @@ function UIKit.ribbon(parent: GuiObject, text: string, color: string?): Frame
 		ZIndex = 8,
 		Parent = parent,
 	}, { UIKit.corner(8), UIKit.stroke(3), UIKit.gradient(colors[1], colors[2]) })
+	UIKit.studs(r, 0.45, "Weld", 16)
 	UIKit.text({ Size = UDim2.fromScale(0.9, 0.78), Position = UDim2.fromScale(0.05, 0.11), Text = text, ZIndex = 9, Stroke = 2.5, Parent = r })
 	UIKit.wiggle(r, 4, 3.5)
 	UIKit.shine(r, 2.5)

@@ -183,3 +183,13 @@ La planète est **peinte dans le ciel** (`Lighting.PlanetSky`). Le brouillard du
   Comet, qui existaient déjà.
 - Biomes et événement : `Icon` dans `Config` est un nom d'icône (Sparkles, Snowflake, Fire, Galaxy, Eye,
   Rift, Egg, Comet).
+
+## Motifs de surface dans l'interface (7 nov.)
+
+Les trois motifs de Roblox (tirés de `studs.dds` de Studio, en calques transparents dans `UIKit.Art`) sont utilisés partout via `UIKit.studs(parent, transparence, motif, tuile)` :
+
+| Motif | Où |
+| --- | --- |
+| **Studs** (picots en relief) | cartes, boutons (menu, prix, cadeau, ronds), cartes de skins |
+| **Inlets** (picots en creux) | fond des fenêtres, lignes de la liste des foreuses |
+| **Weld** (croisillons) | bandeau de titre des fenêtres, onglets et catégories, rubans |

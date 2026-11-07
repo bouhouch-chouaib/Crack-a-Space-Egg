@@ -295,7 +295,7 @@ local function makeCard(p: Pet, order: number)
 	}, { UIKit.corner(14), UIKit.gradient(r.Color:Lerp(Color3.new(1, 1, 1), 0.35), r.Color:Lerp(Color3.new(0, 0, 0), 0.25)) })
 	local isSel = (mode == "sell" and selected[p.id]) or (mode == "bag" and focus == p.id) or (mode == "fuse" and table.find(slots, p.id) ~= nil)
 	UIKit.stroke(if isSel then 6 else 4, if isSel then Color3.fromRGB(255, 230, 90) else nil).Parent = c
-	UIKit.studs(c, 0.85)
+	UIKit.studs(c, 0.6)
 	portrait(c, p, UDim2.fromOffset(130, 112), UDim2.new(0.5, 0, 0, 66), 3)
 	UIKit.text({ Size = UDim2.new(1, -10, 0, 24), Position = UDim2.fromOffset(5, 124), Text = p.name, ZIndex = 4, Stroke = 2.5, Parent = c })
 	UIKit.text({ Size = UDim2.new(1, -10, 0, 18), Position = UDim2.fromOffset(5, 148), Text = r.Name:upper(), TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.5), ZIndex = 4, Stroke = 2, Parent = c })
