@@ -66,10 +66,10 @@ local function anchorAt(pos: Vector3): Attachment
 	return a
 end
 
-function Sfx.Play(name: string, opts: { at: Vector3?, volume: number?, pitch: number? }?)
+function Sfx.Play(name: string, opts: { at: Vector3?, volume: number?, pitch: number? }?): Sound?
 	local def = S.Sfx[name]
 	if not def then
-		return
+		return nil
 	end
 	local t = template(name, def)
 	local s = t:Clone()
@@ -101,11 +101,13 @@ function Sfx.Play(name: string, opts: { at: Vector3?, volume: number?, pitch: nu
 			anchor:Destroy()
 		end
 	end)
+	return s
 end
 
 export type Loop = {
 	sound: Sound,
 	Set: (self: Loop, level: number) -> (),
+	SetPitch: (self: Loop, mult: number) -> (),
 	Destroy: (self: Loop) -> (),
 }
 
@@ -120,6 +122,11 @@ function Sfx.Loop(name: string, parent: Instance?): Loop
 	s.Volume = 0
 	s.PlaybackSpeed = def.Pitch or 1
 	s.SoundGroup = Sfx.EffectsGroup
+	if def.Region then
+		-- seulement la partie régulière de l'enregistrement, en boucle
+		s.PlaybackRegionsEnabled = true
+		s.LoopRegion = NumberRange.new(def.Region[1], def.Region[2])
+	end
 	if parent then
 		s.RollOffMode = Enum.RollOffMode.InverseTapered
 		s.RollOffMinDistance = 10
@@ -129,6 +136,9 @@ function Sfx.Loop(name: string, parent: Instance?): Loop
 	local loop = { sound = s, target = 0 }
 	function loop.Set(self, level: number)
 		self.target = math.clamp(level, 0, 1) * (def.Volume or 0.5)
+	end
+	function loop.SetPitch(self, mult: number)
+		self.sound.PlaybackSpeed = (def.Pitch or 1) * mult
 	end
 	function loop.Destroy(self)
 		self.sound:Destroy()
@@ -143,6 +153,10 @@ function Sfx.Loop(name: string, parent: Instance?): Loop
 			end
 			s.Volume = v
 			if v > 0 and not s.IsPlaying then
+				if def.Region then
+					-- départ au hasard dans la partie régulière : chaque reprise sonne un peu différemment
+					s.TimePosition = def.Region[1] + math.random() * (def.Region[2] - def.Region[1] - 4)
+				end
 				s:Play()
 			elseif v == 0 and s.IsPlaying then
 				s:Stop()

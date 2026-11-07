@@ -407,34 +407,51 @@ Config.Sounds = {
 	},
 	-- Sons joués à une position : on les entend jusqu'à cette distance (studs)
 	Range = 160,
+	-- Volumes réglés sur une mesure (AudioAnalyzer, Studio, 7 nov.) : niveau efficace visé
+	-- ~0,15 pour les sons importants, ~0,09 pour l'interface. Un son très faible au départ
+	-- (enregistrement pro) a donc un volume au-dessus de 1.
 	Sfx = {
-		Click = { Id = 106984966606682, Volume = 0.35, Pitch = 1.3 },
-		Open = { Id = 80984744279155, Volume = 0.3 },
-		Error = { Id = 91501650514390, Volume = 0.35 },
-		Coin = { Id = 130378474223829, Volume = 0.45 },
-		Buy = { Id = 90531793028786, Volume = 0.5 },
-		Pop = { Id = 106984966606682, Volume = 0.6 },
-		RockHit = { Id = 9118588165, Volume = 0.35 },
-		RockBreak = { Id = 9125869504, Volume = 0.8 },
-		Derock = { Id = 9125869138, Volume = 0.7 },
-		Riser = { Id = 94077390731779, Volume = 0.35 },
-		Hatch = { Id = 9043151109, Volume = 0.5 }, -- éclosion commune à rare
+		Click = { Id = 106984966606682, Volume = 0.5, Pitch = 1.3 },
+		Open = { Id = 80984744279155, Volume = 0.35 },
+		Error = { Id = 91501650514390, Volume = 0.25 },
+		Coin = { Id = 130378474223829, Volume = 0.35 },
+		Buy = { Id = 90531793028786, Volume = 3 },
+		Pop = { Id = 106984966606682, Volume = 0.9 },
+		-- foreuse du joueur et astéroïdes
+		RockHit = { Id = 9118588165, Volume = 1.1 },
+		RockBreak = { Id = 9118612665, Volume = 0.8 }, -- gros impact croquant
+		RockCrumble = { Id = 103615926684206, Volume = 0.35 }, -- éboulis par-dessus
+		-- machine à dérocher
+		Clamp = { Id = 9116888605, Volume = 0.3 }, -- les pinces se ferment
+		Crack = { Id = 9113959343, Volume = 2 }, -- la roche se fend pendant le forage
+		Riser = { Id = 94077390731779, Volume = 0.45 }, -- montée avant l'éclatement
+		EggFly = { Id = 80984744279155, Volume = 0.5 },
+		-- éclosion et récompenses
+		Hatch = { Id = 9043151109, Volume = 0.5 }, -- commune à rare
 		HatchRare = { Id = 9038916885, Volume = 0.6 }, -- épique et au-delà
-		LevelUp = { Id = 1839881844, Volume = 0.5 },
+		LevelUp = { Id = 1839881844, Volume = 0.45 },
 		Reward = { Id = 9038916885, Volume = 0.6 },
-		Warning = { Id = 80890994815283, Volume = 0.4 },
-		Freeze = { Id = 9125611419, Volume = 0.8 },
-		Thaw = { Id = 96795857757261, Volume = 0.4, Pitch = 1.4 },
-		MeteorStart = { Id = 9126102564, Volume = 0.45 },
+		-- jetpack
+		JetStart = { Id = 104612149748953, Volume = 0.9 }, -- allumage
+		JetStop = { Id = 87598090301048, Volume = 0.35 }, -- extinction
+		-- gel et événements
+		Warning = { Id = 80890994815283, Volume = 0.3 },
+		Freeze = { Id = 9125611419, Volume = 0.6 },
+		Thaw = { Id = 96795857757261, Volume = 0.3, Pitch = 1.4 },
+		MeteorStart = { Id = 9126102564, Volume = 3 },
 	},
-	-- Boucles (volume au maximum de l'effet)
+	-- Boucles (volume au maximum de l'effet). Region = partie régulière d'un long enregistrement,
+	-- jouée en boucle (secondes).
 	Loops = {
-		Jetpack = { Id = 9125742262, Volume = 0.35 },
-		Drill = { Id = 199754867, Volume = 0.3 },
-		Machine = { Id = 199754867, Volume = 0.35, Pitch = 0.8 },
-		Tunnel = { Id = 9119462099, Volume = 0.45 },
-		Void = { Id = 6544555787, Volume = 0.5 }, -- vent glacé hors du couloir
-		Heart = { Id = 132163421525060, Volume = 0.5 }, -- battements quand le gel approche
+		JetBody = { Id = 87588244098894, Volume = 0.5 }, -- souffle grave du réacteur
+		JetFlame = { Id = 90423293726333, Volume = 0.35 }, -- flamme du brûleur
+		DrillMotor = { Id = 199754867, Volume = 0.45 },
+		DrillGrind = { Id = 9125450647, Volume = 1.6, Region = { 20, 100 } }, -- grosse foreuse dans la pierre
+		MachineGrind = { Id = 9125450647, Volume = 1.8, Region = { 20, 100 } },
+		MachineMotor = { Id = 199754867, Volume = 0.4, Pitch = 0.8 },
+		Tunnel = { Id = 9119462099, Volume = 2.5 },
+		Void = { Id = 6544555787, Volume = 0.2 }, -- vent glacé hors du couloir
+		Heart = { Id = 132163421525060, Volume = 0.4 }, -- battements quand le gel approche
 	},
 	RareFrom = 4, -- rareté à partir de laquelle l'éclosion joue la fanfare
 }

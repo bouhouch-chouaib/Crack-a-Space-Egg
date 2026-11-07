@@ -1,5 +1,5 @@
 -- Ambiance sonore (Config.Sounds) : musique selon le lieu, boucles (jetpack, foreuse, soufflerie,
--- vent glacé, machines à dérocher) et sons des moments clés, lus dans les attributs et les remotes
+-- vent glacé ; les machines à dérocher sont dans Derock.client) et sons des moments clés, lus dans les attributs et les remotes
 -- déjà publiés par le serveur. Contient aussi la fenêtre Réglages (musique et sons).
 --   Musique : Base dans le vaisseau, Belt dans les anneaux, Event pendant la pluie de météores ;
 --   hors du couloir elle s'efface sous le vent glacé.
@@ -44,38 +44,56 @@ end
 
 -- BOUCLES -----------------------------------------------------------------------------------
 
-local jet = Sfx.Loop("Jetpack")
-local drill = Sfx.Loop("Drill")
+local jetBody = Sfx.Loop("JetBody")
+local jetFlame = Sfx.Loop("JetFlame")
+local drillMotor = Sfx.Loop("DrillMotor")
+local drillGrind = Sfx.Loop("DrillGrind")
 local tunnel = Sfx.Loop("Tunnel")
 local void = Sfx.Loop("Void")
 local heart = Sfx.Loop("Heart")
 
--- Machines à dérocher : une boucle placée sur chaque machine pendant le forage de la roche
-local machines: { [Model]: { loop: Sfx.Loop, broke: number? } } = {}
-local function scanMachines()
-	local bases = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Bases")
-	if not bases then
-		return
-	end
-	for _, b in ipairs(bases:GetChildren()) do
-		local m = b:FindFirstChild("DerockMachine")
-		if m and m:IsA("Model") and m.PrimaryPart and not machines[m] then
-			machines[m] = { loop = Sfx.Loop("Machine", m.PrimaryPart) }
+-- Jetpacks des autres joueurs : le souffle, placé sur eux (on les entend passer)
+local others: { [Model]: Sfx.Loop } = {}
+local function otherJets()
+	for _, p in ipairs(Players:GetPlayers()) do
+		local c = p.Character
+		local r = c and c:FindFirstChild("HumanoidRootPart")
+		if p ~= player and c and r and not others[c] then
+			others[c] = Sfx.Loop("JetBody", r)
 		end
 	end
-	for m, st in pairs(machines) do
-		if not m:IsDescendantOf(workspace) then
-			st.loop:Destroy()
-			machines[m] = nil
+	for c, loop in pairs(others) do
+		if not c:IsDescendantOf(workspace) then
+			loop:Destroy()
+			others[c] = nil
 		end
 	end
 end
-task.spawn(function()
-	while true do
-		scanMachines()
-		task.wait(3)
+
+-- État du jetpack (Jetpack.client) : 0 éteint, 1 poussée, 2 vol plané ou soufflerie
+local jetState = 0
+local jetSince = 0
+player:GetAttributeChangedSignal("JetLocal"):Connect(function()
+	local s = (player:GetAttribute("JetLocal") or 0) :: number
+	if s == 1 and jetState ~= 1 then
+		Sfx.Play("JetStart", { pitch = 0.95 + math.random() * 0.1 })
+	elseif s == 0 and jetState ~= 0 and os.clock() - jetSince > 0.35 and not player:GetAttribute("InTunnel") then
+		-- extinction seulement si le jetpack reste coupé (pas entre la poussée et le vol plané)
+		task.delay(0.2, function()
+			if jetState == 0 then
+				Sfx.Play("JetStop")
+			end
+		end)
 	end
+	if s ~= 0 and jetState == 0 then
+		jetSince = os.clock()
+	end
+	jetState = s
 end)
+
+-- Foreuse : le moteur et la pierre montent dans les aigus à mesure que l'œuf se dégage
+local drillProgress = 0
+local lastConfirmed = 0
 
 local current = ""
 RunService.Heartbeat:Connect(function(dt: number)
@@ -105,27 +123,48 @@ RunService.Heartbeat:Connect(function(dt: number)
 		end
 	end
 
-	-- jetpack (0 arrêté, 1 en vol, 2 poussée), foreuse, soufflerie, froid
-	local j = (character and character:GetAttribute("Jet") or 0) :: number
-	jet:Set(if j == 2 then 1 elseif j == 1 then 0.55 else 0)
-	jet.sound.PlaybackSpeed = if j == 2 then 1.15 else 1
+	-- jetpack : poussée = souffle + flamme ; vol plané = souffle léger
+	local vy = if root then root.AssemblyLinearVelocity.Y else 0
+	local inTunnel = player:GetAttribute("InTunnel") == true
+	if jetState == 1 then
+		jetBody:Set(1)
+		jetFlame:Set(1)
+		jetBody:SetPitch(1 + math.clamp(vy / 60, 0, 0.2))
+		jetFlame:SetPitch(1.05 + math.clamp(vy / 80, 0, 0.15))
+	elseif jetState == 2 then
+		jetBody:Set(if inTunnel then 0.25 else 0.45)
+		jetFlame:Set(if inTunnel then 0.1 else 0.25)
+		jetBody:SetPitch(0.9)
+		jetFlame:SetPitch(0.95)
+	else
+		jetBody:Set(0)
+		jetFlame:Set(0)
+	end
+	for c, loop in pairs(others) do
+		local j = (c:GetAttribute("Jet") or 0) :: number
+		loop:Set(if j == 1 then 0.8 elseif j == 2 then 0.35 else 0)
+	end
+
+	-- foreuse : moteur dès qu'elle tourne, pierre quand les coups portent
 	local drilling = player:GetAttribute("DrillReady") == true and typeof(player:GetAttribute("DrillAtLocal")) == "Vector3"
-	drill:Set(if drilling then 1 else 0)
-	tunnel:Set(if player:GetAttribute("InTunnel") then 1 else 0)
+	local biting = drilling and os.clock() - lastConfirmed < 0.5
+	drillMotor:Set(if drilling then 1 else 0)
+	drillGrind:Set(if biting then 1 elseif drilling then 0.3 else 0)
+	drillMotor:SetPitch(0.9 + 0.35 * drillProgress)
+	drillGrind:SetPitch(0.9 + 0.25 * drillProgress)
+	if not drilling then
+		drillProgress = 0
+	end
+
+	tunnel:Set(if inTunnel then 1 else 0)
 	void:Set(if outside then 0.35 + 0.65 * cold else 0)
 	heart:Set(if cold > 0.45 then (cold - 0.45) / 0.55 else 0)
+end)
 
-	-- machines : forage entre la fermeture des pinces et l'éclatement de la roche
-	local now = workspace:GetServerTimeNow()
-	for m, st in pairs(machines) do
-		local js = m:GetAttribute("JobStart") :: number?
-		local je = m:GetAttribute("JobEnd") :: number?
-		local working = js and je and now >= js + 0.7 and now < je - 0.8
-		st.loop:Set(if working then 1 else 0)
-		if je and now >= je - 0.8 and now < je and st.broke ~= je then
-			st.broke = je
-			Sfx.Play("Derock", { at = m.PrimaryPart.Position })
-		end
+task.spawn(function()
+	while true do
+		otherJets()
+		task.wait(2)
 	end
 end)
 
@@ -133,7 +172,7 @@ end)
 
 -- Coups de foreuse : petits éclats (pas plus d'un toutes les 0,12 s), gros fracas quand la roche cède
 local lastHit = 0
-Remotes:WaitForChild("DrillHit").OnClientEvent:Connect(function(rock: BasePart?, by: Player, _damage: number, _rarities, broken: boolean)
+Remotes:WaitForChild("DrillHit").OnClientEvent:Connect(function(rock: BasePart?, by: Player, _damage: number, _rarities, broken: boolean, left: number?, perEgg: number?)
 	if not rock or not rock.Parent then
 		return
 	end
@@ -142,8 +181,15 @@ Remotes:WaitForChild("DrillHit").OnClientEvent:Connect(function(rock: BasePart?,
 		at = rock.Position
 	end
 	local mine = by == player
+	if mine then
+		lastConfirmed = os.clock()
+		if type(left) == "number" and type(perEgg) == "number" and perEgg > 0 then
+			drillProgress = math.clamp(1 - left / perEgg, 0, 1)
+		end
+	end
 	if broken then
 		Sfx.Play("RockBreak", { at = at, volume = if mine then 1 else 0.6 })
+		Sfx.Play("RockCrumble", { at = at, volume = if mine then 1 else 0.6 })
 	elseif os.clock() - lastHit > 0.12 then
 		lastHit = os.clock()
 		Sfx.Play("RockHit", { at = at, volume = if mine then 1 else 0.5, pitch = 0.85 + math.random() * 0.35 })
@@ -155,11 +201,6 @@ Remotes:WaitForChild("Hatched").OnClientEvent:Connect(function(owner: Player, po
 	local rare = rarity >= S.RareFrom
 	Sfx.Play(if rare then "HatchRare" else "Hatch", { at = pos, volume = if owner == player then 1 else 0.5 })
 	Sfx.Play("Pop", { at = pos, pitch = 0.8 })
-end)
-
--- Œuf révélé par la machine : petit « pop » plus aigu selon la rareté
-Remotes:WaitForChild("EggRevealed").OnClientEvent:Connect(function(_ring: number, rarity: number)
-	Sfx.Play("Pop", { pitch = 0.9 + 0.06 * rarity })
 end)
 
 Remotes:WaitForChild("Notice").OnClientEvent:Connect(function(_text: string, kind: string?)
@@ -179,7 +220,10 @@ player.AttributeChanged:Connect(function(name: string)
 	local v = player:GetAttribute(name)
 	if name == "Cargo" and type(v) == "number" then
 		if v > last.Cargo then
+			-- un œuf sort de l'astéroïde : « pop » et tintement, plus aigus à chaque œuf de la soute
 			Sfx.Play("Pop", { pitch = 1.1 + 0.05 * math.min(v, 8) })
+			Sfx.Play("Coin", { volume = 0.6, pitch = 1.3 + 0.05 * math.min(v, 8) })
+			drillProgress = 0
 		end
 		last.Cargo = v
 	elseif name == "Credits" and type(v) == "number" then

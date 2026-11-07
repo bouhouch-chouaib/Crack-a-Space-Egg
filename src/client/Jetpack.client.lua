@@ -314,6 +314,7 @@ RunService.RenderStepped:Connect(function(dt)
 	if state ~= sentState then
 		sentState = state
 		Remotes.JetState:FireServer(state)
+		player:SetAttribute("JetLocal", state) -- lu sans délai par Audio.client
 	end
 	local rig = rigs[character]
 	if rig then

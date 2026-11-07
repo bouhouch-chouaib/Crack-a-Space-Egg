@@ -18,8 +18,11 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
+local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local camera = workspace.CurrentCamera
+local player = Players.LocalPlayer
+local ANTICIPATE = 1.1 -- secondes avant l'éclatement où la roche tremble fort et s'illumine
 
 local DESCEND = 0.7 -- secondes pour fermer les pinces et descendre la foreuse
 local REVEAL = 0.8 -- secondes avant la fin où la roche éclate
@@ -301,11 +304,160 @@ local function setFx(fx: Fx, on: boolean)
 	fx.flash.Enabled = on
 end
 
+-- FISSURES LUMINEUSES -----------------------------------------------------------------
+-- À chaque craquement, une fissure en zigzag s'ouvre sur la roche : un trait blanc bordé de la
+-- couleur de la rareté, et un rayon de lumière qui sort de la fente. Plus on approche de
+-- l'éclatement, plus les rayons sont longs et vifs. Tout est attaché à la roche (suit ses
+-- tremblements et sa taille) et disparaît avec elle.
+
+type Crack = { shafts: { Beam }, tips: { Attachment }, normals: { Vector3 }, glows: { Beam } }
+
+-- Point de la surface de la roche dans une direction (depuis le centre)
+local function surfacePoint(shell: Model, center: Vector3, dir: Vector3): (BasePart?, Vector3?, Vector3?)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { shell }
+	-- la roche ignore les rayons (noCollide) : on l'active le temps du tir
+	local parts = {}
+	for _, d in ipairs(shell:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.CanQuery = true
+			table.insert(parts, d)
+		end
+	end
+	local hit = workspace:Raycast(center + dir * 8, -dir * 8, params)
+	for _, d in ipairs(parts) do
+		d.CanQuery = false
+	end
+	if hit and hit.Instance:IsA("BasePart") then
+		return hit.Instance :: BasePart, hit.Position, hit.Normal
+	end
+	return nil, nil, nil
+end
+
+local function crackBeam(a0: Attachment, a1: Attachment, color: Color3, width: number, transparency: number, textured: boolean, glow: boolean, z: number): Beam
+	local b = Instance.new("Beam")
+	b.Attachment0 = a0
+	b.Attachment1 = a1
+	b.Color = ColorSequence.new(color)
+	b.Width0 = width
+	b.Width1 = width * 0.7
+	b.Transparency = NumberSequence.new(transparency)
+	b.LightEmission = if glow then 1 else 0
+	b.LightInfluence = 0
+	b.FaceCamera = true
+	b.Segments = 1
+	-- dessinée devant les bosses de la roche (sa forme de collision est plus lisse que le maillage)
+	b.ZOffset = z
+	if textured then
+		b.Texture = UIKit.Art.FxGlow
+	end
+	b.Parent = a0
+	return b
+end
+
+local function addCrack(shell: Model, center: Vector3, color: Color3): Crack?
+	-- sur la face tournée vers la caméra (effet vu par chaque joueur), à ±70° près, plutôt sur les flancs
+	local toCam = camera.CFrame.Position - center
+	local flat = Vector3.new(toCam.X, 0, toCam.Z)
+	if flat.Magnitude < 0.05 then
+		flat = Vector3.zAxis
+	end
+	local yaw = math.rad((math.random() - 0.5) * 140)
+	local dir = (CFrame.Angles(0, yaw, 0) * flat.Unit + Vector3.new(0, math.random() * 0.9 - 0.35, 0)).Unit
+	local side = dir:Cross(Vector3.yAxis)
+	if side.Magnitude < 0.05 then
+		side = Vector3.xAxis
+	end
+	side = side.Unit
+	local up = side:Cross(dir).Unit
+	-- orientation de la fissure au hasard (horizontale, en biais ou verticale)
+	local turn = math.random() * math.pi
+	side, up = side * math.cos(turn) + up * math.sin(turn), up * math.cos(turn) - side * math.sin(turn)
+	local crack: Crack = { shafts = {}, tips = {}, normals = {}, glows = {} }
+	local prev: Attachment? = nil
+	local prevCore: Attachment? = nil
+	local n = math.random(3, 5)
+	local mid = math.floor(n / 2)
+	local zigSign = if math.random() < 0.5 then 1 else -1
+	for i = 0, n do
+		-- zigzag : on avance le long de la surface en déviant à gauche et à droite
+		local along = (i / n - 0.5) * 0.6
+		-- zigzag irrégulier : le sens change souvent, l'écart varie
+		if math.random() < 0.7 then
+			zigSign = -zigSign
+		end
+		local zig = zigSign * (0.02 + math.random() * 0.1)
+		local d = (dir + side * along + up * zig).Unit
+		local part, pos, normal = surfacePoint(shell, center, d)
+		if part and pos and normal then
+			-- deux couches décalées : le bord sombre contre la roche, la lumière juste devant
+			-- (accrocher à la roche AVANT de placer : WorldPosition dépend du parent)
+			local a = Instance.new("Attachment")
+			a.Parent = part
+			a.WorldPosition = pos + normal * 0.06
+			local core = Instance.new("Attachment")
+			core.Parent = part
+			core.WorldPosition = pos + normal * 0.2
+			if prev and prevCore then
+				crackBeam(prev, a, OUTLINE, 0.22, 0, false, false, 0.3) -- bord sombre de la fente (style cartoon)
+				crackBeam(prevCore, core, color:Lerp(Color3.new(1, 1, 1), 0.5), 0.1, 0, false, true, 0.4) -- cœur lumineux
+				table.insert(crack.glows, crackBeam(prevCore, core, color, 0.6, 0.3, true, true, 0.35)) -- halo coloré
+			end
+			prevCore = core
+			-- un rayon de lumière sort au milieu de la fissure
+			if i == mid then
+				local tip = Instance.new("Attachment")
+				tip.Parent = part
+				tip.WorldPosition = pos + normal * 0.6
+				local shaft = Instance.new("Beam")
+				shaft.Attachment0 = a
+				shaft.Attachment1 = tip
+				shaft.Texture = UIKit.Art.FxGlow
+				shaft.Color = ColorSequence.new(Color3.new(1, 1, 1), color)
+				shaft.Width0 = 0.5
+				shaft.Width1 = 1.4
+				shaft.Transparency = NumberSequence.new({ kp(0, 0.1), kp(1, 1) })
+				shaft.LightEmission = 1
+				shaft.LightInfluence = 0
+				shaft.FaceCamera = true
+				shaft.ZOffset = 0.4
+				shaft.Parent = a
+				table.insert(crack.shafts, shaft)
+				table.insert(crack.tips, tip)
+				table.insert(crack.normals, part.CFrame:VectorToObjectSpace(normal))
+			end
+			prev = a
+		end
+	end
+	return crack
+end
+
+-- Les rayons s'allongent et les halos s'avivent quand l'éclatement approche (a de 0 à 1)
+local function updateCracks(cracks: { Crack }, a: number, now: number)
+	for ci, c in ipairs(cracks) do
+		local flicker = 0.85 + 0.15 * math.sin(now * 30 + ci)
+		for i, shaft in ipairs(c.shafts) do
+			local tip = c.tips[i]
+			local base = shaft.Attachment0
+			if tip and base and tip.Parent then
+				tip.Position = base.Position + c.normals[i] * (0.6 + 3.5 * a) * flicker
+				shaft.Width1 = (1.4 + 2 * a) * flicker
+			end
+		end
+		for _, g in ipairs(c.glows) do
+			g.Width0 = (0.6 + 0.6 * a) * flicker
+			g.Width1 = g.Width0 * 0.7
+		end
+	end
+end
+
 -- La roche éclate : morceaux qui partent en tournant, flash, poussière
-local function burst(shell: Model, center: Vector3, color: Color3)
+local function burst(shell: Model, center: Vector3, color: Color3, rarity: number)
+	local pieces = 4 + math.min(rarity, 7)
 	for _, p in ipairs(shell:GetDescendants()) do
 		if p:IsA("BasePart") then
-			for _ = 1, 4 do
+			for _ = 1, pieces do
 				local chunk = p:Clone()
 				for _, c in ipairs(chunk:GetChildren()) do
 					c:Destroy()
@@ -315,7 +467,7 @@ local function burst(shell: Model, center: Vector3, color: Color3)
 				chunk.CFrame = CFrame.new(center + dir * 0.6) * CFrame.Angles(math.random() * 6, math.random() * 6, math.random() * 6)
 				chunk.Parent = workspace
 				tween(chunk, 0.9, {
-					CFrame = CFrame.new(center + dir * (5 + math.random() * 3) + Vector3.new(0, -2, 0)) * CFrame.Angles(math.random() * 9, math.random() * 9, 0),
+					CFrame = CFrame.new(center + dir * (6 + math.random() * 5) + Vector3.new(0, -2, 0)) * CFrame.Angles(math.random() * 9, math.random() * 9, 0),
 					Size = chunk.Size * 0.3,
 					Transparency = 1,
 				})
@@ -346,8 +498,35 @@ local function burst(shell: Model, center: Vector3, color: Color3)
 		SpreadAngle = Vector2.new(180, 180),
 		LightEmission = 1,
 	})
-	s:Emit(30)
+	s:Emit(30 + 10 * rarity)
+	-- éclair de lumière à la couleur de la rareté
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 12 + rarity
+	light.Brightness = 2.5
+	light.Shadows = false
+	light.Parent = a
+	tween(light, 0.6, { Brightness = 0 })
 	Debris:AddItem(a, 1.5)
+	-- sons : gros impact croquant + éboulis
+	Sfx.Play("RockBreak", { at = center })
+	Sfx.Play("RockCrumble", { at = center })
+	-- secousse de la caméra pour le joueur tout près (plus forte pour les raretés hautes)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local hum = character and character:FindFirstChildOfClass("Humanoid")
+	if root and hum and (root.Position - center).Magnitude < 45 then
+		local amp = 0.25 + 0.06 * rarity
+		task.spawn(function()
+			local t0 = os.clock()
+			while os.clock() - t0 < 0.35 do
+				local k = 1 - (os.clock() - t0) / 0.35
+				hum.CameraOffset = Vector3.new((math.random() - 0.5) * amp * k, (math.random() - 0.5) * amp * k, 0)
+				RunService.RenderStepped:Wait()
+			end
+			hum.CameraOffset = Vector3.zero
+		end)
+	end
 end
 
 -- MACHINES -----------------------------------------------------------------------
@@ -369,6 +548,14 @@ type State = {
 	burst: boolean,
 	flown: boolean,
 	spin: number,
+	grind: Sfx.Loop,
+	motor: Sfx.Loop,
+	clanked: boolean,
+	riser: boolean,
+	nextCrack: number,
+	punch: number,
+	glow: PointLight?,
+	cracks: { Crack },
 }
 
 local states: { [Model]: State } = {}
@@ -393,6 +580,13 @@ local function track(machine: Model)
 		burst = false,
 		flown = false,
 		spin = 0,
+		grind = Sfx.Loop("MachineGrind", machine.PrimaryPart),
+		motor = Sfx.Loop("MachineMotor", machine.PrimaryPart),
+		clanked = false,
+		riser = false,
+		nextCrack = 0,
+		punch = 0,
+		cracks = {},
 	}
 	st.drillRest = rel(machine, st.drill)
 	st.clampLRest = rel(machine, st.clampL)
@@ -401,6 +595,8 @@ local function track(machine: Model)
 	states[machine] = st
 	machine.AncestryChanged:Connect(function()
 		if not machine:IsDescendantOf(workspace) then
+			st.grind:Destroy()
+			st.motor:Destroy()
 			states[machine] = nil
 		end
 	end)
@@ -442,6 +638,14 @@ local function clearJob(st: State)
 	st.job = nil
 	st.burst = false
 	st.flown = false
+	st.clanked = false
+	st.riser = false
+	st.nextCrack = 0
+	st.punch = 0
+	st.glow = nil
+	st.cracks = {}
+	st.grind:Set(0)
+	st.motor:Set(0)
 end
 
 -- L'œuf révélé vole jusqu'au propriétaire, puis « +1 🥚 READY »
@@ -458,6 +662,7 @@ local function flyEgg(st: State, owner: Player?)
 		return
 	end
 	local start = egg:GetPivot().Position
+	Sfx.Play("EggFly", { at = start })
 	local h = (egg:GetAttribute("RevealH") or REVEAL_H) :: number
 	local t0 = os.clock()
 	local conn
@@ -470,6 +675,10 @@ local function flyEgg(st: State, owner: Player?)
 		if k >= 1 then
 			conn:Disconnect()
 			egg:Destroy()
+			if owner == player then
+				Sfx.Play("Pop", { pitch = 1.2 })
+				Sfx.Play("Coin", { pitch = 1.4 })
+			end
 		end
 	end)
 end
@@ -480,6 +689,8 @@ RunService.RenderStepped:Connect(function(dt)
 	for machine, st in pairs(states) do
 		local pivot = machine:GetPivot()
 		if (pivot.Position - camPos).Magnitude > 260 then
+			st.grind:Set(0)
+			st.motor:Set(0)
 			continue
 		end
 		local js = machine:GetAttribute("JobStart") :: number?
@@ -518,15 +729,87 @@ RunService.RenderStepped:Connect(function(dt)
 			end
 			-- Forage : vibration, éclats, la roche rétrécit
 			local drilling = t >= DESCEND * 0.8 and t < revealAt
+			local k = math.clamp((t - DESCEND) / math.max(0.1, revealAt - DESCEND), 0, 1)
 			if st.fx then
 				st.fx.at.WorldPosition = eggCenter + Vector3.new(0, EGG_H / 2 - 0.2, 0)
 				setFx(st.fx, drilling)
 			end
+			-- les pinces se referment sur la roche : « clac »
+			if not st.clanked and t >= DESCEND * 0.7 and t < revealAt then
+				st.clanked = true
+				Sfx.Play("Clamp", { at = eggCenter })
+			end
+			-- forage : la mèche et la pierre montent dans les aigus jusqu'à l'éclatement
+			st.grind:Set(if drilling then 1 else 0)
+			st.motor:Set(if drilling then 1 else 0)
+			st.grind:SetPitch(0.85 + 0.35 * k)
+			st.motor:SetPitch(0.85 + 0.45 * k)
+			-- la roche se fend, de plus en plus vite : craquement, éclats, petit sursaut
+			if drilling and st.shell and now >= st.nextCrack then
+				st.nextCrack = now + (0.55 - 0.4 * k) * (0.8 + math.random() * 0.4)
+				Sfx.Play("Crack", { at = eggCenter, pitch = 0.9 + 0.3 * k + math.random() * 0.15 })
+				if st.fx then
+					st.fx.chips:Emit(6)
+					st.fx.sparks:Emit(8)
+				end
+				st.punch = 0.07
+				-- une nouvelle fissure lumineuse (jusqu'à 7)
+				if #st.cracks < 7 then
+					local c = addCrack(st.shell, eggCenter, (Config.Rarities[rarity] or Config.Rarities[1]).Color)
+					if c then
+						table.insert(st.cracks, c)
+					end
+				end
+			end
+			st.punch = math.max(0, st.punch - dt * 0.5)
+			-- juste avant l'éclatement : la roche tremble fort et la lumière de l'œuf perce
+			local anticipation = if drilling then math.clamp(1 - (revealAt - t) / ANTICIPATE, 0, 1) else 0
+			if st.shell then
+				-- les fissures brillent un peu dès le début, puis de plus en plus (0,25 → 1)
+				updateCracks(st.cracks, math.max(anticipation, 0.25 * k), now)
+			end
+			if anticipation > 0 and not st.riser then
+				st.riser = true
+				Sfx.Play("Riser", { at = eggCenter, pitch = 1.3 })
+			end
+			if st.shell and anticipation > 0 then
+				local rc = (Config.Rarities[rarity] or Config.Rarities[1]).Color
+				if not st.glow then
+					local core = st.shell.PrimaryPart or st.shell:FindFirstChildWhichIsA("BasePart")
+					if core then
+						local g = Instance.new("PointLight")
+						g.Color = rc
+						g.Range = 8
+						g.Shadows = false
+						g.Brightness = 0
+						g.Parent = core
+						st.glow = g
+						-- la roche s'illumine de l'intérieur (visible même en plein jour)
+						local hl = Instance.new("Highlight")
+						hl.Name = "RevealGlow"
+						hl.FillColor = rc
+						hl.OutlineColor = rc:Lerp(Color3.new(1, 1, 1), 0.5)
+						hl.FillTransparency = 1
+						hl.OutlineTransparency = 1
+						hl.DepthMode = Enum.HighlightDepthMode.Occluded
+						hl.Parent = st.shell
+					end
+				end
+				if st.glow then
+					local pulse = 0.8 + 0.2 * math.sin(now * 40)
+					st.glow.Brightness = 2.5 * anticipation * pulse
+					local hl = st.shell:FindFirstChild("RevealGlow") :: Highlight?
+					if hl then
+						hl.FillTransparency = 1 - 0.65 * anticipation * pulse
+						hl.OutlineTransparency = 1 - anticipation
+					end
+				end
+			end
 			if st.shell and drilling then
-				local k = math.clamp((t - DESCEND) / math.max(0.1, revealAt - DESCEND), 0, 1)
-				local jitter = Vector3.new((math.random() - 0.5) * 0.12, (math.random() - 0.5) * 0.08, (math.random() - 0.5) * 0.12)
+				local amp = 1 + 3 * anticipation
+				local jitter = Vector3.new((math.random() - 0.5) * 0.12 * amp, (math.random() - 0.5) * 0.08 * amp, (math.random() - 0.5) * 0.12 * amp)
 				st.shell:PivotTo(CFrame.new(eggCenter + jitter) * st.shell:GetPivot().Rotation)
-				local target = (EGG_H * 1.05) * (1 - 0.15 * k)
+				local target = (EGG_H * 1.05) * (1 - 0.15 * k) * (1 + st.punch)
 				local size = st.shell:GetExtentsSize()
 				local cur = math.max(size.X, size.Y, size.Z)
 				if math.abs(cur - target) > 0.02 then
@@ -538,11 +821,16 @@ RunService.RenderStepped:Connect(function(dt)
 				st.burst = true
 				local color = (Config.Rarities[rarity] or Config.Rarities[1]).Color
 				if st.shell then
-					burst(st.shell, eggCenter, color)
+					burst(st.shell, eggCenter, color, rarity)
 					st.shell = nil
 				end
 				if st.fx then
 					setFx(st.fx, false)
+				end
+				-- l'œuf apparaît : tintement, et fanfare à partir d'Épique
+				Sfx.Play("Coin", { at = eggCenter, pitch = 0.9 + 0.08 * rarity })
+				if rarity >= Config.Sounds.RareFrom then
+					Sfx.Play("HatchRare", { at = eggCenter })
 				end
 				local egg = makeEgg(ring, rarity)
 				egg:SetAttribute("RevealH", revealHeight(rarity))
