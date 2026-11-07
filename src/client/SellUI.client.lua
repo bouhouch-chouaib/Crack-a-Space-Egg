@@ -107,6 +107,16 @@ local function gemCard(i: number, g: any): Frame
 	-- aperçu 3D
 	local vp = new("ViewportFrame", { Size = UDim2.fromOffset(120, 100), Position = UDim2.fromOffset(30, 4), BackgroundTransparency = 1, Ambient = Color3.fromRGB(180, 180, 195), LightDirection = Vector3.new(-1, -1.4, -1), ZIndex = 4, Parent = c })
 	local m = GemModel.Make("gem", g.ring, g.rarity, g.shiny)
+	-- dans un ViewportFrame, la réflexion renvoie un ciel gris et le verre s'affiche mal : les pierres
+	-- sombres (Void Pearl, Rift Singularity) sortaient grises. L'aperçu garde donc la couleur pure.
+	for _, d in ipairs(m:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Reflectance = 0
+			if d.Material == Enum.Material.Glass then
+				d.Material = Enum.Material.SmoothPlastic
+			end
+		end
+	end
 	m:PivotTo(CFrame.new())
 	m.Parent = vp
 	local cam = new("Camera", { FieldOfView = 34, Parent = vp })
