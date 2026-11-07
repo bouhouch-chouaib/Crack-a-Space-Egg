@@ -412,8 +412,9 @@ end
 -- Tomber dans le Vide tue le joueur : il réapparaît à sa base et perd l'œuf porté (§13).
 -- Le carburant du jetpack (Config.Jetpack.Tiers) décide jusqu'où on peut aller sans tomber.
 local function watchFalls()
+	Players.RespawnTime = Config.Map.RespawnTime
 	while true do
-		task.wait(0.5)
+		task.wait(0.2)
 		for _, player in ipairs(Players:GetPlayers()) do
 			local hrp = root(player)
 			local d = DataService.Get(player)

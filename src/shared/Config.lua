@@ -44,7 +44,8 @@ Config.Map = {
 	DecorArc = 750, -- studs d'arc couverts de chaque côté du couloir (au-delà, la brume cache tout)
 	DecorDensity = 1 / 2600, -- roches par stud² de champ
 	DecorMax = 70, -- plafond par anneau (lisibilité et performances)
-	FallY = -150, -- sous cette hauteur, le joueur est perdu dans le Vide
+	FallY = -85, -- sous cette hauteur, le joueur est perdu dans le Vide (sous les roches les plus basses)
+	RespawnTime = 1.5, -- secondes avant de réapparaître à sa base après une mort
 }
 
 -- GEL HORS DU COULOIR (ColdService, ColdFx.client) ---------------------------------------------
@@ -496,7 +497,7 @@ Config.Sounds = {
 		Open = { Id = 80984744279155, Volume = 0.35 },
 		Error = { Id = 91501650514390, Volume = 0.25 },
 		Coin = { Id = 130378474223829, Volume = 0.35 },
-		Buy = { Id = 90531793028786, Volume = 3 },
+		Buy = { Id = 90531793028786, Volume = 1.2 },
 		Pop = { Id = 106984966606682, Volume = 0.9 },
 		-- foreuse du joueur et astéroïdes
 		RockHit = { Id = 9118588165, Volume = 1.1 },
@@ -530,8 +531,8 @@ Config.Sounds = {
 	Loops = {
 		JetBody = { Id = 87588244098894, Volume = 0.33 }, -- souffle grave du réacteur
 		JetFlame = { Id = 90423293726333, Volume = 0.23 }, -- flamme du brûleur
-		DrillMotor = { Id = 199754867, Volume = 0.45 },
-		DrillGrind = { Id = 9125450647, Volume = 1.6, Region = { 20, 100 } }, -- grosse foreuse dans la pierre
+		DrillMotor = { Id = 199754867, Volume = 0.27 },
+		DrillGrind = { Id = 9125450647, Volume = 0.95, Region = { 20, 100 } }, -- grosse foreuse dans la pierre
 		MachineGrind = { Id = 9125450647, Volume = 1.8, Region = { 20, 100 } },
 		MachineMotor = { Id = 199754867, Volume = 0.4, Pitch = 0.8 },
 		Tunnel = { Id = 9119462099, Volume = 2.5 },
