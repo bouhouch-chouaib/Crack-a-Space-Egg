@@ -173,7 +173,14 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
   - anneau 5 : **le bruit** (forer, courir, utiliser le jetpack remplit une jauge de bruit) ;
   - anneau 6 : **le vol de ses œufs** (forer l'astéroïde qu'il garde le réveille) ;
   - anneau 7 : 💡 les deux.
-- ✅ Un monstre réveillé **poursuit le joueur jusqu'à sa base**. S'il l'attrape, le joueur perd la moitié de sa soute et revient au vaisseau. Atteindre sa base le sauve.
+- ✅ (7 nov.) **Fait** (`MonsterService`, `MonsterFx.client`, réglages dans `Config.Monsters`) :
+  - anneau 5 : **le Dévoreur**, ver de roche aux fissures vertes. La jauge de bruit (à droite) se remplit quand on fore ou qu'on pousse au jetpack, redescend quand on plane ou qu'on reste discret ; alerte à 70 % (grondement, secousse), réveil à 100 % ;
+  - anneau 6 : **le Gardien de la Faille**, un œil cosmique. Environ 1 astéroïde sur 5 est gardé : un petit œil flotte au-dessus, avec une lueur. Il contient 50 % d'œufs en plus, à la rareté tirée deux fois (la meilleure). Le forer réveille le gardien ;
+  - anneau 7 : **la Reine du Nid**, insecte aux ailes de cristal : bruit et astéroïdes gardés ;
+  - modèles générés par l'IA 3D de Studio (`ReplicatedStorage.Assets.Monsters` : Devourer, Watcher, Queen).
+- ✅ **Poursuite** : le monstre sort en grandissant (1,4 s pour fuir), puis vole vers le joueur à 85 / 90 / 95 % de sa vitesse en vol (au moins 28 studs/s). **Il abandonne au bout d'un temps qui dépend de la rareté de l'œuf porté** : 8 s (Commun), 10, 13, 16, 20, 25, 30 s (Cosmique), 5 s sans œuf. Le vaisseau le fait fuir aussitôt. 12 s de répit ensuite.
+- ✅ **S'il attrape le joueur** : l'œuf porté est perdu et le joueur revient à sa base.
+- ✅ **À l'écran** pour le joueur poursuivi : bandeau « NOM! ESCAPE 12s » avec une barre (en bas), bord rouge qui bat plus fort quand il approche, icône de danger au bord de l'écran de son côté, contour du monstre visible à travers les roches, musique de poursuite, rugissement, grondement près de lui, secousses. Les autres joueurs voient et entendent aussi le monstre.
 - ✅ Mourir, ou tomber dans le Vide, ramène au vaisseau avec une soute vide.
 
 ## 14. Événements

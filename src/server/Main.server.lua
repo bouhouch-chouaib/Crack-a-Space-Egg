@@ -14,6 +14,7 @@ local BoostService = require(script.Parent.BoostService)
 local WindTunnelService = require(script.Parent.WindTunnelService)
 local ColdService = require(script.Parent.ColdService)
 local CreatureService = require(script.Parent.CreatureService)
+local MonsterService = require(script.Parent.MonsterService)
 
 WorldBuilder.Build()
 Bases.Start()
@@ -29,3 +30,4 @@ MachineService.Start()
 WindTunnelService.Start() -- souffleries : on y farme le niveau du jetpack
 ColdService.Start() -- gel et manque d'oxygène hors du couloir
 CreatureService.Start() -- sac, vente au Trading Post, fusion
+MonsterService.Start() -- monstres des anneaux 5 à 7 (bruit, gardiens, poursuites)

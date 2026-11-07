@@ -51,6 +51,34 @@ Config.Map = {
 -- Hors du couloir (entre les bouées) et hors du vaisseau, il n'y a plus d'oxygène et le froid gagne :
 -- après quelques secondes de répit, le gel monte ; trop loin, il monte tout de suite et 2× plus vite.
 -- À 100 %, le joueur est pris dans un bloc de glace puis renvoyé à sa base (il perd ses œufs).
+-- MONSTRES (anneaux 5 à 7, docs/Mecaniques.md §13) ---------------------------------------
+-- Un monstre par anneau, chacun repère le joueur à sa façon :
+--   Noise : la jauge de bruit (forer, pousser au jetpack) ; à 1, il se réveille
+--   Guard : forer un astéroïde gardé (lueur et œil au-dessus) le réveille aussitôt
+--   Both  : les deux
+-- Il poursuit le joueur un temps qui dépend de la rareté de l'œuf qu'il porte (ChaseTime), puis
+-- abandonne. S'il l'attrape : l'œuf est perdu et le joueur revient à sa base. Le vaisseau protège.
+Config.Monsters = {
+	Kinds = {
+		[5] = { Name = "Devourer", Model = "Devourer", Sense = "Noise", Speed = 0.85, Size = 30, Color = Color3.fromRGB(150, 255, 90) },
+		[6] = { Name = "Rift Watcher", Model = "Watcher", Sense = "Guard", Speed = 0.9, Size = 20, Color = Color3.fromRGB(90, 230, 255) },
+		[7] = { Name = "Nest Queen", Model = "Queen", Sense = "Both", Speed = 0.95, Size = 34, Color = Color3.fromRGB(255, 170, 60) },
+	},
+	-- Bruit (par seconde) : forer, pousser au jetpack ; il retombe quand on reste discret
+	Noise = { Drill = 0.09, Jet = 0.06, Decay = 0.18, QuietDelay = 1, Warn = 0.7 },
+	-- Astéroïdes gardés (anneaux Guard et Both) : part, œufs en plus, rareté tirée deux fois (la meilleure)
+	GuardShare = 0.22,
+	GuardEggs = 1.5,
+	-- Durée de la poursuite (s) selon la rareté de l'œuf porté (1 = Commun … 7 = Cosmique), sans œuf : NoEgg
+	ChaseTime = { 8, 10, 13, 16, 20, 25, 30 },
+	NoEgg = 5,
+	Emerge = 1.4, -- secondes où il sort (on a le temps de fuir)
+	CatchRadius = 6, -- en plus de son rayon
+	MinSpeed = 28, -- studs/s au minimum (sinon vitesse en vol du joueur × Speed)
+	Cooldown = 12, -- secondes de répit après une poursuite
+	RingMargin = 30, -- studs autour de l'épaisseur de l'anneau où il règne
+}
+
 Config.Cold = {
 	Margin = 6, -- studs de tolérance au-delà des bouées et du bord du vaisseau
 	Grace = 3, -- secondes hors zone avant que le gel commence
@@ -404,6 +432,7 @@ Config.Sounds = {
 		Base = 1842185080, -- vaisseau et bases : « Explore », aventure électro pour enfants
 		Belt = 1840200807, -- anneaux et couloir : « Futureworld », science-fiction
 		Event = 1846096405, -- pluie de météores : « Action And Tension »
+		Chase = 100817604765534, -- poursuite par un monstre : « Dangerous Pursuit »
 	},
 	-- Sons joués à une position : on les entend jusqu'à cette distance (studs)
 	Range = 160,
@@ -439,6 +468,11 @@ Config.Sounds = {
 		Freeze = { Id = 9125611419, Volume = 0.6 },
 		Thaw = { Id = 96795857757261, Volume = 0.3, Pitch = 1.4 },
 		MeteorStart = { Id = 9126102564, Volume = 3 },
+		-- monstres
+		MonsterRoar = { Id = 9113980319, Volume = 1.8 }, -- réveil
+		MonsterWarn = { Id = 9118805486, Volume = 1.5 }, -- trop de bruit : il remue
+		MonsterCatch = { Id = 9118612665, Volume = 1, Pitch = 0.7 }, -- il t'attrape
+		Escape = { Id = 1839881844, Volume = 0.45 }, -- il abandonne
 	},
 	-- Boucles (volume au maximum de l'effet). Region = partie régulière d'un long enregistrement,
 	-- jouée en boucle (secondes).
@@ -452,6 +486,7 @@ Config.Sounds = {
 		Tunnel = { Id = 9119462099, Volume = 2.5 },
 		Void = { Id = 6544555787, Volume = 0.2 }, -- vent glacé hors du couloir
 		Heart = { Id = 132163421525060, Volume = 0.4 }, -- battements quand le gel approche
+		MonsterGrowl = { Id = 9113985466, Volume = 0.5, Region = { 2, 36 } }, -- grondement du monstre (placé sur lui)
 	},
 	RareFrom = 4, -- rareté à partir de laquelle l'éclosion joue la fanfare
 }

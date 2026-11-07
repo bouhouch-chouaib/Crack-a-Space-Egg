@@ -63,6 +63,22 @@ function BeltService.Get(part: Instance): Asteroid?
 	return active[part :: BasePart]
 end
 
+-- Position de l'astéroïde de l'anneau le plus proche d'un point (dans maxDist), pour la sortie d'un monstre
+function BeltService.NearestPosition(pos: Vector3, ringIndex: number, maxDist: number): Vector3?
+	local best, bestDist = nil, maxDist
+	local t = now()
+	for _, a in pairs(active) do
+		if a.ring == ringIndex then
+			local p = BeltService.Position(a, t)
+			local d = (p - pos).Magnitude
+			if d < bestDist then
+				best, bestDist = p, d
+			end
+		end
+	end
+	return best
+end
+
 -- Joueurs qui se tenaient sur une roche qui vient de casser ou de disparaître : délai de grâce
 -- (lu par GameService.watchFalls : une chute pendant ce délai ne fait pas perdre la soute)
 BeltService.Grace = {} :: { [Player]: number }
@@ -123,6 +139,12 @@ local function spawn(ringIndex: number, age: number)
 	local field = Config.FieldHeight(ringIndex)
 	local t0 = now() - age
 	local eggs = math.ceil(rng:NextInteger(size.Eggs[1], size.Eggs[2]) * EventService.EggMult())
+	-- Anneaux à gardien (Config.Monsters) : certains astéroïdes sont gardés, plus riches
+	local kind = Config.Monsters.Kinds[ringIndex]
+	local guarded = kind ~= nil and (kind.Sense == "Guard" or kind.Sense == "Both") and rng:NextNumber() < Config.Monsters.GuardShare
+	if guarded then
+		eggs = math.ceil(eggs * Config.Monsters.GuardEggs)
+	end
 	-- Place sur toute l'épaisseur et la hauteur du champ, sans chevaucher un voisin du même anneau
 	-- (même vitesse linéaire : deux voisins gardent à peu près leur écart en défilant)
 	local radius, height
@@ -192,6 +214,9 @@ local function spawn(ringIndex: number, age: number)
 	p:SetAttribute("Eggs", a.stock)
 	p:SetAttribute("MaxEggs", a.maxStock)
 	p:SetAttribute("Size", size.Name)
+	if guarded then
+		p:SetAttribute("Guarded", true) -- lu par MonsterService (réveil) et MonsterFx.client (œil, lueur)
+	end
 	a.part = p
 	a.model = model
 	active[p] = a

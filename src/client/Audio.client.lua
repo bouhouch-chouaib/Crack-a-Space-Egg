@@ -104,7 +104,9 @@ RunService.Heartbeat:Connect(function(dt: number)
 
 	-- musique du lieu
 	local want = "Base"
-	if root and not inShip(root.Position) then
+	if player:GetAttribute("Chased") then
+		want = "Chase" -- un monstre te poursuit (MonsterService)
+	elseif root and not inShip(root.Position) then
 		want = if workspace:GetAttribute("EventActive") then "Event" else "Belt"
 	end
 	if want ~= current then

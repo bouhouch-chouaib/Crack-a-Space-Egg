@@ -73,6 +73,8 @@ local function sync(player: Player)
 end
 GameService.Sync = sync
 GameService.Notice = notice
+-- Appelé à chaque coup de foreuse (posé par MonsterService) : (player, roche, anneau)
+GameService.DrillHook = nil :: ((Player, BasePart, number) -> ())?
 
 local function root(player: Player): BasePart?
 	local c = player.Character
@@ -159,11 +161,20 @@ local function onDrill(player: Player, target: any, at: any)
 	end
 
 	local damage = Config.DrillPower(d.drill) * Config.DrillTick
+	local guarded = a.part:GetAttribute("Guarded") == true
+	-- bruit et gardiens des anneaux à monstres (MonsterService)
+	if GameService.DrillHook then
+		GameService.DrillHook(player, a.part, a.ring)
+	end
 	local eggs, broken, progress = BeltService.Hit(a, player, damage, room)
 	local rarities = {}
 	if eggs > 0 then
 		for _ = 1, eggs do
 			local rarity = rollRarity(d, a.ring)
+			if guarded then
+				-- astéroïde gardé : la rareté est tirée deux fois, on garde la meilleure
+				rarity = math.max(rarity, rollRarity(d, a.ring))
+			end
 			table.insert(d.cargo, { ring = a.ring, rarity = rarity })
 			table.insert(rarities, rarity)
 		end
