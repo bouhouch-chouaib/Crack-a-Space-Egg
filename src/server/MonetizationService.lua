@@ -105,6 +105,15 @@ function MonetizationService.Start()
 		end
 	end
 	MarketplaceService.ProcessReceipt = processReceipt
+	-- Studio seulement : faire passer un reçu fictif par le vrai traitement (test des livraisons)
+	if game:GetService("RunService"):IsStudio() then
+		local bf = Instance.new("BindableFunction")
+		bf.Name = "ReceiptDebug"
+		bf.OnInvoke = function(player: Player, productId: number)
+			return processReceipt({ PlayerId = player.UserId, ProductId = productId, PurchaseId = "debug" .. os.clock() })
+		end
+		bf.Parent = game:GetService("ServerStorage")
+	end
 end
 
 return MonetizationService

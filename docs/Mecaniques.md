@@ -223,6 +223,8 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 - ✅ **Potions** de 15 min, cumulables dans le temps et sauvegardées : x2 Luck (39 R$), x2 Money (39 R$), x2 Jetpack XP (25 R$). Meteor Shower (99 R$) lance tout de suite une pluie de météores pour tout le serveur. Les potions actives s'affichent sous l'horloge, avec leur minuteur.
 - ✅ **Starter Pack** (99 R$) : gros paquet d'argent + x2 Luck + x2 Money. **Paquets d'argent** : le montant dépend de l'anneau le plus loin débloqué.
 - ✅ Les effets sont calculés par le serveur (`BoostService`). Les identifiants Roblox vont dans `Config.Shop`, `Config.Drills` et `Config.Hatch.Skip`. Tant qu'un identifiant vaut 0, le bouton affiche « Coming soon! ».
+- ✅ Les 33 articles sont créés sur Roblox depuis l'Assistant de Studio (API Open Cloud) : 6 passes et 27 produits (10 foreuses, 7 « Hatch now », 4 potions, 5 paquets d'argent, le Starter Pack). Chacun a une icône faite par `tools/store_icons.py` (images dans `tools/store-icons`). Leurs identifiants sont dans `Config`.
+- Dans Studio, les points d'accès de test `ServerStorage.ReceiptDebug` et `BoostDebug` font passer un achat fictif par le vrai traitement. Ils n'existent pas dans le jeu publié.
 
 ## 19. Interface
 

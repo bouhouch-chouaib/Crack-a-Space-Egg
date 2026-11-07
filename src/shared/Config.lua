@@ -238,6 +238,13 @@ Config.Drills = {
 	drill("Galaxy Drill", 60000, 4e12, 999, Color3.fromRGB(255, 110, 210)),
 	drill("Cosmic Drill", 170000, 5e13, 1499, Color3.fromRGB(130, 255, 240)),
 }
+-- Produits Robux des foreuses (créés le 7 nov. sur Roblox, palier 2 à 11)
+for tier, id in pairs({
+	[2] = 3729246395, [3] = 3729246424, [4] = 3729246438, [5] = 3729246452, [6] = 3729246472,
+	[7] = 3729246638, [8] = 3729246665, [9] = 3729246690, [10] = 3729246706, [11] = 3729246737,
+}) do
+	Config.Drills[tier].ProductId = id
+end
 
 -- Mutations
 Config.Sizes = {
@@ -610,18 +617,18 @@ Config.Shop = {
 		Text = "Big money pack + x2 Luck + x2 Money potions",
 		Art = "Money4",
 		PackBase = 45000, -- comme le 3e paquet d'argent
-		Id = 0,
+		Id = 3729245985,
 		Price = 99,
 		Was = 249, -- prix barré
 	},
 	-- Passes (achat définitif). Effets appliqués par BoostService.
 	Passes = {
-		{ Key = "JetXP2x", Name = "x2 Jetpack XP", Text = "Train your jetpack twice as fast", Art = "PassTraining2x", Id = 0, Price = 149 },
-		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "x2 jetpack fuel", Art = "PassTurboJetpack", Id = 0, Price = 99 },
-		{ Key = "FastHatch", Name = "Fast Hatch", Text = "Eggs hatch 2x faster", Art = "PassAutoCrack", Id = 0, Price = 199, Ribbon = "BEST SELLER!" },
-		{ Key = "Money2x", Name = "x2 Money", Text = "Creatures earn double, forever", Art = "PassMoney2x", Id = 0, Price = 299, Ribbon = "BEST VALUE!" },
-		{ Key = "BaseSlots", Name = "+5 Base Slots", Text = "Room for 5 more eggs and creatures", Art = "PassPetSlot", Id = 0, Price = 249 },
-		{ Key = "VIP", Name = "VIP", Text = "VIP chat tag, +10% money", Art = "PassVIP", Id = 0, Price = 399 },
+		{ Key = "JetXP2x", Name = "x2 Jetpack XP", Text = "Train your jetpack twice as fast", Art = "PassTraining2x", Id = 2075661369, Price = 149 },
+		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "x2 jetpack fuel", Art = "PassTurboJetpack", Id = 2075607386, Price = 99 },
+		{ Key = "FastHatch", Name = "Fast Hatch", Text = "Eggs hatch 2x faster", Art = "PassAutoCrack", Id = 2076051409, Price = 199, Ribbon = "BEST SELLER!" },
+		{ Key = "Money2x", Name = "x2 Money", Text = "Creatures earn double, forever", Art = "PassMoney2x", Id = 2074467451, Price = 299, Ribbon = "BEST VALUE!" },
+		{ Key = "BaseSlots", Name = "+5 Base Slots", Text = "Room for 5 more eggs and creatures", Art = "PassPetSlot", Id = 2074281420, Price = 249 },
+		{ Key = "VIP", Name = "VIP", Text = "VIP chat tag, +10% money", Art = "PassVIP", Id = 2074857407, Price = 399 },
 	},
 	PassEffects = {
 		JetXP2x = 2, -- × XP de jetpack
@@ -634,21 +641,21 @@ Config.Shop = {
 	-- Potions de 15 minutes (produits Robux), cumulables dans le temps
 	PotionMinutes = 15,
 	Potions = {
-		{ Key = "Luck", Name = "x2 Luck", Art = "PotionLuck", Id = 0, Price = 39 },
-		{ Key = "Money", Name = "x2 Money", Art = "PotionMoney", Id = 0, Price = 39 },
-		{ Key = "JetXP", Name = "x2 Jetpack XP", Art = "PotionSuit", Id = 0, Price = 25 },
-		{ Key = "Meteor", Name = "Meteor Shower", Text = "For the whole server!", Art = "PotionMeteor", Id = 0, Price = 99 },
+		{ Key = "Luck", Name = "x2 Luck", Art = "PotionLuck", Id = 3729245893, Price = 39 },
+		{ Key = "Money", Name = "x2 Money", Art = "PotionMoney", Id = 3729245927, Price = 39 },
+		{ Key = "JetXP", Name = "x2 Jetpack XP", Art = "PotionSuit", Id = 3729245953, Price = 25 },
+		{ Key = "Meteor", Name = "Meteor Shower", Text = "For the whole server!", Art = "PotionMeteor", Id = 3729245971, Price = 99 },
 	},
 	-- Boost gratuit contre une pub récompensée
 	FreeBoost = { Name = "Free x2 Boost", Minutes = 5, Art = "FreeBoost" },
 	-- Paquets d'argent : montant = Base × Config.Hatch.RingIncome de l'anneau le plus loin débloqué
 	-- (environ 4 min à 35 min de revenus), pour qu'un paquet reste intéressant à toutes les étapes du jeu
 	MoneyPacks = {
-		{ Art = "Money1", Base = 6000, Id = 0, Price = 19 },
-		{ Art = "Money2", Base = 20000, Id = 0, Price = 49 },
-		{ Art = "Money3", Base = 45000, Id = 0, Price = 99, Ribbon = "POPULAR!" },
-		{ Art = "Money4", Base = 120000, Id = 0, Price = 249 },
-		{ Art = "Money5", Base = 260000, Id = 0, Price = 499, Ribbon = "BEST VALUE!" },
+		{ Art = "Money1", Base = 6000, Id = 3729246128, Price = 19 },
+		{ Art = "Money2", Base = 20000, Id = 3729246160, Price = 49 },
+		{ Art = "Money3", Base = 45000, Id = 3729246196, Price = 99, Ribbon = "POPULAR!" },
+		{ Art = "Money4", Base = 120000, Id = 3729246217, Price = 249 },
+		{ Art = "Money5", Base = 260000, Id = 3729246247, Price = 499, Ribbon = "BEST VALUE!" },
 	},
 }
 
@@ -771,15 +778,15 @@ Config.Hatch = {
 	WanderFullHeight = 4,
 	WanderPeriod = 6,
 	-- Faire éclore tout de suite contre des Robux (du temps, jamais des œufs ni des créatures).
-	-- Un produit de développeur par rareté ; ProductId = 0 tant qu'il n'est pas créé sur Roblox.
+	-- Un produit de développeur par rareté (créés le 7 nov. sur Roblox).
 	Skip = {
-		{ Price = 9, ProductId = 0 }, -- Common
-		{ Price = 15, ProductId = 0 }, -- Uncommon
-		{ Price = 25, ProductId = 0 }, -- Rare
-		{ Price = 45, ProductId = 0 }, -- Epic
-		{ Price = 79, ProductId = 0 }, -- Legendary
-		{ Price = 129, ProductId = 0 }, -- Mythic
-		{ Price = 199, ProductId = 0 }, -- Cosmic
+		{ Price = 9, ProductId = 3729247130 }, -- Common
+		{ Price = 15, ProductId = 3729247160 }, -- Uncommon
+		{ Price = 25, ProductId = 3729247194 }, -- Rare
+		{ Price = 45, ProductId = 3729247244 }, -- Epic
+		{ Price = 79, ProductId = 3729247270 }, -- Legendary
+		{ Price = 129, ProductId = 3729247308 }, -- Mythic
+		{ Price = 199, ProductId = 3729247356 }, -- Cosmic
 	},
 }
 
