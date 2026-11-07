@@ -127,7 +127,7 @@ Les cartes ont une illustration sur un fond en dégradé, un bouton vert (Robux 
 | --- | --- |
 | **Toasts** | « +3 eggs · best: Rare », « Cargo full! », « Not enough $ » (petites bulles qui glissent) |
 | **Annonce serveur** | Bandeau en haut quand quelqu'un trouve un Mythique ou mieux ✅ |
-| **Nouvel anneau** | Grand titre à l'entrée de l'anneau ; « Your jetpack is too weak here. Risky! » si le palier du jetpack est trop bas ✅ ; « First egg from the … » au premier œuf ✅ |
+| **Nouvel anneau** | Grand titre à l'entrée de l'anneau (« RING n », sans avertissement) ✅ ; « First egg from the … » au premier œuf ✅ |
 | **Perte** | Flash rouge « You lost 5 eggs » (Vide, monstre) ✅ |
 | **Première minute** | Flèche au sol, bulles très courtes avec icônes, main qui montre le geste ✅ |
 | **Réglages** | Musique et sons ON/OFF ✅, qualité graphique (moins d'effets sur téléphone), masquer les créatures des autres |
