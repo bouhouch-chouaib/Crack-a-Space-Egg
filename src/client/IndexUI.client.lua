@@ -247,13 +247,6 @@ refresh = function()
 			stroke.Thickness = if r == ring then 6 else 3.5
 			stroke.Color = if r == ring then Color3.fromRGB(255, 235, 120) else UIKit.Outline
 		end
-		local lockIcon = t.frame:FindFirstChild("RingLock")
-		local locked = r > (player:GetAttribute("Ring") or 1)
-		if locked and not lockIcon then
-			UIKit.icon("Lock", { Name = "RingLock", Size = UDim2.fromOffset(30, 30), Position = UDim2.new(1, -34, 1, -34), ZIndex = 3, Parent = t.frame })
-		elseif not locked and lockIcon then
-			lockIcon:Destroy()
-		end
 	end
 	local biome = Config.Biomes[ring]
 	local n, total = ringCount(ring)

@@ -171,7 +171,8 @@ local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost,
 		Crystals = crystals,
 	}
 end
--- Prix de déblocage (UnlockCost) calés sur les revenus des créatures (Config.Hatch) : avec une base
+-- UnlockCost : plus utilisé depuis le 7 nov. (tous les anneaux sont ouverts, on y va à ses risques ;
+-- c'est la portée du jetpack qui décide). Ancien calcul : prix calés sur les revenus (Config.Hatch), avec une base
 -- pleine de créatures plutôt communes de l'anneau précédent, il faut environ 10 min (anneau 2),
 -- 15 min (3), 20 min (4), 30 min (5), 45 min (6) et 1 h (7).
 Config.Rings = {

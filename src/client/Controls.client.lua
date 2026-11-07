@@ -26,15 +26,12 @@ targetValue.Parent = player
 
 
 -- Raison pour laquelle on ne peut pas forer cette roche (nil = on peut)
-local function blocked(rock: BasePart): string?
+local function blocked(_rock: BasePart): string?
 	if player:GetAttribute("Credits") == nil then
 		return "Loading your save..."
 	end
 	if (player:GetAttribute("Cargo") or 0) >= (player:GetAttribute("CargoMax") or 1) then
 		return "{Egg} You carry an egg! Bring it back to your base"
-	end
-	if (rock:GetAttribute("Ring") or 1) > (player:GetAttribute("Ring") or 1) then
-		return "{Lock} Locked ring! Unlock it at the shop"
 	end
 	return nil
 end

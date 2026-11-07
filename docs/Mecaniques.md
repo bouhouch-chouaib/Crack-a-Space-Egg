@@ -133,7 +133,7 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 | Foreuse | Fore plus vite |
 | Soute | Plus d'œufs par voyage |
 | Scanner | Plus de chance ; repère les astéroïdes rares et les épaves |
-| Combinaison | Chaque palier donne la résistance à la pression qui ouvre l'anneau suivant. Sans le bon palier, la pression y est mortelle |
+| Combinaison | ❌ Retirée le 7 nov. : **tous les anneaux sont ouverts**, on peut y aller et y forer à ses risques et périls. C'est la portée du jetpack (paliers) qui décide si on y arrive sans tomber dans le Vide |
 
 ### Niveau du jetpack et souffleries (remplace l'oxygène, 7 nov.)
 
@@ -237,7 +237,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 
 - ✅ **Passes** (définitifs) : x2 Jetpack XP (149 R$), Turbo Jetpack (+25 % de carburant, 99 R$ ; pas plus, pour ne pas sauter un palier), Fast Hatch (éclosion ×2 plus rapide, 199 R$), x2 Money (revenus des créatures ×2, 299 R$), +5 Base Slots (249 R$), VIP (+10 % d'argent et tag [VIP] doré dans le chat, 399 R$).
 - ✅ **Potions** de 15 min, cumulables dans le temps et sauvegardées : x2 Luck (39 R$), x2 Money (39 R$), x2 Jetpack XP (25 R$). Meteor Shower (99 R$) lance tout de suite une pluie de météores pour tout le serveur. Les potions actives s'affichent sous l'horloge, avec leur minuteur.
-- ✅ **Starter Pack** (99 R$) : gros paquet d'argent + x2 Luck + x2 Money. **Paquets d'argent** : le montant dépend de l'anneau le plus loin débloqué.
+- ✅ **Starter Pack** (99 R$) : gros paquet d'argent + x2 Luck + x2 Money. **Paquets d'argent** : le montant dépend de l'anneau le plus lointain où l'on a déjà sorti un œuf.
 - ✅ Les effets sont calculés par le serveur (`BoostService`). Les identifiants Roblox vont dans `Config.Shop`, `Config.Drills` et `Config.Hatch.Skip`. Tant qu'un identifiant vaut 0, le bouton affiche « Coming soon! ».
 - ✅ Les 33 articles sont créés sur Roblox depuis l'Assistant de Studio (API Open Cloud) : 6 passes et 27 produits (10 foreuses, 7 « Hatch now », 4 potions, 5 paquets d'argent, le Starter Pack). Chacun a une icône faite par `tools/store_icons.py` (images dans `tools/store-icons`). Leurs identifiants sont dans `Config`.
 - Dans Studio, les points d'accès de test `ServerStorage.ReceiptDebug` et `BoostDebug` font passer un achat fictif par le vrai traitement. Ils n'existent pas dans le jeu publié.

@@ -151,10 +151,6 @@ local function onDrill(player: Player, target: any, at: any)
 		character:SetAttribute("DrillAt", point)
 		character:SetAttribute("DrillingUntil", workspace:GetServerTimeNow() + Config.DrillTick * 2)
 	end
-	if a.ring > d.ring then
-		notice(player, "Unlock the " .. Config.Rings[a.ring].Name .. " at the Space Shop", "warn")
-		return
-	end
 	local max = Config.CargoSlots()
 	local room = max - #d.cargo
 	if room <= 0 then
@@ -179,6 +175,12 @@ local function onDrill(player: Player, target: any, at: any)
 			end
 			table.insert(d.cargo, { ring = a.ring, rarity = rarity })
 			table.insert(rarities, rarity)
+		end
+		-- tous les anneaux sont ouverts (on y va à ses risques) : d.ring retient le plus lointain
+		-- où l'on a déjà sorti un œuf (onglets de l'Index, montant des paquets d'argent)
+		if a.ring > d.ring then
+			d.ring = a.ring
+			notice(player, ("{Star} First egg from the %s!"):format(Config.Rings[a.ring].Name), "good")
 		end
 		sync(player)
 	end
@@ -407,25 +409,6 @@ function GameService.GrantDrill(player: Player, tier: number): boolean
 	return true
 end
 
-local function unlockRing(player: Player, index: any)
-	local d = DataService.Get(player)
-	if not d or type(index) ~= "number" or index ~= d.ring + 1 then
-		return
-	end
-	local ring = Config.Rings[index]
-	if not ring then
-		return
-	end
-	if d.credits < ring.UnlockCost then
-		notice(player, "Not enough credits", "warn")
-		return
-	end
-	d.credits -= ring.UnlockCost
-	d.ring = index
-	sync(player)
-	notice(player, ring.Name .. " unlocked! Rarer eggs out there", "good")
-end
-
 -- CHUTE DANS LE VIDE ---------------------------------------------------------
 
 -- Tomber dans le Vide tue le joueur : il réapparaît à sa base et perd l'œuf porté (§13).
@@ -504,7 +487,6 @@ function GameService.Start()
 	Remotes.JetState.OnServerEvent:Connect(onJetState)
 	Remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
 	Remotes.BuyDrill.OnServerEvent:Connect(buyDrill)
-	Remotes.UnlockRing.OnServerEvent:Connect(unlockRing)
 	-- Réglages : couper la musique ou les sons (gardé dans la sauvegarde)
 	Remotes.Settings.OnServerEvent:Connect(function(player: Player, attr: unknown, off: unknown)
 		local d = DataService.Get(player)

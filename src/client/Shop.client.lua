@@ -288,10 +288,6 @@ for i, u in ipairs(UPGRADES) do
 		Remotes.BuyUpgrade:FireServer(u.id)
 	end)
 end
--- La combinaison ouvre l'anneau suivant
-local suit = upgradeCard("SUIT", "UpSuit", "Purple", #UPGRADES + 1, function()
-	Remotes.UnlockRing:FireServer((player:GetAttribute("Ring") or 1) + 1)
-end)
 
 local function refreshUpgrades()
 	local credits = player:GetAttribute("Credits") or 0
@@ -333,21 +329,6 @@ local function refreshUpgrades()
 	end
 	drillCard.light.Visible = drillCard.affordable
 
-	local ring = player:GetAttribute("Ring") or 1
-	local nextRing = Config.Rings[ring + 1]
-	suit.level.Text = "Lv " .. ring
-	if nextRing then
-		suit.effect.Text = "Opens " .. nextRing.Name
-		suit.price.Text = "$" .. Format.Short(nextRing.UnlockCost)
-		suit.affordable, suit.why = credits >= nextRing.UnlockCost, "Not enough $!"
-		UIKit.recolor(suit.grad, if suit.affordable then "Green" else "Grey")
-	else
-		suit.effect.Text = "All rings open"
-		suit.price.Text = "MAX"
-		UIKit.recolor(suit.grad, "Gold")
-		suit.affordable, suit.why = false, "All rings are open!"
-	end
-	suit.light.Visible = suit.affordable
 end
 
 -- 3. PETS et 4. REWARDS : bientôt (semaine 2) -------------------------------------
@@ -576,9 +557,7 @@ player.AttributeChanged:Connect(function(name)
 	local id = if name == "Ring" or name == "Drill" then name else string.sub(name, 5)
 	local now = player:GetAttribute(name)
 	if win.isOpen() and known[id] and type(now) == "number" and now > known[id] then
-		if id == "Ring" then
-			celebrate(suit.card, "NEW RING!", Color3.fromRGB(230, 170, 255))
-		elseif id == "Drill" then
+		if id == "Drill" then
 			celebrate(drillCard.card, "NEW DRILL!", Color3.fromRGB(255, 200, 90))
 		elseif upgradeCards[id] then
 			celebrate(upgradeCards[id].card, "LEVEL UP!", Color3.fromRGB(255, 236, 110))

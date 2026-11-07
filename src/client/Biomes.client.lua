@@ -152,17 +152,18 @@ local function showTitle(index: number)
 		Parent = box,
 	})
 	UIKit.shinyText(title, color)
-	local locked = index > (player:GetAttribute("Ring") or 1)
+	-- tous les anneaux sont ouverts ; si le jetpack est en dessous du palier de l'anneau, on prévient
+	local risky = index > ((player:GetAttribute("JetTier") or 1) :: number)
 	local sub = UIKit.text({
 		Size = UDim2.new(1, 0, 0, 40),
 		Position = UDim2.fromOffset(0, 96),
-		Text = if locked then "{Lock} Locked! Unlock it at the shop" else "RING " .. index,
-		TextColor3 = if locked then Color3.fromRGB(255, 110, 110) else Color3.fromRGB(255, 250, 220),
+		Text = if risky then "{Warning} Your jetpack is too weak here. Risky!" else "RING " .. index,
+		TextColor3 = if risky then Color3.fromRGB(255, 110, 110) else Color3.fromRGB(255, 250, 220),
 		ZIndex = 3,
 		Stroke = 3.5,
 		Parent = box,
 	})
-	if locked then
+	if risky then
 		UIKit.shake(sub)
 	end
 	UIKit.sparkles(box, { count = 5, size = 34, z = 4 })

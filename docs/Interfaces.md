@@ -50,7 +50,7 @@ Cinq cartes, une par amélioration ✅ :
 | 📦 **Cargo** | Places dans la soute |
 | 🚀 **Jetpack** | Poussée, carburant, vitesse |
 | 📡 **Scanner** | Chance, repère des astéroïdes rares |
-| 🧑‍🚀 **Suit** | Palier de combinaison → **l'anneau qu'il ouvre** (image de l'anneau, verrouillé ou ouvert) |
+| 🧑‍🚀 **Suit** | ❌ Retiré le 7 nov. : tous les anneaux sont ouverts (le jetpack décide jusqu'où on va) |
 
 Chaque carte a une illustration, son niveau, « actuel → suivant », et un bouton **$ prix** : vert si on peut payer, gris sinon. Au niveau maximum, une pastille **MAX**.
 
@@ -127,7 +127,7 @@ Les cartes ont une illustration sur un fond en dégradé, un bouton vert (Robux 
 | --- | --- |
 | **Toasts** | « +3 eggs · best: Rare », « Cargo full! », « Not enough $ » (petites bulles qui glissent) |
 | **Annonce serveur** | Bandeau en haut quand quelqu'un trouve un Mythique ou mieux ✅ |
-| **Nouvel anneau** | Grand titre « 🧊 ICE RING UNLOCKED! » |
+| **Nouvel anneau** | Grand titre à l'entrée de l'anneau ; « Your jetpack is too weak here. Risky! » si le palier du jetpack est trop bas ✅ ; « First egg from the … » au premier œuf ✅ |
 | **Perte** | Flash rouge « You lost 5 eggs » (Vide, monstre) ✅ |
 | **Première minute** | Flèche au sol, bulles très courtes avec icônes, main qui montre le geste ✅ |
 | **Réglages** | Musique et sons ON/OFF ✅, qualité graphique (moins d'effets sur téléphone), masquer les créatures des autres |
