@@ -157,6 +157,18 @@ end
 
 type Group = { model: Model, offset: CFrame, root: CFrame, kind: string, side: number }
 type Mesh = { part: BasePart, offset: CFrame, size: Vector3 }
+-- Membre d'une créature découpée (tools/creature-rig.lua) : il tourne autour de son Joint
+-- follow : pièce sans joint qui suit un membre (« Head__Glow » : yeux et cristaux lumineux de la tête)
+type Limb = {
+	part: BasePart,
+	offset: CFrame,
+	size: Vector3,
+	role: string,
+	joint: Vector3,
+	side: number,
+	phase: number,
+	follow: string?,
+}
 type Pet = {
 	body: Model,
 	core: BasePart,
@@ -166,6 +178,8 @@ type Pet = {
 	motion: any,
 	groups: { Group },
 	meshes: { Mesh },
+	limbs: { Limb },
+	head: Limb?,
 	fx: { [string]: ParticleEmitter },
 	lastTrick: number,
 	lastStep: number,
@@ -224,6 +238,7 @@ local function track(m: Instance)
 		motion = Config.CreatureMotion[(m:GetAttribute("Creature") or "") :: string] or DEFAULT,
 		groups = {},
 		meshes = {},
+		limbs = {},
 		fx = {},
 		lastTrick = -1,
 		lastStep = -1,
@@ -234,11 +249,50 @@ local function track(m: Instance)
 	for _, d in ipairs(body:GetDescendants()) do
 		if d:IsA("BasePart") and d ~= core then
 			local group = d:FindFirstAncestorWhichIsA("Model")
-			if group == body or not ANIMATED[(group :: Model).Name] then
+			local role = d:GetAttribute("Role") :: string?
+			local joint = d:FindFirstChild("Joint") :: Attachment?
+			local follow = d:GetAttribute("Follow") :: string?
+			if follow then
+				table.insert(p.limbs, {
+					part = d,
+					offset = core.CFrame:ToObjectSpace(d.CFrame),
+					size = d.Size,
+					role = "Follow",
+					joint = Vector3.zero,
+					side = 0,
+					phase = 0,
+					follow = follow,
+				})
+			elseif role and role ~= "Body" and joint then
+				-- membre animé : pattes, bras, ailes, nageoires, oreilles, queue, tête, mâchoire, tentacules
+				local side = if role:sub(-1) == "L" then -1 elseif role:sub(-1) == "R" then 1 else 0
+				local limb: Limb = {
+					part = d,
+					offset = core.CFrame:ToObjectSpace(d.CFrame),
+					size = d.Size,
+					role = role,
+					joint = core.CFrame:PointToObjectSpace(joint.WorldPosition),
+					side = side,
+					-- pas en diagonale (trot) : avant gauche avec arrière droite ; une paire de pattes
+					-- non séparée (LegF, LegB) bat en opposition avec l'autre paire
+					phase = if role == "LegFR" or role == "LegBL" or role == "LegR" or role == "LegB" then math.pi else 0,
+				}
+				table.insert(p.limbs, limb)
+				if role == "Head" then
+					p.head = limb
+				end
+			elseif group == body or not ANIMATED[(group :: Model).Name] then
 				table.insert(p.meshes, { part = d, offset = core.CFrame:ToObjectSpace(d.CFrame), size = d.Size })
 			end
 		end
 	end
+	-- la mâchoire et les oreilles suivent la tête : on anime la tête d'abord, les pièces qui suivent en dernier
+	local function order(l: Limb): number
+		return if l.role == "Head" then 0 elseif l.follow then 2 else 1
+	end
+	table.sort(p.limbs, function(a, b)
+		return order(a) < order(b)
+	end)
 	for _, child in ipairs(body:GetChildren()) do
 		if child:IsA("Model") and ANIMATED[child.Name] then
 			local cf, size = child:GetBoundingBox()
@@ -270,7 +324,23 @@ end
 -- POSES -------------------------------------------------------------------------------------
 -- Position (x, z) dans le repère du socle, hauteur y, cap (yaw), tangage (pitch, + = nez en l'air),
 -- roulis (roll), étirement (sx, sy, sz : largeur, hauteur, longueur)
-type Pose = { x: number, y: number, z: number, yaw: number, pitch: number, roll: number, sx: number, sy: number, sz: number }
+-- Pour les membres : phase des pas, gait (0 arrêté -> 1 en marche), roar (bouche ouverte, 0 -> 1),
+-- act (figure en cours, 0 -> 1)
+type Pose = {
+	x: number,
+	y: number,
+	z: number,
+	yaw: number,
+	pitch: number,
+	roll: number,
+	sx: number,
+	sy: number,
+	sz: number,
+	phase: number,
+	gait: number,
+	roar: number,
+	act: number,
+}
 
 local function walkPose(p: Pet, pose: Pose, w: number, from: Vector3, to: Vector3, now: number)
 	local mo = p.motion
@@ -342,6 +412,8 @@ local function walkPose(p: Pet, pose: Pose, w: number, from: Vector3, to: Vector
 		pose.y = math.max(0, math.sin(now * 3 + p.seed)) * h * 0.08
 	end
 	pose.x, pose.z = pos.X, pos.Z
+	pose.phase = if style == "scuttle" then sp * 3 elseif style == "waddle" then sp * 1.6 else sp
+	pose.gait = math.min(1, w * 8, (1 - w) * 8)
 end
 
 local function idlePose(p: Pet, pose: Pose, g: number, now: number)
@@ -366,6 +438,10 @@ local function trickPose(p: Pet, pose: Pose, g: number, now: number)
 	local fwdX, fwdZ = -math.sin(pose.yaw), -math.cos(pose.yaw)
 	-- déplacements des figures limités : une géante ne traverse pas toute la base
 	local reach = math.min(h, H.WanderFullHeight)
+	pose.act = up
+	if trick == "roar" or trick == "flame" or trick == "strike" then
+		pose.roar = smooth(g / 0.25) * (1 - smooth((g - 0.75) / 0.25))
+	end
 	if trick == "spin" then
 		pose.yaw += smooth(g) * TAU
 		pose.y += up * h * 0.25
@@ -457,6 +533,69 @@ local function fireTrick(p: Pet)
 	end
 end
 
+-- MEMBRES -----------------------------------------------------------------------------------
+-- Rotation d'un membre autour de son joint, dans le repère de la créature (avant = -Z, gauche = -X).
+-- Angles(a, 0, 0) : a > 0 lance une patte vers l'avant, relève le museau ; Angles(0, 0, c) côté
+-- gauche (side -1) : c < 0 lève l'aile ou le bras.
+local function limbRotation(p: Pet, l: Limb, pose: Pose, now: number): CFrame
+	local role = l.role
+	local style = p.motion.Style
+	local s = l.side
+	local seed = p.seed
+	local walk = pose.gait
+	local flying = style == "fly" or style == "swim" or style == "float"
+	local kind = role:sub(1, 3)
+	if kind == "Leg" then
+		if flying then
+			-- pattes repliées vers l'arrière, qui pédalent un peu
+			return CFrame.Angles(-0.45 + math.sin(now * 3 + l.phase + seed) * 0.08, 0, 0)
+		end
+		-- amplitudes modérées : au-delà, la découpe des pattes laisse voir une fente au niveau de l'épaule
+		local amp = if style == "stomp" then 0.26 elseif style == "scuttle" then 0.4 elseif style == "waddle" then 0.22 else 0.32
+		local a = math.sin(pose.phase + l.phase) * amp * walk
+		-- au repos : petit piétinement de temps en temps
+		a += math.sin(now * 7 + l.phase + seed) * 0.05 * (1 - walk) * math.max(0, math.sin(now * 0.6 + seed))
+		return CFrame.Angles(a, 0, if style == "waddle" then s * 0.08 * walk else 0)
+	elseif kind == "Arm" then
+		local swing = -math.sin(pose.phase + (if s < 0 then 0 else math.pi)) * 0.4 * walk
+		local idle = math.sin(now * 2 + seed + s) * 0.07
+		local raise = s * 1.1 * pose.roar
+		return CFrame.Angles(swing + idle - pose.roar * 0.4, 0, raise - s * 0.05)
+	elseif kind == "Win" then
+		local flap
+		if flying then
+			local beat = if p.motion.Flutter then 18 else 9
+			flap = math.sin(now * beat + seed) * 0.65 + 0.15
+		else
+			-- au sol : ailes posées qui respirent, grand battement pendant une figure
+			flap = math.sin(now * 2 + seed) * 0.08 + pose.act * (0.35 + math.sin(now * 11) * 0.45)
+		end
+		return CFrame.Angles(0, 0, s * flap)
+	elseif kind == "Fin" then
+		return CFrame.Angles(0, 0, s * (math.sin(now * 4 + seed) * 0.3 + 0.05))
+	elseif kind == "Ear" then
+		-- petit frémissement toutes les quelques secondes
+		local twitch = math.max(0, math.sin(now * 0.9 + seed * 2)) ^ 12
+		return CFrame.Angles(0, 0, s * 0.3 * math.sin(now * 30) * twitch)
+	elseif role == "Tail" then
+		local wag = math.sin(now * (5 + 4 * walk) + seed) * (0.3 + 0.15 * walk)
+		return CFrame.Angles(math.sin(now * 2 + seed) * 0.1 - pose.roar * 0.3, wag, 0)
+	elseif role == "Head" then
+		-- regarde autour d'elle à l'arrêt, hoche la tête en marchant, relève le museau pour rugir
+		-- amplitudes faibles : la tête est découpée dans le modèle, tourner fort ouvrirait le cou
+		local look = math.sin(now * 0.7 + seed) * 0.16 * (1 - walk) * (1 - pose.act)
+		local nod = math.sin(pose.phase * 2) * 0.05 * walk + math.sin(now * 2.2 + seed) * 0.025
+		return CFrame.Angles(nod + pose.roar * 0.2, look, math.sin(now * 0.5 + seed) * 0.04 * (1 - walk))
+	elseif role == "Jaw" then
+		-- bouche : grande ouverture pour rugir, petit mâchonnement de temps en temps
+		local chomp = math.max(0, math.sin(now * 0.8 + seed * 3)) ^ 20 * (0.5 + 0.5 * math.sin(now * 18))
+		return CFrame.Angles(-(pose.roar * 0.55 + chomp * 0.22), 0, 0)
+	elseif role == "Tentacles" then
+		return CFrame.Angles(math.sin(now * 3 + seed) * 0.12, 0, math.cos(now * 2.6 + seed) * 0.12)
+	end
+	return CFrame.new()
+end
+
 -- BOUCLE ------------------------------------------------------------------------------------
 
 local moveParts: { BasePart } = {}
@@ -482,7 +621,21 @@ RunService.RenderStepped:Connect(function()
 		local k = math.floor(t)
 		local f = t - k
 		local from, to = spot(p, k - 1), spot(p, k)
-		local pose: Pose = { x = from.X, y = 0, z = from.Z, yaw = 0, pitch = 0, roll = 0, sx = 1, sy = 1, sz = 1 }
+		local pose: Pose = {
+			x = from.X,
+			y = 0,
+			z = from.Z,
+			yaw = 0,
+			pitch = 0,
+			roll = 0,
+			sx = 1,
+			sy = 1,
+			sz = 1,
+			phase = 0,
+			gait = 0,
+			roar = 0,
+			act = 0,
+		}
 		-- cap : celui du trajet en cours (on le garde pendant la pause)
 		local d = to - from
 		if d.Magnitude > 0.05 then
@@ -534,6 +687,29 @@ RunService.RenderStepped:Connect(function()
 			local want = mesh.size * scale
 			if (mesh.part.Size - want).Magnitude > 1e-3 then
 				mesh.part.Size = want
+			end
+		end
+		-- membres : chacun tourne autour de son joint ; la mâchoire et les oreilles suivent la tête,
+		-- les pièces « Follow » suivent leur membre
+		local turns: { [string]: CFrame } = {}
+		for _, l in ipairs(p.limbs) do
+			local turn
+			if l.follow then
+				turn = turns[l.follow] or CFrame.new()
+			else
+				local j = l.joint * scale
+				turn = CFrame.new(j) * limbRotation(p, l, pose, now) * CFrame.new(-j)
+				if (l.role == "Jaw" or l.role:sub(1, 3) == "Ear") and turns["Head"] then
+					turn = turns["Head"] * turn
+				end
+				turns[l.role] = turn
+			end
+			local o = l.offset
+			table.insert(moveParts, l.part)
+			table.insert(moveCFrames, pivot * turn * CFrame.new(o.Position * scale) * o.Rotation)
+			local want = l.size * scale
+			if (l.part.Size - want).Magnitude > 1e-3 then
+				l.part.Size = want
 			end
 		end
 		for _, gr in ipairs(p.groups) do

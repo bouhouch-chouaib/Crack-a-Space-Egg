@@ -1,3 +1,31 @@
+# Créatures « blocky » animées (7 nov., soir) — méthode actuelle
+
+Les 42 créatures ont été refaites dans un seul style, celui des jeux d'œufs de référence : low-poly « blocky »
+(blocs chanfreinés, prismes, cristaux, couleurs franches, texture pixel), faites dans Blender avec le kit
+`ropilot.model` (px = 8, sans picots). Plus la rareté monte, plus elles sont grandes et impressionnantes :
+Common/Uncommon chibi et mignonnes, Rare avec quelques cristaux lumineux, Epic armure et yeux lumineux,
+Legendary majestueuses, Mythic menaçantes (crocs, ailes, flammes), Cosmic en boss ultime.
+Les anciennes versions sont dans `ServerStorage.OldCreatures` (et les restes trouvés dans le Workspace dans
+`OldCreatures.WorkspaceLeftovers`).
+
+Chaîne pour une créature (clé `R<anneau>_T<rareté>`) :
+1. Blender : modèle fait avec le kit, une pièce par partie (tête, pattes, ailes...). Fichiers dans le dossier
+   Blender de Ropilot : `<clé>.blend` (spécification du kit) et `<clé>_rig.blend` (découpé).
+2. `tools/blender/rigjoin.py` : `rig_join(clé, {rôle: [pièces]})` fusionne les pièces par membre animé
+   (Head, Jaw, LegFL/FR/BL/BR, LegL/R, ArmL/R, WingL/R, FinL/R, EarL/R, Tail, Tentacles ; le reste = Body).
+   Chaque matériau lumineux donne un objet « <rôle>__Glow » (Neon dans Studio) qui suit son membre.
+3. Import dans Studio, puis `require(ServerStorage.CreatureRig).Install(workspace.Work_<clé>, clé, nil, true)`
+   (`tools/creature-rig.lua`) : retire les soudures, recalcule gauche/droite d'après la position, pose un
+   Joint par membre, attribut Follow sur les pièces lumineuses, Height = hauteur (ou 0,55 × longueur pour
+   une créature plate ou allongée, sinon la raie et les serpents deviennent immenses).
+4. `Creatures.client` anime les membres selon `Config.CreatureMotion` : pattes en trot diagonal, ailes qui
+   battent, queue qui remue, tête qui regarde autour, mâchoire qui s'ouvre pour rugir ; oreilles,
+   mâchoire et pièces « Follow » suivent la tête ou leur membre.
+5. Portraits (`Art` de `Config.Creatures`) : rendus Blender des modèles installés, style standard Ropilot
+   (dossier Renders/Creatures, ids dans renders.json).
+
+---
+
 # Créatures 3D générées par IA (7 nov.)
 
 Les 42 créatures (`ReplicatedStorage.Assets.Creatures.R<anneau>_T<rareté>`) sont générées par l'IA 3D de
