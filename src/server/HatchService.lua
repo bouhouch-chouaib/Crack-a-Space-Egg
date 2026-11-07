@@ -17,6 +17,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
@@ -159,11 +160,13 @@ local function buildEgg(player: Player, floor: BasePart, item): Model?
 	return m
 end
 
--- Créature : socle à la couleur de sa rareté + son modèle 3D en briques (Assets.Creatures.R<anneau>_T<rareté>),
+-- Créature : socle invisible (repère de sa place) + son modèle 3D en briques (Assets.Creatures.R<anneau>_T<rareté>),
 -- à la taille de sa rareté et de son tirage. Le modèle s'appelle « Body » : chaque client le fait se
 -- promener autour du socle et l'anime (Creatures.client). Sans modèle 3D : un centre invisible, et le
 -- client affiche la carte de la créature (image, nom, $/s).
-local function buildPet(player: Player, floor: BasePart, item): Model
+-- fresh : elle vient d'éclore. Le disque de lumière de sa rareté s'éteint alors en fondu (sinon on ne le
+-- voit pas : il ne reste pas comme une flaque sous la créature)
+local function buildPet(player: Player, floor: BasePart, item, fresh: boolean?): Model
 	local m = Instance.new("Model")
 	m.Name = "Pet_" .. item.id
 	local r = Config.Rarities[item.rarity] or Config.Rarities[1]
@@ -176,12 +179,15 @@ local function buildPet(player: Player, floor: BasePart, item): Model
 	pad.CFrame = at * CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.pi / 2)
 	pad.Color = r.Color
 	pad.Material = Enum.Material.Neon
-	pad.Transparency = 0.55
+	pad.Transparency = if fresh then 0.55 else 1
 	pad.Anchored = true
 	pad.CanCollide = false
 	pad.CanTouch = false
 	pad.CanQuery = false
 	pad.Parent = m
+	if fresh then
+		TweenService:Create(pad, TweenInfo.new(1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 1.2), { Transparency = 1 }):Play()
+	end
 	local creatures = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Creatures")
 	local template = creatures and creatures:FindFirstChild(("R%d_T%d"):format(item.ring, item.rarity)) :: Model?
 	if template then
@@ -223,7 +229,7 @@ local function buildPet(player: Player, floor: BasePart, item): Model
 	return m
 end
 
-local function build(player: Player, item)
+local function build(player: Player, item, fresh: boolean?)
 	local base = Bases.Get(player)
 	local floor = base and floorOf(base)
 	if not floor then
@@ -234,7 +240,7 @@ local function build(player: Player, item)
 	if old then
 		old:Destroy()
 	end
-	local m = if item.kind == "egg" then buildEgg(player, floor, item) else buildPet(player, floor, item)
+	local m = if item.kind == "egg" then buildEgg(player, floor, item) else buildPet(player, floor, item, fresh)
 	if m then
 		models[player][item.id] = m
 	end
@@ -444,7 +450,7 @@ function HatchService.Hatch(player: Player, id: string)
 			models[player][id] = nil
 		end
 		if player.Parent then
-			build(player, item)
+			build(player, item, true)
 			syncBase(player)
 			Remotes.Hatched:FireAllClients(player, pos, item.ring, item.rarity, item.name, item.income, item.size)
 			if item.rarity >= Config.AnnounceFrom then
