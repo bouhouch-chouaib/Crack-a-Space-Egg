@@ -53,6 +53,8 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("ReadyList", table.concat(ready, ","))
 	player:SetAttribute("Ring", d.ring)
+	player:SetAttribute("MusicOff", if d.settings and d.settings.musicOff then true else nil)
+	player:SetAttribute("SfxOff", if d.settings and d.settings.sfxOff then true else nil)
 	player:SetAttribute("Drill", d.drill)
 	-- Niveau du jetpack (HUD) et vitesses qui en découlent (Jetpack.client)
 	local jl, jx, jn = Config.JetpackLevel(d.jetXP or 0)
@@ -477,6 +479,19 @@ function GameService.Start()
 	Remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
 	Remotes.BuyDrill.OnServerEvent:Connect(buyDrill)
 	Remotes.UnlockRing.OnServerEvent:Connect(unlockRing)
+	-- Réglages : couper la musique ou les sons (gardé dans la sauvegarde)
+	Remotes.Settings.OnServerEvent:Connect(function(player: Player, attr: unknown, off: unknown)
+		local d = DataService.Get(player)
+		if not d or type(off) ~= "boolean" then
+			return
+		end
+		local field = if attr == "MusicOff" then "musicOff" elseif attr == "SfxOff" then "sfxOff" else nil
+		if field then
+			d.settings = d.settings or {}
+			d.settings[field] = off
+			sync(player)
+		end
+	end)
 
 	for _, base in ipairs(WorldBuilder.Bases) do
 		bindBase(base)

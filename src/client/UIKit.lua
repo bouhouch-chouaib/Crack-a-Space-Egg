@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 
 local Theme = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Theme"))
 local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
+local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local UIKit = {}
 
@@ -932,6 +933,7 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		end
 		opened = true
 		gui.Enabled = true
+		Sfx.Play("Open")
 		scaleOf(frame).Scale = 1
 		if prepare then
 			task.wait()

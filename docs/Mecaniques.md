@@ -238,8 +238,12 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 
 ## 20. Son et ambiance
 
-- 💡 Une musique par lieu (vaisseau, couloir, Vide, monstres) et un bruitage par rareté à la casse.
-- 💡 Bruitages de la foreuse et du jetpack, et une alarme quand la combinaison faiblit.
+- ✅ (7 nov.) Sons gratuits du Creator Store (APM Music, Pro Sound Effects, Daily Sounds), tous dans `Config.Sounds` : pour en changer un, on remplace son Id. Module `Sfx` (sons à l'écran ou placés dans le monde, boucles avec fondu) et script `Audio.client` qui les déclenche.
+- ✅ **Musique par lieu** : « Explore » dans le vaisseau, « Futureworld » dans les anneaux, « Action And Tension » pendant la pluie de météores (fondu de 1,6 s). Hors du couloir, elle baisse sous un vent glacé.
+- ✅ **Boucles** : jetpack (plus fort en poussée), foreuse, soufflerie, machine à dérocher (entendue de près, chez tous les joueurs), vent du Vide, battements de cœur quand le gel dépasse la moitié.
+- ✅ **Moments clés** : coups de foreuse et roche qui éclate (placés au point d'impact), œuf ramassé, œuf révélé, éclosion (fanfare à partir d'Épique, entendue aussi par les voisins), achat en $, gros gain, niveau de jetpack, alarme à la sortie du couloir, prise dans la glace et dégel, début de la pluie de météores, achat Robux, clic sur les boutons, ouverture des fenêtres, message d'erreur.
+- ✅ **Réglages** (roue dentée en haut à droite) : musique et sons ON/OFF, gardés dans la sauvegarde.
+- 💡 Musique propre aux monstres des anneaux 5 à 7, quand ils existeront.
 
 ## 21. Technique
 

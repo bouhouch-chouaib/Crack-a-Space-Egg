@@ -220,7 +220,7 @@ eventPill.Position = UDim2.fromOffset(16, 2)
 local settings = UIKit.roundButton({ name = "Settings", art = "Settings", size = 56, parent = topRight })
 settings.Position = UDim2.fromOffset(202, 0)
 settings.MouseButton1Click:Connect(function()
-	UIKit.toast("Coming soon!", "info")
+	UIKit.Open:Fire("Settings")
 end)
 
 -- POTIONS ACTIVES (sous l'horloge, en haut à droite) : icône qui flotte et temps restant ---------

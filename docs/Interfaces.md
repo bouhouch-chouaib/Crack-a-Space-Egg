@@ -130,7 +130,7 @@ Les cartes ont une illustration sur un fond en dégradé, un bouton vert (Robux 
 | **Nouvel anneau** | Grand titre « 🧊 ICE RING UNLOCKED! » |
 | **Perte** | Flash rouge « You lost 5 eggs » (Vide, monstre) ✅ |
 | **Première minute** | Flèche au sol, bulles très courtes avec icônes, main qui montre le geste ✅ |
-| **Réglages** | Musique, sons, qualité graphique (moins d'effets sur téléphone), masquer les créatures des autres |
+| **Réglages** | Musique et sons ON/OFF ✅, qualité graphique (moins d'effets sur téléphone), masquer les créatures des autres |
 
 ---
 

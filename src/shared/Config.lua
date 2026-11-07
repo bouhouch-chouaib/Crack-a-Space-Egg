@@ -394,6 +394,50 @@ Config.FarFade = {
 	Start = 0.72,
 	Finish = 0.97,
 }
+
+-- SONS (Sfx.lua, Audio.client) : sons gratuits du Creator Store (APM Music, Pro Sound Effects,
+-- Daily Sounds). Pour en changer un, remplacer son Id ; Volume et Pitch règlent le niveau et la hauteur.
+Config.Sounds = {
+	MusicVolume = 0.3,
+	MusicFade = 1.6, -- secondes de fondu entre deux musiques
+	Music = {
+		Base = 1842185080, -- vaisseau et bases : « Explore », aventure électro pour enfants
+		Belt = 1840200807, -- anneaux et couloir : « Futureworld », science-fiction
+		Event = 1846096405, -- pluie de météores : « Action And Tension »
+	},
+	-- Sons joués à une position : on les entend jusqu'à cette distance (studs)
+	Range = 160,
+	Sfx = {
+		Click = { Id = 106984966606682, Volume = 0.35, Pitch = 1.3 },
+		Open = { Id = 80984744279155, Volume = 0.3 },
+		Error = { Id = 91501650514390, Volume = 0.35 },
+		Coin = { Id = 130378474223829, Volume = 0.45 },
+		Buy = { Id = 90531793028786, Volume = 0.5 },
+		Pop = { Id = 106984966606682, Volume = 0.6 },
+		RockHit = { Id = 9118588165, Volume = 0.35 },
+		RockBreak = { Id = 9125869504, Volume = 0.8 },
+		Derock = { Id = 9125869138, Volume = 0.7 },
+		Riser = { Id = 94077390731779, Volume = 0.35 },
+		Hatch = { Id = 9043151109, Volume = 0.5 }, -- éclosion commune à rare
+		HatchRare = { Id = 9038916885, Volume = 0.6 }, -- épique et au-delà
+		LevelUp = { Id = 1839881844, Volume = 0.5 },
+		Reward = { Id = 9038916885, Volume = 0.6 },
+		Warning = { Id = 80890994815283, Volume = 0.4 },
+		Freeze = { Id = 9125611419, Volume = 0.8 },
+		Thaw = { Id = 96795857757261, Volume = 0.4, Pitch = 1.4 },
+		MeteorStart = { Id = 9126102564, Volume = 0.45 },
+	},
+	-- Boucles (volume au maximum de l'effet)
+	Loops = {
+		Jetpack = { Id = 9125742262, Volume = 0.35 },
+		Drill = { Id = 199754867, Volume = 0.3 },
+		Machine = { Id = 199754867, Volume = 0.35, Pitch = 0.8 },
+		Tunnel = { Id = 9119462099, Volume = 0.45 },
+		Void = { Id = 6544555787, Volume = 0.5 }, -- vent glacé hors du couloir
+		Heart = { Id = 132163421525060, Volume = 0.5 }, -- battements quand le gel approche
+	},
+	RareFrom = 4, -- rareté à partir de laquelle l'éclosion joue la fanfare
+}
 -- Rideaux de brume dans les vides entre deux anneaux (WorldBuilder)
 Config.FogCurtains = {
 	PerGap = 16,
