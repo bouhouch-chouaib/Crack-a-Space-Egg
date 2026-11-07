@@ -784,7 +784,7 @@ Config.Shop = {
 	-- Passes (achat définitif). Effets appliqués par BoostService.
 	Passes = {
 		{ Key = "JetXP2x", Name = "x2 Jetpack XP", Text = "Train your jetpack twice as fast", Art = "PassTraining2x", Id = 2075661369, Price = 149 },
-		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "x2 jetpack fuel", Art = "PassTurboJetpack", Id = 2075607386, Price = 99 },
+		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "+25% jetpack fuel", Art = "PassTurboJetpack", Id = 2075607386, Price = 99 },
 		{ Key = "FastHatch", Name = "Fast Hatch", Text = "Eggs hatch 2x faster", Art = "PassAutoCrack", Id = 2076051409, Price = 199, Ribbon = "BEST SELLER!" },
 		{ Key = "Money2x", Name = "x2 Money", Text = "Creatures earn double, forever", Art = "PassMoney2x", Id = 2074467451, Price = 299, Ribbon = "BEST VALUE!" },
 		{ Key = "BaseSlots", Name = "+5 Base Slots", Text = "Room for 5 more eggs and creatures", Art = "PassPetSlot", Id = 2074281420, Price = 249 },
@@ -792,7 +792,7 @@ Config.Shop = {
 	},
 	PassEffects = {
 		JetXP2x = 2, -- × XP de jetpack
-		TurboJetpack = 2, -- × carburant
+		TurboJetpack = 1.25, -- × carburant (pas plus : au niveau 1 on reste sous les 55 studs du premier vide)
 		FastHatch = 0.5, -- × temps d'éclosion
 		Money2x = 2, -- × revenus des créatures
 		BaseSlots = 5, -- emplacements en plus dans la base

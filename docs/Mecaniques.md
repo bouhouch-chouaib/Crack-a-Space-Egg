@@ -235,7 +235,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 
 ### Boutique Robux (7 nov.)
 
-- ✅ **Passes** (définitifs) : x2 Jetpack XP (149 R$), Turbo Jetpack (réservoir ×2, 99 R$), Fast Hatch (éclosion ×2 plus rapide, 199 R$), x2 Money (revenus des créatures ×2, 299 R$), +5 Base Slots (249 R$), VIP (+10 % d'argent et tag [VIP] doré dans le chat, 399 R$).
+- ✅ **Passes** (définitifs) : x2 Jetpack XP (149 R$), Turbo Jetpack (+25 % de carburant, 99 R$ ; pas plus, pour ne pas sauter un palier), Fast Hatch (éclosion ×2 plus rapide, 199 R$), x2 Money (revenus des créatures ×2, 299 R$), +5 Base Slots (249 R$), VIP (+10 % d'argent et tag [VIP] doré dans le chat, 399 R$).
 - ✅ **Potions** de 15 min, cumulables dans le temps et sauvegardées : x2 Luck (39 R$), x2 Money (39 R$), x2 Jetpack XP (25 R$). Meteor Shower (99 R$) lance tout de suite une pluie de météores pour tout le serveur. Les potions actives s'affichent sous l'horloge, avec leur minuteur.
 - ✅ **Starter Pack** (99 R$) : gros paquet d'argent + x2 Luck + x2 Money. **Paquets d'argent** : le montant dépend de l'anneau le plus loin débloqué.
 - ✅ Les effets sont calculés par le serveur (`BoostService`). Les identifiants Roblox vont dans `Config.Shop`, `Config.Drills` et `Config.Hatch.Skip`. Tant qu'un identifiant vaut 0, le bouton affiche « Coming soon! ».

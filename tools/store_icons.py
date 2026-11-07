@@ -100,7 +100,7 @@ MONEY = (140, 255, 120)
 
 # Passes
 make("pass_JetXP2x", CYAN, "WindTunnel", "x2")
-make("pass_TurboJetpack", ORANGE, "Fire", "x2", text_color=YELLOW)
+make("pass_TurboJetpack", ORANGE, "Fire", "+25%", text_size=96, text_color=YELLOW)
 make("pass_FastHatch", PURPLE, "Hatch", "x2", icon2="Hourglass")
 make("pass_Money2x", GREEN, "Sparkles", "$x2", text_color=MONEY, text_size=110)
 make("pass_BaseSlots", BLUE, "Home", "+5")
