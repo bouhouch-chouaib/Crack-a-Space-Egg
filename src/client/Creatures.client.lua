@@ -23,6 +23,7 @@ local GLOW = "rbxassetid://103844906730878"
 local TAU = math.pi * 2
 local WALK = 0.45 -- part d'un cycle passée à se déplacer (le reste : pause, figure)
 local DEFAULT = { Style = "trot", Trick = "spin", Speed = 1 }
+local BIRTH = 1.5 -- secondes de l'animation de naissance
 
 local function kp(t: number, v: number): NumberSequenceKeypoint
 	return NumberSequenceKeypoint.new(t, v)
@@ -183,6 +184,8 @@ type Pet = {
 	fx: { [string]: ParticleEmitter },
 	lastTrick: number,
 	lastStep: number,
+	born: number?, -- vient d'éclore (heure serveur) : elle jaillit de l'œuf
+	spinBirth: boolean,
 }
 
 local pets: { [Model]: Pet } = {}
@@ -242,6 +245,8 @@ local function track(m: Instance)
 		fx = {},
 		lastTrick = -1,
 		lastStep = -1,
+		born = m:GetAttribute("BornAt") :: number?,
+		spinBirth = rarity >= 4,
 	}
 	local ANIMATED = { Tail = true, WingL = true, WingR = true, Orbit = true }
 	-- Pièces du corps (étirées avec lui) : toutes celles qui ne sont pas dans un groupe animé,
@@ -275,7 +280,12 @@ local function track(m: Instance)
 					side = side,
 					-- pas en diagonale (trot) : avant gauche avec arrière droite ; une paire de pattes
 					-- non séparée (LegF, LegB) bat en opposition avec l'autre paire
-					phase = if role == "LegFR" or role == "LegBL" or role == "LegR" or role == "LegB" then math.pi else 0,
+					phase = if role == "LegFR"
+							or role == "LegBL"
+							or role == "LegR"
+							or role == "LegB"
+						then math.pi
+						else 0,
 				}
 				table.insert(p.limbs, limb)
 				if role == "Head" then
@@ -297,13 +307,21 @@ local function track(m: Instance)
 		if child:IsA("Model") and ANIMATED[child.Name] then
 			local cf, size = child:GetBoundingBox()
 			local rel = core.CFrame:ToObjectSpace(cf)
-			local g: Group = { model = child, offset = core.CFrame:ToObjectSpace(child:GetPivot()), root = CFrame.new(), kind = child.Name, side = 1 }
+			local g: Group = {
+				model = child,
+				offset = core.CFrame:ToObjectSpace(child:GetPivot()),
+				root = CFrame.new(),
+				kind = child.Name,
+				side = 1,
+			}
 			if child.Name == "WingL" or child.Name == "WingR" then
 				g.side = if rel.Position.X >= 0 then 1 else -1
 				g.root = CFrame.new(rel.Position - Vector3.new(g.side * size.X * 0.45, 0, 0))
 			elseif child.Name == "Tail" then
 				local toBody = (Vector3.new(0, h * 0.45, 0) - rel.Position)
-				g.root = CFrame.new(rel.Position + (if toBody.Magnitude > 0 then toBody.Unit else Vector3.zero) * size.Magnitude * 0.4)
+				g.root = CFrame.new(
+					rel.Position + (if toBody.Magnitude > 0 then toBody.Unit else Vector3.zero) * size.Magnitude * 0.4
+				)
 			end
 			table.insert(p.groups, g)
 		end
@@ -551,7 +569,11 @@ local function limbRotation(p: Pet, l: Limb, pose: Pose, now: number): CFrame
 			return CFrame.Angles(-0.45 + math.sin(now * 3 + l.phase + seed) * 0.08, 0, 0)
 		end
 		-- amplitudes modérées : au-delà, la découpe des pattes laisse voir une fente au niveau de l'épaule
-		local amp = if style == "stomp" then 0.26 elseif style == "scuttle" then 0.4 elseif style == "waddle" then 0.22 else 0.32
+		local amp = if style == "stomp"
+			then 0.26
+			elseif style == "scuttle" then 0.4
+			elseif style == "waddle" then 0.22
+			else 0.32
 		local a = math.sin(pose.phase + l.phase) * amp * walk
 		-- au repos : petit piétinement de temps en temps
 		a += math.sin(now * 7 + l.phase + seed) * 0.05 * (1 - walk) * math.max(0, math.sin(now * 0.6 + seed))
@@ -664,6 +686,29 @@ RunService.RenderStepped:Connect(function()
 						fireTrick(p)
 					end
 				end
+			end
+		end
+		-- naissance : surgit de l'œuf (rebond de taille), saute de joie, puis rejoint sa promenade
+		local born = p.born
+		if born then
+			local age = now - born
+			if age > BIRTH or age < -1 then
+				p.born = nil
+			elseif age >= 0 then
+				local pop = math.clamp(age / 0.55, 0, 1) - 1
+				local s = math.max(0.02, 1 + 2.70158 * pop ^ 3 + 1.70158 * pop ^ 2) -- Back Out : 0 -> 1,1 -> 1
+				pose.sx *= s
+				pose.sy *= s
+				pose.sz *= s
+				pose.y += h * 0.45 * math.sin(math.pi * math.clamp(age / 0.8, 0, 1))
+				local w = smooth((age - 0.9) / 0.6)
+				pose.x *= w
+				pose.z *= w
+				if p.spinBirth then
+					pose.yaw += (1 - smooth(age / 1.0)) * TAU
+				end
+			else
+				pose.sx, pose.sy, pose.sz = 0.02, 0.02, 0.02
 			end
 		end
 		-- vol / nage / flottement : en l'air, avec un battement

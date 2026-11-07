@@ -950,8 +950,13 @@ Config.Hatch = {
 	-- anneau 7 = 30B (Uncommon), 120B, 600B, 5T, 60T (Mythic), 1Qa (Cosmic).
 	RarityIncome = { 1, 3, 12, 60, 500, 6000, 100000 },
 	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10 },
-	-- Secondes entre l'appui sur « Hatch » et l'éclatement (l'œuf tremble et se fissure)
-	Burst = 1.6,
+	-- Secondes entre l'appui sur « Hatch » et l'éclatement, selon la rareté : l'œuf se charge (tremble,
+	-- brille, se fissure de rayons, s'élève...) de plus en plus longtemps et fort (HatchFx)
+	Burst = { 1.6, 2.1, 2.7, 3.4, 4.3, 5.4, 6.8 },
+	-- Pendant la charge, l'œuf grossit jusqu'à Grow × la hauteur de la créature à naître (au moins MinGrow ×
+	-- sa taille) : plus elle est immense, plus il gonfle
+	Grow = 0.85,
+	MinGrow = 1.15,
 	-- Œuf tenu dans les mains en sortant de la machine : hauteur selon la rareté (studs),
 	-- et délai avant qu'il apparaisse (le temps que l'œuf révélé vole jusqu'au joueur)
 	HeldHeight = { 1.7, 1.85, 2.0, 2.15, 2.35, 2.55, 2.8 },

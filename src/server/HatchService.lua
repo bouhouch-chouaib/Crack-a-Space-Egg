@@ -100,9 +100,14 @@ local function buildEgg(player: Player, floor: BasePart, item): Model?
 		if d:IsA("BillboardGui") and d.Name == "Rays" then
 			d.Size = UDim2.fromScale(h * 1.9, h * 1.9)
 		elseif d:IsA("ParticleEmitter") and d.Name == "Aura" then
-			d.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, h * 0.9), NumberSequenceKeypoint.new(1, h * 1.3) })
+			d.Size =
+				NumberSequence.new({ NumberSequenceKeypoint.new(0, h * 0.9), NumberSequenceKeypoint.new(1, h * 1.3) })
 		elseif d:IsA("ParticleEmitter") and d.Name == "Sparkles" then
-			d.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.35 + item.rarity * 0.06), NumberSequenceKeypoint.new(1, 0) })
+			d.Size = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0),
+				NumberSequenceKeypoint.new(0.3, 0.35 + item.rarity * 0.06),
+				NumberSequenceKeypoint.new(1, 0),
+			})
 		end
 	end
 	local yaw = CFrame.Angles(0, rng:NextNumber(-0.5, 0.5), 0)
@@ -186,9 +191,14 @@ local function buildPet(player: Player, floor: BasePart, item, fresh: boolean?):
 	pad.CanQuery = false
 	pad.Parent = m
 	if fresh then
-		TweenService:Create(pad, TweenInfo.new(1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 1.2), { Transparency = 1 }):Play()
+		TweenService:Create(
+			pad,
+			TweenInfo.new(1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 1.2),
+			{ Transparency = 1 }
+		):Play()
 	end
-	local creatures = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Creatures")
+	local creatures = ReplicatedStorage:FindFirstChild("Assets")
+		and ReplicatedStorage.Assets:FindFirstChild("Creatures")
 	local template = creatures and creatures:FindFirstChild(("R%d_T%d"):format(item.ring, item.rarity)) :: Model?
 	if template then
 		local body = template:Clone()
@@ -197,6 +207,10 @@ local function buildPet(player: Player, floor: BasePart, item, fresh: boolean?):
 		local h = (H.PetHeight[item.rarity] or 3.5) * (item.size or 1) * stage.Scale
 		body:ScaleTo(body:GetScale() * h / ((body:GetAttribute("Height") or 1) :: number))
 		body:SetAttribute("Height", h)
+		if fresh then
+			-- elle jaillit de l'œuf (Creatures.client)
+			m:SetAttribute("BornAt", workspace:GetServerTimeNow())
+		end
 		-- Il regarde vers le centre de la base, un peu de travers
 		local toCenter = floor.CFrame:PointToObjectSpace(floor.Position) - Vector3.new(item.x, 0, item.z)
 		local yaw = math.atan2(-toCenter.X, -toCenter.Z) + rng:NextNumber(-0.6, 0.6)
@@ -331,7 +345,10 @@ function HatchService.CanPlace(base: Model, d, x: number, z: number, rarity: num
 	end
 	for name, radius in pairs(H.KeepOut) do
 		local thing = base:FindFirstChild(name)
-		local pos = if thing and thing:IsA("Model") then thing:GetPivot().Position elseif thing and thing:IsA("BasePart") then thing.Position else nil
+		local pos = if thing and thing:IsA("Model")
+			then thing:GetPivot().Position
+			elseif thing and thing:IsA("BasePart") then thing.Position
+			else nil
 		if pos then
 			local p = floor.CFrame:PointToObjectSpace(pos)
 			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius + foot * 0.4 then
@@ -442,9 +459,17 @@ function HatchService.Hatch(player: Player, id: string)
 	if prompt then
 		prompt.Enabled = false
 	end
+	-- Charge plus longue et plus spectaculaire avec la rareté ; l'œuf grossit jusqu'à la taille de la
+	-- créature à naître (HatchFx sur les clients)
+	local dur = H.Burst[item.rarity] or 2
+	local petHeight = (H.PetHeight[item.rarity] or 3.5) * item.size
+	local eggHeight = (m:GetAttribute("BodyHeight") or 3) :: number
+	m:SetAttribute("Rarity", item.rarity)
+	m:SetAttribute("HatchDuration", dur)
+	m:SetAttribute("HatchGrow", math.max(H.MinGrow, petHeight * H.Grow / eggHeight))
 	m:SetAttribute("Hatching", workspace:GetServerTimeNow())
 	local pos = m:GetPivot().Position
-	task.delay(H.Burst or 1.6, function()
+	task.delay(dur, function()
 		if models[player] and models[player][id] == m then
 			m:Destroy()
 			models[player][id] = nil
@@ -482,7 +507,11 @@ local function makeHeld(character: Model, ring: number, rarity: number): Model?
 		if (d:IsA("ParticleEmitter") and d.Name ~= "Sparkles") or d:IsA("BillboardGui") then
 			d:Destroy()
 		elseif d:IsA("ParticleEmitter") then
-			d.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.3), NumberSequenceKeypoint.new(1, 0) })
+			d.Size = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0),
+				NumberSequenceKeypoint.new(0.3, 0.3),
+				NumberSequenceKeypoint.new(1, 0),
+			})
 		elseif d:IsA("BasePart") then
 			d.Anchored = false
 			d.CanCollide = false
@@ -569,7 +598,12 @@ function HatchService.SkipEgg(player: Player, rarity: number): boolean
 	end
 	if not target then
 		for _, item in ipairs(d.base) do
-			if item.kind == "egg" and item.rarity == rarity and item.hatchAt > now and (not target or item.hatchAt > target.hatchAt) then
+			if
+				item.kind == "egg"
+				and item.rarity == rarity
+				and item.hatchAt > now
+				and (not target or item.hatchAt > target.hatchAt)
+			then
 				target = item
 			end
 		end
@@ -710,7 +744,17 @@ function HatchService.Start()
 			syncBase(player)
 			local parts = {}
 			for _, item in ipairs(d.base) do
-				table.insert(parts, ("%s %d:%d (%.1f,%.1f)%s"):format(item.kind, item.ring, item.rarity, item.x, item.z, if item.name then " " .. item.name .. " $" .. item.income .. "/s" else ""))
+				table.insert(
+					parts,
+					("%s %d:%d (%.1f,%.1f)%s"):format(
+						item.kind,
+						item.ring,
+						item.rarity,
+						item.x,
+						item.z,
+						if item.name then " " .. item.name .. " $" .. item.income .. "/s" else ""
+					)
+				)
 			end
 			return ("credits=%d ready=%d base=[%s]"):format(d.credits, #d.ready, table.concat(parts, "; "))
 		end

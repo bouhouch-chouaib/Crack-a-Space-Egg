@@ -10,7 +10,6 @@
 --   en attendant les modèles 3D des créatures.
 
 local CollectionService = game:GetService("CollectionService")
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -21,6 +20,8 @@ local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
+local HatchFx = require(script.Parent:WaitForChild("HatchFx"))
+local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -62,7 +63,16 @@ end
 -- Le serveur soude l'œuf tenu au torse et pose l'attribut HeldEgg (« anneau:rareté »).
 -- Tant qu'on le tient : un fantôme montre où il ira sur le sol de sa base, clic (ou doigt) = poser.
 
-local gui = new("ScreenGui", { Name = "Hatchery", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 4, Parent = player:WaitForChild("PlayerGui") })
+local gui = new(
+	"ScreenGui",
+	{
+		Name = "Hatchery",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 4,
+		Parent = player:WaitForChild("PlayerGui"),
+	}
+)
 
 local banner = new("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
@@ -73,8 +83,15 @@ local banner = new("Frame", {
 	Parent = gui,
 }, { UIKit.corner(), UIKit.stroke(3), UIKit.gradient(UIKit.Colors.Gold[1], UIKit.Colors.Gold[2]) })
 UIKit.autoScale(banner)
-local bannerText = UIKit.text({ Size = UDim2.new(1, -24, 0.56, 0), Position = UDim2.new(0, 12, 0.08, 0), Text = "", Parent = banner })
-local bannerSub = UIKit.text({ Size = UDim2.new(1, -24, 0.32, 0), Position = UDim2.new(0, 12, 0.62, 0), Text = "", TextColor3 = Color3.fromRGB(255, 250, 220), Parent = banner })
+local bannerText =
+	UIKit.text({ Size = UDim2.new(1, -24, 0.56, 0), Position = UDim2.new(0, 12, 0.08, 0), Text = "", Parent = banner })
+local bannerSub = UIKit.text({
+	Size = UDim2.new(1, -24, 0.32, 0),
+	Position = UDim2.new(0, 12, 0.62, 0),
+	Text = "",
+	TextColor3 = Color3.fromRGB(255, 250, 220),
+	Parent = banner,
+})
 
 local placing: { ring: number, rarity: number }? = nil
 local ghost: Model? = nil
@@ -100,12 +117,18 @@ end
 -- Même règle que le serveur (HatchService.CanPlace), pour la couleur du cercle
 local function canPlace(base: Model, floor: BasePart, x: number, z: number, rarity: number): (boolean, string?)
 	local foot = H.Footprint[rarity] or 3
-	if math.abs(x) > floor.Size.X / 2 - H.Margin - foot * 0.5 or math.abs(z) > floor.Size.Z / 2 - H.Margin - foot * 0.5 then
+	if
+		math.abs(x) > floor.Size.X / 2 - H.Margin - foot * 0.5
+		or math.abs(z) > floor.Size.Z / 2 - H.Margin - foot * 0.5
+	then
 		return false, "Too close to the wall"
 	end
 	for name, radius in pairs(H.KeepOut) do
 		local thing = base:FindFirstChild(name)
-		local pos = if thing and thing:IsA("Model") then thing:GetPivot().Position elseif thing and thing:IsA("BasePart") then thing.Position else nil
+		local pos = if thing and thing:IsA("Model")
+			then thing:GetPivot().Position
+			elseif thing and thing:IsA("BasePart") then thing.Position
+			else nil
 		if pos then
 			local p = floor.CFrame:PointToObjectSpace(pos)
 			if Vector2.new(p.X - x, p.Z - z).Magnitude < radius + foot * 0.4 then
@@ -202,8 +225,18 @@ RunService.RenderStepped:Connect(function()
 	local current = placing :: { ring: number, rarity: number }
 	local waiting = (player:GetAttribute("WaitingEggs") or 0) :: number
 	local name = Config.EggName(current.ring, current.rarity)
-	Icons.Apply(bannerSub, ("{Home} Base %d/%d"):format((player:GetAttribute("BaseUsed") or 0) :: number, (player:GetAttribute("BaseSlots") or H.Slots) :: number)
-		.. (if waiting > 0 then ("   ·   +%d egg%s waiting"):format(waiting, if waiting > 1 then "s" else "") else ""))
+	Icons.Apply(
+		bannerSub,
+		("{Home} Base %d/%d"):format(
+			(player:GetAttribute("BaseUsed") or 0) :: number,
+			(player:GetAttribute("BaseSlots") or H.Slots) :: number
+		)
+			.. (
+				if waiting > 0
+					then ("   ·   +%d egg%s waiting"):format(waiting, if waiting > 1 then "s" else "")
+					else ""
+			)
+	)
 	local hide = function(text: string)
 		ghost:PivotTo(CFrame.new(0, -500, 0))
 		ring3d.CFrame = CFrame.new(0, -500, 0)
@@ -227,7 +260,9 @@ RunService.RenderStepped:Connect(function()
 	end
 	floorParams.FilterDescendantsInstances = { floor }
 	-- Souris : position dans la fenêtre ; doigt : position dans l'interface (sans la barre du haut)
-	local ray = if touch then camera:ScreenPointToRay(screen.X, screen.Y) else camera:ViewportPointToRay(screen.X, screen.Y)
+	local ray = if touch
+		then camera:ScreenPointToRay(screen.X, screen.Y)
+		else camera:ViewportPointToRay(screen.X, screen.Y)
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, floorParams)
 	if not hit then
 		return hide("{Mouse} Point at your base floor to place your " .. name)
@@ -239,10 +274,17 @@ RunService.RenderStepped:Connect(function()
 	local h = H.EggHeight[current.rarity] or 3
 	local top = floor.CFrame * CFrame.new(placeX, floor.Size.Y / 2, placeZ)
 	local t = os.clock()
-	ghost:PivotTo(CFrame.new(top.Position + Vector3.new(0, h / 2 + 0.6 + math.sin(t * 4) * 0.15, 0)) * CFrame.Angles(0, t, 0))
+	ghost:PivotTo(
+		CFrame.new(top.Position + Vector3.new(0, h / 2 + 0.6 + math.sin(t * 4) * 0.15, 0)) * CFrame.Angles(0, t, 0)
+	)
 	ring3d.CFrame = CFrame.new(top.Position + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 	ring3d.Color = if ok then GOOD else BAD
-	Icons.Apply(bannerText, if ok then (if touch then "{Tap} Tap to place your " else "{Mouse} Click to place your ") .. name else "{Cross} " .. (why or "Not here"))
+	Icons.Apply(
+		bannerText,
+		if ok
+			then (if touch then "{Tap} Tap to place your " else "{Mouse} Click to place your ") .. name
+			else "{Cross} " .. (why or "Not here")
+	)
 end)
 
 local function tryPlace()
@@ -293,7 +335,14 @@ local function rotFromTo(a: Vector3, b: Vector3): CFrame
 	end
 	return CFrame.fromAxisAngle(axis.Unit, math.acos(math.clamp(a:Dot(b), -1, 1)))
 end
-local function aimArm(character: Model, upper: string, shoulderName: string, lower: string, elbowName: string, grip: Vector3)
+local function aimArm(
+	character: Model,
+	upper: string,
+	shoulderName: string,
+	lower: string,
+	elbowName: string,
+	grip: Vector3
+)
 	local up = character:FindFirstChild(upper)
 	local shoulder = up and up:FindFirstChild(shoulderName) :: Motor6D?
 	if not shoulder or not shoulder.Part0 then
@@ -333,7 +382,14 @@ end)
 
 -- ŒUFS QUI INCUBENT ---------------------------------------------------------------------
 
-type Incub = { model: Model, gui: BillboardGui, fill: Frame, time: TextLabel, ready: boolean, prompts: { ProximityPrompt } }
+type Incub = {
+	model: Model,
+	gui: BillboardGui,
+	fill: Frame,
+	time: TextLabel,
+	ready: boolean,
+	prompts: { ProximityPrompt },
+}
 local incubating: { [Model]: Incub } = {}
 
 local function trackIncubating(m: Instance)
@@ -357,10 +413,29 @@ local function trackIncubating(m: Instance)
 		Adornee = core,
 		Parent = gui,
 	})
-	UIKit.text({ Size = UDim2.new(1, 0, 0, 22), Text = name, TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.25), Parent = b })
-	local bar = new("Frame", { Size = UDim2.new(1, -20, 0, 18), Position = UDim2.fromOffset(10, 24), BackgroundColor3 = Color3.fromRGB(30, 32, 44), Parent = b }, { UIKit.corner(), UIKit.stroke(2) })
-	local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = bar }, { UIKit.gradient(r.Color:Lerp(Color3.new(1, 1, 1), 0.4), r.Color) })
-	local time = UIKit.text({ Size = UDim2.new(1, 0, 0, 22), Position = UDim2.fromOffset(0, 44), Text = "", Parent = b })
+	UIKit.text({
+		Size = UDim2.new(1, 0, 0, 22),
+		Text = name,
+		TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.25),
+		Parent = b,
+	})
+	local bar = new(
+		"Frame",
+		{
+			Size = UDim2.new(1, -20, 0, 18),
+			Position = UDim2.fromOffset(10, 24),
+			BackgroundColor3 = Color3.fromRGB(30, 32, 44),
+			Parent = b,
+		},
+		{ UIKit.corner(), UIKit.stroke(2) }
+	)
+	local fill = new(
+		"Frame",
+		{ Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = bar },
+		{ UIKit.gradient(r.Color:Lerp(Color3.new(1, 1, 1), 0.4), r.Color) }
+	)
+	local time =
+		UIKit.text({ Size = UDim2.new(1, 0, 0, 22), Position = UDim2.fromOffset(0, 44), Text = "", Parent = b })
 	local prompts = {}
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("ProximityPrompt") then
@@ -384,17 +459,40 @@ for _, m in ipairs(CollectionService:GetTagged("Incubating")) do
 	task.spawn(trackIncubating, m)
 end
 
--- Éclosion en cours : l'œuf n'est plus animé par Eggs.client, il tremble ici
-type Shake = { model: Model, start: number, base: CFrame, light: Highlight }
-local shaking: { [Model]: Shake } = {}
+-- Éclosion en cours : l'œuf n'est plus animé par Eggs.client ; HatchFx le charge (il tremble, brille,
+-- se fissure de rayons, grossit jusqu'à la taille de la créature) puis le fait éclater à Remotes.Hatched
+local charging: { [Model]: any } = {}
+local recent: { any } = {} -- charges finies (œuf détruit), en attendant leur Remotes.Hatched
 
-local function startShake(m: Model)
-	if shaking[m] then
+local function startCharge(m: Model)
+	if charging[m] then
 		return
 	end
 	CollectionService:RemoveTag(m, "Egg")
-	local hl = new("Highlight", { FillColor = Color3.new(1, 1, 1), FillTransparency = 1, OutlineTransparency = 1, DepthMode = Enum.HighlightDepthMode.Occluded, Adornee = m, Parent = m })
-	shaking[m] = { model = m, start = os.clock(), base = m:GetPivot(), light = hl }
+	local core = m.PrimaryPart
+	if not core or (core.Position - camera.CFrame.Position).Magnitude > 220 then
+		return
+	end
+	local rarity = (m:GetAttribute("Rarity") or 1) :: number
+	local started = (m:GetAttribute("Hatching") or workspace:GetServerTimeNow()) :: number
+	local dur = (m:GetAttribute("HatchDuration") or 2) :: number
+	local mine = m:GetAttribute("Owner") == player.UserId
+	local fx = HatchFx.Charge(m, {
+		rarity = rarity,
+		grow = (m:GetAttribute("HatchGrow") or 1) :: number,
+		duration = math.max(0.3, dur - (workspace:GetServerTimeNow() - started)),
+		owner = mine,
+		onCrack = function(i: number)
+			Sfx.Play("Crack", { at = core.Position, volume = if mine then 0.5 else 0.25, pitch = 0.8 + 0.08 * i })
+		end,
+	})
+	charging[m] = fx
+	if rarity >= 3 then
+		Sfx.Play(
+			"Riser",
+			{ at = core.Position, volume = if mine then 1 else 0.5, pitch = math.clamp(2.6 / dur, 0.6, 1.2) }
+		)
+	end
 end
 
 RunService.RenderStepped:Connect(function()
@@ -421,7 +519,7 @@ RunService.RenderStepped:Connect(function()
 		if m:GetAttribute("Hatching") then
 			Icons.Apply(st.time, "{Hatch} HATCHING!")
 			st.time.TextColor3 = GOLD
-			startShake(m)
+			startCharge(m)
 		elseif left <= 0 then
 			if not st.ready then
 				st.ready = true
@@ -435,40 +533,18 @@ RunService.RenderStepped:Connect(function()
 			st.time.TextColor3 = Color3.new(1, 1, 1)
 		end
 	end
-	for m, st in pairs(shaking) do
+	for m, fx in pairs(charging) do
 		if not m.Parent then
-			shaking[m] = nil
-			continue
+			-- l'œuf vient d'être détruit par le serveur : l'éclatement arrive avec Remotes.Hatched
+			fx.stop()
+			charging[m] = nil
+			fx.ended = os.clock()
+			table.insert(recent, fx)
 		end
-		local k = math.clamp((t - st.start) / H.Burst, 0, 1)
-		local a = 0.04 + 0.3 * k * k
-		m:PivotTo(st.base * CFrame.new(0, math.abs(math.sin(t * 30)) * 0.15 * k, 0) * CFrame.Angles(math.sin(t * 41) * a, 0, math.cos(t * 37) * a))
-		st.light.FillTransparency = 1 - 0.85 * k
 	end
 end)
 
 -- ÉCLATEMENT ET BANNIÈRE ------------------------------------------------------------------
-
-local function burstAt(pos: Vector3, color: Color3, rarity: number)
-	local at = new("Attachment", { WorldPosition = pos, Parent = workspace.Terrain })
-	local function emit(props: { [string]: any }, count: number)
-		local e = new("ParticleEmitter", { Enabled = false, LightInfluence = 0, Parent = at })
-		for k, v in pairs(props) do
-			(e :: any)[k] = v
-		end
-		e:Emit(count)
-	end
-	local kp = NumberSequenceKeypoint.new
-	emit({ Texture = UIKit.Art.FxShell, Color = ColorSequence.new(Color3.new(1, 1, 1)), Size = NumberSequence.new({ kp(0, 0.9), kp(1, 0.4) }), Lifetime = NumberRange.new(0.7, 1.1),
-		Speed = NumberRange.new(12, 22), SpreadAngle = Vector2.new(180, 180), Acceleration = Vector3.new(0, -40, 0), RotSpeed = NumberRange.new(-300, 300), Rotation = NumberRange.new(0, 360) }, 14 + rarity * 2)
-	emit({ Texture = UIKit.Art.FxSparkle, Color = ColorSequence.new(Color3.new(1, 1, 1), color), LightEmission = 1, Size = NumberSequence.new({ kp(0, 0), kp(0.2, 1.6 + rarity * 0.25), kp(1, 0) }),
-		Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(10, 26), SpreadAngle = Vector2.new(180, 180) }, 20 + rarity * 6)
-	emit({ Texture = UIKit.Art.FxGlow, Color = ColorSequence.new(color), LightEmission = 1, Size = NumberSequence.new({ kp(0, 2), kp(1, 9 + rarity) }),
-		Transparency = NumberSequence.new({ kp(0, 0.1), kp(1, 1) }), Lifetime = NumberRange.new(0.5, 0.5), Speed = NumberRange.new(0, 0) }, 2)
-	local light = new("PointLight", { Color = color, Range = 18, Brightness = 6, Parent = at })
-	UIKit.tween(light, 1, { Brightness = 0 })
-	Debris:AddItem(at, 2)
-end
 
 local function hatchBanner(ring: number, rarity: number, name: string, income: number)
 	local r = rarityOf(rarity)
@@ -522,15 +598,47 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 		img = vp
 	else
 		local art = artOf(ring, name)
-		img = UIKit.icon(art or "Creatures", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(190, 190), ZIndex = 32, Parent = frame })
+		img = UIKit.icon(
+			art or "Creatures",
+			{
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.42),
+				Size = UDim2.fromOffset(190, 190),
+				ZIndex = 32,
+				Parent = frame,
+			}
+		)
 	end
 	UIKit.float(img, 6, 4, 2)
-	UIKit.text({ Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, -6), Text = "{Hatch} YOU HATCHED", ZIndex = 33, Stroke = 3, Parent = frame })
-	local nameLabel = UIKit.text({ Size = UDim2.new(1, 0, 0, 46), Position = UDim2.new(0, 0, 1, -86), Text = name:upper(), TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), ZIndex = 33, Stroke = 4, Parent = frame })
+	UIKit.text({
+		Size = UDim2.new(1, 0, 0, 34),
+		Position = UDim2.fromOffset(0, -6),
+		Text = "{Hatch} YOU HATCHED",
+		ZIndex = 33,
+		Stroke = 3,
+		Parent = frame,
+	})
+	local nameLabel = UIKit.text({
+		Size = UDim2.new(1, 0, 0, 46),
+		Position = UDim2.new(0, 0, 1, -86),
+		Text = name:upper(),
+		TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2),
+		ZIndex = 33,
+		Stroke = 4,
+		Parent = frame,
+	})
 	if rarity >= 5 then
 		UIKit.shinyText(nameLabel, r.Color)
 	end
-	UIKit.text({ Size = UDim2.new(1, 0, 0, 34), Position = UDim2.new(0, 0, 1, -40), Text = "{Cash} " .. money(income) .. "/s  ·  " .. r.Name:upper(), TextColor3 = UIKit.Money, ZIndex = 33, Stroke = 3, Parent = frame })
+	UIKit.text({
+		Size = UDim2.new(1, 0, 0, 34),
+		Position = UDim2.new(0, 0, 1, -40),
+		Text = "{Cash} " .. money(income) .. "/s  ·  " .. r.Name:upper(),
+		TextColor3 = UIKit.Money,
+		ZIndex = 33,
+		Stroke = 3,
+		Parent = frame,
+	})
 	UIKit.popIn(frame)
 	task.delay(3.2, function()
 		local s = frame:FindFirstChild("AnimScale") :: UIScale?
@@ -542,15 +650,33 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 	end)
 end
 
-Remotes:WaitForChild("Hatched").OnClientEvent:Connect(function(owner: Player, pos: Vector3, ring: number, rarity: number, name: string, income: number)
-	local r = rarityOf(rarity)
-	if (pos - camera.CFrame.Position).Magnitude < 200 then
-		burstAt(pos, r.Color, rarity)
-	end
-	if owner == player then
-		hatchBanner(ring, rarity, name, income)
-	end
-end)
+Remotes:WaitForChild("Hatched").OnClientEvent
+	:Connect(function(owner: Player, pos: Vector3, ring: number, rarity: number, name: string, income: number)
+		-- l'œuf qui a éclaté : la charge partie de ce point (il a grossi et s'est peut-être élevé)
+		local fx = nil
+		for i = #recent, 1, -1 do
+			local f = recent[i]
+			if os.clock() - f.ended > 3 then
+				table.remove(recent, i)
+			elseif (f.origin - pos).Magnitude < 2 then
+				fx = f
+				table.remove(recent, i)
+				break
+			end
+		end
+		if (pos - camera.CFrame.Position).Magnitude < 220 then
+			if fx then
+				HatchFx.Burst(fx.center, fx.size, fx.groundY, rarity, owner == player)
+			else
+				local h = H.EggHeight[rarity] or 3
+				HatchFx.Burst(pos, h, pos.Y - h / 2 - 0.6, rarity, owner == player)
+			end
+		end
+		if owner == player then
+			-- la bannière attend que la créature soit sortie de l'œuf
+			task.delay(0.7 + 0.12 * rarity, hatchBanner, ring, rarity, name, income)
+		end
+	end)
 
 -- CRÉATURES POSÉES ------------------------------------------------------------------------
 
@@ -578,8 +704,19 @@ local function trackCreature(m: Instance)
 			Adornee = bcore,
 			Parent = gui,
 		})
-		UIKit.text({ Size = UDim2.fromScale(1, 0.55), Text = (m:GetAttribute("Creature") or "?") :: string, TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), Parent = tag })
-		UIKit.text({ Size = UDim2.fromScale(1, 0.45), Position = UDim2.fromScale(0, 0.55), Text = "{Cash} " .. money((m:GetAttribute("Income") or 0) :: number) .. "/s", TextColor3 = UIKit.Money, Parent = tag })
+		UIKit.text({
+			Size = UDim2.fromScale(1, 0.55),
+			Text = (m:GetAttribute("Creature") or "?") :: string,
+			TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2),
+			Parent = tag,
+		})
+		UIKit.text({
+			Size = UDim2.fromScale(1, 0.45),
+			Position = UDim2.fromScale(0, 0.55),
+			Text = "{Cash} " .. money((m:GetAttribute("Income") or 0) :: number) .. "/s",
+			TextColor3 = UIKit.Money,
+			Parent = tag,
+		})
 		creatures[m] = tag
 		return
 	end
@@ -614,8 +751,20 @@ local function trackCreature(m: Instance)
 		img.ImageColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.3)
 	end
 	UIKit.float(img, 4, 3, 1.6, math.random() * 6)
-	UIKit.text({ Size = UDim2.fromScale(1, 0.13), Position = UDim2.fromScale(0, 0.74), Text = name, TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2), Parent = holder })
-	UIKit.text({ Size = UDim2.fromScale(1, 0.12), Position = UDim2.fromScale(0, 0.87), Text = "{Cash} " .. money(income) .. "/s", TextColor3 = UIKit.Money, Parent = holder })
+	UIKit.text({
+		Size = UDim2.fromScale(1, 0.13),
+		Position = UDim2.fromScale(0, 0.74),
+		Text = name,
+		TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2),
+		Parent = holder,
+	})
+	UIKit.text({
+		Size = UDim2.fromScale(1, 0.12),
+		Position = UDim2.fromScale(0, 0.87),
+		Text = "{Cash} " .. money(income) .. "/s",
+		TextColor3 = UIKit.Money,
+		Parent = holder,
+	})
 	creatures[m] = b
 end
 
