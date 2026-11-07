@@ -16,7 +16,7 @@ Légende : ✅ décidé dans `docs/Mecaniques.md` · ❓ à trancher (voir la fi
 | Zone | Contenu |
 | --- | --- |
 | **En bas à gauche** | **Argent** en énorme ($, vert-or), avec le revenu par seconde des créatures de la base (« +$120/s ») et les gains qui s'envolent en « +$12.5K » |
-| **À gauche, deux gros boutons seulement** | 🛒 **SHOP** et 📖 **INDEX** (décision du 6 nov.). Tout le reste est dans la boutique, en faisant défiler. Pastille rouge « ! » quand il y a quelque chose à acheter ou à réclamer |
+| **À gauche, deux gros boutons seulement** | 🛒 **STORE** (Robux) et 📖 **INDEX** (décision du 6 nov., STORE depuis le 7 nov.). Pastille rouge « ! » quand il y a quelque chose à acheter ou à réclamer |
 | **En haut à droite** | **Œuf porté** ✅ (7 nov.) : on n'en porte qu'un, donc pas de compteur. Emplacement discret « NO EGG – Drill an asteroid » ; quand on ramasse un œuf, il s'allume à la couleur de la rareté (« EPIC EGG! – Bring it home! »), avec rayons, halo et un éclat au ramassage. Les potions actives sont juste en dessous |
 | **À droite, ronds** | Raccourcis : ⭐ Supernova (quand elle est disponible), 🛡️ boost actif (potion, avec son minuteur) |
 | **Jauges (bord gauche)** | **Jetpack** (carburant, existe déjà), **Oxygène** : elle n'apparaît que hors du couloir et devient rouge et clignote en dessous de 25 % ✅. **Bruit** : seulement dans les anneaux 5 à 7, comme un œil qui s'ouvre ✅ |
@@ -89,9 +89,14 @@ Trois onglets ✅ :
 
 En bas : le champ **Codes**, et la récompense **Join the group** (+10 % de chance) ✅.
 
-## 9. Shop : la boutique unique (bouton SHOP du HUD)
+## 9. Boutiques : STORE (Robux) et atelier des foreuses ($)
 
-Décision du 6 nov. : **une seule fenêtre qui défile**, qui regroupe tout ce qui n'est pas l'index. Le haut a des raccourcis vers chaque section (petites icônes) pour y sauter directement.
+✅ Refonte du 7 nov. (recherche dans `docs/Boutique.md`) : **deux fenêtres, deux monnaies, jamais mélangées**.
+
+- **STORE** (bouton du HUD, Robux) : menu à gauche (STARTER, PASSES, CASH, BOOSTS) qui fait défiler jusqu'à la section. Starter Pack en vedette (rayons, « ONE TIME! », contenu en icônes, vrai compte à rebours de 3 jours depuis la première partie, un seul achat), passes avec « OWNED », 5 paquets d'argent (le dernier en or « BEST VALUE! »), potions avec leur temps restant. Tous les prix sont lus sur Roblox (`Prices.lua`), « … » pendant le chargement.
+- **DRILL WORKSHOP** (stand Shop du vaisseau, $) : onglets **DRILLS** (liste, aperçu 3D qui tourne, puissance actuelle → suivante, achat en $ ou petit bouton Robux), **SKINS** (12 apparences de foreuse, voir Mecaniques.md) et **UPGRADES** (scanner).
+
+Ancienne version (6 nov., remplacée) : une seule fenêtre qui défile.
 
 1. **Featured** : l'offre du moment, avec un compte à rebours. **Jamais d'œufs contre des Robux** ✅.
 2. **Upgrades** ($) : les 5 cartes Drill, Cargo, Jetpack, Scanner, Suit (contenu en §3). Le stand SHOP du vaisseau ouvre la boutique directement à cette section.

@@ -125,7 +125,7 @@ local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -20), UDim
 new("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = menu })
 local buttons = {}
 for i, b in ipairs({
-	{ "Shop", "SHOP", "Shop", "Green" },
+	{ "Store", "STORE", "Shop", "Green" }, -- tout ce qui s'achète en Robux (Store.client)
 	{ "Index", "INDEX", "Index", "Blue" },
 }) do
 	local button, badge = UIKit.menuButton({ name = b[1], text = b[2], art = b[3], color = b[4], parent = menu })
@@ -133,29 +133,18 @@ for i, b in ipairs({
 	UIKit.popIn(button.Parent :: Frame, 0.08 * i)
 	buttons[b[1]] = { button = button, badge = badge }
 	button.MouseButton1Click:Connect(function()
-		if b[1] == "Shop" then
-			UIKit.Open:Fire("Shop")
+		if b[1] == "Store" then
+			UIKit.Open:Fire("Store")
 		else
 			UIKit.Open:Fire("Index")
 		end
 	end)
 end
 
--- La pastille de SHOP s'allume quand une amélioration est à portée de bourse
+-- La pastille de STORE s'allume tant que l'offre de bienvenue (Starter Pack) est disponible
 local function refreshBadges()
-	local credits = player:GetAttribute("Credits") or 0
-	local affordable = false
-	for id, u in pairs(Config.Upgrades) do
-		local level = player:GetAttribute("Lvl_" .. id) or 0
-		if level < u.Max and credits >= Config.UpgradeCost(id, level) then
-			affordable = true
-		end
-	end
-	local nextDrill = Config.Drills[(player:GetAttribute("Drill") or 1) + 1]
-	if nextDrill and credits >= nextDrill.Cost then
-		affordable = true
-	end
-	buttons.Shop.badge.Visible = affordable
+	local ends = (player:GetAttribute("StarterEnds") or 0) :: number
+	buttons.Store.badge.Visible = Config.Shop.Featured.Id ~= 0 and not player:GetAttribute("StarterBought") and ends > os.time()
 end
 
 -- ŒUF PORTÉ (en haut à droite) ------------------------------------------------------
@@ -404,7 +393,7 @@ player.AttributeChanged:Connect(function(name)
 		refreshSpeed()
 	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" then
 		refreshCargo()
-	elseif name == "Drill" or string.sub(name, 1, 4) == "Lvl_" then
+	elseif name == "StarterBought" or name == "StarterEnds" then
 		refreshBadges()
 	end
 end)

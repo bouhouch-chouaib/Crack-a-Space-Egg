@@ -46,6 +46,7 @@ type Rig = {
 	tip: Attachment?,
 	carry: CFrame,
 	tier: number,
+	accent: Color3?, -- couleur du skin (rayon de forage), sinon celle du palier
 	k: number, -- 0 = sur le dos, 1 = en main
 	aim: Vector3, -- direction de la mèche (repère du torse), lissée
 	spin: number,
@@ -76,7 +77,7 @@ end
 -- EFFETS AU POINT D'IMPACT ------------------------------------------------------------
 
 local function makeFx(rig: Rig): Fx
-	local tierColor = (Config.Drills[rig.tier] or Config.Drills[1]).Color
+	local tierColor = rig.accent or (Config.Drills[rig.tier] or Config.Drills[1]).Color
 	local contact = Instance.new("Attachment")
 	contact.Name = "DrillContact"
 	contact.Parent = workspace.Terrain
@@ -248,6 +249,7 @@ local function bindDrill(rig: Rig)
 		rig.tip = bit:FindFirstChild("Tip") :: Attachment?
 	end
 	rig.tier = (drill:GetAttribute("Tier") or 1) :: number
+	rig.accent = drill:GetAttribute("Accent") :: Color3?
 end
 
 local function track(character: Model)
@@ -452,6 +454,23 @@ RunService.PreSimulation:Connect(function(dt)
 				else
 					hum.AutoRotate = true
 					hum.CameraOffset = Vector3.zero
+				end
+			end
+		end
+	end
+end)
+
+-- SKIN RAINBOW : les couleurs de la foreuse défilent (chez chaque client)
+RunService.Heartbeat:Connect(function()
+	local t = os.clock()
+	for _, rig in pairs(rigs) do
+		local drill = rig.drill
+		if drill and drill.Parent and drill:GetAttribute("Rainbow") then
+			local h = (t * 0.2) % 1
+			for name, offset in pairs({ Body = 0, Trim = 0.33, Glow = 0.5 }) do
+				local piece = drill:FindFirstChild(name, true)
+				if piece and piece:IsA("BasePart") then
+					piece.Color = Color3.fromHSV((h + offset) % 1, if name == "Trim" then 0.35 else 0.7, 1)
 				end
 			end
 		end

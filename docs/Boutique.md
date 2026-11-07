@@ -75,6 +75,11 @@ Trois onglets :
 Une police de titres (Fredoka One) et une pour les petits textes (Builder Sans), cartes et boutons
 refaits selon les règles ci-dessus, fenêtres plus aérées.
 
+## Fait (7 nov.)
+- ✅ STORE et atelier des foreuses séparés, comme prévu ci-dessus ; ancien `Shop.client.lua` supprimé.
+- ✅ Prix Robux lus sur Roblox, « OWNED », Starter Pack honnête (3 jours, un seul achat), rubans retirés sauf « BEST VALUE! ».
+- ✅ Skins : 9 en $ et 3 en passes Robux (Galaxy, Rainbow, Supernova), créés sur Roblox avec leur icône.
+
 ## Sources
 - Monetization foundations : https://create.roblox.com/docs/production/game-design/monetization-foundations
 - Starter pack design : https://create.roblox.com/docs/production/game-design/starter-pack-design

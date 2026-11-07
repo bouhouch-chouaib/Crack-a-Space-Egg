@@ -37,6 +37,10 @@ local function default()
 		inventory = {}, -- sac de créatures (CreatureService), 100 places
 		seen = {}, -- ["anneau:rareté"] = true : créature déjà eue dans la base (Index)
 		indexClaimed = {}, -- ["anneau"] = true : récompense d'anneau de l'Index réclamée
+		skins = {}, -- ["clé"] = true : skins de foreuse achetés en $ (SkinService)
+		skin = "Classic", -- skin de foreuse équipé
+		firstJoin = 0, -- os.time() de la première partie (fenêtre du Starter Pack)
+		starterBought = false, -- Starter Pack déjà acheté (un seul par joueur)
 		-- Base : œufs en incubation et créatures posées. Position (x, z) dans le repère du sol de la base.
 		--   œuf      : { kind = "egg", ring, rarity, x, z, hatchAt = os.time() de fin }
 		--   créature : { kind = "pet", ring, rarity, x, z, name, size, weight, income }

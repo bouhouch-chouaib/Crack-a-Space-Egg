@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local DrillSkin = require(ReplicatedStorage.Shared.DrillSkin)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local BeltService = require(script.Parent.BeltService)
@@ -53,6 +54,9 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("ReadyList", table.concat(ready, ","))
 	player:SetAttribute("Ring", d.ring)
+	-- Starter Pack : fin de l'offre (3 jours après la première partie) et achat déjà fait
+	player:SetAttribute("StarterEnds", (d.firstJoin or 0) + Config.Shop.Featured.Duration)
+	player:SetAttribute("StarterBought", d.starterBought == true)
 	player:SetAttribute("Drill", d.drill)
 	-- Niveau du jetpack (HUD) et vitesses qui en découlent (Jetpack.client)
 	local jl, jx, jn = Config.JetpackLevel(d.jetXP or 0)
@@ -296,6 +300,8 @@ local function equipDrill(player: Player)
 	model.Name = "EquippedDrill"
 	model:SetAttribute("Tier", d.drill)
 	model:ScaleTo(Config.DrillHold.Scale)
+	-- skin choisi à l'atelier (couleurs, effet), gardé quand on change de foreuse
+	DrillSkin.Apply(model, d.skin, true)
 	local body = model.PrimaryPart :: BasePart
 	local handle = body:FindFirstChild("Handle") :: Attachment?
 	local weld = Instance.new("Weld")
@@ -501,6 +507,10 @@ function GameService.Start()
 		credits.Name = "Credits"
 		credits.Parent = ls
 		ls.Parent = player
+		local d = DataService.Get(player)
+		if d and (d.firstJoin or 0) == 0 then
+			d.firstJoin = os.time()
+		end
 		sync(player)
 		equipDrill(player)
 		equipJetpack(player)

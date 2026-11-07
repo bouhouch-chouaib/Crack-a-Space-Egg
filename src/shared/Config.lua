@@ -266,6 +266,47 @@ for tier, id in pairs({
 	Config.Drills[tier].ProductId = id
 end
 
+-- SKINS DE FOREUSE (atelier des foreuses, onglet SKINS) ---------------------------------
+-- Ils ne changent que l'apparence (couleurs des pièces Body, Trim, Dark, Bit, Glow) et se gardent
+-- quand on change de foreuse. Price en $ ; Robux = skin vendu comme passe (PassId sur Roblox).
+-- Rarity : couleur du cadre (Config.Rarities). Accent : couleur du rayon de forage.
+-- Effect : "Sparkle" (étincelles), "Rainbow" (couleurs qui défilent), "Flames" (flammes).
+local function skin(key, name, rarity, price, body, trim, dark, bit, glow, effect)
+	return { Key = key, Name = name, Rarity = rarity, Price = price, Body = body, Trim = trim, Dark = dark, Bit = bit, Glow = glow, Accent = glow, Effect = effect }
+end
+local col = Color3.fromRGB
+Config.DrillSkins = {
+	{ Key = "Classic", Name = "Classic", Rarity = 1, Price = 0 }, -- couleurs d'origine de chaque foreuse
+	skin("Bubblegum", "Bubblegum", 2, 25000, col(255, 150, 205), col(255, 236, 246), col(205, 80, 150), col(255, 255, 255), col(255, 170, 225)),
+	skin("Mint", "Mint", 2, 60000, col(140, 240, 190), col(240, 255, 248), col(40, 140, 110), col(220, 255, 240), col(150, 255, 215)),
+	skin("Midnight", "Midnight", 3, 500000, col(45, 55, 115), col(90, 200, 255), col(22, 24, 52), col(175, 220, 255), col(90, 200, 255)),
+	skin("Lava", "Lava", 3, 5e6, col(55, 42, 42), col(255, 125, 40), col(30, 24, 24), col(255, 195, 95), col(255, 115, 30)),
+	skin("Toxic", "Toxic", 4, 5e7, col(135, 240, 60), col(150, 65, 205), col(60, 40, 85), col(225, 255, 150), col(175, 255, 80)),
+	skin("Frost", "Frost", 4, 5e8, col(205, 236, 255), col(255, 255, 255), col(90, 140, 195), col(232, 250, 255), col(160, 230, 255), "Sparkle"),
+	skin("Gold", "Gold", 5, 5e9, col(255, 200, 50), col(255, 245, 190), col(170, 110, 20), col(255, 235, 150), col(255, 222, 90), "Sparkle"),
+	skin("Diamond", "Diamond", 6, 5e10, col(135, 240, 255), col(255, 255, 255), col(60, 150, 220), col(232, 255, 255), col(175, 250, 255), "Sparkle"),
+	-- skins premium (Robux)
+	skin("Galaxy", "Galaxy", 6, 0, col(110, 60, 200), col(255, 140, 230), col(30, 20, 70), col(205, 185, 255), col(255, 140, 240), "Sparkle"),
+	skin("Rainbow", "Rainbow", 7, 0, col(255, 90, 90), col(255, 255, 255), col(60, 50, 90), col(255, 255, 255), col(255, 255, 255), "Rainbow"),
+	skin("Supernova", "Supernova", 7, 0, col(255, 200, 60), col(255, 90, 180), col(90, 30, 80), col(255, 240, 200), col(255, 140, 60), "Flames"),
+}
+-- Skins vendus en Robux (passes) : prix indicatif (le vrai prix est lu sur Roblox) et identifiant du passe
+Config.DrillSkins[10].Robux, Config.DrillSkins[10].PassId = 149, 2074575666
+Config.DrillSkins[11].Robux, Config.DrillSkins[11].PassId = 199, 2075043675
+Config.DrillSkins[12].Robux, Config.DrillSkins[12].PassId = 249, 2074203684
+Config.DrillSkinArt = {
+	Sparkle = "rbxassetid://138922153683020",
+	Glow = "rbxassetid://103844906730878",
+}
+function Config.DrillSkin(key: string?)
+	for _, s in ipairs(Config.DrillSkins) do
+		if s.Key == key then
+			return s
+		end
+	end
+	return Config.DrillSkins[1]
+end
+
 -- Mutations
 Config.Sizes = {
 	{ Name = "Small", Chance = 0.30, Mult = 0.7 },
@@ -759,7 +800,8 @@ Config.IndexReward = {
 -- (le bouton affiche alors « Coming soon! »). Price = prix affiché en Robux.
 -- Jamais d'œufs ni de créatures contre des Robux.
 Config.Shop = {
-	-- Offre du moment, renouvelée chaque jour à minuit UTC (compte à rebours affiché)
+	-- Starter Pack : offre de bienvenue, visible pendant Duration secondes après la première partie,
+	-- achetable une seule fois (guide Roblox « Starter pack design »). Le prix est lu sur Roblox.
 	Featured = {
 		Name = "Starter Pack",
 		Text = "Big money pack + x2 Luck + x2 Money potions",
@@ -767,14 +809,14 @@ Config.Shop = {
 		PackBase = 45000, -- comme le 3e paquet d'argent
 		Id = 3729245985,
 		Price = 99,
-		Was = 249, -- prix barré
+		Duration = 3 * 86400,
 	},
 	-- Passes (achat définitif). Effets appliqués par BoostService.
 	Passes = {
 		{ Key = "JetXP2x", Name = "x2 Jetpack XP", Text = "Train your jetpack twice as fast", Art = "PassTraining2x", Id = 2075661369, Price = 149 },
 		{ Key = "TurboJetpack", Name = "Turbo Jetpack", Text = "+25% jetpack fuel", Art = "PassTurboJetpack", Id = 2075607386, Price = 99 },
-		{ Key = "FastHatch", Name = "Fast Hatch", Text = "Eggs hatch 2x faster", Art = "PassAutoCrack", Id = 2076051409, Price = 199, Ribbon = "BEST SELLER!" },
-		{ Key = "Money2x", Name = "x2 Money", Text = "Creatures earn double, forever", Art = "PassMoney2x", Id = 2074467451, Price = 299, Ribbon = "BEST VALUE!" },
+		{ Key = "FastHatch", Name = "Fast Hatch", Text = "Eggs hatch 2x faster", Art = "PassAutoCrack", Id = 2076051409, Price = 199 },
+		{ Key = "Money2x", Name = "x2 Money", Text = "Creatures earn double, forever", Art = "PassMoney2x", Id = 2074467451, Price = 299 },
 		{ Key = "BaseSlots", Name = "+5 Base Slots", Text = "Room for 5 more eggs and creatures", Art = "PassPetSlot", Id = 2074281420, Price = 249 },
 		{ Key = "VIP", Name = "VIP", Text = "VIP chat tag, +10% money", Art = "PassVIP", Id = 2074857407, Price = 399 },
 	},
@@ -800,9 +842,9 @@ Config.Shop = {
 	MoneyPacks = {
 		{ Art = "Money1", Base = 6000, Id = 3729246128, Price = 19 },
 		{ Art = "Money2", Base = 20000, Id = 3729246160, Price = 49 },
-		{ Art = "Money3", Base = 45000, Id = 3729246196, Price = 99, Ribbon = "POPULAR!" },
+		{ Art = "Money3", Base = 45000, Id = 3729246196, Price = 99 },
 		{ Art = "Money4", Base = 120000, Id = 3729246217, Price = 249 },
-		{ Art = "Money5", Base = 260000, Id = 3729246247, Price = 499, Ribbon = "BEST VALUE!" },
+		{ Art = "Money5", Base = 260000, Id = 3729246247, Price = 499 },
 	},
 }
 

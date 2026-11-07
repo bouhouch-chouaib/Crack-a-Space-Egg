@@ -91,6 +91,11 @@ function MonetizationService.Start()
 			if not giveMoney(player, shop.Featured.PackBase) then
 				return false
 			end
+			local d = DataService.Get(player)
+			if d then
+				d.starterBought = true
+				player:SetAttribute("StarterBought", true)
+			end
 			BoostService.Add(player, "Luck", minutes)
 			BoostService.Add(player, "Money", minutes)
 			return true
