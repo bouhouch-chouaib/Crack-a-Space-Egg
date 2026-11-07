@@ -207,7 +207,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 - ✅ **La première minute** est la priorité : le joueur ne doit ni s'ennuyer ni se demander quoi faire. Il n'y a **pas de cinématique**, on joue tout de suite. 💡 Un astéroïde facile arrive pile au bon moment, et le premier œuf donne à coup sûr une créature.
 - ✅ **Guide** (7 nov., `Guide.client`, `Config.Guide`) : **un enfant doit pouvoir le suivre sans difficulté**, et il tient le joueur plusieurs minutes, jusqu'à ce qu'il ait intégré la boucle et ses détours.
   - Bulle en bas de l'écran : 3 à 5 mots, grosse icône, une petite ligne d'aide ; 10 étoiles de progression ; petite croix pour passer (deux touches).
-  - Flèche au sol (chevrons qui filent vers le but), flèche qui rebondit au-dessus du but, contour vert qui le fait briller même derrière un mur, grosse flèche au bord de l'écran quand le but est hors champ.
+  - Chaîne de grosses flèches vertes posées au sol tous les 5 studs, du joueur jusqu'au but, avec une vague de lumière qui file vers le but ; flèche au sol (chevrons qui filent vers le but), flèche qui rebondit au-dessus du but, contour vert qui le fait briller même derrière un mur, grosse flèche au bord de l'écran quand le but est hors champ.
   - Main qui montre le geste : clic maintenu sur la roche (ordinateur), appui sur le bouton DRILL (téléphone).
   - Fête à chaque étape (« Great! », étincelles, son), « You did it! » à la fin.
   - Étapes enregistrées (`d.guide`) : forer un œuf → le rapporter à la machine → poser l'œuf → pendant qu'il couve, aller chercher le suivant → faire éclore → « ta créature rapporte des $ » → 3 créatures → acheter la Rusty Drill → acheter sa soufflerie → jetpack niveau 10 → un œuf de l'anneau 2.

@@ -194,6 +194,79 @@ local beam = new("Beam", {
 	Enabled = false,
 	Parent = workspace.Terrain,
 })
+-- Chaîne de flèches entre le joueur et le but : une grosse flèche verte tous les CHAIN_GAP studs,
+-- posée à plat sur le sol (ou en l'air au-dessus du vide), pointée vers le but ; une vague de lumière
+-- les parcourt du joueur vers le but pour montrer le sens.
+local CHAIN_GAP = 5
+local CHAIN_MAX = 48
+local CHAIN_SIZE = 3.8
+local chainFolder = new("Folder", { Name = "GuideChain", Parent = workspace })
+local chain: { BasePart } = {}
+local chainDecals: { { Decal } } = {}
+for i = 1, CHAIN_MAX do
+	local p = new("Part", {
+		Name = "Arrow" .. i,
+		Anchored = true,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+		CastShadow = false,
+		Transparency = 1,
+		Size = Vector3.new(CHAIN_SIZE, 0.05, CHAIN_SIZE),
+		CFrame = CFrame.new(0, -1e4, 0),
+		Parent = chainFolder,
+	})
+	-- dessus et dessous : on la voit aussi en volant sous elle
+	local top = new("Decal", { Face = Enum.NormalId.Top, Texture = UIKit.Art.ArrowUp or Icons.Ids.ArrowUp, Parent = p })
+	local bottom = new("Decal", { Face = Enum.NormalId.Bottom, Texture = UIKit.Art.ArrowUp or Icons.Ids.ArrowUp, Parent = p })
+	chain[i] = p
+	chainDecals[i] = { top, bottom }
+end
+local chainParams = RaycastParams.new()
+chainParams.FilterType = Enum.RaycastFilterType.Exclude
+chainParams.IgnoreWater = true
+local chainCFrames: { CFrame } = {}
+local HIDDEN = CFrame.new(0, -1e4, 0)
+
+-- Pose la chaîne de « from » (pieds du joueur) vers « to » (le but) ; nil = tout cacher
+local function placeChain(from: Vector3?, to: Vector3?, character: Model?)
+	local count = 0
+	if from and to then
+		local flat = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
+		local dist = (to - from).Magnitude
+		-- on laisse un peu de place autour du joueur et du but
+		local first, last = 3.5, dist - 4
+		if last > first and flat.Magnitude > 0.5 then
+			chainParams.FilterDescendantsInstances = { chainFolder, character :: Instance }
+			local now = os.clock()
+			local d = first
+			while d <= last and count < CHAIN_MAX do
+				count += 1
+				local p = from:Lerp(to, d / dist)
+				-- collée au sol s'il y en a juste dessous (pont du vaisseau, base) ; sinon en l'air
+				local hit = workspace:Raycast(p + Vector3.new(0, 3, 0), Vector3.new(0, -9, 0), chainParams)
+				if hit then
+					p = hit.Position + Vector3.new(0, 0.15, 0)
+				end
+				-- vague de lumière qui file vers le but, petit rebond
+				local wave = (math.sin(now * 6 - count * 0.7) + 1) / 2
+				-- le haut de l'image va vers l'arrière de la pièce (+Z) : on tourne la pièce dos au but
+				local cf = CFrame.lookAt(p, p - flat) * CFrame.new(0, wave * 0.35, 0)
+				chainCFrames[count] = cf
+				local decals = chainDecals[count]
+				local t = 0.45 - 0.45 * wave
+				decals[1].Transparency = t
+				decals[2].Transparency = t
+				d += CHAIN_GAP
+			end
+		end
+	end
+	for i = count + 1, CHAIN_MAX do
+		chainCFrames[i] = HIDDEN
+	end
+	workspace:BulkMoveTo(chain, chainCFrames, Enum.BulkMoveMode.FireCFrameChanged)
+end
+
 -- but hors de l'écran (derrière la caméra, sur le côté) : grosse flèche au bord de l'écran qui montre
 -- où se tourner, avec l'icône de l'étape dedans
 local edge = UIKit.icon("ArrowUp", {
@@ -559,6 +632,7 @@ RunService.RenderStepped:Connect(function()
 		glow.Enabled = false
 		edge.Visible = false
 		edgeIcon.Visible = false
+		placeChain(nil, nil, nil)
 	else
 		-- flèche au bord de l'écran si le but n'est pas visible
 		local cam = workspace.CurrentCamera
@@ -600,6 +674,7 @@ RunService.RenderStepped:Connect(function()
 		a1.WorldPosition = tp
 		local far = (tp - hrp.Position).Magnitude
 		beam.Enabled = far > 7
+		placeChain(hrp.Position - Vector3.new(0, 2.6, 0), tp, character)
 		-- plus le but est loin, plus la flèche est large (on la voit de loin)
 		local w = math.clamp(far / 25, 1.6, 4)
 		beam.Width0, beam.Width1 = w, w
