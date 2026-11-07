@@ -46,7 +46,10 @@ Légende : ✅ décidé · 💡 détail proposé, à ajuster en jeu · ❓ reste
 - ✅ Le joueur marche, saute et utilise le jetpack (maintenir Saut en l'air ; le carburant se recharge au sol).
 - ✅ On saute d'astéroïde en astéroïde. Tomber dans le Vide ramène au vaisseau avec une soute vide.
 - 💡 Un joueur debout sur un astéroïde est entraîné avec lui.
-- ✅ Sur téléphone (7 nov., `Mobile.client`) : gros bouton **DRILL** à côté du bouton de saut de Roblox (qui sert aussi à voler) ; le maintenir fore la roche la plus proche à portée, il devient vert quand une roche est à portée. Mode allégé : moitié moins de particules (`Config.Mobile`).
+- ✅ **Téléphones, tablettes, manettes et consoles** (7 nov.). `Device.lua` suit l'appareil utilisé en direct (clavier et souris, tactile ou manette ; une console démarre en manette) : aides, guide, boutons et textes changent dès qu'on change d'appareil.
+  - **Téléphone** (`Mobile.client`) : gros bouton **DRILL** juste à gauche du bouton de saut de Roblox (qui sert aussi à voler), à sa taille, recalé quand l'écran tourne ; le maintenir fore la roche la plus proche à portée, il devient vert quand une roche est à portée. L'argent, le jetpack, STORE et INDEX montent en haut à gauche pour laisser la place au joystick. Mode allégé : moitié moins de particules (`Config.Mobile`). Poser l'œuf : toucher le sol de sa base.
+  - **Manette** : maintenir **RT** (ou RB) fore la roche la plus proche ; A = sauter / voler ; **croix gauche = STORE, croix droite = INDEX** (petite flèche sur les boutons) ; dans une fenêtre, le premier bouton est sélectionné, la croix et le stick se déplacent dedans, A valide, **B ferme**. Poser l'œuf : il va juste devant le joueur, RT pour le poser. Invites : X (machine, stand, soufflerie), Y (faire éclore).
+  - Touches de la manette réunies dans `Device.Pad`.
 
 ## 4. Tapis d'astéroïdes
 

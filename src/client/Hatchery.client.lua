@@ -98,7 +98,7 @@ local ghost: Model? = nil
 local ring3d: Part? = nil
 local placeX, placeZ, placeOk = 0, 0, false
 local pointer: Vector2? = nil
-local touch = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+local Device = require(script.Parent:WaitForChild("Device"))
 
 local function myBase(): Model?
 	local index = player:GetAttribute("Base")
@@ -254,18 +254,35 @@ RunService.RenderStepped:Connect(function()
 	if hrp and (hrp.Position - floor.Position).Magnitude > math.max(floor.Size.X, floor.Size.Z) * 1.2 then
 		return hide("{Home} Bring your " .. name .. " to your base!")
 	end
-	local screen = if touch then pointer else UserInputService:GetMouseLocation()
-	if not screen then
-		return hide("{Tap} Tap your base floor to place your " .. name)
-	end
+	local kind = Device.Kind()
+	local touch = kind == "Touch"
+	local pad = kind == "Gamepad"
 	floorParams.FilterDescendantsInstances = { floor }
-	-- Souris : position dans la fenêtre ; doigt : position dans l'interface (sans la barre du haut)
-	local ray = if touch
-		then camera:ScreenPointToRay(screen.X, screen.Y)
-		else camera:ViewportPointToRay(screen.X, screen.Y)
-	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, floorParams)
+	local hit: RaycastResult? = nil
+	if pad and hrp then
+		-- manette : l'œuf ira juste devant le joueur ; il marche pour choisir la place
+		local look = hrp.CFrame.LookVector * Vector3.new(1, 0, 1)
+		local ahead = hrp.Position + (if look.Magnitude > 0.01 then look.Unit else Vector3.zAxis) * (3 + (H.Footprint[current.rarity] or 3))
+		hit = workspace:Raycast(ahead + Vector3.new(0, 6, 0), Vector3.new(0, -20, 0), floorParams)
+		if not hit then
+			return hide("{Home} Walk onto your base floor")
+		end
+	else
+		local screen = if touch then pointer else UserInputService:GetMouseLocation()
+		if not screen then
+			return hide("{Tap} Tap your base floor to place your " .. name)
+		end
+		-- Souris : position dans la fenêtre ; doigt : position dans l'interface (sans la barre du haut)
+		local ray = if touch
+			then camera:ScreenPointToRay(screen.X, screen.Y)
+			else camera:ViewportPointToRay(screen.X, screen.Y)
+		hit = workspace:Raycast(ray.Origin, ray.Direction * 500, floorParams)
+		if not hit then
+			return hide(if touch then "{Tap} Tap your base floor to place your " .. name else "{Mouse} Point at your base floor to place your " .. name)
+		end
+	end
 	if not hit then
-		return hide("{Mouse} Point at your base floor to place your " .. name)
+		return
 	end
 	local p = floor.CFrame:PointToObjectSpace(hit.Position)
 	placeX, placeZ = p.X, p.Z
@@ -282,7 +299,7 @@ RunService.RenderStepped:Connect(function()
 	Icons.Apply(
 		bannerText,
 		if ok
-			then (if touch then "{Tap} Tap to place your " else "{Mouse} Click to place your ") .. name
+			then (if pad then ("Press %s to place your "):format(Device.Key("place")) elseif touch then "{Tap} Tap to place your " else "{Mouse} Click to place your ") .. name
 			else "{Cross} " .. (why or "Not here")
 	)
 end)
@@ -307,7 +324,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if not placing or processed then
 		return
 	end
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.KeyCode == Device.Pad.Place then
 		tryPlace()
 	elseif input.UserInputType == Enum.UserInputType.Touch then
 		pointer = Vector2.new(input.Position.X, input.Position.Y)
@@ -526,7 +543,7 @@ RunService.RenderStepped:Connect(function()
 				UIKit.bump(st.time, 0.3)
 			end
 			local own = m:GetAttribute("Owner") == player.UserId
-			Icons.Apply(st.time, if own then "{Hatch} READY! Press F" else "{Hatch} READY!")
+			Icons.Apply(st.time, if own then (if Device.IsTouch() then "{Hatch} READY! Tap HATCH" else "{Hatch} READY! Press " .. Device.Key("hatch")) else "{Hatch} READY!")
 			st.time.TextColor3 = GOLD:Lerp(Color3.new(1, 1, 1), 0.5 + 0.5 * math.sin(t * 6))
 		else
 			Icons.Apply(st.time, "{Hourglass} " .. timeText(left))

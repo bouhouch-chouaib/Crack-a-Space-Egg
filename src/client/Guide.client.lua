@@ -14,7 +14,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
@@ -26,7 +25,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
 local G = Config.Guide
 local new = UIKit.new
-local touchOnly = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local Device = require(script.Parent:WaitForChild("Device"))
 
 local INK = Color3.fromRGB(28, 30, 44)
 local GOLD = Color3.fromRGB(255, 205, 60)
@@ -128,7 +127,8 @@ local skipAsk = UIKit.text({
 local skipArmed = 0
 
 -- main qui montre le geste (maintenir le clic / toucher le bouton FORER / toucher le sol)
-local hand = UIKit.icon(if touchOnly then "Tap" else "Mouse", {
+-- (tactile : un doigt ; souris : la souris ; manette : un rond avec le nom de la touche, plus bas)
+local hand = UIKit.icon(if Device.IsTouch() then "Tap" else "Mouse", {
 	Name = "Hand",
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Size = UDim2.fromOffset(84, 84),
@@ -137,6 +137,20 @@ local hand = UIKit.icon(if touchOnly then "Tap" else "Mouse", {
 	Parent = gui,
 })
 local handScale = new("UIScale", { Parent = hand })
+local padBadge = new("Frame", {
+	Name = "PadBadge",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Size = UDim2.fromOffset(78, 78),
+	BackgroundColor3 = Color3.fromRGB(30, 32, 46),
+	Visible = false,
+	ZIndex = 20,
+	Parent = gui,
+}, { UIKit.corner(39), UIKit.stroke(5, Color3.new(1, 1, 1)) })
+local padLabel = UIKit.text({ Size = UDim2.fromScale(0.86, 0.6), Position = UDim2.fromScale(0.07, 0.2), Text = "RT", ZIndex = 21, Parent = padBadge })
+local badgeScale = new("UIScale", { Parent = padBadge })
+Device.Changed:Connect(function()
+	hand.Image = UIKit.Art[if Device.IsTouch() then "Tap" else "Mouse"] or hand.Image
+end)
 
 -- fête : « GREAT! » au centre, rayons, étincelles, son
 local cheer = UIKit.text({
@@ -435,9 +449,16 @@ end
 local function goRock(ring: number?, sub: string?): Hint
 	local rock = nearestRock(ring)
 	if player:GetAttribute("RockNear") then
-		return { icon = if touchOnly then "Tap" else "Mouse", text = if touchOnly then "Hold DRILL!" else "Hold click to drill!", sub = sub, target = rock, hold = "drill" }
+		local kind = Device.Kind()
+		return {
+			icon = if kind == "Touch" then "Tap" elseif kind == "Gamepad" then "Lightning" else "Mouse",
+			text = if kind == "Touch" then "Hold DRILL!" elseif kind == "Gamepad" then ("Hold %s to drill!"):format(Device.Key("drill")) else "Hold click to drill!",
+			sub = sub,
+			target = rock,
+			hold = "drill",
+		}
 	end
-	return { icon = "Jetpack", text = if ring and ring > 1 then ("Fly to Ring %d!"):format(ring) else "Fly to a rock!", sub = sub or "Hold jump to fly", target = rock }
+	return { icon = "Jetpack", text = if ring and ring > 1 then ("Fly to Ring %d!"):format(ring) else "Fly to a rock!", sub = sub or ("Hold %s to fly"):format(if Device.IsTouch() then "jump" else Device.Key("jump")), target = rock }
 end
 
 local function decide(step: number): Hint?
@@ -506,10 +527,10 @@ local function decide(step: number): Hint?
 
 	-- la boucle de l'œuf passe avant tout (même pendant les objectifs suivants)
 	if readyEgg then
-		return { icon = "Hatch", text = if touchOnly then "Tap HATCH!" else "Press F to hatch!", sub = "Your egg is ready", target = readyEgg }
+		return { icon = "Hatch", text = if Device.IsTouch() then "Tap HATCH!" else ("Press %s to hatch!"):format(Device.Key("hatch")), sub = "Your egg is ready", target = readyEgg }
 	end
 	if held then
-		return { icon = "Egg", text = "Put your egg down!", sub = if touchOnly then "Tap the floor of your base" else "Click the floor of your base", target = floor, hold = "tap" }
+		return { icon = "Egg", text = "Put your egg down!", sub = if Device.IsTouch() then "Tap the floor of your base" elseif Device.IsGamepad() then ("Walk on your base, press %s"):format(Device.Key("place")) else "Click the floor of your base", target = floor, hold = "tap" }
 	end
 	if job then
 		return { icon = "Lightning", text = "Watch the machine!", sub = "It breaks the rock", target = machine }
@@ -519,7 +540,7 @@ local function decide(step: number): Hint?
 		local console = machine and machine:FindFirstChild("PromptPoint", true)
 		local mp = posOf(console or machine)
 		if here and mp and (here - mp).Magnitude < G.MachineNear then
-			return { icon = "Lightning", text = if touchOnly then "Tap the button!" else "Press E!", sub = "Free your egg from the rock", target = machine }
+			return { icon = "Lightning", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(Device.Key("machine")), sub = "Free your egg from the rock", target = machine }
 		end
 		-- l'air de l'œuf s'épuise (ColdService) : on le dit à l'enfant, en secondes
 		local air = player:GetAttribute("O2Left")
@@ -708,11 +729,26 @@ RunService.RenderStepped:Connect(function()
 			glow.Enabled = false
 		end
 	end
-	-- main : sur téléphone, elle appuie sur le bouton FORER ; sur ordinateur, elle clique sur la roche
+	-- main : sur téléphone, elle appuie sur le bouton DRILL ; sur ordinateur, elle clique sur la roche ;
+	-- à la manette, un rond avec le nom de la touche (RT) s'enfonce à côté du but
 	local h = shown
-	if h and h.hold then
+	local pad = Device.IsGamepad()
+	padBadge.Visible = false
+	if h and h.hold and pad then
+		hand.Visible = false
+		if tp then
+			local v, onScreen = workspace.CurrentCamera:WorldToViewportPoint(tp)
+			if onScreen then
+				padBadge.Visible = true
+				padBadge.Position = UDim2.fromOffset(v.X + 50, v.Y + 20)
+				padLabel.Text = Device.Key(if h.hold == "drill" then "drill" else "place")
+				local t = os.clock()
+				badgeScale.Scale = if h.hold == "drill" then 1 - 0.15 * math.min(1, (t % 1.6) * 4) else 1 - 0.15 * math.abs(math.sin(t * 6))
+			end
+		end
+	elseif h and h.hold then
 		local pos: Vector2? = nil
-		if h.hold == "drill" and touchOnly then
+		if h.hold == "drill" and Device.IsTouch() then
 			local mobile = player.PlayerGui:FindFirstChild("Mobile")
 			local btn = mobile and mobile:FindFirstChild("Drill", true) :: GuiObject?
 			if btn then

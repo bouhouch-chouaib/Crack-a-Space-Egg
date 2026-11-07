@@ -13,8 +13,104 @@ local Workspace = game:GetService("Workspace")
 local Theme = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Theme"))
 local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
+local Device = require(script.Parent:WaitForChild("Device"))
+local ContextActionService = game:GetService("ContextActionService")
+local GuiService = game:GetService("GuiService")
 
 local UIKit = {}
+
+-- MANETTE DANS LES FENÊTRES ------------------------------------------------------------
+-- Fenêtres ouvertes, de la plus ancienne à la plus récente : B ferme la dernière ; à l'ouverture avec
+-- une manette, son premier bouton est sélectionné et la sélection reste dans la fenêtre.
+type PadWindow = { frame: GuiObject, close: () -> () }
+local padStack: { PadWindow } = {}
+
+-- Premier bouton visible d'une fenêtre (en haut à gauche d'abord), hors bouton de fermeture
+local function firstButton(root: GuiObject): GuiObject?
+	local marked: GuiObject? = nil
+	local best, bestScore = nil, math.huge
+	for _, d in ipairs(root:GetDescendants()) do
+		if d:IsA("GuiButton") and d.Selectable and d.Visible and d.AbsoluteSize.X > 4 and d.Name ~= "Close" then
+			local shown = true
+			local a = d.Parent
+			while a and a ~= root do
+				if a:IsA("GuiObject") and not a.Visible then
+					shown = false
+					break
+				end
+				a = a.Parent
+			end
+			if shown then
+				if d:GetAttribute("PadFirst") then
+					marked = d
+				end
+				local score = d.AbsolutePosition.Y * 4 + d.AbsolutePosition.X
+				if score < bestScore then
+					best, bestScore = d, score
+				end
+			end
+		end
+	end
+	return marked or best
+end
+
+local function selectIn(w: PadWindow)
+	if Device.IsGamepad() then
+		task.defer(function()
+			local b = firstButton(w.frame)
+			if b then
+				GuiService.SelectedObject = b
+			end
+		end)
+	end
+end
+
+local function padClose(_, state: Enum.UserInputState)
+	if state ~= Enum.UserInputState.Begin then
+		return Enum.ContextActionResult.Pass
+	end
+	local top = padStack[#padStack]
+	if top then
+		top.close()
+		return Enum.ContextActionResult.Sink
+	end
+	return Enum.ContextActionResult.Pass
+end
+
+local function padOpened(w: PadWindow)
+	table.insert(padStack, w)
+	if #padStack == 1 then
+		ContextActionService:BindActionAtPriority("UIKitClose", padClose, false, 3000, Device.Pad.Cancel)
+	end
+	selectIn(w)
+end
+
+local function padClosed(w: PadWindow)
+	local i = table.find(padStack, w)
+	if i then
+		table.remove(padStack, i)
+	end
+	local sel = GuiService.SelectedObject
+	if sel and sel:IsDescendantOf(w.frame) then
+		GuiService.SelectedObject = nil
+	end
+	if #padStack == 0 then
+		ContextActionService:UnbindAction("UIKitClose")
+	else
+		selectIn(padStack[#padStack])
+	end
+end
+
+-- On prend la manette alors qu'une fenêtre est ouverte : on sélectionne dedans
+Device.Changed:Connect(function(kind)
+	local top = padStack[#padStack]
+	if kind == "Gamepad" and top then
+		selectIn(top)
+	elseif kind ~= "Gamepad" then
+		GuiService.SelectedObject = nil
+	end
+end)
+UIKit.FirstButton = firstButton
 
 -- ILLUSTRATIONS (générées dans le style des captures de référence) ---------------
 UIKit.Art = {
@@ -861,6 +957,7 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		BackgroundTransparency = 1,
 		Text = "",
 		AutoButtonColor = false,
+		Selectable = false, -- la manette ne doit pas s'arrêter sur le fond
 		Parent = gui,
 	})
 	-- Le cadre extérieur porte l'échelle écran, la fenêtre porte l'animation (deux UIScale distincts)
@@ -883,6 +980,8 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		Parent = rig,
 	}, { UIKit.corner(18), UIKit.stroke(5) })
 	UIKit.studs(frame, 0.47, "Inlets", 30)
+	-- manette : la sélection reste dans la fenêtre (onglets de côté compris : ils sont dans « rig »)
+	rig.SelectionGroup = true
 	-- Fond vivant : poussières lumineuses qui montent
 	UIKit.dust(frame, 16)
 	-- Bandeau de titre
@@ -975,6 +1074,7 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 	})
 	local opened = false
 	local onOpen: { () -> () } = {}
+	local padEntry: PadWindow = { frame = rig, close = function() end }
 	-- prepare : lancé une fois la mise en page faite, avant l'animation (ex. sauter à une section)
 	local function open(prepare: (() -> ())?)
 		if opened then
@@ -999,12 +1099,14 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 		for _, fn in ipairs(onOpen) do
 			task.spawn(fn)
 		end
+		padOpened(padEntry)
 	end
 	local function closeWindow()
 		if not opened then
 			return
 		end
 		opened = false
+		padClosed(padEntry)
 		UIKit.setBlur(false)
 		tween(dim, 0.16, { BackgroundTransparency = 1 })
 		-- Fermeture : la fenêtre rétrécit en glissant un peu vers le bas, puis disparaît
@@ -1019,6 +1121,7 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 	end
 	close.MouseButton1Click:Connect(closeWindow)
 	dim.MouseButton1Click:Connect(closeWindow)
+	padEntry.close = closeWindow
 	return {
 		gui = gui,
 		frame = frame,

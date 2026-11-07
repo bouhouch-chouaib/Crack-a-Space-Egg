@@ -633,7 +633,7 @@ function HatchService.SkipEgg(player: Player, rarity: number): boolean
 	if m then
 		m:SetAttribute("HatchAt", now)
 	end
-	GameService.Notice(player, "{Hatch} Ready to hatch! Press F", "good")
+	GameService.Notice(player, "{Hatch} Your egg is ready to hatch!", "good")
 	return true
 end
 

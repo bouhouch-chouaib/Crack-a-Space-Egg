@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local Device = require(script.Parent:WaitForChild("Device"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local player = Players.LocalPlayer
@@ -15,6 +16,7 @@ local camera = workspace.CurrentCamera
 -- DRILL ------------------------------------------------------------------
 
 local drilling = false
+local padHeld: { [Enum.KeyCode]: boolean } = {}
 local pointer: Vector2? = nil -- position écran du clic / doigt
 local target: BasePart? = nil
 local lastSent = 0
@@ -143,6 +145,17 @@ UserInputService.InputEnded:Connect(function(input)
 		drilling = false
 		pointer = nil
 	end
+	padHeld[input.KeyCode] = nil
+end)
+
+-- Gâchettes de la manette tenues (RT / RB) : n'importe quelle manette branchée
+UserInputService.InputBegan:Connect(function(input, processed)
+	if not processed and (input.KeyCode == Device.Pad.Drill or input.KeyCode == Device.Pad.DrillAlt) then
+		padHeld[input.KeyCode] = true
+	end
+end)
+UserInputService.WindowFocusReleased:Connect(function()
+	table.clear(padHeld)
 end)
 
 -- Bouton FORER des téléphones (Mobile.client) : tant qu'il est enfoncé, on fore la roche la plus proche
@@ -164,14 +177,19 @@ RunService.RenderStepped:Connect(function()
 		player:SetAttribute("RockNear", nearestInRange(hrp.Position) ~= nil)
 	end
 
-	-- Foreuse (clic / doigt sur la roche, ou bouton FORER : la roche la plus proche)
-	local wantDrill = drilling or player:GetAttribute("DrillHeld") == true
+	-- Foreuse : clic / doigt sur la roche, bouton DRILL (téléphone) ou gâchette RT / RB (manette) :
+	-- ces deux derniers forent la roche la plus proche à portée. Pas pendant la pose d'un œuf ni quand
+	-- la manette navigue dans un menu.
+	local padDrill = next(padHeld) ~= nil
+		and not player:GetAttribute("PlacingEgg")
+		and game:GetService("GuiService").SelectedObject == nil
+	local wantDrill = drilling or player:GetAttribute("DrillHeld") == true or padDrill
 	local hitPart, hitPos, tooFar = nil, nil, nil
 	if wantDrill then
 		hitPart, hitPos, tooFar = findTarget(if drilling then pointer else nil)
 		if not hitPart and os.clock() - lastWarn > 2.5 then
 			lastWarn = os.clock()
-			UIKit.toast(if tooFar then "{Jetpack} Too far! Jump closer" else "{Jetpack} No asteroid in reach! Jump on a rock", "warn")
+			UIKit.toast(if tooFar then "{Jetpack} Too far! Fly closer" else "{Jetpack} No asteroid in reach! Fly to a rock", "warn")
 		end
 	elseif UserInputService.MouseEnabled then
 		-- Survol à la souris : on montre déjà si la roche est à portée

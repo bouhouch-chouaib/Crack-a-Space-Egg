@@ -1,31 +1,33 @@
--- Téléphones et tablettes (écran tactile sans clavier).
--- 1. Gros bouton FORER à côté du bouton de saut de Roblox (qui sert aussi à voler : le maintenir pousse
---    le jetpack). Tant qu'on le tient, on fore la roche la plus proche à portée (attribut local
---    DrillHeld, lu par Controls.client) : plus besoin de viser la roche du doigt. Il devient vert et
---    pulse quand une roche est à portée (RockNear), gris sinon.
--- 2. Mode allégé : moitié moins de particules partout (les téléphones chauffent vite).
+-- Téléphones et tablettes.
+-- 1. Gros bouton DRILL juste à gauche du bouton de saut de Roblox (qui sert aussi à voler : le maintenir
+--    pousse le jetpack), à sa taille et recalé quand l'écran tourne ou change. Tant qu'on le tient, on
+--    fore la roche la plus proche à portée (attribut local DrillHeld, lu par Controls.client) : plus
+--    besoin de viser la roche du doigt. Il devient vert quand une roche est à portée (RockNear).
+--    Visible seulement quand on joue au doigt (Device) : un PC tactile à la souris ne le voit pas.
+-- 2. Mode allégé sur les appareils tactiles sans clavier : moitié moins de particules partout.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local Device = require(script.Parent:WaitForChild("Device"))
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local player = Players.LocalPlayer
 local new = UIKit.new
 
-if not UserInputService.TouchEnabled or UserInputService.KeyboardEnabled then
+if not UserInputService.TouchEnabled then
 	return
 end
 
 -- BOUTON FORER --------------------------------------------------------------------------
 
-local gui = new("ScreenGui", { Name = "Mobile", ResetOnSpawn = false, DisplayOrder = 3, Parent = player:WaitForChild("PlayerGui") })
+local gui = new("ScreenGui", { Name = "Mobile", ResetOnSpawn = false, DisplayOrder = 3, IgnoreGuiInset = true, Parent = player:WaitForChild("PlayerGui") })
 local SIZE = 116
+local size = SIZE
 local drill = UIKit.roundButton({ name = "Drill", art = "UpDrill", color = "Orange", size = SIZE, parent = gui })
 drill.AnchorPoint = Vector2.new(0.5, 0.5)
--- à gauche du bouton de saut de Roblox (en bas à droite), un peu plus haut pour le pouce
 drill.Position = UDim2.new(1, -220, 1, -150)
 UIKit.studs(drill, 0.5, "Studs", 18).UICorner.CornerRadius = UDim.new(0.5, 0)
 UIKit.text({
@@ -42,8 +44,46 @@ local grad = drill:FindFirstChildOfClass("UIGradient") :: UIGradient
 
 local function setHeld(on: boolean)
 	player:SetAttribute("DrillHeld", if on then true else nil)
-	drill.Size = UDim2.fromOffset(if on then SIZE * 0.92 else SIZE, if on then SIZE * 0.92 else SIZE)
+	local s = if on then size * 0.92 else size
+	drill.Size = UDim2.fromOffset(s, s)
 end
+
+-- À gauche du bouton de saut de Roblox, 25 % plus gros que lui, un peu plus haut pour le pouce.
+-- Sans bouton de saut trouvé : en bas à droite.
+local function place()
+	local touchGui = player.PlayerGui:FindFirstChild("TouchGui")
+	local jump = touchGui and touchGui:FindFirstChild("JumpButton", true) :: GuiObject?
+	if jump and jump.AbsoluteSize.X > 10 then
+		size = math.floor(math.clamp(jump.AbsoluteSize.X * 1.25, 80, 140))
+		local c = jump.AbsolutePosition + jump.AbsoluteSize / 2 - gui.AbsolutePosition
+		drill.Position = UDim2.fromOffset(c.X - jump.AbsoluteSize.X / 2 - size * 0.62, c.Y - size * 0.35)
+	else
+		local v = workspace.CurrentCamera.ViewportSize
+		size = math.floor(math.clamp(math.min(v.X, v.Y) * 0.22, 80, 140))
+		drill.Position = UDim2.new(1, -size * 1.9, 1, -size * 1.3)
+	end
+	setHeld(player:GetAttribute("DrillHeld") == true)
+end
+
+local function refreshShown()
+	local on = Device.IsTouch()
+	gui.Enabled = on
+	if not on then
+		setHeld(false)
+	else
+		task.defer(place)
+	end
+end
+Device.Changed:Connect(refreshShown)
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+	task.defer(place)
+end)
+-- le bouton de saut arrive avec le personnage
+player.CharacterAdded:Connect(function()
+	task.delay(1, place)
+end)
+task.delay(1, place)
+refreshShown()
 drill.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
 		setHeld(true)
@@ -70,6 +110,9 @@ refresh()
 
 -- MODE ALLÉGÉ ---------------------------------------------------------------------------
 
+if UserInputService.KeyboardEnabled then
+	return
+end
 player:SetAttribute("Lite", true)
 local LITE = Config.Mobile.ParticleScale
 local seen = setmetatable({}, { __mode = "k" })

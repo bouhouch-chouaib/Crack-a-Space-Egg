@@ -5,11 +5,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local Device = require(script.Parent:WaitForChild("Device"))
+local ContextActionService = game:GetService("ContextActionService")
+local GuiService = game:GetService("GuiService")
 
 local new = UIKit.new
 local player = Players.LocalPlayer
@@ -374,26 +376,83 @@ if player.Character then
 end
 player.CharacterAdded:Connect(watchVoid)
 
--- AIDE (en bas au centre) : cachée pendant le guide de la première minute (Guide.client) ; sur
--- téléphone, elle parle du bouton FORER et du bouton de saut
-local touchOnly = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+-- AIDE (en bas au centre) : cachée pendant le guide de la première minute (Guide.client) ; elle
+-- nomme les commandes de l'appareil utilisé (souris, tactile, manette) et change avec lui
 local hint = UIKit.text({
 	Name = "Hint",
 	AnchorPoint = Vector2.new(0.5, 1),
 	Size = UDim2.new(0.6, 0, 0, 26),
 	Position = UDim2.new(0.5, 0, 1, -12),
-	Text = if touchOnly
-		then "{Tap} Hold DRILL near an asteroid   ·   Hold jump to fly, steer to glide"
-		else "{Mouse} Hold click on an asteroid to drill   ·   Hold jump to fly, steer to glide",
+	Text = "",
 	TextColor3 = Color3.fromRGB(230, 235, 255),
 	Stroke = 2,
 	Parent = gui,
 })
 local function refreshHint()
+	local kind = Device.Kind()
 	hint.Visible = player:GetAttribute("Guide") == nil
+	local text = if kind == "Touch"
+		then "{Tap} Hold DRILL near an asteroid   ·   Hold jump to fly, steer to glide"
+		elseif kind == "Gamepad" then ("Hold %s near an asteroid to drill   ·   Hold %s to fly   ·   D-pad: Store / Index"):format(Device.Key("drill"), Device.Key("jump"))
+		else "{Mouse} Hold click on an asteroid to drill   ·   Hold Space to fly, steer to glide"
+	UIKit.setIconText(hint, text)
 end
 player:GetAttributeChangedSignal("Guide"):Connect(refreshHint)
-refreshHint()
+
+-- MANETTE : croix gauche = STORE, croix droite = INDEX (petite flèche sur les boutons) ------------
+local padTags: { GuiObject } = {}
+for name, dir in pairs({ Store = -1, Index = 1 }) do
+	local b = buttons[name].button
+	local tag = new("Frame", {
+		Name = "PadTag",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, 4, 0.5, 0),
+		Size = UDim2.fromOffset(40, 40),
+		BackgroundColor3 = Color3.fromRGB(30, 32, 46),
+		ZIndex = 6,
+		Visible = false,
+		Parent = b,
+	}, { UIKit.corner(20), UIKit.stroke(3) })
+	UIKit.icon("ArrowUp", { Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), Rotation = 90 * dir, ZIndex = 7, Parent = tag })
+	table.insert(padTags, tag)
+end
+local function padShortcut(window: string)
+	return function(_, state: Enum.UserInputState)
+		-- quand la manette navigue dans un menu, la croix sert à se déplacer
+		if state ~= Enum.UserInputState.Begin or GuiService.SelectedObject ~= nil then
+			return Enum.ContextActionResult.Pass
+		end
+		UIKit.Open:Fire(window)
+		return Enum.ContextActionResult.Sink
+	end
+end
+ContextActionService:BindAction("PadStore", padShortcut("Store"), false, Device.Pad.Store)
+ContextActionService:BindAction("PadIndex", padShortcut("Index"), false, Device.Pad.Index)
+
+-- TÉLÉPHONE : le joystick de Roblox est en bas à gauche ; on monte l'argent en haut à gauche et les
+-- gros boutons juste dessous, pour que le pouce ne les cache pas
+local function layout()
+	local kind = Device.Kind()
+	for _, tag in ipairs(padTags) do
+		tag.Visible = kind == "Gamepad"
+	end
+	local scale = (moneyGroup:FindFirstChildOfClass("UIScale") :: UIScale).Scale
+	if kind == "Touch" then
+		moneyGroup.AnchorPoint = Vector2.new(0, 0)
+		moneyGroup.Position = UDim2.fromOffset(12, 8)
+		menu.AnchorPoint = Vector2.new(0, 0)
+		menu.Position = UDim2.fromOffset(20, 8 + moneyGroup.Size.Y.Offset * scale + 6)
+	else
+		moneyGroup.AnchorPoint = Vector2.new(0, 1)
+		moneyGroup.Position = UDim2.new(0, 18, 1, -18)
+		menu.AnchorPoint = Vector2.new(0, 0.5)
+		menu.Position = UDim2.new(0, 34, 0.5, -20)
+	end
+	refreshHint()
+end
+Device.Changed:Connect(layout)
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout)
+layout()
 
 -- MISE À JOUR ---------------------------------------------------------------
 player.AttributeChanged:Connect(function(name)
