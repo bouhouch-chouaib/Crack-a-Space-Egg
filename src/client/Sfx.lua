@@ -117,6 +117,14 @@ function Sfx.Loop(name: string, parent: Instance?): Loop
 		s.PlaybackRegionsEnabled = true
 		s.LoopRegion = NumberRange.new(def.Region[1], def.Region[2])
 	end
+	if def.Soft then
+		-- son adouci : on coupe une partie des aigus (plus discret, moins agressif)
+		local eq = Instance.new("EqualizerSoundEffect")
+		eq.LowGain = 0
+		eq.MidGain = -4
+		eq.HighGain = -14
+		eq.Parent = s
+	end
 	if parent then
 		s.RollOffMode = Enum.RollOffMode.InverseTapered
 		s.RollOffMinDistance = 10

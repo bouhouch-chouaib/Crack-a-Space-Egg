@@ -129,8 +129,8 @@ RunService.Heartbeat:Connect(function(dt: number)
 	if jetState == 1 then
 		jetBody:Set(1)
 		jetFlame:Set(1)
-		jetBody:SetPitch(1 + math.clamp(vy / 60, 0, 0.2))
-		jetFlame:SetPitch(1.05 + math.clamp(vy / 80, 0, 0.15))
+		jetBody:SetPitch(1 + math.clamp(vy / 60, 0, 0.08))
+		jetFlame:SetPitch(1 + math.clamp(vy / 80, 0, 0.05))
 	elseif jetState == 2 then
 		jetBody:Set(if inTunnel then 0.25 else 0.45)
 		jetFlame:Set(if inTunnel then 0.1 else 0.25)

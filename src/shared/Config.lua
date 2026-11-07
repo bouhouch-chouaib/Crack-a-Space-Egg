@@ -514,8 +514,8 @@ Config.Sounds = {
 		LevelUp = { Id = 1839881844, Volume = 0.45 },
 		Reward = { Id = 9038916885, Volume = 0.6 },
 		-- jetpack
-		JetStart = { Id = 104612149748953, Volume = 0.6 }, -- allumage
-		JetStop = { Id = 87598090301048, Volume = 0.25 }, -- extinction
+		JetStart = { Id = 104612149748953, Volume = 0.3 }, -- allumage
+		JetStop = { Id = 87598090301048, Volume = 0.12 }, -- extinction
 		-- gel et événements
 		Warning = { Id = 80890994815283, Volume = 0.3 },
 		Freeze = { Id = 9125611419, Volume = 0.6 },
@@ -529,8 +529,8 @@ Config.Sounds = {
 	-- Boucles (volume au maximum de l'effet). Region = partie régulière d'un long enregistrement,
 	-- jouée en boucle (secondes).
 	Loops = {
-		JetBody = { Id = 87588244098894, Volume = 0.33 }, -- souffle grave du réacteur
-		JetFlame = { Id = 90423293726333, Volume = 0.23 }, -- flamme du brûleur
+		JetBody = { Id = 87588244098894, Volume = 0.17, Soft = true }, -- souffle grave du réacteur (discret, aigus adoucis)
+		JetFlame = { Id = 90423293726333, Volume = 0.08, Soft = true }, -- flamme du brûleur, juste en fond
 		DrillMotor = { Id = 199754867, Volume = 0.27 },
 		DrillGrind = { Id = 9125450647, Volume = 0.95, Region = { 20, 100 } }, -- grosse foreuse dans la pierre
 		MachineGrind = { Id = 9125450647, Volume = 1.8, Region = { 20, 100 } },
