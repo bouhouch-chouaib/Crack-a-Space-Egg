@@ -20,7 +20,7 @@ local function buildMarker(adornee: BasePart): BillboardGui
 	gui.Adornee = adornee
 	gui.Size = UDim2.fromScale(12, 12) -- en studs : grandit et rapetisse avec la distance
 	gui.StudsOffsetWorldSpace = Vector3.new(0, 22, 0)
-	gui.AlwaysOnTop = true
+	gui.AlwaysOnTop = false -- les BillboardGui « toujours devant » ne s'affichent pas dans ce jeu
 	gui.MaxDistance = 2000
 	gui.LightInfluence = 0
 

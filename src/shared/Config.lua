@@ -325,12 +325,10 @@ Config.DrillSlack = 12 -- marge de portée côté serveur (latence + défilement
 -- s'il tombe quand même dans le Vide, il est ramené au bout du quai SANS perdre ses œufs
 Config.RescueTime = 6
 
--- Jetpack (côté client) : carburant en secondes de poussée, rechargé au sol. Le vol plané en
--- consomme aussi, moins vite (GlideCost × la poussée). Le carburant de chaque niveau est calculé
+-- Jetpack (côté client) : carburant en secondes de poussée, rechargé au sol. Le vol plané (chute
+-- freinée, Saut relâché) ne consomme rien, mais il faut qu'il reste du carburant (7 nov.). Le carburant de chaque niveau est calculé
 -- pour atteindre la PORTÉE voulue (Config.Jetpack.Tiers) : au départ on ne dépasse pas l'anneau 1 ;
 -- chaque palier de jetpack permet de franchir le vide jusqu'à l'anneau suivant. Tomber = mourir.
-Config.JetpackGlideCost = 0.5
-
 -- NIVEAU DU JETPACK -------------------------------------------------------------------
 -- On gagne de l'XP de jetpack en restant dans une soufflerie (même AFK) et en volant en mission.
 -- XP pour passer du niveau L au niveau L+1 = XPBase × XPGrowth^(L-1).

@@ -1,6 +1,6 @@
 -- Jetpack : vol, effets et pose du joueur.
 -- VOL (joueur local) : maintenir Saut en l'air pousse vers le haut (carburant) ; relâché, on plane
--- (chute freinée). La direction se pilote au clavier / joystick, à la vitesse en vol (AirSpeed),
+-- (chute freinée, gratuite tant qu'il reste du carburant). La direction se pilote au clavier / joystick, à la vitesse en vol (AirSpeed),
 -- avec de l'inertie. Au sol, on marche à la vitesse au sol (GroundSpeed). Carburant rechargé au sol.
 -- Les vitesses viennent du serveur (attributs GroundSpeed / AirSpeed, amélioration Jetpack).
 -- EFFETS (tous les joueurs) : sur les deux tuyères du jetpack porté (Assets.Jetpack, soudé au dos
@@ -308,8 +308,7 @@ RunService.RenderStepped:Connect(function(dt)
 			vy = math.min(MV.Climb * (0.85 + 0.15 * (air / MV.Air)), math.max(vy, 0) + MV.ClimbAccel * dt)
 			state = 1
 		elseif fuel > 0 and vy < 0 then
-			-- vol plané : la chute est freinée, et ça consomme aussi (moins vite)
-			fuel = math.max(0, fuel - dt * Config.JetpackGlideCost)
+			-- vol plané : la chute est freinée, sans consommer (il faut juste qu'il reste du carburant)
 			vy += workspace.Gravity * MV.FallBrake * dt
 			state = 2
 		end

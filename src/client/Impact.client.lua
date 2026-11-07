@@ -75,7 +75,9 @@ end
 local bar = Instance.new("BillboardGui")
 bar.Name = "RockBar"
 bar.Size = UDim2.fromOffset(250, 92)
-bar.AlwaysOnTop = true
+-- Pas AlwaysOnTop : les BillboardGui « toujours devant » ne s'affichent pas dans ce jeu (7 nov.).
+-- La barre flotte assez haut pour ne pas être cachée par le joueur debout sur la roche.
+bar.AlwaysOnTop = false
 bar.LightInfluence = 0
 bar.MaxDistance = 180
 bar.Enabled = false
@@ -161,7 +163,7 @@ RunService.RenderStepped:Connect(function(dt)
 	barGrad.Color = ColorSequence.new(c1, c2)
 	barText.Text = Format.Short(math.max(0, shownHp)) .. "/" .. Format.Short(eggHP) .. " HP"
 	Icons.Apply(barEggs, "{Egg} " .. (rock:GetAttribute("Eggs") or 0) .. "/" .. (rock:GetAttribute("MaxEggs") or 0) .. " left")
-	bar.StudsOffsetWorldSpace = Vector3.new(0, rock.Size.Y / 2 + 4, 0)
+	bar.StudsOffsetWorldSpace = Vector3.new(0, rock.Size.Y / 2 + 10, 0)
 end)
 
 -- NOMBRES DE DÉGÂTS -----------------------------------------------------------------
@@ -174,11 +176,11 @@ local function damageNumber(at: Vector3, text: string, color: Color3, big: boole
 	holder.CanTouch = false
 	holder.Transparency = 1
 	holder.Size = Vector3.one * 0.2
-	holder.Position = at + Vector3.new((math.random() - 0.5) * 2, 0.5, (math.random() - 0.5) * 2)
+	holder.Position = at + Vector3.new((math.random() - 0.5) * 2, 1.5, (math.random() - 0.5) * 2)
 	holder.Parent = workspace
 	local b = Instance.new("BillboardGui")
 	b.Size = UDim2.fromOffset(if big then 170 else 120, if big then 56 else 40)
-	b.AlwaysOnTop = true
+	b.AlwaysOnTop = false -- voir la barre de vie
 	b.LightInfluence = 0
 	b.MaxDistance = 120
 	b.Parent = holder

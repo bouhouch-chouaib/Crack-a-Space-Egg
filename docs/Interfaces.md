@@ -145,3 +145,5 @@ Les cartes ont une illustration sur un fond en dégradé, un bouton vert (Robux 
 3. **Gemmes** : non, une seule monnaie ($).
 4. **Améliorations** : au stand SHOP du vaisseau **et** dans la boutique (section Upgrades).
 5. **HUD** : seulement deux boutons, SHOP et INDEX. Upgrades, Pets et Rewards sont des sections de la boutique.
+
+> Note technique (7 nov.) : les BillboardGui en `AlwaysOnTop = true` ne s'affichent pas dans ce jeu (barre de vie des roches, nombres de dégâts et maison « YOUR BASE » étaient invisibles). Tout est en `AlwaysOnTop = false`, placé assez haut pour ne pas être caché.
