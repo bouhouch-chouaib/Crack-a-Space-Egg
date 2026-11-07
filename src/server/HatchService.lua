@@ -410,6 +410,7 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	}
 	table.insert(d.base, item)
 	build(player, item)
+	GameService.Quest(player, "place", 1)
 	readyCount[player] = #d.ready
 	syncBase(player)
 	HatchService.UpdateHeld(player)
@@ -450,6 +451,7 @@ function HatchService.Hatch(player: Player, id: string)
 	item.weight = math.floor(rng:NextNumber(c.Weight[1], c.Weight[2]) * 10 + 0.5) / 10
 	item.income = Config.CreatureIncome(item.ring, item.rarity, item.size)
 	item.hatchAt = nil
+	GameService.Quest(player, "hatch", 1)
 	local key = item.ring .. ":" .. item.rarity
 	-- nouvelle espèce dans l'Index : petite récompense en $ (donnée quand elle sort de l'œuf)
 	local newSpecies = (d.index[key] or 0) == 0
@@ -656,6 +658,7 @@ local function payIncome()
 				if whole > 0 then
 					d.credits += whole
 					GameService.Sync(player)
+					GameService.Quest(player, "income", whole)
 				end
 			end
 		end

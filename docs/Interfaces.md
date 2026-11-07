@@ -84,7 +84,7 @@ Chaque carte a une illustration, son niveau, « actuel → suivant », et un bou
 
 ## 8. Rewards (cadeaux et quêtes)
 
-Trois onglets ✅ :
+Trois onglets ✅ (fait le 7 nov., `RewardsUI.client`, bouton REWARDS du HUD avec pastille, croix haut à la manette) :
 - **Daily** : un calendrier de 7 jours, le jour actuel en avant, **Claim**, puis un compte à rebours jusqu'au suivant.
 - **Playtime** : 4 cadeaux (5, 15, 30 et 60 min) avec leur minuteur, prêts à réclamer quand ils brillent.
 - **Quests** : 3 quêtes du jour avec une barre de progression et une récompense, et le temps avant la remise à zéro.

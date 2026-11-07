@@ -42,6 +42,9 @@ local function default()
 		firstJoin = 0, -- os.time() de la première partie (fenêtre du Starter Pack)
 		guide = -1, -- étape du guide de la première minute atteinte (Guide.client) ; -1 = pas encore décidé
 		starterBought = false, -- Starter Pack déjà acheté (un seul par joueur)
+		rewards = {}, -- connexion quotidienne, temps de jeu, quêtes, codes, pub (RewardService)
+		groupClaimed = false, -- récompense « Join the group » déjà réclamée
+		inGroup = false, -- membre du groupe du jeu (revérifié à chaque arrivée) : +10 % de chance
 		-- Base : œufs en incubation et créatures posées. Position (x, z) dans le repère du sol de la base.
 		--   œuf      : { kind = "egg", ring, rarity, x, z, hatchAt = os.time() de fin }
 		--   créature : { kind = "pet", ring, rarity, x, z, name, size, weight, income }

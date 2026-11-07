@@ -115,7 +115,9 @@ function BoostService.LuckMult(d): number
 	for _ in pairs(d and d.indexClaimed or {}) do
 		claimed += 1
 	end
-	return m * (1 + Config.IndexReward.Luck * claimed)
+	-- membre du groupe Roblox du jeu : +10 % (RewardService)
+	local group = if d and d.inGroup then Config.Rewards.GroupLuck else 0
+	return m * (1 + Config.IndexReward.Luck * claimed + group)
 end
 
 -- XP du jetpack (soufflerie et vol)

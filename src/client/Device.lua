@@ -19,6 +19,7 @@ Device.Pad = {
 	Cancel = Enum.KeyCode.ButtonB, -- fermer une fenêtre, annuler
 	Store = Enum.KeyCode.DPadLeft,
 	Index = Enum.KeyCode.DPadRight,
+	Rewards = Enum.KeyCode.DPadUp,
 }
 
 local GAMEPADS = {

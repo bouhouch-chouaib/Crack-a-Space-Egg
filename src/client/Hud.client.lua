@@ -124,23 +124,20 @@ end
 
 -- GROS BOUTONS (à gauche) : la boutique (améliorations, passes, potions, récompenses…
 -- tout s'y trouve en faisant défiler) et l'index des créatures
-local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -20), UDim2.fromOffset(220, 2 * 76))
+local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -46), UDim2.fromOffset(220, 3 * 76))
 new("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = menu })
 local buttons = {}
 for i, b in ipairs({
 	{ "Store", "STORE", "Shop", "Green" }, -- tout ce qui s'achète en Robux (Store.client)
 	{ "Index", "INDEX", "Index", "Blue" },
+	{ "Rewards", "REWARDS", "Rewards", "Purple" }, -- cadeaux, quêtes, codes (RewardsUI.client)
 }) do
 	local button, badge = UIKit.menuButton({ name = b[1], text = b[2], art = b[3], color = b[4], parent = menu })
 	button.Parent.LayoutOrder = i
 	UIKit.popIn(button.Parent :: Frame, 0.08 * i)
 	buttons[b[1]] = { button = button, badge = badge }
 	button.MouseButton1Click:Connect(function()
-		if b[1] == "Store" then
-			UIKit.Open:Fire("Store")
-		else
-			UIKit.Open:Fire("Index")
-		end
+		UIKit.Open:Fire(b[1])
 	end)
 end
 
@@ -148,6 +145,8 @@ end
 local function refreshBadges()
 	local ends = (player:GetAttribute("StarterEnds") or 0) :: number
 	buttons.Store.badge.Visible = Config.Shop.Featured.Id ~= 0 and not player:GetAttribute("StarterBought") and ends > os.time()
+	-- REWARDS : cadeaux, quêtes et connexion quotidienne à réclamer (RewardService)
+	buttons.Rewards.badge.Visible = ((player:GetAttribute("RewardsReady") or 0) :: number) > 0
 end
 
 -- ŒUF PORTÉ (en haut à droite) ------------------------------------------------------
@@ -393,15 +392,15 @@ local function refreshHint()
 	hint.Visible = player:GetAttribute("Guide") == nil
 	local text = if kind == "Touch"
 		then "{Tap} Hold DRILL near an asteroid   ·   Hold jump to fly, steer to glide"
-		elseif kind == "Gamepad" then ("Hold %s near an asteroid to drill   ·   Hold %s to fly   ·   D-pad: Store / Index"):format(Device.Key("drill"), Device.Key("jump"))
+		elseif kind == "Gamepad" then ("Hold %s near an asteroid to drill   ·   Hold %s to fly   ·   D-pad: Store / Index / Rewards"):format(Device.Key("drill"), Device.Key("jump"))
 		else "{Mouse} Hold click on an asteroid to drill   ·   Hold Space to fly, steer to glide"
 	UIKit.setIconText(hint, text)
 end
 player:GetAttributeChangedSignal("Guide"):Connect(refreshHint)
 
--- MANETTE : croix gauche = STORE, croix droite = INDEX (petite flèche sur les boutons) ------------
+-- MANETTE : croix gauche = STORE, croix droite = INDEX, croix haut = REWARDS (petite flèche) ------
 local padTags: { GuiObject } = {}
-for name, dir in pairs({ Store = -1, Index = 1 }) do
+for name, dir in pairs({ Store = -1, Index = 1, Rewards = 0 }) do
 	local b = buttons[name].button
 	local tag = new("Frame", {
 		Name = "PadTag",
@@ -428,6 +427,7 @@ local function padShortcut(window: string)
 end
 ContextActionService:BindAction("PadStore", padShortcut("Store"), false, Device.Pad.Store)
 ContextActionService:BindAction("PadIndex", padShortcut("Index"), false, Device.Pad.Index)
+ContextActionService:BindAction("PadRewards", padShortcut("Rewards"), false, Device.Pad.Rewards)
 
 -- TÉLÉPHONE : le joystick de Roblox est en bas à gauche ; on monte l'argent en haut à gauche et les
 -- gros boutons juste dessous, pour que le pouce ne les cache pas
@@ -446,7 +446,7 @@ local function layout()
 		moneyGroup.AnchorPoint = Vector2.new(0, 1)
 		moneyGroup.Position = UDim2.new(0, 18, 1, -18)
 		menu.AnchorPoint = Vector2.new(0, 0.5)
-		menu.Position = UDim2.new(0, 34, 0.5, -20)
+		menu.Position = UDim2.new(0, 34, 0.5, -46)
 	end
 	refreshHint()
 end
@@ -463,7 +463,7 @@ player.AttributeChanged:Connect(function(name)
 		refreshSpeed()
 	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" then
 		refreshCargo()
-	elseif name == "StarterBought" or name == "StarterEnds" then
+	elseif name == "StarterBought" or name == "StarterEnds" or name == "RewardsReady" then
 		refreshBadges()
 	end
 end)

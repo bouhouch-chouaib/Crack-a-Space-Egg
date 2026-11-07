@@ -1165,4 +1165,56 @@ Config.Mobile = {
 	ParticleScale = 0.5,
 }
 
+-- RÉCOMPENSES (RewardService, RewardsUI.client) ---------------------------------------
+-- Ce qui fait revenir : connexion quotidienne (7 jours qui reprennent au début ; un jour manqué =
+-- retour au jour 1), cadeaux de temps de jeu (cumulé sur la journée), 3 quêtes du jour, codes,
+-- bonus du groupe Roblox, boost gratuit contre une pub. Jamais d'œufs ni de créatures.
+-- Une récompense : { Money = unités, Luck / MoneyBoost / JetXP = minutes de potion }.
+-- Money est en « secondes de revenu de base » de l'anneau le plus lointain atteint
+-- (Config.Hatch.RingIncome) : 200 = 1K $ dans l'anneau 1, 35,6K $ dans l'anneau 2... Elle reste
+-- intéressante à toutes les étapes. Les journées changent à minuit UTC.
+Config.Rewards = {
+	Daily = {
+		{ Money = 200 },
+		{ Luck = 10 },
+		{ Money = 400 },
+		{ MoneyBoost = 10 },
+		{ Money = 800 },
+		{ JetXP = 15 },
+		{ Money = 2000, Luck = 15, MoneyBoost = 15 }, -- jour 7 : le gros cadeau
+	},
+	Playtime = {
+		{ Minutes = 5, Reward = { Money = 100 } },
+		{ Minutes = 15, Reward = { Luck = 5 } },
+		{ Minutes = 30, Reward = { Money = 400 } },
+		{ Minutes = 60, Reward = { MoneyBoost = 15, JetXP = 15 } },
+	},
+	-- Quêtes : 3 tirées chaque jour dans cette liste (les mêmes pour un joueur toute la journée).
+	-- Goal = nombre à atteindre, ou { min, max } ; IncomeGoal = secondes de revenu de base (quête $).
+	Quests = {
+		{ Kind = "drill", Text = "Drill %d eggs", Goal = { 4, 6 }, Art = "Egg" },
+		{ Kind = "hatch", Text = "Hatch %d eggs", Goal = { 2, 3 }, Art = "Hatch" },
+		{ Kind = "break", Text = "Break %d asteroids", Goal = { 2, 3 }, Art = "Lightning" },
+		{ Kind = "place", Text = "Put %d eggs in your base", Goal = { 2, 4 }, Art = "Home" },
+		{ Kind = "tunnel", Text = "Train %d s in your wind tunnel", Goal = { 90, 150 }, Art = "WindTunnel" },
+		{ Kind = "income", Text = "Earn %s from your pets", IncomeGoal = 600, Art = "Cash" },
+	},
+	QuestReward = { Money = 200 }, -- 1K $ dans l'anneau 1
+	AllQuestsReward = { Luck = 15 }, -- en plus, à la 3e quête réclamée
+	-- Groupe Roblox : 0 = le groupe propriétaire du jeu (s'il appartient à un groupe)
+	GroupId = 0,
+	GroupLuck = 0.1, -- +10 % de chance tant qu'on est membre
+	GroupReward = { Money = 500 }, -- une fois, au premier « Claim »
+	-- Boost gratuit contre une pub récompensée (AdService) : la récompense passe par le produit de la
+	-- potion x2 Luck (canal AdReward), on donne alors ces potions-ci au lieu de l'achat normal
+	AdBoost = { Luck = 5, MoneyBoost = 5 },
+	AdCooldown = 600, -- secondes entre deux pubs
+}
+-- Codes promo (en majuscules) : une fois par joueur
+Config.Codes = {
+	WELCOME = { Money = 500, Luck = 10 },
+	SPACEEGG = { Money = 1000 },
+	DRILLTIME = { JetXP = 15, MoneyBoost = 10 },
+}
+
 return Config

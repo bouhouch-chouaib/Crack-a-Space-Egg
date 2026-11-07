@@ -20,9 +20,18 @@ local MonetizationService = {}
 -- ProductId -> fonction qui donne l'achat au joueur (renvoie true si c'est fait)
 local HANDLERS: { [number]: (Player) -> boolean } = {}
 
+-- Récompense d'une pub (canal AdReward) : boost gratuit au lieu de l'achat normal (RewardService)
+MonetizationService.AdReward = nil :: ((Player) -> boolean)?
+
 local function processReceipt(receipt): Enum.ProductPurchaseDecision
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
 	local handler = HANDLERS[receipt.ProductId]
+	local okChannel, fromAd = pcall(function()
+		return receipt.ProductPurchaseChannel == Enum.ProductPurchaseChannel.AdReward
+	end)
+	if okChannel and fromAd then
+		handler = MonetizationService.AdReward
+	end
 	-- Joueur parti ou partie pas encore chargée : Roblox redemandera plus tard
 	if not player or not handler or not DataService.Get(player) then
 		return Enum.ProductPurchaseDecision.NotProcessedYet

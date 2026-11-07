@@ -15,6 +15,7 @@ local ColdService = require(script.Parent.ColdService)
 local CreatureService = require(script.Parent.CreatureService)
 local MonsterService = require(script.Parent.MonsterService)
 local SkinService = require(script.Parent.SkinService)
+local RewardService = require(script.Parent.RewardService)
 
 WorldBuilder.Build()
 Bases.Start()
@@ -25,6 +26,8 @@ HatchService.Start() -- idem : reconstruit les œufs et créatures de la base au
 DataService.Start()
 LeaderboardService.Start()
 MonetizationService.Start()
+RewardService.Start() -- connexion quotidienne, temps de jeu, quêtes, codes, groupe, pub
+MonetizationService.AdReward = RewardService.GrantAdBoost
 MachineService.Start()
 WindTunnelService.Start() -- souffleries : on y farme le niveau du jetpack
 ColdService.Start() -- gel et manque d'oxygène hors du couloir

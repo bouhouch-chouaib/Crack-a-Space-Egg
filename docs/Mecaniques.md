@@ -225,10 +225,14 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
   - Étapes enregistrées (`d.guide`) : forer un œuf → le rapporter à la machine → poser l'œuf → pendant qu'il couve, aller chercher le suivant → faire éclore → « ta créature rapporte des $ » → 3 créatures → acheter sa soufflerie (1K) → jetpack niveau 3 → acheter la Rusty Drill (2K) → acheter un niveau de Scanner (la chance). Pas d'étape « va à l'anneau 2 » : le joueur y va de lui-même (ordre et niveaux revus après un test du 7 nov.).
   - Il suit l'état réel : s'il tombe, perd son œuf, porte un œuf ou en a un prêt, la bulle le ramène à ce qu'il faut faire (« Bring it home! », « Press F to hatch! »...), même pendant les objectifs suivants. Pas assez d'argent : « Save $2K for a new drill » avec la somme actuelle, et la flèche vers les roches.
   - Les anciens joueurs qui ont déjà des créatures ne le voient pas.
-- ✅ Une récompense de connexion quotidienne, sur 7 jours qui reprennent au début.
-- ✅ 3 quêtes du jour.
-- ✅ Des cadeaux à 5, 15, 30 et 60 minutes de jeu.
-- ✅ Des codes promo, et +10 % de chance pour les membres du groupe Roblox.
+- ✅ **Fait le 7 nov.** (`RewardService`, fenêtre REWARDS `RewardsUI.client`, réglages `Config.Rewards` et `Config.Codes`). Jamais d'œufs ni de créatures ; les sommes en $ suivent l'anneau le plus lointain atteint, pour rester intéressantes à toutes les étapes. Les journées changent à minuit UTC.
+  - Connexion quotidienne sur 7 jours qui reprennent au début ; un jour manqué = retour au jour 1. Jour 1 : 1K $, puis potions et $, jour 7 : gros cadeau (10K $ + x2 Luck et x2 Money 15 min dans l'anneau 1).
+  - Cadeaux à 5, 15, 30 et 60 minutes de jeu dans la journée (cumulé, AFK compris).
+  - 3 quêtes du jour tirées parmi 6 (forer des œufs, faire éclore, casser des astéroïdes, poser des œufs, s'entraîner en soufflerie, gagner des $ avec ses créatures), 1K $ chacune (anneau 1), et x2 Luck 15 min quand les 3 sont réclamées.
+  - Codes promo (une fois par joueur) : WELCOME, SPACEEGG, DRILLTIME.
+  - Groupe Roblox : +10 % de chance tant qu'on est membre, et un cadeau au premier « Claim ». **Le jeu appartient à un compte, pas à un groupe : mettre l'identifiant du groupe dans `Config.Rewards.GroupId`** (le bouton affiche « GROUP SOON » d'ici là).
+  - Boost gratuit contre une pub récompensée (AdService, toutes les 10 min) : x2 Luck et x2 Money 5 min. La pub passe par le produit de la potion x2 Luck (canal AdReward). Roblox ne montre ces pubs qu'aux joueurs et pays éligibles.
+  - Bouton REWARDS dans le HUD avec pastille quand quelque chose est à réclamer ; la fenêtre s'ouvre sur l'onglet utile. Manette : croix haut.
 
 ## 17. Social
 

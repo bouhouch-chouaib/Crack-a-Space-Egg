@@ -311,6 +311,7 @@ local function tick()
 				if t.owner == player and t.tier >= 1 then
 					-- XP gagnée (boosts compris) et palier : le client fait jaillir des « +XP » du joueur
 					Remotes.TunnelXP:FireClient(player, addXP(player, d, J.Tunnels[t.tier].XP), t.tier)
+					GameService.Quest(player, "tunnel", 1)
 				end
 			elseif hum.FloorMaterial == Enum.Material.Air and (character:GetAttribute("Jet") or 0) ~= 0 then
 				addXP(player, d, J.FlightXP)

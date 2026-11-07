@@ -79,6 +79,8 @@ local function sync(player: Player)
 end
 GameService.Sync = sync
 GameService.Notice = notice
+-- Quêtes du jour : les services signalent ce que fait le joueur (RewardService remplace cette fonction)
+GameService.Quest = function(_player: Player, _kind: string, _amount: number?) end
 -- Appelé à chaque coup de foreuse (posé par MonsterService) : (player, roche, anneau)
 GameService.DrillHook = nil :: ((Player, BasePart, number) -> ())?
 
@@ -169,6 +171,12 @@ local function onDrill(player: Player, target: any, at: any)
 		GameService.DrillHook(player, a.part, a.ring)
 	end
 	local eggs, broken, progress = BeltService.Hit(a, player, damage, room)
+	if eggs > 0 then
+		GameService.Quest(player, "drill", eggs)
+	end
+	if broken then
+		GameService.Quest(player, "break", 1)
+	end
 	local rarities = {}
 	if eggs > 0 then
 		for _ = 1, eggs do
