@@ -13,7 +13,6 @@ local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local HatchService = require(script.Parent.HatchService)
 local BoostService = require(script.Parent.BoostService)
-local EventService = require(script.Parent.EventService)
 local Format = require(ReplicatedStorage.Shared.Format)
 
 local MonetizationService = {}
@@ -55,17 +54,10 @@ function MonetizationService.Start()
 	end
 	local shop = Config.Shop
 	local minutes = shop.PotionMinutes
-	-- Potions : 15 min de bonus (Meteor Shower : pluie de météores pour tout le serveur)
+	-- Potions : 15 min de bonus
 	for _, potion in ipairs(shop.Potions) do
 		if potion.Id ~= 0 then
 			HANDLERS[potion.Id] = function(player)
-				if potion.Key == "Meteor" then
-					EventService.StartNow(minutes * 60)
-					for _, p in ipairs(Players:GetPlayers()) do
-						GameService.Notice(p, ("{Comet} %s started a Meteor Shower!"):format(player.DisplayName), "good")
-					end
-					return true
-				end
 				local ok = BoostService.Add(player, potion.Key, minutes)
 				if ok then
 					GameService.Notice(player, ("{Lightning} %s active for %d min!"):format(potion.Name, minutes), "good")

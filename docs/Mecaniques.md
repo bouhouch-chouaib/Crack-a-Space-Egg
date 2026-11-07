@@ -193,7 +193,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 | --- | --- | --- |
 | Astéroïde spécial (doré, cristallin, colossal) | Plusieurs fois par heure | Annoncé à tout le serveur |
 | Épave d'ancien foreur | Rare | Contient une relique |
-| Pluie de météores | Toutes les 20 min, pendant 3 min | Défilement plus rapide, +50 % d'œufs |
+| ~~Pluie de météores~~ | ❌ Retirée le 7 nov. | — |
 | Comète de Noël | Toutes les 60 min | Tout le serveur la fore ensemble |
 | Réveil des monstres | Rare | 2 min de chaos dans les anneaux 5 à 7, butin doublé |
 
@@ -231,12 +231,12 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 | **VIP** (nom doré, +10 % de $, traînée exclusive) | ✅ Passe |
 | Skins de base et de combinaison | ✅ Produits |
 | Potion de chance, recharge de combinaison | ✅ Produits |
-| Pluie de météores pour tout le serveur | ✅ Produit |
+| ~~Pluie de météores pour tout le serveur~~ | ❌ Retirée le 7 nov. (produit retiré de la vente sur Roblox) |
 
 ### Boutique Robux (7 nov.)
 
 - ✅ **Passes** (définitifs) : x2 Jetpack XP (149 R$), Turbo Jetpack (+25 % de carburant, 99 R$ ; pas plus, pour ne pas sauter un palier), Fast Hatch (éclosion ×2 plus rapide, 199 R$), x2 Money (revenus des créatures ×2, 299 R$), +5 Base Slots (249 R$), VIP (+10 % d'argent et tag [VIP] doré dans le chat, 399 R$).
-- ✅ **Potions** de 15 min, cumulables dans le temps et sauvegardées : x2 Luck (39 R$), x2 Money (39 R$), x2 Jetpack XP (25 R$). Meteor Shower (99 R$) lance tout de suite une pluie de météores pour tout le serveur. Les potions actives s'affichent sous l'horloge, avec leur minuteur.
+- ✅ **Potions** de 15 min, cumulables dans le temps et sauvegardées : x2 Luck (39 R$), x2 Money (39 R$), x2 Jetpack XP (25 R$). (Meteor Shower retirée le 7 nov.)
 - ✅ **Starter Pack** (99 R$) : gros paquet d'argent + x2 Luck + x2 Money. **Paquets d'argent** : le montant dépend de l'anneau le plus lointain où l'on a déjà sorti un œuf.
 - ✅ Les effets sont calculés par le serveur (`BoostService`). Les identifiants Roblox vont dans `Config.Shop`, `Config.Drills` et `Config.Hatch.Skip`. Tant qu'un identifiant vaut 0, le bouton affiche « Coming soon! ».
 - ✅ Les 33 articles sont créés sur Roblox depuis l'Assistant de Studio (API Open Cloud) : 6 passes et 27 produits (10 foreuses, 7 « Hatch now », 4 potions, 5 paquets d'argent, le Starter Pack). Chacun a une icône faite par `tools/store_icons.py` (images dans `tools/store-icons`). Leurs identifiants sont dans `Config`.
@@ -250,14 +250,14 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 ## 20. Son et ambiance
 
 - ✅ (7 nov.) Sons gratuits du Creator Store (APM Music, Pro Sound Effects, Daily Sounds), tous dans `Config.Sounds` : pour en changer un, on remplace son Id. Module `Sfx` (sons à l'écran ou placés dans le monde, boucles avec fondu) et script `Audio.client` qui les déclenche.
-- ✅ **Musique par lieu** : « Explore » dans le vaisseau, « Futureworld » dans les anneaux, « Action And Tension » pendant la pluie de météores (fondu de 1,6 s). Hors du couloir, elle baisse sous un vent glacé.
+- ✅ **Musique par lieu** : « Explore » dans le vaisseau, « Futureworld » dans les anneaux, « Dangerous Pursuit » pendant une poursuite de monstre (fondu de 1,6 s). Hors du couloir, elle baisse sous un vent glacé.
 - ✅ **Volumes mesurés** (7 nov.) : chaque son a été mesuré dans Studio (AudioAnalyzer : niveau et timbre) puis réglé sur un niveau commun ; les enregistrements pro très faibles ont un volume au-dessus de 1. Pour les boucles tirées d'un long enregistrement, seule sa partie régulière tourne (`Region`).
 - ✅ **Jetpack** : allumage à la poussée, souffle grave du réacteur + flamme qui montent dans les aigus avec la vitesse de montée, souffle léger en vol plané, extinction quand il reste coupé. Les jetpacks des autres joueurs s'entendent de près.
 - ✅ **Foreuse** : moteur dès qu'elle tourne, grosse foreuse dans la pierre quand les coups portent ; les deux montent dans les aigus à mesure que l'œuf se dégage. « Pop » + tintement quand l'œuf sort, gros impact croquant + éboulis quand l'astéroïde se brise.
 - ✅ **Autres boucles** : soufflerie, vent du Vide, battements de cœur quand le gel dépasse la moitié.
-- ✅ **Moments clés** : coups de foreuse et roche qui éclate (placés au point d'impact), œuf ramassé, œuf révélé, éclosion (fanfare à partir d'Épique, entendue aussi par les voisins), achat en $, gros gain, niveau de jetpack, alarme à la sortie du couloir, prise dans la glace et dégel, début de la pluie de météores, achat Robux, clic sur les boutons, ouverture des fenêtres, message d'erreur.
+- ✅ **Moments clés** : coups de foreuse et roche qui éclate (placés au point d'impact), œuf ramassé, œuf révélé, éclosion (fanfare à partir d'Épique, entendue aussi par les voisins), achat en $, gros gain, niveau de jetpack, alarme à la sortie du couloir, prise dans la glace et dégel, achat Robux, clic sur les boutons, ouverture des fenêtres, message d'erreur.
 - ✅ **Machine à dérocher** (Derock.client, entendue et vue par tous) : « clac » des pinces ; forage qui monte dans les aigus ; la roche se fend de plus en plus vite (craquement, éclats, petit sursaut) et chaque craquement ouvre une **fissure lumineuse** à la couleur de la rareté (bord sombre, cœur clair, halo, rayon de lumière qui sort) ; la dernière seconde, la roche tremble fort, s'illumine de l'intérieur et les rayons s'allongent sur une montée sonore ; puis explosion (plus de morceaux et d'étincelles selon la rareté, éclair de couleur, secousse de caméra pour le joueur tout près), tintement et fanfare à partir d'Épique ; l'œuf s'envole avec un souffle et arrive avec un « pop ».
-- ✅ **Réglages** (roue dentée en haut à droite) : musique et sons ON/OFF, gardés dans la sauvegarde.
+- ❌ Réglages musique / sons retirés le 7 nov.
 - 💡 Musique propre aux monstres des anneaux 5 à 7, quand ils existeront.
 
 ## 21. Technique

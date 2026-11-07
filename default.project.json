@@ -56,9 +56,6 @@
         "Notice": {
           "$className": "RemoteEvent"
         },
-        "Settings": {
-          "$className": "RemoteEvent"
-        },
         "OpenShop": {
           "$className": "RemoteEvent"
         }

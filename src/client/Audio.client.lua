@@ -1,7 +1,7 @@
 -- Ambiance sonore (Config.Sounds) : musique selon le lieu, boucles (jetpack, foreuse, soufflerie,
 -- vent glacé ; les machines à dérocher sont dans Derock.client) et sons des moments clés, lus dans les attributs et les remotes
--- déjà publiés par le serveur. Contient aussi la fenêtre Réglages (musique et sons).
---   Musique : Base dans le vaisseau, Belt dans les anneaux, Event pendant la pluie de météores ;
+-- déjà publiés par le serveur.
+--   Musique : Base dans le vaisseau, Belt dans les anneaux, Chase pendant une poursuite de monstre ;
 --   hors du couloir elle s'efface sous le vent glacé.
 
 local Players = game:GetService("Players")
@@ -10,13 +10,11 @@ local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
-local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local S = Config.Sounds
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
-local new = UIKit.new
 
 -- MUSIQUE -----------------------------------------------------------------------------------
 
@@ -107,7 +105,7 @@ RunService.Heartbeat:Connect(function(dt: number)
 	if player:GetAttribute("Chased") then
 		want = "Chase" -- un monstre te poursuit (MonsterService)
 	elseif root and not inShip(root.Position) then
-		want = if workspace:GetAttribute("EventActive") then "Event" else "Belt"
+		want = "Belt"
 	end
 	if want ~= current then
 		current = want
@@ -265,13 +263,6 @@ if player.Character then
 end
 player.CharacterAdded:Connect(watchCharacter)
 
--- Début de la pluie de météores
-workspace:GetAttributeChangedSignal("EventActive"):Connect(function()
-	if workspace:GetAttribute("EventActive") then
-		Sfx.Play("MeteorStart")
-	end
-end)
-
 -- Achat Robux réussi
 local MarketplaceService = game:GetService("MarketplaceService")
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(who, _id, purchased)
@@ -300,43 +291,3 @@ for _, o in ipairs(gui:GetDescendants()) do
 	hook(o)
 end
 gui.DescendantAdded:Connect(hook)
-
--- RÉGLAGES ----------------------------------------------------------------------------------
-
-local W = UIKit.window({ name = "SettingsWindow", title = "{Settings} SETTINGS", color = "Blue", size = Vector2.new(520, 400) })
-local list = new("Frame", { Name = "List", Size = UDim2.fromOffset(460, 200), BackgroundTransparency = 1, LayoutOrder = 1, Parent = W.body })
-new("UIListLayout", { Padding = UDim.new(0, 14), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = list })
-
-local function toggleRow(order: number, label: string, attr: string)
-	local row = new("Frame", { Size = UDim2.fromOffset(440, 80), BackgroundColor3 = Color3.fromRGB(40, 60, 110), LayoutOrder = order, Parent = list }, { UIKit.corner(), UIKit.stroke(3) })
-	UIKit.text({ Text = label, Size = UDim2.fromScale(0.55, 0.6), Position = UDim2.fromScale(0.05, 0.2), TextXAlignment = Enum.TextXAlignment.Left, Parent = row })
-	local b = new("TextButton", {
-		Name = "Toggle",
-		AutoButtonColor = false,
-		Size = UDim2.fromOffset(150, 56),
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -14, 0.5, 0),
-		Text = "",
-		Parent = row,
-	}, { UIKit.corner(), UIKit.stroke(3) })
-	local t = UIKit.text({ Size = UDim2.fromScale(0.8, 0.7), Position = UDim2.fromScale(0.1, 0.15), Parent = b })
-	UIKit.juice(b)
-	local function refresh()
-		local on = not player:GetAttribute(attr)
-		b.BackgroundColor3 = if on then Color3.fromRGB(90, 210, 90) else Color3.fromRGB(220, 70, 70)
-		t.Text = if on then "ON" else "OFF"
-	end
-	refresh()
-	player:GetAttributeChangedSignal(attr):Connect(refresh)
-	b.MouseButton1Click:Connect(function()
-		Remotes:WaitForChild("Settings"):FireServer(attr, not player:GetAttribute(attr))
-	end)
-end
-toggleRow(1, "Music", "MusicOff")
-toggleRow(2, "Sounds", "SfxOff")
-
-UIKit.Open.Event:Connect(function(what: string)
-	if what == "Settings" then
-		W.open()
-	end
-end)

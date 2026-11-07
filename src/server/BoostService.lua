@@ -3,7 +3,7 @@
 -- ou des créatures.
 -- Publié sur le joueur (pour l'affichage) :
 --   Pass_<Clé> = true            passe possédé (Config.Shop.Passes)
---   Boost_<Clé> = os.time() fin  potion active (Config.Shop.Potions, sauf Meteor)
+--   Boost_<Clé> = os.time() fin  potion active (Config.Shop.Potions)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")

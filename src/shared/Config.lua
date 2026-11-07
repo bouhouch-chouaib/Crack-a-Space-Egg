@@ -110,21 +110,9 @@ Config.Movement = {
 	FallBrake = 0.35, -- en vol plané (Saut relâché), la chute est freinée de ce facteur
 }
 
--- Événements (docs/Mecaniques.md §14) ---------------------------------------
-Config.Events = {
-	MeteorShower = {
-		Name = "Meteor Shower",
-		Icon = "Comet",
-		Every = 20 * 60, -- secondes entre deux pluies
-		Duration = 3 * 60,
-		SpawnMult = 1.5, -- le défilement accélère
-		EggMult = 1.5, -- +50 % d'œufs par astéroïde
-	},
-}
-
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 230, -- environ 160 en temps normal, plus pendant une pluie de météores
+	MaxActive = 230, -- environ 160 en temps normal
 	SpawnArc = 180, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
 	-- Hauteur : les astéroïdes s'étalent sur plusieurs étages, plus haut dans les grands anneaux
 	HeightBase = 10, -- ± studs au minimum
@@ -496,7 +484,6 @@ Config.Sounds = {
 	Music = {
 		Base = 1842185080, -- vaisseau et bases : « Explore », aventure électro pour enfants
 		Belt = 1840200807, -- anneaux et couloir : « Futureworld », science-fiction
-		Event = 1846096405, -- pluie de météores : « Action And Tension »
 		Chase = 100817604765534, -- poursuite par un monstre : « Dangerous Pursuit »
 	},
 	-- Sons joués à une position : on les entend jusqu'à cette distance (studs)
@@ -532,7 +519,6 @@ Config.Sounds = {
 		Warning = { Id = 80890994815283, Volume = 0.3 },
 		Freeze = { Id = 9125611419, Volume = 0.6 },
 		Thaw = { Id = 96795857757261, Volume = 0.3, Pitch = 1.4 },
-		MeteorStart = { Id = 9126102564, Volume = 3 },
 		-- monstres
 		MonsterRoar = { Id = 9113980319, Volume = 1.8 }, -- réveil
 		MonsterWarn = { Id = 9118805486, Volume = 1.5 }, -- trop de bruit : il remue
@@ -805,7 +791,6 @@ Config.Shop = {
 		{ Key = "Luck", Name = "x2 Luck", Art = "PotionLuck", Id = 3729245893, Price = 39 },
 		{ Key = "Money", Name = "x2 Money", Art = "PotionMoney", Id = 3729245927, Price = 39 },
 		{ Key = "JetXP", Name = "x2 Jetpack XP", Art = "PotionSuit", Id = 3729245953, Price = 25 },
-		{ Key = "Meteor", Name = "Meteor Shower", Text = "For the whole server!", Art = "PotionMeteor", Id = 3729245971, Price = 99 },
 	},
 	-- Boost gratuit contre une pub récompensée
 	FreeBoost = { Name = "Free x2 Boost", Minutes = 5, Art = "FreeBoost" },

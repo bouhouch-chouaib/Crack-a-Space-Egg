@@ -1,6 +1,5 @@
 -- Repères qui guident sans lire (docs/Direction-artistique.md §7 bis) :
 -- - une grande maison « YOUR BASE » qui flotte au-dessus de SA base (lui seul la voit) ;
--- - la bannière d'événement au-dessus du portique LAUNCH, avec son compte à rebours.
 
 local Players = game:GetService("Players")
 local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
@@ -87,44 +86,5 @@ RunService.Heartbeat:Connect(function()
 	if root then
 		local d = (root.Position - (marker.Adornee :: BasePart).Position).Magnitude
 		marker.Enabled = d > 26
-	end
-end)
-
--- BANNIÈRE D'ÉVÉNEMENT -------------------------------------------------------
-
-local function clock(seconds: number): string
-	seconds = math.max(0, math.floor(seconds))
-	return string.format("%d:%02d", seconds // 60, seconds % 60)
-end
-
-task.spawn(function()
-	local world = workspace:WaitForChild("World", 30)
-	local banner = world and world:WaitForChild("EventBanner", 30)
-	if not banner then
-		return
-	end
-	local bg = banner:WaitForChild("BannerGui"):WaitForChild("Background")
-	local title = bg:WaitForChild("Title") :: TextLabel
-	local timer = bg:WaitForChild("Timer") :: TextLabel
-	local stroke = bg:FindFirstChildOfClass("UIStroke")
-	while true do
-		local now = workspace:GetServerTimeNow()
-		local name = workspace:GetAttribute("EventName") or "Event"
-		local icon = "{" .. (workspace:GetAttribute("EventIcon") or "Star") .. "}"
-		if workspace:GetAttribute("EventActive") then
-			Icons.Apply(title, string.format("%s %s!", icon, string.upper(name)))
-			timer.Text = "ENDS IN " .. clock((workspace:GetAttribute("EventEndsAt") or now) - now)
-			-- Le cadre clignote doucement en or pendant l'événement
-			if stroke then
-				stroke.Color = if math.floor(now * 2) % 2 == 0 then Color3.fromRGB(255, 196, 60) else Color3.fromRGB(63, 201, 216)
-			end
-		else
-			Icons.Apply(title, string.format("%s %s", icon, string.upper(name)))
-			timer.Text = "IN " .. clock((workspace:GetAttribute("EventStartsAt") or now) - now)
-			if stroke then
-				stroke.Color = Color3.fromRGB(63, 201, 216)
-			end
-		end
-		task.wait(0.25)
 	end
 end)

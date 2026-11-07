@@ -158,77 +158,67 @@ local function refreshBadges()
 	buttons.Shop.badge.Visible = affordable
 end
 
--- SOUTE (en haut au centre) ---------------------------------------------------
-local cargoGroup = group("Cargo", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 14), UDim2.fromOffset(240, 120))
-local cargoPill, cargoText = UIKit.pill({ name = "CargoPill", art = "Egg", size = UDim2.fromOffset(200, 56), parent = cargoGroup })
-cargoPill.Position = UDim2.fromOffset(28, 0)
-local dots = new("Frame", {
-	Name = "Dots",
-	Size = UDim2.fromOffset(240, 18),
-	Position = UDim2.fromOffset(0, 62),
-	BackgroundTransparency = 1,
-	Parent = cargoGroup,
-}, { new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 4) }) })
-local goHome = UIKit.text({
-	Size = UDim2.fromOffset(240, 34),
-	Position = UDim2.fromOffset(0, 84),
-	Text = "{Home} GO HOME!",
-	TextColor3 = Color3.fromRGB(255, 120, 110),
-	Visible = false,
-	Stroke = 3,
-	Parent = cargoGroup,
-})
+-- ŒUF PORTÉ (en haut à droite) ------------------------------------------------------
+-- On ne porte qu'un œuf à la fois : pas de compteur, juste un emplacement. Vide, il reste discret ;
+-- quand on ramasse un œuf, il s'allume à la couleur de la rareté (« RARE EGG! », « Bring it home! »).
+local eggGroup = group("Egg", Vector2.new(1, 0), UDim2.new(1, -18, 0, 14), UDim2.fromOffset(280, 92))
+local eggSlot = new("Frame", {
+	Name = "EggSlot",
+	Size = UDim2.fromOffset(270, 84),
+	Position = UDim2.fromOffset(10, 4),
+	BackgroundColor3 = Color3.new(1, 1, 1),
+	Parent = eggGroup,
+}, { UIKit.corner(), UIKit.stroke(4) })
+local eggGrad = UIKit.gradient(UIKit.Colors.Dark[1], UIKit.Colors.Dark[2])
+eggGrad.Parent = eggSlot
+local eggFx = new("Frame", { Name = "Fx", Size = UDim2.fromOffset(110, 110), Position = UDim2.fromOffset(-14, -13), BackgroundTransparency = 1, Parent = eggSlot })
+local eggRays = UIKit.rays(eggFx, { color = Color3.new(1, 1, 1), size = 130, speed = 40, transparency = 0.5, z = 1 })
+local eggGlow = UIKit.glow(eggFx, { color = Color3.new(1, 1, 1), size = 120, transparency = 0.45, z = 1, pulse = 1.6 })
+local eggIcon = UIKit.icon("Egg", { Size = UDim2.fromOffset(78, 78), Position = UDim2.fromOffset(2, 3), ZIndex = 3, Parent = eggSlot })
+local eggTitle = UIKit.text({ Size = UDim2.fromOffset(176, 38), Position = UDim2.fromOffset(86, 8), Text = "NO EGG", TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Stroke = 3, Parent = eggSlot })
+local eggSub = UIKit.text({ Size = UDim2.fromOffset(176, 26), Position = UDim2.fromOffset(86, 48), Text = "Drill an asteroid", TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Stroke = 2.5, Parent = eggSlot })
+UIKit.float(eggIcon, 2, 5, 2.4)
 
-local lastCargo = -1
+local carrying = nil :: boolean?
 local function refreshCargo()
-	local cargo = player:GetAttribute("Cargo") or 0
-	local max = player:GetAttribute("CargoMax") or 1
-	cargoText.Text = string.format("%d/%d", cargo, max)
-	local full = cargo >= max
-	local grad = cargoPill:FindFirstChildOfClass("UIGradient")
-	if grad then
-		local c = if full then UIKit.Colors.Red else UIKit.Colors.Dark
-		grad.Color = ColorSequence.new(c[1], c[2])
+	local has = (player:GetAttribute("Cargo") or 0) > 0
+	local r = tonumber(string.split(player:GetAttribute("CargoRarities") or "", ",")[1] or "")
+	local rarity = Config.Rarities[r or 1] or Config.Rarities[1]
+	if has then
+		local c = rarity.Color
+		eggGrad.Color = ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.25), c:Lerp(Color3.new(0, 0, 0), 0.45))
+		eggIcon.ImageTransparency = 0
+		eggIcon.ImageColor3 = Color3.new(1, 1, 1)
+		eggRays.ImageColor3, eggGlow.ImageColor3 = c, c
+		eggFx.Visible = true
+		eggTitle.Text = string.upper(rarity.Name) .. " EGG!"
+		eggTitle.TextColor3 = Color3.new(1, 1, 1)
+		UIKit.setIconText(eggSub, "{Home} Bring it home!")
+		eggSub.TextColor3 = Color3.fromRGB(255, 245, 200)
+	else
+		eggGrad.Color = ColorSequence.new(UIKit.Colors.Dark[1], UIKit.Colors.Dark[2])
+		eggIcon.ImageTransparency = 0.55
+		eggIcon.ImageColor3 = Color3.fromRGB(150, 150, 170)
+		eggFx.Visible = false
+		eggTitle.Text = "NO EGG"
+		eggTitle.TextColor3 = Color3.fromRGB(190, 195, 215)
+		UIKit.setIconText(eggSub, "Drill an asteroid")
+		eggSub.TextColor3 = Color3.fromRGB(160, 165, 185)
 	end
-	goHome.Visible = full
-	if cargo ~= lastCargo then
-		UIKit.bump(cargoPill, 0.1)
-		if full then
-			UIKit.shake(cargoPill)
-		end
-		lastCargo = cargo
+	-- on vient de ramasser un œuf : il saute, éclat de lumière
+	if carrying == false and has then
+		UIKit.bump(eggSlot, 0.18)
+		UIKit.burst(eggSlot, UDim2.fromOffset(42, 42), rarity.Color)
 	end
-	-- Une pastille par œuf, de la couleur de sa rareté
-	for _, d in ipairs(dots:GetChildren()) do
-		if d:IsA("Frame") then
-			d:Destroy()
-		end
-	end
-	local list = string.split(player:GetAttribute("CargoRarities") or "", ",")
-	for _, r in ipairs(list) do
-		local rarity = Config.Rarities[tonumber(r) or 0]
-		if rarity then
-			new("Frame", { Size = UDim2.fromOffset(14, 18), BackgroundColor3 = rarity.Color, Parent = dots }, { UIKit.corner(7), UIKit.stroke(2) })
-		end
-	end
+	carrying = has
 end
 
--- EN HAUT À DROITE : événement + réglages -----------------------------------------
-local topRight = group("TopRight", Vector2.new(1, 0), UDim2.new(1, -18, 0, 14), UDim2.fromOffset(260, 60))
-local eventPill, eventText = UIKit.pill({ name = "EventPill", art = "Comet", size = UDim2.fromOffset(170, 52), parent = topRight })
-eventPill.Position = UDim2.fromOffset(16, 2)
-local settings = UIKit.roundButton({ name = "Settings", art = "Settings", size = 56, parent = topRight })
-settings.Position = UDim2.fromOffset(202, 0)
-settings.MouseButton1Click:Connect(function()
-	UIKit.Open:Fire("Settings")
-end)
-
--- POTIONS ACTIVES (sous l'horloge, en haut à droite) : icône qui flotte et temps restant ---------
-local boostGroup = group("Boosts", Vector2.new(1, 0), UDim2.new(1, -18, 0, 84), UDim2.fromOffset(260, 84))
+-- POTIONS ACTIVES (sous l'œuf, en haut à droite) : icône qui flotte et temps restant ---------
+local boostGroup = group("Boosts", Vector2.new(1, 0), UDim2.new(1, -18, 0, 112), UDim2.fromOffset(260, 84))
 new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, Padding = UDim.new(0, 6), Parent = boostGroup })
 local boostCards: { [string]: { frame: Frame, time: TextLabel } } = {}
 for i, potion in ipairs(Config.Shop.Potions) do
-	if potion.Key ~= "Meteor" then
+	do
 		local f = new("Frame", { Name = potion.Key, Size = UDim2.fromOffset(70, 84), BackgroundTransparency = 1, LayoutOrder = i, Visible = false, Parent = boostGroup })
 		local icon = UIKit.icon(potion.Art, { Size = UDim2.fromOffset(62, 62), Position = UDim2.fromOffset(4, 0), Parent = f })
 		UIKit.float(icon, 3, 4, 1.4, i)
@@ -423,11 +413,6 @@ refreshSpeed()
 refreshCargo()
 refreshBadges()
 
-local function clock(seconds: number): string
-	seconds = math.max(0, math.floor(seconds))
-	return string.format("%d:%02d", seconds // 60, seconds % 60)
-end
-
 RunService.RenderStepped:Connect(function()
 	local fuel = math.clamp(player:GetAttribute("Fuel") or 1, 0, 1)
 	fuelFill.Size = UDim2.fromScale(1, fuel)
@@ -438,14 +423,5 @@ RunService.RenderStepped:Connect(function()
 	noiseGauge.Visible = noise ~= nil
 	if noise then
 		noiseFill.Size = UDim2.fromScale(1, math.clamp(noise, 0, 1))
-	end
-	-- Minuteur de l'événement
-	local now = workspace:GetServerTimeNow()
-	if workspace:GetAttribute("EventActive") then
-		eventText.Text = "NOW!"
-		eventText.TextColor3 = Color3.fromRGB(255, 214, 90)
-	else
-		eventText.Text = clock((workspace:GetAttribute("EventStartsAt") or now) - now)
-		eventText.TextColor3 = Color3.new(1, 1, 1)
 	end
 end)

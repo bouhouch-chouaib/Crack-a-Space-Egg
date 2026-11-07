@@ -1,18 +1,15 @@
 -- Sons du joueur (Config.Sounds) : effets courts, boucles et musique.
--- Deux groupes dans SoundService, Music et Effects ; les réglages les coupent (attributs MusicOff
--- et SfxOff du joueur, tenus par le serveur).
+-- Deux groupes dans SoundService, Music et Effects.
 --   Sfx.Play("Coin")                         son à l'écran
 --   Sfx.Play("RockBreak", { at = position })  son placé dans le monde (on l'entend de près)
 --   local l = Sfx.Loop("Jetpack") ; l:Set(0.6) volume de 0 à 1 (0 = arrêté)
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local S = Config.Sounds
-local player = Players.LocalPlayer
 
 local Sfx = {}
 
@@ -29,13 +26,6 @@ end
 Sfx.MusicGroup = group("Music")
 Sfx.EffectsGroup = group("Effects")
 
-local function applySettings()
-	Sfx.MusicGroup.Volume = if player:GetAttribute("MusicOff") then 0 else 1
-	Sfx.EffectsGroup.Volume = if player:GetAttribute("SfxOff") then 0 else 1
-end
-applySettings()
-player:GetAttributeChangedSignal("MusicOff"):Connect(applySettings)
-player:GetAttributeChangedSignal("SfxOff"):Connect(applySettings)
 
 -- Un son de chaque sorte, prêt à être cloné (chargé une seule fois)
 local templates: { [string]: Sound } = {}

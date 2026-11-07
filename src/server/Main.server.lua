@@ -2,7 +2,6 @@
 
 local WorldBuilder = require(script.Parent.WorldBuilder)
 local Bases = require(script.Parent.Bases)
-local EventService = require(script.Parent.EventService)
 local BeltService = require(script.Parent.BeltService)
 local GameService = require(script.Parent.GameService)
 local DataService = require(script.Parent.DataService)
@@ -18,7 +17,6 @@ local MonsterService = require(script.Parent.MonsterService)
 
 WorldBuilder.Build()
 Bases.Start()
-EventService.Start()
 BeltService.Start()
 BoostService.Start() -- passes et potions (avant le chargement des parties)
 GameService.Start() -- branche DataService.Loaded avant que les parties se chargent

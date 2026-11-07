@@ -17,8 +17,7 @@ Légende : ✅ décidé dans `docs/Mecaniques.md` · ❓ à trancher (voir la fi
 | --- | --- |
 | **En bas à gauche** | **Argent** en énorme ($, vert-or), avec le revenu par seconde des créatures de la base (« +$120/s ») et les gains qui s'envolent en « +$12.5K » |
 | **À gauche, deux gros boutons seulement** | 🛒 **SHOP** et 📖 **INDEX** (décision du 6 nov.). Tout le reste est dans la boutique, en faisant défiler. Pastille rouge « ! » quand il y a quelque chose à acheter ou à réclamer |
-| **En haut au centre** | **Soute** : « 🥚 3/8 », avec des petits œufs colorés selon leur rareté. Pleine, elle clignote : « GO HOME! » et une flèche vers la base |
-| **En haut à droite** | Petit rappel d'événement (« ☄️ 12:34 »), ⚙️ réglages |
+| **En haut à droite** | **Œuf porté** ✅ (7 nov.) : on n'en porte qu'un, donc pas de compteur. Emplacement discret « NO EGG – Drill an asteroid » ; quand on ramasse un œuf, il s'allume à la couleur de la rareté (« EPIC EGG! – Bring it home! »), avec rayons, halo et un éclat au ramassage. Les potions actives sont juste en dessous |
 | **À droite, ronds** | Raccourcis : ⭐ Supernova (quand elle est disponible), 🛡️ boost actif (potion, avec son minuteur) |
 | **Jauges (bord gauche)** | **Jetpack** (carburant, existe déjà), **Oxygène** : elle n'apparaît que hors du couloir et devient rouge et clignote en dessous de 25 % ✅. **Bruit** : seulement dans les anneaux 5 à 7, comme un œil qui s'ouvre ✅ |
 | **En bas au centre** | **Pouvoir actif** de la créature équipée (Légendaire et plus), avec son temps de recharge en cercle ✅ |
@@ -99,7 +98,7 @@ Décision du 6 nov. : **une seule fenêtre qui défile**, qui regroupe tout ce q
 3. **Pets** : ses créatures, les emplacements équipés et le bouton Equip best (contenu en §6). La vente (§4) et la fusion (§5) restent aux machines du vaisseau.
 4. **Rewards** : connexion quotidienne, cadeaux de temps de jeu, 3 quêtes du jour, codes, bonus du groupe (contenu en §8).
 5. **Game Passes** ✅ : Cargo XL, Turbo Jetpack, Auto Crack, x2 Money, x2 Training, +1 Equipped Creature, VIP.
-6. **Potions** ✅ (15 min) : x2 Luck, x2 Money, Suit Refill, Meteor Shower pour tout le serveur.
+6. **Potions** ✅ (15 min) : x2 Luck, x2 Money, x2 Jetpack XP. (Meteor Shower retirée le 7 nov.)
 7. **Money packs** ✅ : 5 paliers, du paquet de billets au coffre, jusqu'à de gros montants.
 8. **Skins** ✅ : thèmes de base, couleurs de combinaison, traînées de jetpack.
 9. **Free boost** ✅ : une potion x2 de 5 min contre une pub récompensée.
@@ -130,7 +129,7 @@ Les cartes ont une illustration sur un fond en dégradé, un bouton vert (Robux 
 | **Nouvel anneau** | Grand titre à l'entrée de l'anneau (« RING n », sans avertissement) ✅ ; « First egg from the … » au premier œuf ✅ |
 | **Perte** | Flash rouge « You lost 5 eggs » (Vide, monstre) ✅ |
 | **Première minute** | Flèche au sol, bulles très courtes avec icônes, main qui montre le geste ✅ |
-| **Réglages** | Musique et sons ON/OFF ✅, qualité graphique (moins d'effets sur téléphone), masquer les créatures des autres |
+| **Réglages** | ❌ Retirés le 7 nov. (fenêtre musique / sons et roue dentée) |
 
 ---
 
