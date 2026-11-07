@@ -46,7 +46,7 @@ Légende : ✅ décidé · 💡 détail proposé, à ajuster en jeu · ❓ reste
 - ✅ Le joueur marche, saute et utilise le jetpack (maintenir Saut en l'air ; le carburant se recharge au sol).
 - ✅ On saute d'astéroïde en astéroïde. Tomber dans le Vide ramène au vaisseau avec une soute vide.
 - 💡 Un joueur debout sur un astéroïde est entraîné avec lui.
-- 💡 Sur mobile, des boutons Jetpack et Forer s'ajoutent à l'écran.
+- ✅ Sur téléphone (7 nov., `Mobile.client`) : gros bouton **DRILL** à côté du bouton de saut de Roblox (qui sert aussi à voler) ; le maintenir fore la roche la plus proche à portée, il devient vert quand une roche est à portée. Mode allégé : moitié moins de particules (`Config.Mobile`).
 
 ## 4. Tapis d'astéroïdes
 
@@ -204,7 +204,15 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 
 ## 16. Fidélisation (tout est prévu dès la sortie)
 
-- ✅ **La première minute** est la priorité : le joueur ne doit ni s'ennuyer ni se demander quoi faire. Il n'y a **pas de cinématique**, on joue tout de suite. Une flèche au sol et des bulles de texte très courtes guident les premières actions : sortir, forer, rentrer, casser. 💡 Un astéroïde facile arrive pile au bon moment, et le premier œuf donne à coup sûr une créature.
+- ✅ **La première minute** est la priorité : le joueur ne doit ni s'ennuyer ni se demander quoi faire. Il n'y a **pas de cinématique**, on joue tout de suite. 💡 Un astéroïde facile arrive pile au bon moment, et le premier œuf donne à coup sûr une créature.
+- ✅ **Guide** (7 nov., `Guide.client`, `Config.Guide`) : **un enfant doit pouvoir le suivre sans difficulté**, et il tient le joueur plusieurs minutes, jusqu'à ce qu'il ait intégré la boucle et ses détours.
+  - Bulle en bas de l'écran : 3 à 5 mots, grosse icône, une petite ligne d'aide ; 10 étoiles de progression ; petite croix pour passer (deux touches).
+  - Flèche au sol (chevrons qui filent vers le but), flèche qui rebondit au-dessus du but, contour vert qui le fait briller même derrière un mur, grosse flèche au bord de l'écran quand le but est hors champ.
+  - Main qui montre le geste : clic maintenu sur la roche (ordinateur), appui sur le bouton DRILL (téléphone).
+  - Fête à chaque étape (« Great! », étincelles, son), « You did it! » à la fin.
+  - Étapes enregistrées (`d.guide`) : forer un œuf → le rapporter à la machine → poser l'œuf → pendant qu'il couve, aller chercher le suivant → faire éclore → « ta créature rapporte des $ » → 3 créatures → acheter la Rusty Drill → acheter sa soufflerie → jetpack niveau 10 → un œuf de l'anneau 2.
+  - Il suit l'état réel : s'il tombe, perd son œuf, porte un œuf ou en a un prêt, la bulle le ramène à ce qu'il faut faire (« Bring it home! », « Press F to hatch! »...), même pendant les objectifs suivants. Pas assez d'argent : « Save $5K for a new drill » avec la somme actuelle, et la flèche vers les roches.
+  - Les anciens joueurs qui ont déjà des créatures ne le voient pas.
 - ✅ Une récompense de connexion quotidienne, sur 7 jours qui reprennent au début.
 - ✅ 3 quêtes du jour.
 - ✅ Des cadeaux à 5, 15, 30 et 60 minutes de jeu.

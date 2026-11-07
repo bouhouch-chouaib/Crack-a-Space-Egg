@@ -40,6 +40,7 @@ local function default()
 		skins = {}, -- ["clé"] = true : skins de foreuse achetés en $ (SkinService)
 		skin = "Classic", -- skin de foreuse équipé
 		firstJoin = 0, -- os.time() de la première partie (fenêtre du Starter Pack)
+		guide = -1, -- étape du guide de la première minute atteinte (Guide.client) ; -1 = pas encore décidé
 		starterBought = false, -- Starter Pack déjà acheté (un seul par joueur)
 		-- Base : œufs en incubation et créatures posées. Position (x, z) dans le repère du sol de la base.
 		--   œuf      : { kind = "egg", ring, rarity, x, z, hatchAt = os.time() de fin }

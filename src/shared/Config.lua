@@ -1123,4 +1123,29 @@ function Config.Probabilities(ringIndex: number, luck: number): { number }
 	return p
 end
 
+-- GUIDE DE LA PREMIÈRE MINUTE (Guide.client) ------------------------------------------
+-- Fait pour qu'un enfant suive sans lire : bulles de 3 à 5 mots, grosses icônes, flèche au sol,
+-- main qui montre le geste, petite fête à chaque réussite. Il accompagne le joueur pendant toute la
+-- première boucle (et ses détours) jusqu'à l'anneau 2. Étapes enregistrées (d.guide) :
+--   0 voler jusqu'à une roche et forer   1 rapporter l'œuf à la machine   2 poser l'œuf
+--   3 faire éclore (et aller chercher un 2e œuf pendant l'incubation)   4 « ta créature rapporte des $ »
+--   5 avoir Pets créatures   6 acheter la foreuse n° Drill   7 acheter sa soufflerie
+--   8 jetpack au niveau JetLevel (de quoi atteindre l'anneau 2)   9 sortir un œuf de l'anneau Ring
+--   10 (= Steps) terminé
+Config.Guide = {
+	Steps = 10,
+	Pets = 3,
+	Drill = 2,
+	JetLevel = Config.Jetpack.Tiers[2].Level,
+	Ring = 2,
+	Arrow = "rbxassetid://111578532993258", -- chevrons blancs à contour sombre (poutre au sol)
+	MachineNear = 14, -- studs : assez près de la machine pour appuyer sur E
+	PetCheer = 5, -- secondes de « ta créature rapporte des $ »
+}
+
+-- Téléphones et tablettes (Mobile.client) : part des particules gardée en mode allégé
+Config.Mobile = {
+	ParticleScale = 0.5,
+}
+
 return Config

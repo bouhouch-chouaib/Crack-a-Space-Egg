@@ -145,6 +145,10 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
+-- Bouton FORER des téléphones (Mobile.client) : tant qu'il est enfoncé, on fore la roche la plus proche
+-- à portée (attribut local DrillHeld). Roche à portée : attribut local RockNear (bouton et guide), 5 fois par seconde.
+local lastNear = 0
+
 -- BOUCLE PAR IMAGE ----------------------------------------------------------
 
 RunService.RenderStepped:Connect(function()
@@ -155,10 +159,16 @@ RunService.RenderStepped:Connect(function()
 		return
 	end
 
-	-- Foreuse
+	if os.clock() - lastNear > 0.2 then
+		lastNear = os.clock()
+		player:SetAttribute("RockNear", nearestInRange(hrp.Position) ~= nil)
+	end
+
+	-- Foreuse (clic / doigt sur la roche, ou bouton FORER : la roche la plus proche)
+	local wantDrill = drilling or player:GetAttribute("DrillHeld") == true
 	local hitPart, hitPos, tooFar = nil, nil, nil
-	if drilling then
-		hitPart, hitPos, tooFar = findTarget(pointer)
+	if wantDrill then
+		hitPart, hitPos, tooFar = findTarget(if drilling then pointer else nil)
 		if not hitPart and os.clock() - lastWarn > 2.5 then
 			lastWarn = os.clock()
 			UIKit.toast(if tooFar then "{Jetpack} Too far! Jump closer" else "{Jetpack} No asteroid in reach! Jump on a rock", "warn")
@@ -181,7 +191,7 @@ RunService.RenderStepped:Connect(function()
 			outline.Enabled = false
 		end
 	end
-	if drilling then
+	if wantDrill then
 		local shown = hitPart or tooFar
 		outline.Adornee = shown and shown.Parent
 		outline.OutlineColor = if hitPart then IN_RANGE else TOO_FAR
@@ -200,7 +210,7 @@ RunService.RenderStepped:Connect(function()
 			end
 		end
 	end
-	player:SetAttribute("DrillReady", drilling)
+	player:SetAttribute("DrillReady", wantDrill)
 	player:SetAttribute("DrillAtLocal", if active then hitPos else nil)
 	if active and os.clock() - lastSent >= Config.DrillTick then
 		lastSent = os.clock()

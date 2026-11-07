@@ -57,6 +57,8 @@ local function sync(player: Player)
 	-- Starter Pack : fin de l'offre (3 jours après la première partie) et achat déjà fait
 	player:SetAttribute("StarterEnds", (d.firstJoin or 0) + Config.Shop.Featured.Duration)
 	player:SetAttribute("StarterBought", d.starterBought == true)
+	-- Guide de la première minute (Guide.client) : étape atteinte, Config.Guide.Steps à la fin
+	player:SetAttribute("GuideStep", d.guide or 0)
 	player:SetAttribute("Drill", d.drill)
 	-- Niveau du jetpack (HUD) et vitesses qui en découlent (Jetpack.client)
 	local jl, jx, jn = Config.JetpackLevel(d.jetXP or 0)
@@ -489,6 +491,18 @@ end
 
 function GameService.Start()
 	Remotes.Drill.OnServerEvent:Connect(onDrill)
+	-- Guide : le client dit quelle étape il a finie ; on garde la plus avancée (jamais de retour en arrière)
+	Remotes.Guide.OnServerEvent:Connect(function(player: Player, step: any)
+		local d = DataService.Get(player)
+		if not d or type(step) ~= "number" or step ~= step then
+			return
+		end
+		step = math.clamp(math.floor(step), 0, Config.Guide.Steps)
+		if step > (d.guide or 0) then
+			d.guide = step
+			player:SetAttribute("GuideStep", step)
+		end
+	end)
 	Remotes.JetState.OnServerEvent:Connect(onJetState)
 	Remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
 	Remotes.BuyDrill.OnServerEvent:Connect(buyDrill)
@@ -510,6 +524,10 @@ function GameService.Start()
 		local d = DataService.Get(player)
 		if d and (d.firstJoin or 0) == 0 then
 			d.firstJoin = os.time()
+		end
+		-- Guide : nouveau joueur = depuis le début ; ancien joueur qui a déjà des créatures = déjà fait
+		if d and (d.guide or -1) < 0 then
+			d.guide = if next(d.index) ~= nil then Config.Guide.Steps else 0
 		end
 		sync(player)
 		equipDrill(player)

@@ -135,7 +135,7 @@ Les cartes ont une illustration sur un fond en dégradé, un bouton vert (Robux 
 | **Annonce serveur** | Bandeau en haut quand quelqu'un trouve un Mythique ou mieux ✅ |
 | **Nouvel anneau** | Grand titre à l'entrée de l'anneau (« RING n », sans avertissement) ✅ ; « First egg from the … » au premier œuf ✅ |
 | **Perte** | Flash rouge « You lost 5 eggs » (Vide, monstre) ✅ |
-| **Première minute** | Flèche au sol, bulles très courtes avec icônes, main qui montre le geste ✅ |
+| **Première minute** | ✅ (7 nov.) Guide pour enfants : bulle de 3 à 5 mots en bas, flèche au sol, flèche qui rebondit, contour vert, flèche au bord de l'écran, main qui montre le geste, fête à chaque étape (voir Mecaniques.md §16). L'aide du bas se cache pendant le guide |
 | **Réglages** | ❌ Retirés le 7 nov. (fenêtre musique / sons et roue dentée) |
 
 ---

@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
@@ -373,16 +374,26 @@ if player.Character then
 end
 player.CharacterAdded:Connect(watchVoid)
 
--- AIDE (en bas au centre, en attendant le guide de la première minute) -------------------
-UIKit.text({
+-- AIDE (en bas au centre) : cachée pendant le guide de la première minute (Guide.client) ; sur
+-- téléphone, elle parle du bouton FORER et du bouton de saut
+local touchOnly = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local hint = UIKit.text({
+	Name = "Hint",
 	AnchorPoint = Vector2.new(0.5, 1),
 	Size = UDim2.new(0.6, 0, 0, 26),
 	Position = UDim2.new(0.5, 0, 1, -12),
-	Text = "{Mouse} Hold click on an asteroid to drill   ·   Hold jump to fly, steer to glide",
+	Text = if touchOnly
+		then "{Tap} Hold DRILL near an asteroid   ·   Hold jump to fly, steer to glide"
+		else "{Mouse} Hold click on an asteroid to drill   ·   Hold jump to fly, steer to glide",
 	TextColor3 = Color3.fromRGB(230, 235, 255),
 	Stroke = 2,
 	Parent = gui,
 })
+local function refreshHint()
+	hint.Visible = player:GetAttribute("Guide") == nil
+end
+player:GetAttributeChangedSignal("Guide"):Connect(refreshHint)
+refreshHint()
 
 -- MISE À JOUR ---------------------------------------------------------------
 player.AttributeChanged:Connect(function(name)
