@@ -515,7 +515,14 @@ local function decide(step: number): Hint?
 		if here and mp and (here - mp).Magnitude < G.MachineNear then
 			return { icon = "Lightning", text = if touchOnly then "Tap the button!" else "Press E!", sub = "Free your egg from the rock", target = machine }
 		end
-		return { icon = "Home", text = "Bring it home!", sub = "Follow the arrow", target = machine }
+		-- l'air de l'œuf s'épuise (ColdService) : on le dit à l'enfant, en secondes
+		local air = player:GetAttribute("O2Left")
+		return {
+			icon = "Home",
+			text = "Bring it home!",
+			sub = if type(air) == "number" then ("Fast! %d s of air left"):format(math.ceil(air)) else "Follow the arrow",
+			target = machine,
+		}
 	end
 
 	-- objectifs

@@ -157,6 +157,13 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 - ✅ À 100 %, le joueur est pris dans un bloc de glace hérissé de cristaux. Il voit un flash, de la glace fissurée sur tout l'écran et « FROZEN! ». 2,2 s plus tard, la glace éclate et il revient à sa base en perdant les œufs de sa soute, comme une chute dans le Vide.
 - Textures : `tools/fx/cold_textures.py` (givre léger et épais, fissures, vignette, flèche).
 
+### Oxygène de l'œuf (7 nov.)
+
+- ✅ Dès qu'on sort un œuf de la roche, un compte à rebours d'air démarre. Sa durée dépend de l'anneau où l'œuf a été foré : 45 s (anneau 1), puis +5 s par anneau jusqu'à 75 s (anneau 7). Un peu plus de temps au loin, mais bien moins que la distance en plus : plus on va loin, plus il faut un bon jetpack pour revenir à temps (`Config.Oxygen`).
+- ✅ Le temps s'arrête et se recharge dès qu'on est de retour sur le vaisseau.
+- ✅ À zéro : plus d'air, le joueur meurt, perd l'œuf et réapparaît à sa base.
+- ✅ Affichage (`OxygenFx.client`) : jauge « AIR 0:42 » sous l'emplacement de l'œuf ; sous 30 % elle passe au rouge et tremble, l'écran bat en rouge, un bip chaque seconde et « HURRY HOME! » au centre ; à zéro, flash rouge et « OUT OF AIR! ». Le guide dit « Fast! 42 s of air left ».
+
 ### (Ancien) Oxygène et caissons de pression
 
 C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, il ne s'achète pas.

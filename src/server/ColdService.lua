@@ -6,6 +6,9 @@
 --   Cold (0..1)       jauge de gel (lue par ColdFx.client pour l'effet plein écran)
 --   ColdGrace (s)     secondes de répit restantes quand on est sorti (nil dans la zone)
 -- et sur le personnage : Cold (teinte de glace vue par tous), Frozen, FrozenAt (éclats).
+-- Oxygène de l'œuf (Config.Oxygen) : dès qu'un œuf est dans la soute et qu'on est hors du vaisseau, un
+-- compte à rebours tourne (durée selon l'anneau de l'œuf). Publié : O2Left, O2Max (secondes, nil = pas
+-- de compte à rebours). À zéro, le joueur meurt asphyxié et perd l'œuf (personnage : Suffocated).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -22,7 +25,7 @@ local ICE = Color3.fromRGB(175, 225, 255)
 
 local ColdService = {}
 
-type State = { outside: number, cold: number, frozen: boolean }
+type State = { outside: number, cold: number, frozen: boolean, o2: number?, o2Max: number? }
 local states: { [Player]: State } = {}
 
 local function round(x: number): number
@@ -117,6 +120,58 @@ local function freeze(player: Player, st: State)
 	end)
 end
 
+-- Sur le vaisseau (sa boîte, publiée dans Start) : on y respire
+local shipMin, shipMax = Vector3.zero, Vector3.zero
+local function onShip(pos: Vector3): boolean
+	local m = Config.Oxygen.ShipMargin
+	return pos.X >= shipMin.X - m and pos.X <= shipMax.X + m
+		and pos.Y >= shipMin.Y - m and pos.Y <= shipMax.Y + m
+		and pos.Z >= shipMin.Z - m and pos.Z <= shipMax.Z + m
+end
+
+local function clearO2(player: Player, st: State)
+	st.o2, st.o2Max = nil, nil
+	if player:GetAttribute("O2Left") ~= nil then
+		player:SetAttribute("O2Left", nil)
+		player:SetAttribute("O2Max", nil)
+	end
+end
+
+-- Plus d'air : le joueur meurt et perd l'œuf
+local function suffocate(player: Player, st: State, character: Model, hum: Humanoid)
+	clearO2(player, st)
+	local d = DataService.Get(player)
+	if d then
+		d.cargo = {}
+		GameService.Sync(player)
+	end
+	character:SetAttribute("Suffocated", true)
+	GameService.Notice(player, "{Oxygen} Out of oxygen! You lost your egg. Fly back faster!", "bad")
+	hum.Health = 0
+end
+
+-- Compte à rebours d'oxygène quand on porte un œuf hors du vaisseau
+local function stepO2(player: Player, st: State, character: Model, hrp: BasePart, hum: Humanoid)
+	local d = DataService.Get(player)
+	local egg = d and d.cargo[1]
+	if not egg or onShip(hrp.Position) then
+		clearO2(player, st)
+		return
+	end
+	if not st.o2 then
+		local ring = if type(egg) == "table" then egg.ring or 1 else egg
+		local times = Config.Oxygen.Time
+		st.o2Max = times[math.clamp(ring, 1, #times)]
+		st.o2 = st.o2Max
+		player:SetAttribute("O2Max", st.o2Max)
+	end
+	st.o2 = math.max(0, (st.o2 :: number) - STEP)
+	player:SetAttribute("O2Left", round(st.o2 :: number))
+	if (st.o2 :: number) <= 0 then
+		suffocate(player, st, character, hum)
+	end
+end
+
 local function step()
 	for _, player in ipairs(Players:GetPlayers()) do
 		local st = states[player]
@@ -128,6 +183,10 @@ local function step()
 		local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		local hum = character and character:FindFirstChildOfClass("Humanoid")
 		if st.frozen or not hrp or not hum or hum.Health <= 0 then
+			continue
+		end
+		stepO2(player, st, character :: Model, hrp, hum)
+		if hum.Health <= 0 then
 			continue
 		end
 		local _, dist = SafeZone.Nearest(hrp.Position)
@@ -162,6 +221,7 @@ function ColdService.Start()
 	local cf, size = ship:GetBoundingBox()
 	ship:SetAttribute("SafeMin", cf.Position - size / 2)
 	ship:SetAttribute("SafeMax", cf.Position + size / 2)
+	shipMin, shipMax = cf.Position - size / 2, cf.Position + size / 2
 	Players.PlayerRemoving:Connect(function(player)
 		states[player] = nil
 	end)
@@ -171,7 +231,10 @@ function ColdService.Start()
 			local st = states[player]
 			if st then
 				st.cold, st.outside, st.frozen = 0, 0, false
+				clearO2(player, st)
 			end
+			player:SetAttribute("O2Left", nil)
+			player:SetAttribute("O2Max", nil)
 			player:SetAttribute("Cold", 0)
 			player:SetAttribute("ColdGrace", nil)
 		end)

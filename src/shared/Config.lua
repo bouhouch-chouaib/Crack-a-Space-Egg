@@ -97,6 +97,19 @@ Config.Cold = {
 	},
 }
 
+-- Oxygène de l'œuf (ColdService) : dès qu'on a sorti un œuf de la roche, on a ce nombre de secondes
+-- (selon l'anneau où on l'a foré) pour le ramener au vaisseau. À zéro : plus d'air, on meurt et l'œuf
+-- est perdu. Le temps s'arrête et se recharge dès qu'on est de retour sur le vaisseau.
+-- Un peu plus de temps pour les anneaux lointains, mais bien moins que la distance en plus : plus on va
+-- loin, plus il faut un bon jetpack pour revenir à temps.
+Config.Oxygen = {
+	Time = { 45, 50, 55, 60, 65, 70, 75 },
+	Low = 0.3, -- part restante sous laquelle l'alerte rouge commence
+	-- studs ajoutés à la boîte du vaisseau pour « de retour à bord » : négatif = un peu à l'intérieur du bord,
+	-- car les roches de l'anneau 1 frôlent le vaisseau (sinon le compte à rebours ne partirait pas)
+	ShipMargin = -6,
+}
+
 -- Vitesse au sol et en vol : elle monte avec le NIVEAU DU JETPACK (Config.Jetpack), qu'on farme dans
 -- les souffleries du vaisseau (l'équivalent des tapis de course) et en volant pendant les missions.
 Config.Movement = {
