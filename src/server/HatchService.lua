@@ -239,6 +239,7 @@ local function buildPet(player: Player, floor: BasePart, item, fresh: boolean?):
 	m:SetAttribute("Rarity", item.rarity)
 	m:SetAttribute("Creature", Config.PetName(item)) -- nom affiché (taille et stade compris)
 	m:SetAttribute("Species", item.name) -- espèce seule (mouvements, image)
+	m:SetAttribute("Stage", item.stage or 1) -- stade (le guide repère 3 créatures à fusionner)
 	m:SetAttribute("Size", item.size)
 	m:SetAttribute("Income", item.income)
 	CollectionService:AddTag(m, "Creature")

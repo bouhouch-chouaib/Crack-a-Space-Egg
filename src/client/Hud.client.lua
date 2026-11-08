@@ -409,7 +409,7 @@ local function refreshHint()
 	hint.Visible = player:GetAttribute("Guide") == nil
 	local text = if kind == "Touch"
 		then "{Tap} Hold DRILL near an asteroid   ·   Hold jump to fly, steer to glide"
-		elseif kind == "Gamepad" then ("Hold %s near an asteroid to drill   ·   Hold %s to fly   ·   D-pad: Store / Index / Rewards"):format(Device.Key("drill"), Device.Key("jump"))
+		elseif kind == "Gamepad" then ("Hold %s near an asteroid to drill   ·   Hold %s to fly   ·   D-pad: menus"):format(Device.Key("drill"), Device.Key("jump"))
 		else "{Mouse} Hold click on an asteroid to drill   ·   Hold Space to fly, steer to glide"
 	UIKit.setIconText(hint, text)
 end

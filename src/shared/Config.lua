@@ -1217,9 +1217,10 @@ Config.Guide = {
 		"3 pets", "Wind tunnel bought", "Jetpack level 3", "New drill bought", "Scanner bought",
 	},
 	-- Tutoriels au bon moment : une seule fois par joueur, quand il en a besoin (Guide.client)
-	Tips = { geode = true, gem = true, basefull = true, supernova = true },
+	Tips = { geode = true, gem = true, basefull = true, supernova = true, rewards = true, fuse = true, monsters = true, mailbox = true },
 	TipMax = 40, -- secondes avant qu'un tip non suivi s'efface tout seul
 	TipShort = 12, -- idem pour un tip sans endroit où aller
+	TipGap = 25, -- secondes de calme entre deux tips d'information (récompenses, fusion, monstres...)
 }
 
 -- Boîte à retours (boîte aux lettres du vaisseau, FeedbackService)
