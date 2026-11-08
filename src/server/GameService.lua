@@ -60,6 +60,7 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("GemCount", #(d.gems or {}))
 	player:SetAttribute("GemValue", gemValue)
+	player:SetAttribute("GemsSold", d.stats.gemsSold or 0)
 	player:SetAttribute("ReadyEggs", #(d.ready or {}))
 	-- Œufs dérochés prêts à poser (« 1:5,2:3 » = anneau:rareté), pour la barre des œufs (Hatchery.client)
 	local ready = {}
@@ -99,6 +100,8 @@ GameService.Sync = sync
 GameService.Notice = notice
 -- Quêtes du jour : les services signalent ce que fait le joueur (RewardService remplace cette fonction)
 GameService.Quest = function(_player: Player, _kind: string, _amount: number?) end
+-- Fin du tutoriel : RewardService remplace cette fonction
+GameService.GuideDone = function(_player: Player) end
 -- Appelé à chaque coup de foreuse (posé par MonsterService) : (player, roche, anneau)
 GameService.DrillHook = nil :: ((Player, BasePart, number) -> ())?
 
@@ -136,6 +139,33 @@ local function rollRarity(d, ringIndex: number): number
 		d.pity = 0
 	end
 	return rarity
+end
+
+-- Ce que le tutoriel impose au prochain forage : { rarity, kind, size? } ou nil
+local function tutorialDrop(d, ringIndex: number)
+	local G = Config.Guide
+	local step = d.guide or 0
+	if step >= G.Steps or ringIndex ~= 1 then
+		return nil
+	end
+	local hatched = 0
+	for _, n in pairs(d.index) do
+		hatched += n
+	end
+	local pending = #d.ready
+	for _, item in ipairs(d.base) do
+		if item.kind == "egg" then
+			pending += 1
+		end
+	end
+	if hatched == 0 and pending == 0 then
+		return { rarity = 1, kind = "egg" } -- le chien commun
+	elseif hatched == 1 and pending == 0 and step < 6 then
+		return { rarity = G.SecondRarity, kind = "egg" }
+	elseif step == 6 and #d.gems == 0 then
+		return { rarity = G.GeodeRarity, kind = "geode", size = G.GeodeSize }
+	end
+	return nil
 end
 
 -- FORAGE ------------------------------------------------------------------
@@ -198,8 +228,7 @@ local function onDrill(player: Player, target: any, at: any)
 	local rarities = {}
 	local kinds = {}
 	if eggs > 0 then
-		-- pas encore de créature ni d'œuf en route : c'est le premier, toujours un œuf de la rareté la plus basse
-		local first = next(d.index) == nil and #d.base == 0 and #d.ready == 0
+		local forced = tutorialDrop(d, a.ring)
 		for _ = 1, eggs do
 			local rarity = rollRarity(d, a.ring)
 			if guarded then
@@ -208,14 +237,13 @@ local function onDrill(player: Player, target: any, at: any)
 			end
 			-- une fois sur 3 : une géode à la place de l'œuf (Config.Geodes)
 			local kind = if rng:NextNumber() < Config.Geodes.Chance then "geode" else "egg"
-			if first then
-				rarity = if a.ring >= Config.CosmicMinRing then 2 else 1
-				kind = "egg"
+			if forced then
+				rarity, kind = forced.rarity, forced.kind
 			end
 			if kind == "geode" then
 				Tracking.Funnel(player, "Gems", 1, "Geode drilled")
 			end
-			table.insert(d.cargo, { ring = a.ring, rarity = rarity, kind = kind })
+			table.insert(d.cargo, { ring = a.ring, rarity = rarity, kind = kind, size = forced and forced.size })
 			table.insert(rarities, rarity)
 			table.insert(kinds, kind)
 		end
@@ -552,7 +580,8 @@ function GameService.Start()
 			return
 		end
 		if step == "tip" then
-			if type(key) == "string" and Config.Guide.Tips[key] and not d.tips[key] then
+			local known = type(key) == "string" and (Config.Guide.Tips[key] or string.match(key, "^drill%d%d?$") or string.match(key, "^tunnel%d%d?$"))
+			if known and not d.tips[key] then
 				d.tips[key] = true
 				player:SetAttribute("Tip_" .. key, true)
 				Tracking.Event(player, "Tip_" .. key)
@@ -577,6 +606,11 @@ function GameService.Start()
 			end
 			d.guide = step
 			player:SetAttribute("GuideStep", step)
+			-- tutoriel fini pour de bon (pas passé) : la récompense
+			if step >= Config.Guide.Steps and not d.guideRewarded and d.drill >= Config.Guide.Drill and (d.tunnel or 0) >= 1 then
+				d.guideRewarded = true
+				GameService.GuideDone(player)
+			end
 		end
 	end)
 	Remotes.JetState.OnServerEvent:Connect(onJetState)

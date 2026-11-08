@@ -82,7 +82,13 @@ local function run(player: Player, base: Model, machine: Model)
 		table.remove(d.cargo, 1)
 		if geode then
 			-- la géode s'ouvre : un minerai de l'anneau, d'une taille tirée au hasard, parfois brillant
+			-- la géode du tutoriel a sa taille imposée
 			local size = pickSize()
+			for _, s in ipairs(Config.Sizes) do
+				if type(egg) == "table" and s.Name == egg.size then
+					size = s
+				end
+			end
 			local shiny = rng:NextNumber() < Config.ShinyChance
 			local gem = {
 				ring = ring,

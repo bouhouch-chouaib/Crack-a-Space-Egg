@@ -163,63 +163,9 @@ local function refreshBadges()
 	buttons.Supernova.badge.Visible = credits >= Config.SupernovaCost(done)
 end
 
--- ŒUF PORTÉ (en haut à droite) ------------------------------------------------------
--- On ne porte qu'un œuf à la fois : pas de compteur, juste un emplacement. Vide, il reste discret ;
--- quand on ramasse un œuf, il s'allume à la couleur de la rareté (« RARE EGG! », « Bring it home! »).
-local eggGroup = group("Egg", Vector2.new(1, 0), UDim2.new(1, -18, 0, 14), UDim2.fromOffset(280, 92))
-local eggSlot = new("Frame", {
-	Name = "EggSlot",
-	Size = UDim2.fromOffset(270, 84),
-	Position = UDim2.fromOffset(10, 4),
-	BackgroundColor3 = Color3.new(1, 1, 1),
-	Parent = eggGroup,
-}, { UIKit.corner(), UIKit.stroke(4) })
-local eggGrad = UIKit.gradient(UIKit.Colors.Dark[1], UIKit.Colors.Dark[2])
-eggGrad.Parent = eggSlot
-local eggFx = new("Frame", { Name = "Fx", Size = UDim2.fromOffset(110, 110), Position = UDim2.fromOffset(-14, -13), BackgroundTransparency = 1, Parent = eggSlot })
-local eggRays = UIKit.rays(eggFx, { color = Color3.new(1, 1, 1), size = 130, speed = 40, transparency = 0.5, z = 1 })
-local eggGlow = UIKit.glow(eggFx, { color = Color3.new(1, 1, 1), size = 120, transparency = 0.45, z = 1, pulse = 1.6 })
-local eggIcon = UIKit.icon("Egg", { Size = UDim2.fromOffset(78, 78), Position = UDim2.fromOffset(2, 3), ZIndex = 3, Parent = eggSlot })
-local eggTitle = UIKit.text({ Size = UDim2.fromOffset(176, 38), Position = UDim2.fromOffset(86, 8), Text = "NO EGG", TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Stroke = 3, Parent = eggSlot })
-local eggSub = UIKit.text({ Size = UDim2.fromOffset(176, 26), Position = UDim2.fromOffset(86, 48), Text = "Drill an asteroid", TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Stroke = 2.5, Parent = eggSlot })
-UIKit.float(eggIcon, 2, 5, 2.4)
-
-local carrying = nil :: boolean?
-local function refreshCargo()
-	local has = (player:GetAttribute("Cargo") or 0) > 0
-	local r = tonumber(string.split(player:GetAttribute("CargoRarities") or "", ",")[1] or "")
-	local geode = string.split(player:GetAttribute("CargoKinds") or "", ",")[1] == "geode"
-	local rarity = Config.Rarities[r or 1] or Config.Rarities[1]
-	if has then
-		local c = rarity.Color
-		eggGrad.Color = ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.25), c:Lerp(Color3.new(0, 0, 0), 0.45))
-		eggIcon.ImageTransparency = 0
-		eggIcon.ImageColor3 = Color3.new(1, 1, 1)
-		eggRays.ImageColor3, eggGlow.ImageColor3 = c, c
-		eggFx.Visible = true
-		eggTitle.Text = string.upper(rarity.Name) .. (if geode then " GEODE!" else " EGG!")
-		eggIcon.Image = UIKit.Art[if geode then "Sparkles" else "Egg"] or eggIcon.Image
-		eggTitle.TextColor3 = Color3.new(1, 1, 1)
-		UIKit.setIconText(eggSub, "{Home} Bring it home!")
-		eggSub.TextColor3 = Color3.fromRGB(255, 245, 200)
-	else
-		eggGrad.Color = ColorSequence.new(UIKit.Colors.Dark[1], UIKit.Colors.Dark[2])
-		eggIcon.ImageTransparency = 0.55
-		eggIcon.ImageColor3 = Color3.fromRGB(150, 150, 170)
-		eggFx.Visible = false
-		eggTitle.Text = "NO EGG"
-		eggIcon.Image = UIKit.Art.Egg
-		eggTitle.TextColor3 = Color3.fromRGB(190, 195, 215)
-		UIKit.setIconText(eggSub, "Drill an asteroid")
-		eggSub.TextColor3 = Color3.fromRGB(160, 165, 185)
-	end
-	-- on vient de ramasser un œuf : il saute, éclat de lumière
-	if carrying == false and has then
-		UIKit.bump(eggSlot, 0.18)
-		UIKit.burst(eggSlot, UDim2.fromOffset(42, 42), rarity.Color)
-	end
-	carrying = has
-end
+-- Emplacement en haut à droite : les deux carrés d'inventaire (Inventory.client) y sont, et la jauge
+-- d'oxygène (OxygenFx) s'accroche à ce groupe
+group("Egg", Vector2.new(1, 0), UDim2.new(1, -18, 0, 14), UDim2.fromOffset(280, 92))
 
 -- POTIONS ACTIVES (sous l'œuf, en haut à droite) : icône qui flotte et temps restant ---------
 local boostGroup = group("Boosts", Vector2.new(1, 0), UDim2.new(1, -18, 0, 112), UDim2.fromOffset(260, 84))
@@ -480,15 +426,12 @@ player.AttributeChanged:Connect(function(name)
 	elseif name == "JetLevel" or name == "JetXP" or name == "JetXPNeed" then
 		refreshSpeed()
 		refreshBadges()
-	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" or name == "CargoKinds" then
-		refreshCargo()
 	elseif name == "StarterBought" or name == "StarterEnds" or name == "RewardsReady" or name == "Supernovas" then
 		refreshBadges()
 	end
 end)
 refreshMoney()
 refreshSpeed()
-refreshCargo()
 refreshBadges()
 
 RunService.RenderStepped:Connect(function()

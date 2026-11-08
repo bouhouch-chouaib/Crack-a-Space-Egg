@@ -396,9 +396,18 @@ function RewardService.GrantAdBoost(player: Player): boolean
 	return true
 end
 
+-- Récompense de fin de tutoriel : le client l'affiche (attribut TutorialReward, Offers.client)
+local function guideDone(player: Player)
+	local d = data(player)
+	if d then
+		player:SetAttribute("TutorialReward", give(player, d, Config.Guide.Reward))
+	end
+end
+
 function RewardService.Start()
 	Remotes.Rewards.OnServerInvoke = onInvoke
 	GameService.Quest = RewardService.Quest
+	GameService.GuideDone = guideDone
 	DataService.Loaded:Connect(function(player: Player)
 		task.spawn(checkGroup, player)
 		publish(player)

@@ -6,6 +6,7 @@
 -- Le serveur fait tout (CreatureService) ; chaque réponse renvoie la liste à jour.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -504,6 +505,9 @@ fuseButton.MouseButton1Click:Connect(function()
 	end
 	task.wait(0.35)
 	local res = call("fuse", { slots[1], slots[2], slots[3] })
+	if res.ok then
+		Players.LocalPlayer:SetAttribute("FuseTour", nil) -- tutoriel de fusion réussi
+	end
 	for _, card in ipairs(slotCards) do
 		local scale = card:FindFirstChildOfClass("UIScale")
 		if scale then
@@ -556,6 +560,65 @@ refresh = function()
 	buildActions()
 	refreshFusion()
 end
+
+-- TUTORIEL DE FUSION (attribut FuseTour, posé par Offers.client) : une grosse flèche montre quoi toucher
+local tourGui = new("ScreenGui", { Name = "FuseTour", ResetOnSpawn = false, IgnoreGuiInset = false, DisplayOrder = 20, Enabled = false, Parent = Players.LocalPlayer:WaitForChild("PlayerGui") })
+local tourArrow = UIKit.icon("ArrowUp", { AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(90, 90), Rotation = 180, Parent = tourGui })
+local tourText = UIKit.text({ AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(340, 44), Text = "", TextColor3 = Color3.fromRGB(255, 225, 110), Stroke = 4, Parent = tourGui })
+local tourWasOpen = false
+
+local function tourTarget(): (GuiObject?, string)
+	if fuseGroupOk() then
+		return fuseButton, "Press FUSE!"
+	end
+	-- première carte encore libre d'un groupe de 3 identiques
+	local first = byId(slots[1]) or byId(slots[2]) or byId(slots[3])
+	local groups: { [string]: { Pet } } = {}
+	for _, p in ipairs(all()) do
+		if not p.locked and p.stage < #C.Stages then
+			local key = ("%d:%d:%d"):format(p.ring, p.rarity, p.stage)
+			groups[key] = groups[key] or {}
+			table.insert(groups[key], p)
+		end
+	end
+	for key, g in pairs(groups) do
+		local wanted = not first or key == ("%d:%d:%d"):format(first.ring, first.rarity, first.stage)
+		if #g >= 3 and wanted then
+			for _, p in ipairs(g) do
+				if not table.find(slots, p.id) then
+					return grid:FindFirstChild(p.id) :: GuiObject?, "Pick 3 same pets!"
+				end
+			end
+		end
+	end
+	return nil, ""
+end
+
+RunService.RenderStepped:Connect(function()
+	local player = Players.LocalPlayer
+	if not player:GetAttribute("FuseTour") then
+		tourGui.Enabled = false
+		tourWasOpen = false
+		return
+	end
+	if tourWasOpen and not W.isOpen() then
+		player:SetAttribute("FuseTour", nil) -- il a refermé la fenêtre
+		return
+	end
+	tourWasOpen = W.isOpen()
+	local target, text = nil, ""
+	if W.isOpen() and mode == "fuse" then
+		target, text = tourTarget()
+	end
+	tourGui.Enabled = target ~= nil
+	if target then
+		local x = target.AbsolutePosition.X + target.AbsoluteSize.X / 2
+		local y = target.AbsolutePosition.Y + math.abs(math.sin(os.clock() * 5)) * -12
+		tourArrow.Position = UDim2.fromOffset(x, y)
+		tourText.Position = UDim2.fromOffset(x, y - 92)
+		tourText.Text = text
+	end
+end)
 
 local TITLES = { bag = "CREATURES", sell = "TRADING POST", fuse = "FUSION MACHINE" }
 

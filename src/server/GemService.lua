@@ -1,35 +1,19 @@
 -- Sac de minerais (géodes ouvertes par la machine, Config.Geodes) et leur vente au stand SELL.
 -- Remotes.Gems (RemoteFunction) :
 --   ("list")                -> { ok, gems }
---   ("sell", { index... })  -> vend ces minerais (il faut être près du stand SELL)
+--   ("sell", { index... })  -> vend ces minerais (de partout : stand SELL ou menu déroulant)
 --   ("sellAll")             -> vend tout le sac
 -- Le serveur décide du prix (gem.value, fixé à l'ouverture de la géode).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
-local WorldBuilder = require(script.Parent.WorldBuilder)
 local Tracking = require(script.Parent.Tracking)
 
 local Remotes = ReplicatedStorage.Remotes
 local GemService = {}
-
-local function nearSell(player: Player): boolean
-	local character = player.Character
-	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not hrp then
-		return false
-	end
-	for _, point in ipairs(WorldBuilder.ShopPoints) do
-		if point.Name == "SellPoint" and (point.Position - hrp.Position).Magnitude <= Config.PetRules.StandRange then
-			return true
-		end
-	end
-	return false
-end
 
 local function sell(player: Player, d, which: { number }?): (number, number)
 	local total, count = 0, 0
@@ -50,6 +34,7 @@ local function sell(player: Player, d, which: { number }?): (number, number)
 	end
 	d.gems = keep
 	d.credits += total
+	d.stats.gemsSold = (d.stats.gemsSold or 0) + count
 	GameService.Sync(player)
 	return total, count
 end
@@ -65,9 +50,6 @@ local function onInvoke(player: Player, action: any, arg: any)
 	end
 	if action ~= "sell" and action ~= "sellAll" then
 		return { ok = false, error = "Unknown action" }
-	end
-	if not nearSell(player) then
-		return { ok = false, error = "Go to the SELL stand to sell your gems", gems = d.gems }
 	end
 	if #d.gems == 0 then
 		return { ok = false, error = "No gems to sell. Drill geodes!", gems = d.gems }

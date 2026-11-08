@@ -563,7 +563,7 @@ end)
 
 -- ÉCLATEMENT ET BANNIÈRE ------------------------------------------------------------------
 
-local function hatchBanner(ring: number, rarity: number, name: string, income: number, petSize: number?, first: boolean?)
+local function hatchBanner(ring: number, rarity: number, name: string, income: number, petSize: number?, special: string?)
 	local r = rarityOf(rarity)
 	local tier = Config.PetSize(petSize)
 	local frame = new("Frame", {
@@ -576,13 +576,14 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 	})
 	UIKit.autoScale(frame)
 	-- la toute première éclosion est une fête : rayons dorés plus grands, éclats, son de récompense
-	local fxColor = if first then Color3.fromRGB(255, 205, 60) else r.Color
-	UIKit.rays(frame, { color = fxColor, size = if first then 900 else 620, transparency = 0.25, z = 30 })
-	UIKit.glow(frame, { color = fxColor, size = if first then 760 else 500, transparency = if first then 0.45 else 0.7, z = 30 })
-	if rarity >= 4 or first then
-		UIKit.sparkles(frame, { count = if first then 12 else 6 + rarity, color = fxColor, z = 33 })
+	local wow = special == "wow" -- la créature rare du tutoriel
+	local fxColor = if wow then Color3.fromRGB(255, 205, 60) else r.Color
+	UIKit.rays(frame, { color = fxColor, size = if wow then 900 else 620, transparency = 0.25, z = 30 })
+	UIKit.glow(frame, { color = fxColor, size = if wow then 760 else 500, transparency = if wow then 0.45 else 0.7, z = 30 })
+	if rarity >= 4 or wow then
+		UIKit.sparkles(frame, { count = if wow then 12 else 6 + rarity, color = fxColor, z = 33 })
 	end
-	if first then
+	if wow then
 		UIKit.burst(frame, UDim2.fromScale(0.5, 0.42), fxColor)
 		task.delay(0.35, UIKit.burst, frame, UDim2.fromScale(0.25, 0.3), fxColor)
 		task.delay(0.6, UIKit.burst, frame, UDim2.fromScale(0.75, 0.3), fxColor)
@@ -639,7 +640,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 	UIKit.text({
 		Size = UDim2.new(1, 0, 0, 34),
 		Position = UDim2.fromOffset(0, -6),
-		Text = if first then "{Hatch} YOUR FIRST CREATURE!" else "{Hatch} YOU HATCHED",
+		Text = if wow then "{Hatch} WOW! SO RARE!" elseif special == "first" then "{Hatch} YOUR FIRST CREATURE!" else "{Hatch} YOU HATCHED",
 		ZIndex = 33,
 		Stroke = 3,
 		Parent = frame,
@@ -685,7 +686,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 		Parent = frame,
 	})
 	UIKit.popIn(frame)
-	task.delay(if first then 4.6 else 3.2, function()
+	task.delay(if wow then 4.6 else 3.2, function()
 		local s = frame:FindFirstChild("AnimScale") :: UIScale?
 		if s then
 			UIKit.tween(s, 0.25, { Scale = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
@@ -696,7 +697,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 end
 
 Remotes:WaitForChild("Hatched").OnClientEvent
-	:Connect(function(owner: Player, pos: Vector3, ring: number, rarity: number, name: string, income: number, size: number?, first: boolean?)
+	:Connect(function(owner: Player, pos: Vector3, ring: number, rarity: number, name: string, income: number, size: number?, special: string?)
 		-- l'œuf qui a éclaté : la charge partie de ce point (il a grossi et s'est peut-être élevé)
 		local fx = nil
 		for i = #recent, 1, -1 do
@@ -710,7 +711,7 @@ Remotes:WaitForChild("Hatched").OnClientEvent
 			end
 		end
 		if (pos - camera.CFrame.Position).Magnitude < 220 then
-			local look = if first then math.max(rarity, 5) else rarity -- première éclosion : effets de Légendaire
+			local look = if special == "wow" then math.max(rarity, 5) else rarity -- la créature rare : effets de Légendaire
 			if fx then
 				HatchFx.Burst(fx.center, fx.size, fx.groundY, look, owner == player)
 			else
@@ -720,7 +721,7 @@ Remotes:WaitForChild("Hatched").OnClientEvent
 		end
 		if owner == player then
 			-- la bannière attend que la créature soit sortie de l'œuf
-			task.delay(0.7 + 0.12 * rarity, hatchBanner, ring, rarity, name, income, size, first)
+			task.delay(0.7 + 0.12 * rarity, hatchBanner, ring, rarity, name, income, size, special)
 		end
 	end)
 

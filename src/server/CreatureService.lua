@@ -5,8 +5,8 @@
 --   store(id)                base -> sac
 --   send(id)                 sac -> base (première place libre)
 --   lock(id)                 cadenas : ni vendue ni fusionnée
---   sell({ids})              près du stand SELL : vend, rapporte Config.PetPrice
---   selldupes()              près du stand SELL : garde le meilleur exemplaire de chaque espèce et stade
+--   sell({ids})              vend, rapporte Config.PetPrice (de partout : menu déroulant Inventory.client)
+--   selldupes()              garde le meilleur exemplaire de chaque espèce et stade, vend le reste
 --   fuse({id, id, id})       près de la machine à fusion : 3 identiques -> stade suivant
 -- Les stands ouvrent la fenêtre en mode vente / fusion (Remotes.OpenCreatures).
 -- Règle : on ne vend ni n'achète de créature contre des Robux.
@@ -225,9 +225,6 @@ function ACTIONS.lock(_player, d, id)
 end
 
 function ACTIONS.sell(player, d, ids)
-	if not near(player, "SellPoint") then
-		return false, "Go to the Trading Post to sell"
-	end
 	if type(ids) ~= "table" then
 		return false, "Nothing selected"
 	end
@@ -240,9 +237,6 @@ function ACTIONS.sell(player, d, ids)
 end
 
 function ACTIONS.selldupes(player, d)
-	if not near(player, "SellPoint") then
-		return false, "Go to the Trading Post to sell"
-	end
 	-- meilleur exemplaire de chaque espèce et stade : on le garde
 	local best = {}
 	local all = {}

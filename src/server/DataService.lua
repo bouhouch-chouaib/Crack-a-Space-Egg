@@ -52,6 +52,7 @@ local function default()
 		base = {},
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
 		pity = 0,
+		guideRewarded = false, -- récompense de fin de tutoriel déjà donnée
 		tips = {}, -- ["clé"] = true : tutoriels au bon moment déjà montrés (Config.Guide.Tips)
 		feedback = { day = 0, count = 0 }, -- retours envoyés aujourd'hui (FeedbackService)
 		supernovas = 0, -- renaissances faites (Config.Supernova) : revenus x Config.SupernovaMult

@@ -3,13 +3,13 @@
 -- une flèche au sol qui file vers le but, une flèche qui rebondit au-dessus et un contour qui le fait
 -- briller, une main qui montre le geste à faire (maintenir, toucher), et une petite fête à chaque réussite.
 -- Il suit l'état réel du joueur, pas un script figé : s'il tombe, perd son œuf ou part ailleurs, la
--- bulle s'adapte (« Fly to a rock! », « Bring it home! »...). Il l'accompagne pendant toute la première
--- boucle et ses détours : premier œuf, machine, pose, deuxième œuf pendant l'incubation, éclosion,
--- 3 créatures, soufflerie, entraînement du jetpack (niveau 3), meilleure foreuse, puis la chance (Scanner).
+-- bulle s'adapte (« Fly to a rock! », « Bring it home! »...). Le tutoriel : un chien commun guidé de A à Z,
+-- une créature Épique avec peu d'aide (bulle sans flèche), une géode à vendre pour payer la soufflerie, la
+-- soufflerie, une nouvelle foreuse, puis la récompense (Offers.client). Les prises sont imposées par le serveur.
 -- Étape atteinte : attribut GuideStep (sauvegardé par le serveur via Remotes.Guide).
 -- La même bulle sert aux tutoriels au bon moment (Config.Guide.Tips), une seule fois par joueur et
 -- seulement quand il en a besoin : sa première géode, son premier minerai, sa base pleine, un cadeau à
--- réclamer, la Supernova, 3 créatures à fusionner, les monstres, la boîte à retours. Les tips
+-- réclamer, la Supernova, les monstres, la boîte à retours. Les tips
 -- d'information attendent Config.Guide.TipGap secondes entre eux, pour ne pas noyer le joueur.
 -- Publie l'attribut local Guide (texte en cours) : l'aide du bas (Hud) se cache pendant le guide.
 
@@ -449,22 +449,6 @@ local function isNear(x: Instance?): boolean
 	return here ~= nil and there ~= nil and (here - there).Magnitude < G.MachineNear
 end
 
--- Trois créatures identiques posées dans la base (même anneau, rareté et stade), pas au dernier stade
-local function canFuse(): boolean
-	local count: { [string]: number } = {}
-	for _, m in ipairs(CollectionService:GetTagged("Creature")) do
-		local stage = (m:GetAttribute("Stage") or 1) :: number
-		if m:GetAttribute("Owner") == player.UserId and m.Parent and stage < #Config.PetRules.Stages then
-			local key = ("%s:%s:%d"):format(tostring(m:GetAttribute("Ring")), tostring(m:GetAttribute("Rarity")), stage)
-			count[key] = (count[key] or 0) + 1
-			if count[key] >= 3 then
-				return true
-			end
-		end
-	end
-	return false
-end
-
 local function windowOpen(name: string): boolean
 	local w = UIKit.Windows[name]
 	return w ~= nil and w.isOpen()
@@ -523,7 +507,7 @@ local function carryHint(machine: Model?, geode: boolean): Hint
 	}
 end
 
-local function decide(step: number): Hint?
+local function decideStep(step: number): Hint?
 	local cargo = attr("Cargo")
 	local held = player:GetAttribute("HeldEgg")
 	local machine = myMachine()
@@ -562,24 +546,20 @@ local function decide(step: number): Hint?
 			return { icon = "Cash", text = "Your pet makes money!", sub = "Every second! Bigger pets earn more" }
 		end
 	end
-	if step == 5 and pets >= G.Pets then
-		advance(6, true)
+	if step == 5 and pets >= 2 then
+		advance(6, true) -- la bannière de la créature rare fait la fête
 		step = 6
 	end
-	local tunnel = myTunnel()
-	if step == 6 and tunnel and tunnel:GetAttribute("OwnerId") == player.UserId and (tunnel:GetAttribute("Tier") or 0) >= 1 then
+	if step == 6 and attr("GemsSold") > 0 then
 		advance(7)
 		step = 7
 	end
-	if step == 7 and attr("JetLevel") >= G.JetLevel then
+	local tunnel = myTunnel()
+	if step == 7 and tunnel and tunnel:GetAttribute("OwnerId") == player.UserId and (tunnel:GetAttribute("Tier") or 0) >= 1 then
 		advance(8)
 		step = 8
 	end
 	if step == 8 and attr("Drill") >= G.Drill then
-		advance(9)
-		step = 9
-	end
-	if step == 9 and attr("Lvl_Scanner") >= 1 then
 		advance(G.Steps)
 		step = G.Steps
 	end
@@ -604,15 +584,22 @@ local function decide(step: number): Hint?
 	-- objectifs
 	if step <= 2 then
 		return goRock(1)
-	elseif step == 3 and pets == 0 and eggs == 1 and anyEgg and ((anyEgg:GetAttribute("HatchTime") or 99) :: number) <= Config.Hatch.FirstTime then
-		-- le tout premier œuf éclot en quelques secondes : on reste là pour le voir
-		return { icon = "Hatch", text = "Your egg is hatching!", sub = "Just a few seconds...", target = anyEgg }
 	elseif step == 3 then
-		-- l'œuf couve : on apprend à repartir chercher le suivant en attendant
-		return goRock(1, "Get another egg while it hatches!")
+		if anyEgg then
+			return { icon = "Hatch", text = "Your egg is hatching!", sub = "Just a few seconds...", target = anyEgg }
+		end
+		return goRock(1)
 	elseif step == 5 then
-		return goRock(nil, if eggs > 0 then ("Drill more while it hatches!  %d/%d pets"):format(pets, G.Pets) else ("Get %d pets!  %d/%d"):format(G.Pets, pets, G.Pets))
+		if eggs > 0 then
+			return { icon = "Hatch", text = "Your rare egg is hatching!", sub = "Just a few seconds..." }
+		end
+		return { icon = "Egg", text = "Get another egg!", sub = "You know the way now!" }
 	elseif step == 6 then
+		if attr("GemCount") > 0 then
+			return { icon = "Sparkles", text = "Sell your gem!", sub = "Step on the SELL mat: money for your wind tunnel", target = sellMat() }
+		end
+		return goRock(1, "Get a geode: gems sell for big money!")
+	elseif step == 7 then
 		local cost = Config.Jetpack.Tunnels[1].Cost
 		if attr("Credits") >= cost then
 			if isNear(tunnel) then
@@ -621,27 +608,28 @@ local function decide(step: number): Hint?
 			return { icon = "WindTunnel", text = "Buy your wind tunnel!", sub = "It makes your jetpack stronger", target = tunnel }
 		end
 		return goRock(nil, ("Save $%s for a wind tunnel  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
-	elseif step == 7 then
-		local level = ("Jetpack level %d/%d"):format(attr("JetLevel"), G.JetLevel)
-		if player:GetAttribute("InTunnel") then
-			return { icon = "WindTunnel", text = "Train in the wind!", sub = level }
-		end
-		return { icon = "WindTunnel", text = "Stand in the wind!", sub = level, target = tunnel }
 	elseif step == 8 then
 		local cost = Config.Drills[G.Drill].Cost
 		if attr("Credits") >= cost then
 			return { icon = "Lightning", text = "Buy a new drill!", sub = "Step on the ITEMS mat", target = shopKiosk() }
 		end
 		return goRock(nil, ("Save $%s for a new drill  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
-	elseif step == 9 then
-		-- la chance : le Scanner (atelier des foreuses, onglet UPGRADES) donne des œufs plus rares
-		local cost = Config.UpgradeCost("Scanner", attr("Lvl_Scanner"))
-		if attr("Credits") >= cost then
-			return { icon = "Sparkles", text = "Boost your luck!", sub = "ITEMS mat > UPGRADES > Scanner: rarer eggs!", target = shopKiosk() }
-		end
-		return goRock(nil, ("Save $%s for more luck  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
 	end
 	return nil
+end
+
+-- Le guide, avec moins d'aide pour le deuxième œuf : la bulle reste, mais plus de flèche ni de main
+local function decide(step: number): Hint?
+	local h = decideStep(step)
+	if h and reached == 5 then
+		h.target = nil
+		h.hold = nil
+		local rarity = tonumber(string.split(player:GetAttribute("CargoRarities") or "", ",")[1] or "")
+		if attr("Cargo") > 0 and rarity and rarity >= G.SecondRarity then
+			h.text = "WOW! A rare egg!"
+		end
+	end
+	return h
 end
 
 -- TUTORIELS AU BON MOMENT -------------------------------------------------------------------
@@ -679,12 +667,22 @@ end
 
 local function decideTip(): Hint?
 	activeTip = nil
+	-- tutoriel de fusion (Offers.client) : flèche vers la machine, puis CreaturesUI prend le relais
+	if player:GetAttribute("FuseTour") then
+		if windowOpen("CreaturesWindow") then
+			return nil
+		end
+		local fusion = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Fusion")
+		return { icon = "Creatures", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(if Device.IsGamepad() then Device.Key("machine") else "F"), sub = "It opens the Fusion Machine", target = fusion }
+	end
+	local step = attr("GuideStep")
+	local guideDone = step >= G.Steps and attr("GemsSold") == 0 -- le tutoriel a déjà montré les géodes, sauf s'il a été passé
 	local cargo = attr("Cargo")
 	local machine = myMachine()
 	local job = machine and machine:GetAttribute("Owner") == player.UserId and machine:GetAttribute("JobEnd") ~= nil
 	local geode = cargo > 0 and string.split(player:GetAttribute("CargoKinds") or "", ",")[1] == "geode"
 	-- première géode portée : ce n'est pas un œuf, on explique où l'emmener
-	if geode and not tipSeen("geode") then
+	if guideDone and geode and not tipSeen("geode") then
 		if job then
 			finishTip("geode")
 		else
@@ -706,19 +704,25 @@ local function decideTip(): Hint?
 		end
 	end
 	-- premier minerai dans le sac
-	if not tipSeen("gem") and attr("GemCount") > 0 then
+	if guideDone and not tipSeen("gem") and attr("GemCount") > 0 then
 		if windowOpen("Sell") then
 			finishTip("gem")
 		else
 			return timedTip("gem", G.TipMax, { icon = "Sparkles", text = "You got a gem!", sub = "Step on the SELL mat to cash it in", target = sellMat() })
 		end
 	end
+	-- un panneau (récompense, nouveau matériel) est à l'écran : on ne parle pas en même temps
+	local offers = player.PlayerGui:FindFirstChild("Offers")
+	local offerCard = offers and offers:FindFirstChild("Holder") :: GuiObject?
+	if offerCard and offerCard.Visible then
+		lastTip = os.clock()
+		return nil
+	end
 	-- tips d'information : un à la fois, avec du calme entre eux. Un tip déjà affiché continue.
-	local running = tipStart.rewards and not tipSeen("rewards") or tipStart.supernova and not tipSeen("supernova") or tipStart.fuse and not tipSeen("fuse") or tipStart.monsters and not tipSeen("monsters") or tipStart.mailbox and not tipSeen("mailbox")
+	local running = tipStart.rewards and not tipSeen("rewards") or tipStart.supernova and not tipSeen("supernova") or tipStart.monsters and not tipSeen("monsters") or tipStart.mailbox and not tipSeen("mailbox")
 	if not running and os.clock() - lastTip < G.TipGap then
 		return nil
 	end
-	local step = attr("GuideStep")
 	-- la Supernova vient de se débloquer
 	if not tipSeen("supernova") and attr("JetLevel") >= Config.Supernova.Level then
 		if windowOpen("Supernova") then
@@ -728,8 +732,8 @@ local function decideTip(): Hint?
 			return timedTip("supernova", G.TipShort, { icon = "Supernova", text = "SUPERNOVA unlocked!", sub = ("Press %s: +50%% money forever"):format(where) })
 		end
 	end
-	-- un cadeau à réclamer, au moment où il faut économiser (après les 3 premières créatures)
-	if not tipSeen("rewards") and step >= 6 and attr("RewardsReady") > 0 then
+	-- un cadeau à réclamer, une fois le tutoriel fini
+	if not tipSeen("rewards") and step >= G.Steps and attr("RewardsReady") > 0 then
 		if windowOpen("Rewards") then
 			finishTip("rewards")
 		else
@@ -744,15 +748,6 @@ local function decideTip(): Hint?
 	-- la suite attend la fin du guide : on ne change pas de sujet pendant la boucle de base
 	if step < G.Steps then
 		return nil
-	end
-	if not tipSeen("fuse") and canFuse() then
-		if windowOpen("CreaturesWindow") then
-			finishTip("fuse")
-		else
-			local press = if Device.IsTouch() then "tap the button" else ("press %s"):format(if Device.IsGamepad() then Device.Key("machine") else "F")
-			local fusion = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Fusion")
-			return timedTip("fuse", G.TipMax, { icon = "Creatures", text = "3 same pets? Fuse them!", sub = ("At the Fusion Machine, %s"):format(press), target = fusion })
-		end
 	end
 	if not tipSeen("mailbox") then
 		if windowOpen("Feedback") then

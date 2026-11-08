@@ -133,7 +133,8 @@ RunService.RenderStepped:Connect(function()
 		local on = alive and onMat(m.part, hrp.Position)
 		if on and not m.on then
 			Sfx.Play("Open")
-			UIKit.Open:Fire(m.window)
+			UIKit.Open:Fire(m.window, player:GetAttribute("ShopTab"))
+			player:SetAttribute("ShopTab", nil)
 		elseif m.on and not on then
 			for _, name in ipairs(CLOSE[m.window] or {}) do
 				local w = UIKit.Windows[name]
