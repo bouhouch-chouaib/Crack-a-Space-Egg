@@ -371,7 +371,7 @@ Config.Jetpack = {
 	-- Prix calés sur les revenus (entre les prix des anneaux).
 	TunnelRadius = 4.5,
 	TunnelHeight = 20,
-	TunnelOffset = Vector3.new(12, 0, 26), -- position dans le repère du sol de la base (devant l'entrée, sur le côté ; bases de 36 studs)
+	TunnelOffset = Vector3.new(10, 0, 26.5), -- dans le repère du sol de la base : devant l'entrée, à droite de l'allée (la machine est à gauche)
 	Tunnels = {
 		{ Name = "Breeze Tunnel", Cost = 1000, XP = 2, Color = Color3.fromRGB(150, 235, 255) },
 		{ Name = "Gale Tunnel", Cost = 30000, XP = 8, Color = Color3.fromRGB(90, 200, 255) },
@@ -962,8 +962,8 @@ Config.Hatch = {
 	-- dépasser de la base (c'est le genre : petite base, créatures géantes). Rayon ≈ la largeur de l'œuf.
 	Footprint = { 1.6, 1.7, 1.8, 2.0, 2.3, 2.6, 3.0 },
 	Margin = 2.0, -- marge le long des murs (en plus de la moitié de la place occupée)
-	-- Zones interdites autour de la machine et du point d'apparition (rayon en studs)
-	KeepOut = { DerockMachine = 8.5, Spawn = 4 },
+	-- Zone interdite autour du point d'apparition (rayon en studs) ; la machine est hors de la base
+	KeepOut = { Spawn = 4 },
 	-- Revenu d'une créature en $/s = RarityIncome[rareté] × RingIncome[anneau] × taille² (Config.PetSizes :
 	-- de ×0,4 pour une Tiny à ×5,8 pour la plus grosse Giant).
 	-- De ~5 $/s (Common de l'anneau 1) à ~1 Qa/s = 10^15 (Cosmic de l'anneau 7).
