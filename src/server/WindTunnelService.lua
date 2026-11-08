@@ -17,6 +17,7 @@ local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 local BoostService = require(script.Parent.BoostService)
+local Tracking = require(script.Parent.Tracking)
 
 local Remotes = ReplicatedStorage.Remotes
 
@@ -267,6 +268,7 @@ buy = function(player: Player, index: number)
 	end
 	d.credits -= nextDef.Cost
 	d.tunnel = (d.tunnel or 0) + 1
+	Tracking.Funnel(player, "WindTunnels", d.tunnel, nextDef.Name)
 	GameService.Sync(player)
 	refresh(index)
 	GameService.Notice(player, ("{WindTunnel} %s ready! +%s XP/s"):format(nextDef.Name, Format.Short(nextDef.XP)), "good")

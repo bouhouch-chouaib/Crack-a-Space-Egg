@@ -12,6 +12,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local WorldBuilder = require(script.Parent.WorldBuilder)
+local Tracking = require(script.Parent.Tracking)
 
 local Remotes = ReplicatedStorage.Remotes
 local GemService = {}
@@ -75,6 +76,7 @@ local function onInvoke(player: Player, action: any, arg: any)
 	if count == 0 then
 		return { ok = false, error = "Pick a gem to sell", gems = d.gems }
 	end
+	Tracking.Funnel(player, "Gems", 3, "Gem sold")
 	GameService.Notice(player, ("{Cash} Sold %d gem%s for $%s!"):format(count, if count > 1 then "s" else "", Format.Short(total)), "good")
 	return { ok = true, total = total, count = count, gems = d.gems }
 end

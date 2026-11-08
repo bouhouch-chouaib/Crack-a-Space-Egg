@@ -25,6 +25,7 @@ local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local Bases = require(script.Parent.Bases)
 local BoostService = require(script.Parent.BoostService)
+local Tracking = require(script.Parent.Tracking)
 
 local Remotes = ReplicatedStorage.Remotes
 local H = Config.Hatch
@@ -117,7 +118,7 @@ local function buildEgg(player: Player, floor: BasePart, item): Model?
 	m:SetAttribute("Owner", player.UserId)
 	m:SetAttribute("ItemId", item.id)
 	m:SetAttribute("HatchAt", item.hatchAt)
-	m:SetAttribute("HatchTime", H.Time[item.rarity] or 60)
+	m:SetAttribute("HatchTime", item.hatchTotal or H.Time[item.rarity] or 60)
 	m:SetAttribute("EggName", Config.EggName(item.ring, item.rarity))
 	CollectionService:AddTag(m, "Incubating")
 	local core = m.PrimaryPart :: BasePart
@@ -381,6 +382,7 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	local slots = BoostService.BaseSlots(player)
 	if #d.base >= slots then
 		GameService.Notice(player, "{Home} Your base is full! (" .. slots .. " max)", "warn")
+		Tracking.Event(player, "BaseFull")
 		return
 	end
 	local index = nil
@@ -400,6 +402,9 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	end
 	table.remove(d.ready, index)
 	nextId += 1
+	-- le tout premier œuf du joueur éclot en quelques secondes
+	local first = next(d.index) == nil and #d.base == 0
+	local total = if first then H.FirstTime else math.ceil((H.Time[rarity] or 60) * BoostService.HatchTimeMult(player))
 	local item = {
 		kind = "egg",
 		id = ("%d%03d"):format(os.time(), nextId % 1000),
@@ -407,7 +412,8 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 		rarity = rarity,
 		x = x,
 		z = z,
-		hatchAt = os.time() + math.ceil((H.Time[rarity] or 60) * BoostService.HatchTimeMult(player)),
+		hatchAt = os.time() + total,
+		hatchTotal = total,
 	}
 	table.insert(d.base, item)
 	build(player, item)
@@ -445,7 +451,9 @@ function HatchService.Hatch(player: Player, id: string)
 	end
 	-- La créature est décidée tout de suite (pas de double éclosion possible)
 	local c = Config.CreatureFor(item.ring, item.rarity)
-	local size = Config.RollPetSize(rng) -- Tiny à Giant (Config.PetSizes)
+	-- la toute première est Huge : c'est le moment « wow » ; ensuite, Tiny à Giant (Config.PetSizes)
+	local first = next(d.index) == nil
+	local size = if first then H.FirstSize else Config.RollPetSize(rng)
 	item.kind = "pet"
 	item.name = c.Name
 	item.size = math.floor(size * 100 + 0.5) / 100
@@ -457,6 +465,16 @@ function HatchService.Hatch(player: Player, id: string)
 	-- nouvelle espèce dans l'Index : petite récompense en $ (donnée quand elle sort de l'œuf)
 	local newSpecies = (d.index[key] or 0) == 0
 	d.index[key] = (d.index[key] or 0) + 1
+	-- progression : 1re, 3e, 5e, 10e, 25e, 50e, 100e éclosion
+	local hatched = 0
+	for _, n in pairs(d.index) do
+		hatched += n
+	end
+	for i, n in ipairs({ 1, 3, 5, 10, 25, 50, 100 }) do
+		if hatched == n then
+			Tracking.Funnel(player, "Hatches", i, ("%d hatched"):format(n))
+		end
+	end
 	d.seen = d.seen or {}
 	d.seen[key] = true -- l'Index la montre (plus de silhouette)
 	d.stats.best = math.max(d.stats.best, item.rarity)
@@ -483,7 +501,7 @@ function HatchService.Hatch(player: Player, id: string)
 		if player.Parent then
 			build(player, item, true)
 			syncBase(player)
-			Remotes.Hatched:FireAllClients(player, pos, item.ring, item.rarity, item.name, item.income, item.size)
+			Remotes.Hatched:FireAllClients(player, pos, item.ring, item.rarity, item.name, item.income, item.size, first)
 			if item.rarity >= Config.AnnounceFrom then
 				Remotes.Announcement:FireAllClients(player.DisplayName, item.name, item.rarity)
 			end

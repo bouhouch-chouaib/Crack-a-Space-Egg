@@ -12,6 +12,7 @@ local BeltService = require(script.Parent.BeltService)
 local Bases = require(script.Parent.Bases)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 local BoostService = require(script.Parent.BoostService)
+local Tracking = require(script.Parent.Tracking)
 
 local Remotes = ReplicatedStorage.Remotes
 
@@ -72,6 +73,9 @@ local function sync(player: Player)
 	player:SetAttribute("StarterBought", d.starterBought == true)
 	-- Guide de la première minute (Guide.client) : étape atteinte, Config.Guide.Steps à la fin
 	player:SetAttribute("GuideStep", d.guide or 0)
+	for key in pairs(d.tips or {}) do
+		player:SetAttribute("Tip_" .. key, true)
+	end
 	player:SetAttribute("Drill", d.drill)
 	player:SetAttribute("Supernovas", d.supernovas or 0)
 	-- Niveau du jetpack (HUD) et vitesses qui en découlent (Jetpack.client)
@@ -194,6 +198,8 @@ local function onDrill(player: Player, target: any, at: any)
 	local rarities = {}
 	local kinds = {}
 	if eggs > 0 then
+		-- pas encore de créature ni d'œuf en route : c'est le premier, toujours un œuf de la rareté la plus basse
+		local first = next(d.index) == nil and #d.base == 0 and #d.ready == 0
 		for _ = 1, eggs do
 			local rarity = rollRarity(d, a.ring)
 			if guarded then
@@ -202,6 +208,13 @@ local function onDrill(player: Player, target: any, at: any)
 			end
 			-- une fois sur 3 : une géode à la place de l'œuf (Config.Geodes)
 			local kind = if rng:NextNumber() < Config.Geodes.Chance then "geode" else "egg"
+			if first then
+				rarity = if a.ring >= Config.CosmicMinRing then 2 else 1
+				kind = "egg"
+			end
+			if kind == "geode" then
+				Tracking.Funnel(player, "Gems", 1, "Geode drilled")
+			end
 			table.insert(d.cargo, { ring = a.ring, rarity = rarity, kind = kind })
 			table.insert(rarities, rarity)
 			table.insert(kinds, kind)
@@ -211,6 +224,7 @@ local function onDrill(player: Player, target: any, at: any)
 		if a.ring > d.ring then
 			d.ring = a.ring
 			notice(player, ("{Star} First egg from the %s!"):format(Config.Rings[a.ring].Name), "good")
+			Tracking.Funnel(player, "Rings", a.ring, Config.Rings[a.ring].Name)
 		end
 		sync(player)
 	end
@@ -301,6 +315,7 @@ local function buyUpgrade(player: Player, id: any)
 	end
 	d.credits -= cost
 	d.levels[id] = level + 1
+	Tracking.Funnel(player, id, level + 1, ("%s %d"):format(id, level + 1))
 	sync(player)
 end
 
@@ -422,6 +437,7 @@ local function buyDrill(player: Player)
 	end
 	d.credits -= nextDrill.Cost
 	d.drill += 1
+	Tracking.Funnel(player, "Drills", d.drill, nextDrill.Name)
 	sync(player)
 	equipDrill(player)
 	notice(player, nextDrill.Name .. " equipped!", "good")
@@ -436,6 +452,7 @@ function GameService.GrantDrill(player: Player, tier: number): boolean
 	d.paidDrill = math.max(d.paidDrill or 1, tier) -- gardée après une Supernova
 	if tier > d.drill then
 		d.drill = tier
+		Tracking.Funnel(player, "Drills", tier, Config.Drills[tier].Name)
 		sync(player)
 		equipDrill(player)
 		notice(player, Config.Drills[tier].Name .. " equipped!", "good")
@@ -465,6 +482,7 @@ local function watchFalls()
 					notice(player, "{Lifebuoy} Saved! Your rock broke, your eggs are safe", "info")
 				elseif not character:GetAttribute("VoidDead") then
 					local lost = #d.cargo
+					Tracking.Death(player, "Void", d.cargo[1])
 					d.cargo = {}
 					sync(player)
 					-- mort : le client montre la chute (VoidDead), puis réapparition à la base
@@ -527,13 +545,36 @@ end
 function GameService.Start()
 	Remotes.Drill.OnServerEvent:Connect(onDrill)
 	-- Guide : le client dit quelle étape il a finie ; on garde la plus avancée (jamais de retour en arrière)
-	Remotes.Guide.OnServerEvent:Connect(function(player: Player, step: any)
+	-- ("tip", clé) : un tutoriel au bon moment a été montré ; ("skip") : le joueur passe le guide
+	Remotes.Guide.OnServerEvent:Connect(function(player: Player, step: any, key: any)
 		local d = DataService.Get(player)
-		if not d or type(step) ~= "number" or step ~= step then
+		if not d then
+			return
+		end
+		if step == "tip" then
+			if type(key) == "string" and Config.Guide.Tips[key] and not d.tips[key] then
+				d.tips[key] = true
+				player:SetAttribute("Tip_" .. key, true)
+				Tracking.Event(player, "Tip_" .. key)
+			end
+			return
+		end
+		if step == "skip" then
+			if (d.guide or 0) < Config.Guide.Steps then
+				Tracking.Event(player, ("GuideSkipped_%d"):format(d.guide or 0))
+				d.guide = Config.Guide.Steps
+				player:SetAttribute("GuideStep", d.guide)
+			end
+			return
+		end
+		if type(step) ~= "number" or step ~= step then
 			return
 		end
 		step = math.clamp(math.floor(step), 0, Config.Guide.Steps)
 		if step > (d.guide or 0) then
+			for s = (d.guide or 0) + 1, step do
+				Tracking.Onboarding(player, s + 1, Config.Guide.Names[s] or ("Step " .. s))
+			end
 			d.guide = step
 			player:SetAttribute("GuideStep", step)
 		end
@@ -563,6 +604,9 @@ function GameService.Start()
 		-- Guide : nouveau joueur = depuis le début ; ancien joueur qui a déjà des créatures = déjà fait
 		if d and (d.guide or -1) < 0 then
 			d.guide = if next(d.index) ~= nil then Config.Guide.Steps else 0
+			if d.guide == 0 then
+				Tracking.Onboarding(player, 1, "Join")
+			end
 		end
 		sync(player)
 		equipDrill(player)
@@ -576,6 +620,7 @@ function GameService.Start()
 			if tierShown and tier and tier > tierShown then
 				equipJetpack(player)
 				local t = Config.Jetpack.Tiers[tier]
+				Tracking.Funnel(player, "JetpackTiers", tier, t.Name)
 				local ring = Config.Rings[math.min(tier, #Config.Rings)]
 				notice(player, if tier <= #Config.Rings
 					then ("{Jetpack} New jetpack: %s! You can now fly to the %s"):format(t.Name, ring.Name)

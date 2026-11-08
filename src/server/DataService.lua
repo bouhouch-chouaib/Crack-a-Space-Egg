@@ -52,6 +52,8 @@ local function default()
 		base = {},
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
 		pity = 0,
+		tips = {}, -- ["clé"] = true : tutoriels au bon moment déjà montrés (Config.Guide.Tips)
+		feedback = { day = 0, count = 0 }, -- retours envoyés aujourd'hui (FeedbackService)
 		supernovas = 0, -- renaissances faites (Config.Supernova) : revenus x Config.SupernovaMult
 		paidDrill = 1, -- meilleure foreuse payée en Robux : la Supernova ne la reprend pas
 		stats = { geodes = 0, best = 0 },

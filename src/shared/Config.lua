@@ -953,6 +953,9 @@ Config.Hatch = {
 	Slots = 10,
 	-- Hauteur du corps de l'œuf posé (studs) selon la rareté : les rares sont plus gros
 	EggHeight = { 2.4, 2.7, 3.0, 3.4, 3.9, 4.5, 5.2 },
+	-- Toute première éclosion du joueur : quelques secondes d'attente, et une créature Huge (moment « wow »)
+	FirstTime = 6,
+	FirstSize = 1.7,
 	-- Place occupée par un œuf posé puis par sa créature (rayon en studs, selon la rareté) :
 	-- deux objets posés ne se touchent pas, et les créatures rares, plus grandes, prennent plus de place
 	-- Depuis le 8 nov., seuls les œufs se gênent : les créatures, immenses, peuvent se chevaucher et
@@ -1208,6 +1211,30 @@ Config.Guide = {
 	Arrow = "rbxassetid://111578532993258", -- chevrons blancs à contour sombre (poutre au sol)
 	MachineNear = 14, -- studs : assez près de la machine pour appuyer sur E
 	PetCheer = 5, -- secondes de « ta créature rapporte des $ »
+	-- Nom de chaque étape dans l'entonnoir Onboarding (Tracking) ; l'étape 1 de l'entonnoir est « Join »
+	Names = {
+		"First egg drilled", "Machine used", "Egg placed", "First pet", "Pet money seen",
+		"3 pets", "Wind tunnel bought", "Jetpack level 3", "New drill bought", "Scanner bought",
+	},
+	-- Tutoriels au bon moment : une seule fois par joueur, quand il en a besoin (Guide.client)
+	Tips = { geode = true, gem = true, basefull = true, supernova = true },
+	TipMax = 40, -- secondes avant qu'un tip non suivi s'efface tout seul
+	TipShort = 12, -- idem pour un tip sans endroit où aller
+}
+
+-- Boîte à retours (boîte aux lettres du vaisseau, FeedbackService)
+Config.Feedback = {
+	Store = "Feedback_v1",
+	MaxChars = 300,
+	Cooldown = 45, -- secondes entre deux envois
+	PerDay = 5, -- envois par joueur et par jour
+	MaxPerDay = 800, -- retours gardés par jour
+	Categories = {
+		{ Key = "Bug", Label = "Bug", Art = "Warning", Color = "Red" },
+		{ Key = "Idea", Label = "Idea", Art = "Sparkles", Color = "Blue" },
+		{ Key = "TooHard", Label = "Too hard", Art = "Fire", Color = "Orange" },
+		{ Key = "Love", Label = "I love it", Art = "Star", Color = "Green" },
+	},
 }
 
 

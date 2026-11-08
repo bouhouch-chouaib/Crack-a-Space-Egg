@@ -14,6 +14,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local WindTunnelService = require(script.Parent.WindTunnelService)
+local Tracking = require(script.Parent.Tracking)
 
 local Remotes = ReplicatedStorage.Remotes
 local SupernovaService = {}
@@ -59,6 +60,8 @@ local function go(player: Player)
 	WindTunnelService.Refresh(player)
 	task.spawn(DataService.Save, player)
 	local n = d.supernovas
+	Tracking.Funnel(player, "Supernova", 1, "Went Supernova")
+	Tracking.Event(player, "Supernova", n)
 	-- les autres joueurs l'apprennent
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= player then

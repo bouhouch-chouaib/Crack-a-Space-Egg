@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local SafeZone = require(ReplicatedStorage.Shared.SafeZone)
 local DataService = require(script.Parent.DataService)
+local Tracking = require(script.Parent.Tracking)
 local GameService = require(script.Parent.GameService)
 local Bases = require(script.Parent.Bases)
 
@@ -103,6 +104,7 @@ local function freeze(player: Player, st: State)
 		local d = DataService.Get(player)
 		if d then
 			local lost = #d.cargo
+			Tracking.Death(player, "Freeze", d.cargo[1])
 			d.cargo = {}
 			GameService.Sync(player)
 			if lost > 0 then
@@ -142,6 +144,7 @@ local function suffocate(player: Player, st: State, character: Model, hum: Human
 	clearO2(player, st)
 	local d = DataService.Get(player)
 	if d then
+		Tracking.Death(player, "Oxygen", d.cargo[1])
 		d.cargo = {}
 		GameService.Sync(player)
 	end

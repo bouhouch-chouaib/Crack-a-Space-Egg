@@ -7,6 +7,8 @@
 -- boucle et ses détours : premier œuf, machine, pose, deuxième œuf pendant l'incubation, éclosion,
 -- 3 créatures, soufflerie, entraînement du jetpack (niveau 3), meilleure foreuse, puis la chance (Scanner).
 -- Étape atteinte : attribut GuideStep (sauvegardé par le serveur via Remotes.Guide).
+-- La même bulle sert aux tutoriels au bon moment (Config.Guide.Tips), une seule fois par joueur et
+-- seulement quand il en a besoin : sa première géode, son premier minerai, sa base pleine, la Supernova.
 -- Publie l'attribut local Guide (texte en cours) : l'aide du bas (Hud) se cache pendant le guide.
 
 local CollectionService = game:GetService("CollectionService")
@@ -355,6 +357,8 @@ local function posOf(x: Instance?): Vector3?
 		return nil
 	elseif x:IsA("BasePart") then
 		return x.Position
+	elseif x:IsA("Attachment") then
+		return x.WorldPosition -- ex. PromptPoint, le point de l'invite de la machine
 	elseif x:IsA("Model") then
 		-- centre réel (le pivot d'un modèle importé peut être loin de lui)
 		return (x :: Model):GetBoundingBox().Position
@@ -392,19 +396,20 @@ local function nearestRock(ring: number?): BasePart?
 end
 
 -- Mes œufs en incubation (et le premier prêt à éclore), mes créatures
-local function myEggs(): (number, Model?)
-	local n, ready = 0, nil
+local function myEggs(): (number, Model?, Model?)
+	local n, ready, any = 0, nil, nil
 	local now = workspace:GetServerTimeNow()
 	for _, m in ipairs(CollectionService:GetTagged("Incubating")) do
 		if m:GetAttribute("Owner") == player.UserId and m.Parent then
 			n += 1
+			any = m
 			local at = m:GetAttribute("HatchAt") :: number?
 			if at and at <= now and not m:GetAttribute("Hatching") and not ready then
 				ready = m
 			end
 		end
 	end
-	return n, ready
+	return n, ready, any
 end
 
 local function myPets(): number
@@ -429,6 +434,18 @@ local function attr(name: string): number
 	return if type(v) == "number" then v else 0
 end
 
+-- Tapis du stand SELL : y marcher ouvre le comptoir
+local function sellMat(): Instance?
+	local shops = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Shops")
+	local stand = shops and shops:FindFirstChild("SellStand")
+	return stand and stand:FindFirstChild("Mat")
+end
+
+local function windowOpen(name: string): boolean
+	local w = UIKit.Windows[name]
+	return w ~= nil and w.isOpen()
+end
+
 -- QUOI DIRE --------------------------------------------------------------------------------
 
 type Hint = { icon: string, text: string, sub: string?, target: Instance?, hold: string? }
@@ -437,13 +454,15 @@ local reached = -1 -- étape la plus avancée envoyée au serveur
 local petCheerAt = 0
 
 -- Étape suivante franchie : on l'enregistre et on fait la fête
-local function advance(step: number)
+local function advance(step: number, quiet: boolean?)
 	if step <= reached then
 		return
 	end
 	reached = step
 	Remotes.Guide:FireServer(step)
-	celebrate(if step >= G.Steps then "You did it!" else nil)
+	if not quiet then
+		celebrate(if step >= G.Steps then "You did it!" else nil)
+	end
 end
 
 -- « Vole jusqu'à une roche » ou, une fois dessus, « maintiens pour forer »
@@ -462,12 +481,30 @@ local function goRock(ring: number?, sub: string?): Hint
 	return { icon = "Jetpack", text = if ring and ring > 1 then ("Fly to Ring %d!"):format(ring) else "Fly to a rock!", sub = sub or ("Hold %s to fly"):format(if Device.IsTouch() then "jump" else Device.Key("jump")), target = rock }
 end
 
+-- Rapporter ce qu'on porte à la machine (œuf ou géode)
+local function carryHint(machine: Model?, geode: boolean): Hint
+	local here = rootPos()
+	local console = machine and machine:FindFirstChild("PromptPoint", true)
+	local mp = posOf(console or machine)
+	if here and mp and (here - mp).Magnitude < G.MachineNear then
+		return { icon = "Lightning", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(Device.Key("machine")), sub = if geode then "The machine opens your geode" else "Free your egg from the rock", target = machine }
+	end
+	-- l'air de l'œuf s'épuise (ColdService) : on le dit à l'enfant, en secondes
+	local air = player:GetAttribute("O2Left")
+	return {
+		icon = if geode then "Sparkles" else "Home",
+		text = if geode then "A geode! Bring it home!" else "Bring it home!",
+		sub = if type(air) == "number" then ("Fast! %d s of air left"):format(math.ceil(air)) else "Follow the arrow",
+		target = machine,
+	}
+end
+
 local function decide(step: number): Hint?
 	local cargo = attr("Cargo")
 	local held = player:GetAttribute("HeldEgg")
 	local machine = myMachine()
 	local job = machine and machine:GetAttribute("Owner") == player.UserId and machine:GetAttribute("JobEnd") ~= nil
-	local eggs, readyEgg = myEggs()
+	local eggs, readyEgg, anyEgg = myEggs()
 	local pets = myPets()
 	local base = myBase()
 	local floor = base and base:FindFirstChild("Floor")
@@ -486,7 +523,7 @@ local function decide(step: number): Hint?
 		step = 3
 	end
 	if step < 4 and pets > 0 then
-		advance(4)
+		advance(4, true) -- la bannière d'éclosion fait déjà la fête
 		step = 4
 		petCheerAt = os.clock()
 	end
@@ -502,7 +539,7 @@ local function decide(step: number): Hint?
 		end
 	end
 	if step == 5 and pets >= G.Pets then
-		advance(6)
+		advance(6, true)
 		step = 6
 	end
 	local tunnel = myTunnel()
@@ -537,25 +574,15 @@ local function decide(step: number): Hint?
 		return { icon = "Lightning", text = "Watch the machine!", sub = "It breaks the rock", target = machine }
 	end
 	if cargo > 0 then
-		local here = rootPos()
-		local console = machine and machine:FindFirstChild("PromptPoint", true)
-		local mp = posOf(console or machine)
-		if here and mp and (here - mp).Magnitude < G.MachineNear then
-			return { icon = "Lightning", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(Device.Key("machine")), sub = "Free your egg from the rock", target = machine }
-		end
-		-- l'air de l'œuf s'épuise (ColdService) : on le dit à l'enfant, en secondes
-		local air = player:GetAttribute("O2Left")
-		return {
-			icon = "Home",
-			text = "Bring it home!",
-			sub = if type(air) == "number" then ("Fast! %d s of air left"):format(math.ceil(air)) else "Follow the arrow",
-			target = machine,
-		}
+		return carryHint(machine, string.split(player:GetAttribute("CargoKinds") or "", ",")[1] == "geode")
 	end
 
 	-- objectifs
 	if step <= 2 then
 		return goRock(1)
+	elseif step == 3 and pets == 0 and eggs == 1 and anyEgg and ((anyEgg:GetAttribute("HatchTime") or 99) :: number) <= Config.Hatch.FirstTime then
+		-- le tout premier œuf éclot en quelques secondes : on reste là pour le voir
+		return { icon = "Hatch", text = "Your egg is hatching!", sub = "Just a few seconds...", target = anyEgg }
 	elseif step == 3 then
 		-- l'œuf couve : on apprend à repartir chercher le suivant en attendant
 		return goRock(1, "Get another egg while it hatches!")
@@ -590,6 +617,85 @@ local function decide(step: number): Hint?
 	return nil
 end
 
+-- TUTORIELS AU BON MOMENT -------------------------------------------------------------------
+
+local tipStart: { [string]: number } = {}
+local tipDone: { [string]: boolean } = {}
+local activeTip: string? = nil
+
+local function tipSeen(key: string): boolean
+	return tipDone[key] == true or player:GetAttribute("Tip_" .. key) == true
+end
+
+local function finishTip(key: string)
+	if not tipSeen(key) then
+		tipDone[key] = true
+		Remotes.Guide:FireServer("tip", key)
+	end
+	if activeTip == key then
+		activeTip = nil
+	end
+end
+
+-- Montre ce tip jusqu'à maxTime secondes, puis le considère comme vu (on ne bloque jamais le joueur)
+local function timedTip(key: string, maxTime: number, hint: Hint): Hint?
+	tipStart[key] = tipStart[key] or os.clock()
+	if os.clock() - tipStart[key] > maxTime then
+		finishTip(key)
+		return nil
+	end
+	activeTip = key
+	return hint
+end
+
+local function decideTip(): Hint?
+	activeTip = nil
+	local cargo = attr("Cargo")
+	local machine = myMachine()
+	local job = machine and machine:GetAttribute("Owner") == player.UserId and machine:GetAttribute("JobEnd") ~= nil
+	local geode = cargo > 0 and string.split(player:GetAttribute("CargoKinds") or "", ",")[1] == "geode"
+	-- première géode portée : ce n'est pas un œuf, on explique où l'emmener
+	if geode and not tipSeen("geode") then
+		if job then
+			finishTip("geode")
+		else
+			activeTip = "geode"
+			return carryHint(machine, true)
+		end
+	end
+	-- la boucle en cours passe d'abord : on n'interrompt pas un joueur qui a les mains pleines
+	local _, readyEgg = myEggs()
+	if cargo > 0 or job or player:GetAttribute("HeldEgg") or readyEgg then
+		return nil
+	end
+	-- un œuf attend et la base est pleine
+	if not tipSeen("basefull") and attr("BaseSlots") > 0 and attr("BaseUsed") >= attr("BaseSlots") and attr("ReadyEggs") > 0 then
+		if windowOpen("Sell") or windowOpen("CreaturesWindow") then
+			finishTip("basefull")
+		else
+			return timedTip("basefull", G.TipMax, { icon = "Home", text = "Your base is full!", sub = "At SELL, sell a pet to make room", target = sellMat() })
+		end
+	end
+	-- premier minerai dans le sac
+	if not tipSeen("gem") and attr("GemCount") > 0 then
+		if windowOpen("Sell") then
+			finishTip("gem")
+		else
+			return timedTip("gem", G.TipMax, { icon = "Sparkles", text = "You got a gem!", sub = "Step on the SELL mat to cash it in", target = sellMat() })
+		end
+	end
+	-- la Supernova vient de se débloquer
+	if not tipSeen("supernova") and attr("JetLevel") >= Config.Supernova.Level then
+		if windowOpen("Supernova") then
+			finishTip("supernova")
+		else
+			local where = if Device.IsGamepad() then "D-pad down" else "the SUPERNOVA button"
+			return timedTip("supernova", G.TipShort, { icon = "Supernova", text = "SUPERNOVA unlocked!", sub = ("Press %s: +50%% money forever"):format(where) })
+		end
+	end
+	return nil
+end
+
 -- AFFICHAGE --------------------------------------------------------------------------------
 
 local shown: Hint? = nil
@@ -618,6 +724,7 @@ local function show(h: Hint?)
 	end
 	subText.Text = h.sub or ""
 	local step = attr("GuideStep")
+	stars.Visible = step < G.Steps
 	for i, s in ipairs(starIcons) do
 		s.ImageTransparency = if i <= step then 0 else 0.7
 		s.ImageColor3 = if i <= step then Color3.new(1, 1, 1) else Color3.fromRGB(120, 120, 140)
@@ -625,8 +732,14 @@ local function show(h: Hint?)
 end
 
 skip.MouseButton1Click:Connect(function()
+	-- un tip : la croix l'efface tout de suite
+	if activeTip then
+		finishTip(activeTip)
+		show(nil)
+		return
+	end
 	if os.clock() - skipArmed < 3 then
-		Remotes.Guide:FireServer(G.Steps)
+		Remotes.Guide:FireServer("skip")
 		reached = G.Steps
 		show(nil)
 		return
@@ -642,17 +755,26 @@ task.spawn(function()
 	while true do
 		task.wait(0.15)
 		local step = player:GetAttribute("GuideStep")
-		if type(step) ~= "number" or step >= G.Steps or reached >= G.Steps then
+		if type(step) ~= "number" then
 			show(nil)
 		else
-			reached = math.max(reached, step)
 			-- une erreur ne doit jamais figer le guide : on l'affiche et on continue
-			local ok, hint = pcall(decide, math.max(step, reached))
-			if ok then
-				show(hint)
-			else
-				warn("[Guide]", hint)
+			local hint: Hint? = nil
+			if step < G.Steps and reached < G.Steps then
+				reached = math.max(reached, step)
+				local ok, result = pcall(decide, math.max(step, reached))
+				if ok then
+					hint = result
+				else
+					warn("[Guide]", result)
+				end
 			end
+			local okTip, tip = pcall(decideTip)
+			if not okTip then
+				warn("[Guide]", tip)
+				tip = nil
+			end
+			show(tip or hint)
 		end
 	end
 end)

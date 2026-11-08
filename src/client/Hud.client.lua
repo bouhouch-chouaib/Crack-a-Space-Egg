@@ -152,7 +152,14 @@ local function refreshBadges()
 	-- SUPERNOVA : visible à partir du niveau Config.Supernova.Level du jetpack, pastille quand on peut payer
 	local done = (player:GetAttribute("Supernovas") or 0) :: number
 	local credits = (player:GetAttribute("Credits") or 0) :: number
-	buttons.Supernova.button.Parent.Visible = ((player:GetAttribute("JetLevel") or 1) :: number) >= Config.Supernova.Level
+	local holder = buttons.Supernova.button.Parent :: Frame
+	local unlocked = ((player:GetAttribute("JetLevel") or 1) :: number) >= Config.Supernova.Level
+	if unlocked and not holder.Visible then
+		-- il vient d'apparaître : il saute aux yeux (le guide explique à quoi il sert)
+		UIKit.popIn(holder)
+		UIKit.burst(holder, UDim2.fromScale(0.5, 0.5), Color3.fromRGB(255, 170, 60))
+	end
+	holder.Visible = unlocked
 	buttons.Supernova.badge.Visible = credits >= Config.SupernovaCost(done)
 end
 
