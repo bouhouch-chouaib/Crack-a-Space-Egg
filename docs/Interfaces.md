@@ -122,10 +122,11 @@ Les cartes ont une illustration sur un fond en dégradé, un bouton vert (Robux 
 
 ## 11. Supernova (renaissance)
 
-- **Ce qu'on perd** : $, améliorations, oxygène.
-- **Ce qu'on garde** : créatures, index, reliques.
-- **Ce qu'on gagne** : +50 % de $ pour toujours, cumulable ✅.
-- Le coût ou la condition, puis un gros bouton **SUPERNOVA** avec confirmation et une animation d'explosion d'étoile.
+- ✅ Bouton SUPERNOVA dans la colonne de gauche, visible à partir du niveau 25 du jetpack.
+- ✅ **Ce qu'on perd** : $, foreuse (sauf Robux), scanner, niveau du jetpack, soufflerie.
+- ✅ **Ce qu'on garde** : créatures, œufs, index, minerais, skins et passes.
+- ✅ **Ce qu'on gagne** : +50 % de $ pour toujours, cumulable (multiplicateur avant → après en haut).
+- ✅ Barre de progression vers le prix, gros bouton **SUPERNOVA!** avec confirmation (deux appuis) et explosion d'étoile en plein écran.
 
 ## 12. Messages et petits écrans
 

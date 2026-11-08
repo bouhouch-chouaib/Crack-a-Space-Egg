@@ -1230,6 +1230,31 @@ Config.Geodes = {
 	BagMax = 200, -- minerais gardés au plus ; au-delà, le nouveau est vendu tout de suite
 }
 
+-- SUPERNOVA (renaissance, docs/Interfaces.md §11) ------------------------------------------
+-- On repart de zéro : $, foreuse (sauf celle payée en Robux), scanner, niveau du jetpack, soufflerie
+-- et œuf porté. On garde : créatures (base et sac), œufs, Index, minerais, skins, passes et potions.
+-- En échange : +50 % de revenus des créatures pour toujours, cumulable (x1,5, x2, x2,5…).
+-- La première coûte 5 M$, chaque suivante coûte Growth fois plus. Le bouton SUPERNOVA n'apparaît
+-- qu'à partir du niveau Level du jetpack (25 = Comet Pack, celui de l'anneau 3), et il disparaît
+-- après chaque Supernova jusqu'à ce qu'on y revienne.
+Config.Supernova = {
+	Base = 5e6,
+	Growth = 8,
+	MoneyBonus = 0.5, -- par Supernova, en plus (additif)
+	Level = 25, -- niveau du jetpack à atteindre pour voir le bouton et pouvoir exploser
+	Delay = 1.6, -- secondes d'explosion à l'écran avant le retour à la base
+}
+
+-- Prix de la prochaine Supernova quand on en a déjà fait n
+function Config.SupernovaCost(n: number): number
+	return Config.Supernova.Base * Config.Supernova.Growth ^ n
+end
+
+-- Multiplicateur de revenus après n Supernovas
+function Config.SupernovaMult(n: number): number
+	return 1 + Config.Supernova.MoneyBonus * n
+end
+
 -- Nom du minerai d'un anneau et d'une rareté
 function Config.GemName(ringIndex: number, rarity: number): string
 	local ring = Config.Rings[math.clamp(ringIndex, 1, #Config.Rings)]

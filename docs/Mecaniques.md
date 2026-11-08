@@ -187,7 +187,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 - ✅ Dans les anneaux 5 à 7, les relais ne protègent pas des monstres : farmer loin rapporte beaucoup, mais c'est risqué.
 - ✅ **Rendements décroissants** : la vitesse est divisée par (1 + oxygène / 60), pour que la statistique ne s'envole pas.
 - ✅ **Courbe visée** : on part avec 15 s et il faut environ 180 s pour le Nid. Ça donne environ 15 min de caisson pour l'anneau 2, environ 1 h 30 au total pour l'anneau 4, et **environ 10 h au total pour l'anneau 7**.
-- ✅ La Supernova remet l'oxygène max à zéro.
+- ✅ La Supernova remet le niveau du jetpack et la soufflerie à zéro.
 - 💡 Tous les chiffres vont dans `Config.lua` et se règlent en jeu.
 
 ## 13. Dangers
@@ -221,7 +221,13 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 
 - ✅ **Index** des créatures : compléter un anneau donne un bonus de chance permanent.
 - ✅ (7 nov.) Chaque nouvelle créature découverte rapporte une petite récompense : l'équivalent d'1 min de ses revenus, au moins 250 $ (`Config.IndexReward.NewSeconds`), avec le message « New in your Index: … +$… » juste après sa sortie de l'œuf.
-- ✅ **Supernova** (rebirth), **dès la sortie** : tout repart à zéro sauf l'index, les créatures et les reliques, avec +50 % de $ pour toujours.
+- ✅ **Supernova** (rebirth), **dès la sortie** (8 nov., `SupernovaService`, `SupernovaUI.client`, `Config.Supernova`) :
+  - Le bouton SUPERNOVA (colonne de gauche, croix bas à la manette) n'apparaît qu'à partir du **niveau 25 du jetpack** (Comet Pack, anneau 3) ; pastille « ! » quand on peut payer.
+  - Prix : 5 M$, puis ×8 à chaque fois (40 M$, 320 M$…).
+  - On perd : $, foreuse (sauf celle payée en Robux), scanner, niveau du jetpack, soufflerie, œuf porté.
+  - On garde : créatures (base et sac), œufs, Index, minerais, skins, passes et potions.
+  - On gagne : +50 % de revenus des créatures pour toujours, cumulable (x1,5, x2, x2,5…).
+  - Fenêtre YOU LOSE / YOU KEEP / YOU GET, double appui pour confirmer (« SURE? TAP AGAIN! »), explosion d'étoile en plein écran, retour à la base pendant le flash blanc ; les autres joueurs reçoivent « X went SUPERNOVA! ».
 
 ## 16. Fidélisation (tout est prévu dès la sortie)
 

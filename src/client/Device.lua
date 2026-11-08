@@ -20,6 +20,7 @@ Device.Pad = {
 	Store = Enum.KeyCode.DPadLeft,
 	Index = Enum.KeyCode.DPadRight,
 	Rewards = Enum.KeyCode.DPadUp,
+	Supernova = Enum.KeyCode.DPadDown,
 }
 
 local GAMEPADS = {

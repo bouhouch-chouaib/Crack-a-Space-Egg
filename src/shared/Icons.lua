@@ -13,6 +13,7 @@ Icons.Ids = {
 	Cash = "rbxassetid://119781577077916",
 	Jetpack = "rbxassetid://101405938770705",
 	Comet = "rbxassetid://97641885073649",
+	Supernova = "rbxassetid://83408422703072", -- étoile qui explose (renaissance)
 	Settings = "rbxassetid://131831924082787",
 	-- jeu d'icônes du 7 nov. (ropilot_generate_ui_art, style « simulator »)
 	Home = "rbxassetid://112808991360692",

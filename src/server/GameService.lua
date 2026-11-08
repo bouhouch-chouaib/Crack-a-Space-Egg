@@ -73,6 +73,7 @@ local function sync(player: Player)
 	-- Guide de la première minute (Guide.client) : étape atteinte, Config.Guide.Steps à la fin
 	player:SetAttribute("GuideStep", d.guide or 0)
 	player:SetAttribute("Drill", d.drill)
+	player:SetAttribute("Supernovas", d.supernovas or 0)
 	-- Niveau du jetpack (HUD) et vitesses qui en découlent (Jetpack.client)
 	local jl, jx, jn = Config.JetpackLevel(d.jetXP or 0)
 	player:SetAttribute("JetLevel", jl)
@@ -385,6 +386,7 @@ local function equipJetpack(player: Player)
 	weld.Parent = handle
 	model.Parent = character
 end
+GameService.EquipJetpack = equipJetpack
 
 -- État du jetpack envoyé par le client (0 = éteint, 1 = poussée, 2 = vol plané), recopié sur le
 -- personnage pour que tous les joueurs voient les flammes et la traînée
@@ -431,6 +433,7 @@ function GameService.GrantDrill(player: Player, tier: number): boolean
 	if not d or not Config.Drills[tier] then
 		return false
 	end
+	d.paidDrill = math.max(d.paidDrill or 1, tier) -- gardée après une Supernova
 	if tier > d.drill then
 		d.drill = tier
 		sync(player)

@@ -103,7 +103,9 @@ function BoostService.IncomeMult(player: Player): number
 	if BoostService.Active(player, "Money") then
 		m *= 2
 	end
-	return m
+	-- Supernovas faites : +50 % chacune, pour toujours
+	local d = DataService.Get(player)
+	return m * Config.SupernovaMult(d and d.supernovas or 0)
 end
 
 -- Chance des œufs rares (multiplie celle du scanner), à partir de la sauvegarde du joueur

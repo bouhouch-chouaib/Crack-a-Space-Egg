@@ -17,6 +17,7 @@ local MonsterService = require(script.Parent.MonsterService)
 local SkinService = require(script.Parent.SkinService)
 local RewardService = require(script.Parent.RewardService)
 local GemService = require(script.Parent.GemService)
+local SupernovaService = require(script.Parent.SupernovaService)
 
 WorldBuilder.Build()
 Bases.Start()
@@ -30,6 +31,7 @@ MonetizationService.Start()
 RewardService.Start() -- connexion quotidienne, temps de jeu, quêtes, codes, groupe, pub
 MonetizationService.AdReward = RewardService.GrantAdBoost
 GemService.Start() -- sac de minerais et vente au stand SELL
+SupernovaService.Start() -- renaissance : tout recommence, +50 % de revenus pour toujours
 MachineService.Start()
 WindTunnelService.Start() -- souffleries : on y farme le niveau du jetpack
 ColdService.Start() -- gel et manque d'oxygène hors du couloir

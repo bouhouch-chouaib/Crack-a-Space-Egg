@@ -123,14 +123,16 @@ local function refreshMoney()
 end
 
 -- GROS BOUTONS (à gauche) : la boutique (améliorations, passes, potions, récompenses…
--- tout s'y trouve en faisant défiler) et l'index des créatures
-local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -46), UDim2.fromOffset(220, 3 * 76))
+-- tout s'y trouve en faisant défiler), l'index des créatures, les récompenses, et SUPERNOVA
+-- (renaissance) qui n'apparaît qu'à partir du niveau Config.Supernova.Level du jetpack
+local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -46), UDim2.fromOffset(220, 4 * 76))
 new("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = menu })
 local buttons = {}
 for i, b in ipairs({
 	{ "Store", "STORE", "Shop", "Green" }, -- tout ce qui s'achète en Robux (Store.client)
 	{ "Index", "INDEX", "Index", "Blue" },
 	{ "Rewards", "REWARDS", "Rewards", "Purple" }, -- cadeaux, quêtes, codes (RewardsUI.client)
+	{ "Supernova", "SUPERNOVA", "Supernova", "Orange" }, -- renaissance (SupernovaUI.client)
 }) do
 	local button, badge = UIKit.menuButton({ name = b[1], text = b[2], art = b[3], color = b[4], parent = menu })
 	button.Parent.LayoutOrder = i
@@ -147,6 +149,11 @@ local function refreshBadges()
 	buttons.Store.badge.Visible = Config.Shop.Featured.Id ~= 0 and not player:GetAttribute("StarterBought") and ends > os.time()
 	-- REWARDS : cadeaux, quêtes et connexion quotidienne à réclamer (RewardService)
 	buttons.Rewards.badge.Visible = ((player:GetAttribute("RewardsReady") or 0) :: number) > 0
+	-- SUPERNOVA : visible à partir du niveau Config.Supernova.Level du jetpack, pastille quand on peut payer
+	local done = (player:GetAttribute("Supernovas") or 0) :: number
+	local credits = (player:GetAttribute("Credits") or 0) :: number
+	buttons.Supernova.button.Parent.Visible = ((player:GetAttribute("JetLevel") or 1) :: number) >= Config.Supernova.Level
+	buttons.Supernova.badge.Visible = credits >= Config.SupernovaCost(done)
 end
 
 -- ŒUF PORTÉ (en haut à droite) ------------------------------------------------------
@@ -403,7 +410,7 @@ player:GetAttributeChangedSignal("Guide"):Connect(refreshHint)
 
 -- MANETTE : croix gauche = STORE, croix droite = INDEX, croix haut = REWARDS (petite flèche) ------
 local padTags: { GuiObject } = {}
-for name, dir in pairs({ Store = -1, Index = 1, Rewards = 0 }) do
+for name, dir in pairs({ Store = -1, Index = 1, Rewards = 0, Supernova = 2 }) do
 	local b = buttons[name].button
 	local tag = new("Frame", {
 		Name = "PadTag",
@@ -431,6 +438,7 @@ end
 ContextActionService:BindAction("PadStore", padShortcut("Store"), false, Device.Pad.Store)
 ContextActionService:BindAction("PadIndex", padShortcut("Index"), false, Device.Pad.Index)
 ContextActionService:BindAction("PadRewards", padShortcut("Rewards"), false, Device.Pad.Rewards)
+ContextActionService:BindAction("PadSupernova", padShortcut("Supernova"), false, Device.Pad.Supernova)
 
 -- TÉLÉPHONE : le joystick de Roblox est en bas à gauche ; on monte l'argent en haut à gauche et les
 -- gros boutons juste dessous, pour que le pouce ne les cache pas
@@ -464,9 +472,10 @@ player.AttributeChanged:Connect(function(name)
 		refreshBadges()
 	elseif name == "JetLevel" or name == "JetXP" or name == "JetXPNeed" then
 		refreshSpeed()
+		refreshBadges()
 	elseif name == "Cargo" or name == "CargoMax" or name == "CargoRarities" or name == "CargoKinds" then
 		refreshCargo()
-	elseif name == "StarterBought" or name == "StarterEnds" or name == "RewardsReady" then
+	elseif name == "StarterBought" or name == "StarterEnds" or name == "RewardsReady" or name == "Supernovas" then
 		refreshBadges()
 	end
 end)

@@ -273,6 +273,14 @@ buy = function(player: Player, index: number)
 end
 WindTunnelService.Buy = buy
 
+-- Reconstruit la soufflerie de la base d'un joueur (après une Supernova : elle redevient à acheter)
+function WindTunnelService.Refresh(player: Player)
+	local index = player:GetAttribute("Base")
+	if type(index) == "number" then
+		refresh(index)
+	end
+end
+
 -- Soufflerie où se trouve ce point (ou nil)
 local function tunnelAt(pos: Vector3): Tunnel?
 	for _, t in pairs(tunnels) do

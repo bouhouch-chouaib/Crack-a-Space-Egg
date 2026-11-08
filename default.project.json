@@ -73,6 +73,9 @@
         },
         "Gems": {
           "$className": "RemoteFunction"
+        },
+        "Supernova": {
+          "$className": "RemoteFunction"
         }
       }
     },
