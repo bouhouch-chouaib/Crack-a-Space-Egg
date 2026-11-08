@@ -2,10 +2,18 @@
 -- - L'icône holographique au-dessus de chaque stand flotte et tourne doucement.
 -- - Chaque vendeur astronaute (tag « ShopVendor ») respire en boucle ; quand le joueur arrive à moins
 --   de WAVE_RANGE studs, il lui fait coucou (une fois, puis de nouveau s'il revient plus tard).
+-- - Marcher sur le tapis (« Mat ») devant un stand ouvre directement son menu, sans touche à appuyer :
+--   STORE = boutique Robux, ITEMS = atelier des foreuses, SELL = comptoir de vente. Il faut quitter
+--   le tapis pour qu'il puisse se rouvrir (on peut donc fermer la fenêtre en restant dessus).
+--   En quittant le tapis, ses fenêtres se ferment toutes seules (SELL : aussi celle des créatures
+--   ouverte par SELL PETS).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+
+local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 local IDLE = "rbxassetid://507766388" -- animations R15 de base de Roblox
@@ -54,6 +62,31 @@ for _, m in ipairs(CollectionService:GetTagged("ShopVendor")) do
 	task.spawn(track, m)
 end
 
+-- TAPIS DES STANDS : fenêtre ouverte en marchant dessus ----------------------------------------
+local OPEN = { Store = "Store", Items = "DrillShop", Sell = "Sell" } -- attribut Shop du stand -> fenêtre
+-- fenêtres fermées en quittant le tapis (noms des UIKit.window)
+local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop" }, Sell = { "Sell", "CreaturesWindow" } }
+local MAT_MARGIN = 1 -- studs autour du tapis qui comptent encore
+local mats: { { part: BasePart, window: string, on: boolean } } = {}
+task.spawn(function()
+	local shops = workspace:WaitForChild("Ship"):WaitForChild("Shops", 30)
+	if not shops then
+		return
+	end
+	for _, stand in ipairs(shops:GetChildren()) do
+		local window = OPEN[stand:GetAttribute("Shop") or ""]
+		local mat = stand:FindFirstChild("Mat")
+		if window and mat and mat:IsA("BasePart") then
+			table.insert(mats, { part = mat, window = window, on = false })
+		end
+	end
+end)
+
+local function onMat(mat: BasePart, pos: Vector3): boolean
+	local p = mat.CFrame:PointToObjectSpace(pos)
+	return math.abs(p.X) <= mat.Size.X / 2 + MAT_MARGIN and math.abs(p.Z) <= mat.Size.Z / 2 + MAT_MARGIN and p.Y > -1 and p.Y < 7
+end
+
 -- icônes holographiques
 local holos: { { part: BasePart, base: CFrame, phase: number } } = {}
 task.spawn(function()
@@ -88,6 +121,23 @@ RunService.RenderStepped:Connect(function()
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not hrp then
 		return
+	end
+	local hum = character:FindFirstChildOfClass("Humanoid")
+	local alive = hum ~= nil and hum.Health > 0
+	for _, m in ipairs(mats) do
+		local on = alive and onMat(m.part, hrp.Position)
+		if on and not m.on then
+			Sfx.Play("Open")
+			UIKit.Open:Fire(m.window)
+		elseif m.on and not on then
+			for _, name in ipairs(CLOSE[m.window] or {}) do
+				local w = UIKit.Windows[name]
+				if w and w.isOpen() then
+					w.close()
+				end
+			end
+		end
+		m.on = on
 	end
 	for _, v in pairs(vendors) do
 		local near = (v.root.Position - hrp.Position).Magnitude < WAVE_RANGE

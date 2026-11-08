@@ -506,6 +506,10 @@ local function bindShopPoint(point: BasePart)
 	if not pp then
 		return
 	end
+	-- STORE, ITEMS et SELL s'ouvrent en marchant sur le tapis du stand (ShipShops.client) : pas d'invite
+	if point.Name == "StorePoint" or point.Name == "ShopPoint" or point.Name == "SellPoint" then
+		pp.Enabled = false
+	end
 	pp.Triggered:Connect(function(p)
 		if point.Name == "StorePoint" then
 			Remotes.OpenShop:FireClient(p, "Store")

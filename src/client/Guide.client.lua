@@ -417,10 +417,11 @@ local function myPets(): number
 	return n
 end
 
--- Ship.Shop est un dossier : on vise le kiosque (sinon le point de l'invite)
+-- Stand ITEMS du vaisseau (Ship.Shops.ItemsStand) : on vise son tapis, qui ouvre l'atelier quand on marche dessus
 local function shopKiosk(): Instance?
-	local folder = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Shop")
-	return folder and (folder:FindFirstChild("ShopKiosk") or folder:FindFirstChild("ShopPoint"))
+	local shops = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Shops")
+	local stand = shops and shops:FindFirstChild("ItemsStand")
+	return stand and (stand:FindFirstChild("Mat") or stand:FindFirstChild("ShopPoint"))
 end
 
 local function attr(name: string): number

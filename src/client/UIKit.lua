@@ -939,6 +939,9 @@ export type Window = {
 }
 
 -- Grande fenêtre : bandeau de titre en dégradé à reflets, croix rouge, corps sombre à picots qui défile
+-- Fenêtres créées, par nom (props.name) : pour les fermer d'ailleurs (ex. en quittant le tapis d'un stand)
+UIKit.Windows = {} :: { [string]: Window }
+
 function UIKit.window(props: { name: string, title: string, color: string, size: Vector2? }): Window
 	local size = props.size or Vector2.new(880, 600)
 	local colors = UIKit.Colors[props.color] or UIKit.Colors.Green
@@ -1122,7 +1125,7 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 	close.MouseButton1Click:Connect(closeWindow)
 	dim.MouseButton1Click:Connect(closeWindow)
 	padEntry.close = closeWindow
-	return {
+	local w: Window = {
 		gui = gui,
 		frame = frame,
 		body = body,
@@ -1136,6 +1139,8 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 			return opened
 		end,
 	}
+	UIKit.Windows[props.name] = w
+	return w
 end
 
 export type NavItem = { key: string, text: string, art: string, color: Color3 }

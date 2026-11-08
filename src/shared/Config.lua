@@ -371,7 +371,7 @@ Config.Jetpack = {
 	-- Prix calés sur les revenus (entre les prix des anneaux).
 	TunnelRadius = 4.5,
 	TunnelHeight = 20,
-	TunnelOffset = Vector3.new(11, 0, 24), -- position dans le repère du sol de la base (devant l'entrée, sur le côté)
+	TunnelOffset = Vector3.new(12, 0, 26), -- position dans le repère du sol de la base (devant l'entrée, sur le côté ; bases de 36 studs)
 	Tunnels = {
 		{ Name = "Breeze Tunnel", Cost = 1000, XP = 2, Color = Color3.fromRGB(150, 235, 255) },
 		{ Name = "Gale Tunnel", Cost = 30000, XP = 8, Color = Color3.fromRGB(90, 200, 255) },
@@ -956,7 +956,8 @@ Config.Hatch = {
 	-- Place occupée par un œuf posé puis par sa créature (rayon en studs, selon la rareté) :
 	-- deux objets posés ne se touchent pas, et les créatures rares, plus grandes, prennent plus de place
 	-- Les Mythic et Cosmic sont immenses : elles prennent une grande partie de la base
-	Footprint = { 2.2, 2.4, 2.8, 3.4, 4.6, 6.4, 8.6 },
+	-- (×1,5 le 8 nov. avec les créatures deux fois plus grandes et les bases de 36 studs)
+	Footprint = { 3.3, 3.6, 4.2, 5.1, 6.9, 9.6, 12.9 },
 	Margin = 2.0, -- marge le long des murs (en plus de la moitié de la place occupée)
 	-- Zones interdites autour de la machine et du point d'apparition (rayon en studs)
 	KeepOut = { DerockMachine = 8.5, Spawn = 4 },
@@ -979,11 +980,12 @@ Config.Hatch = {
 	HandDelay = 1.4,
 	-- Hauteur d'une créature dans la base (studs) selon la rareté, multipliée par sa taille tirée.
 	-- Les rares sont nettement plus grandes (et plus impressionnantes) : la récompense se voit.
-	PetHeight = { 2.6, 3.0, 3.7, 4.8, 7.0, 10.5, 15.0 },
+	-- (doublées le 8 nov. : 5,2 studs pour une Commune, 30 pour une Cosmique)
+	PetHeight = { 5.2, 6.0, 7.4, 9.6, 14.0, 21.0, 30.0 },
 	-- Promenade autour de son socle : rayon (studs) et durée d'un aller (secondes)
-	WanderRadius = 2.2,
+	WanderRadius = 3,
 	-- Au-delà de cette hauteur (studs), une créature se promène moins loin (les géantes piétinent sur place)
-	WanderFullHeight = 4,
+	WanderFullHeight = 8,
 	WanderPeriod = 6,
 	-- Faire éclore tout de suite contre des Robux (du temps, jamais des œufs ni des créatures).
 	-- Un produit de développeur par rareté (créés le 7 nov. sur Roblox).
