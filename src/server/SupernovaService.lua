@@ -15,6 +15,7 @@ local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local WindTunnelService = require(script.Parent.WindTunnelService)
 local Tracking = require(script.Parent.Tracking)
+local MachineService = require(script.Parent.MachineService)
 
 local Remotes = ReplicatedStorage.Remotes
 local SupernovaService = {}
@@ -34,6 +35,7 @@ local function reset(d)
 	end
 	d.jetXP = 0
 	d.tunnel = 0
+	d.machine = { Speed = 0, Luck = 0, Polish = 0 }
 	d.ring = 1
 	d.cargo = {}
 	d.supernovas = (d.supernovas or 0) + 1
@@ -58,6 +60,7 @@ local function go(player: Player)
 	reset(d)
 	GameService.Sync(player)
 	WindTunnelService.Refresh(player)
+	MachineService.Refresh(player)
 	task.spawn(DataService.Save, player)
 	local n = d.supernovas
 	Tracking.Funnel(player, "Supernova", 1, "Went Supernova")

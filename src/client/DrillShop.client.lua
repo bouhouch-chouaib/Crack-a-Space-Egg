@@ -557,7 +557,7 @@ end
 
 Remotes.OpenShop.OnClientEvent:Connect(function(which: string?)
 	-- stand STORE du vaisseau : c'est la boutique Robux (Store.client) qui s'ouvre
-	if which == "Store" or which == "Sell" then
+	if which == "Store" or which == "Sell" or which == "MachineUp" then
 		UIKit.Open:Fire(which)
 		return
 	end

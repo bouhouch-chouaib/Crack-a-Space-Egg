@@ -79,6 +79,9 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("Drill", d.drill)
 	player:SetAttribute("Supernovas", d.supernovas or 0)
+	for key, level in pairs(d.machine or {}) do
+		player:SetAttribute("Mach_" .. key, level)
+	end
 	-- Niveau du jetpack (HUD) et vitesses qui en découlent (Jetpack.client)
 	local jl, jx, jn = Config.JetpackLevel(d.jetXP or 0)
 	player:SetAttribute("JetLevel", jl)

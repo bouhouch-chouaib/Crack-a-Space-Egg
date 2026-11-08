@@ -124,6 +124,21 @@ local function toTunnel()
 	end
 end
 
+-- Devant sa machine, avec la fenêtre des améliorations ouverte
+local function toMachine()
+	local bases = ship() and (ship() :: Instance):FindFirstChild("Bases")
+	local mine = bases and bases:FindFirstChild("Base" .. tostring(player:GetAttribute("Base")))
+	local machine = mine and mine:FindFirstChild("DerockMachine") :: Model?
+	local character = player.Character
+	if mine and machine and character then
+		local floor = mine:FindFirstChild("Floor") :: BasePart
+		local box = machine:GetBoundingBox()
+		local p = box.Position - floor.CFrame.LookVector * 14
+		character:PivotTo(CFrame.lookAt(Vector3.new(p.X, 4, p.Z), Vector3.new(box.X, 4, box.Z)))
+	end
+	UIKit.Open:Fire("MachineUp")
+end
+
 local function toFusion()
 	local fusion = ship() and (ship() :: Instance):FindFirstChild("Fusion") :: Model?
 	local point = fusion and fusion:FindFirstChild("FusionPoint") :: BasePart?
@@ -195,6 +210,9 @@ local function nextOffer(): Offer?
 	local nextTunnel = Config.Jetpack.Tunnels[level + 1]
 	if level >= 1 and nextTunnel and credits >= nextTunnel.Cost and fresh("tunnel" .. (level + 1)) then
 		return { key = "tunnel" .. (level + 1), art = "WindTunnel", title = "Better wind tunnel!", text = ("%s for $%s: train faster"):format(nextTunnel.Name, Format.Short(nextTunnel.Cost)), button = "TUNNEL", go = toTunnel }
+	end
+	if credits >= Config.MachineCost("Speed", attr("Mach_Speed")) and fresh("machine") then
+		return { key = "machine", art = "MachineUp", title = "Upgrade your machine!", text = "Faster, luckier, and better gems", button = "MACHINE", go = toMachine }
 	end
 	if Config.Shop.Featured.Id ~= 0 and fresh("starter") and not player:GetAttribute("StarterBought") and attr("StarterEnds") > os.time() then
 		return { key = "starter", art = "Shop", title = "Starter Pack!", text = "A big bundle of boosts, only for new players", button = "STORE", go = function()

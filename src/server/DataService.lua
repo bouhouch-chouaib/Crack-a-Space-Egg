@@ -52,6 +52,7 @@ local function default()
 		base = {},
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
 		pity = 0,
+		machine = { Speed = 0, Luck = 0, Polish = 0 }, -- niveaux de la machine à dérocher (MachineService)
 		guideRewarded = false, -- récompense de fin de tutoriel déjà donnée
 		tips = {}, -- ["clé"] = true : tutoriels au bon moment déjà montrés (Config.Guide.Tips)
 		feedback = { day = 0, count = 0 }, -- retours envoyés aujourd'hui (FeedbackService)

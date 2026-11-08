@@ -1,4 +1,5 @@
--- Machine à dérocher de chaque base (docs/Mecaniques.md §7).
+-- Machine à dérocher de chaque base (docs/Mecaniques.md §7) et ses améliorations (Config.Machine).
+-- Remotes.Machine (RemoteFunction) : ("buy", clé) -> { ok, error? }. Niveaux publiés en attributs Mach_<clé>.
 -- Le propriétaire déclenche la machine à la console : elle prend les œufs de sa soute un par un,
 -- retire la roche (durée selon la rareté), puis range l'œuf dégagé dans « ready » (à couver ensuite).
 -- Le serveur pose l'état du travail en cours en attributs sur le modèle de la machine ;
@@ -6,6 +7,7 @@
 --   JobStart / JobEnd : temps serveur du travail en cours (absents = machine au repos)
 --   EggRing / EggRarity : l'œuf en cours ; Queue : œufs restants après lui ; Owner : UserId
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -39,6 +41,72 @@ local function pickSize()
 	return Config.Sizes[1]
 end
 
+-- APPARENCE : les pièces orange et jaunes prennent la couleur du palier, chez tous les joueurs
+local ACCENTS = { Static_Orange = "Accent", Static_Yellow = "Accent", ClampL_Orange = "Accent", ClampR_Orange = "Accent", Static_Glow = "Glow", Drill_Glow = "Glow" }
+
+local function machineOf(player: Player): Model?
+	local base = Bases.Get(player)
+	return base and base:FindFirstChild("DerockMachine") :: Model?
+end
+
+local function paint(machine: Model, tier: any)
+	for _, d in ipairs(machine:GetDescendants()) do
+		local role = d:IsA("BasePart") and ACCENTS[d.Name]
+		if role then
+			(d :: BasePart).Color = tier[role]
+		end
+	end
+end
+
+local function totalLevels(d): number
+	local n = 0
+	for _, level in pairs(d.machine or {}) do
+		n += level
+	end
+	return n
+end
+
+-- Remet la machine du joueur à la couleur de ses niveaux, et publie ces niveaux
+function MachineService.Refresh(player: Player)
+	local d = DataService.Get(player)
+	local machine = machineOf(player)
+	if not d or not machine then
+		return
+	end
+	paint(machine, (Config.MachineTier(totalLevels(d))))
+	GameService.Sync(player)
+end
+
+local function buy(player: Player, key: any)
+	local d = DataService.Get(player)
+	if not d then
+		return { ok = false, error = "Loading your save..." }
+	end
+	local track = type(key) == "string" and Config.Machine.Tracks[key]
+	if not track then
+		return { ok = false, error = "Unknown upgrade" }
+	end
+	d.machine = d.machine or { Speed = 0, Luck = 0, Polish = 0 }
+	local level = d.machine[key] or 0
+	if level >= Config.Machine.Max then
+		return { ok = false, error = "Already maxed!" }
+	end
+	local cost = Config.MachineCost(key, level)
+	if d.credits < cost then
+		return { ok = false, error = ("You need $%s"):format(Format.Short(cost)) }
+	end
+	local before = Config.MachineTier(totalLevels(d))
+	d.credits -= cost
+	d.machine[key] = level + 1
+	Tracking.Funnel(player, "Machine" .. key, level + 1, ("%s %d"):format(key, level + 1))
+	MachineService.Refresh(player)
+	local after = Config.MachineTier(totalLevels(d))
+	if after ~= before then
+		GameService.Notice(player, ("{MachineUp} Your machine is now %s!"):format(after.Name), "good")
+	end
+	return { ok = true }
+end
+
 local function clearJob(machine: Model)
 	for _, k in ipairs({ "JobStart", "JobEnd", "EggRing", "EggRarity", "EggKind", "Owner" }) do
 		machine:SetAttribute(k, nil)
@@ -61,7 +129,15 @@ local function run(player: Player, base: Model, machine: Model)
 		if type(egg) == "table" then
 			egg.rarity = rarity
 		end
-		local duration = Config.Derock.Time + Config.Derock.PerRarity * (rarity - 1)
+		-- Cœur chanceux : parfois une rareté de plus (si l'anneau en a une au-dessus)
+		local levels = d.machine or {}
+		if type(egg) == "table" and Config.Eggs[ring][rarity + 1] and rng:NextNumber() < Config.MachineLuck(levels.Luck or 0) then
+			rarity += 1
+			egg.rarity = rarity
+			GameService.Notice(player, ("{MachineLuck} Lucky Core! Upgraded to %s!"):format(Config.Rarities[rarity].Name), "good")
+			GameService.Sync(player)
+		end
+		local duration = Config.MachineTime(rarity, levels.Speed or 0)
 		local now = workspace:GetServerTimeNow()
 		local geode = type(egg) == "table" and egg.kind == "geode"
 		machine:SetAttribute("EggRing", ring)
@@ -96,7 +172,7 @@ local function run(player: Player, base: Model, machine: Model)
 				size = size.Name,
 				mult = size.Mult,
 				shiny = shiny,
-				value = Config.GemValue(ring, rarity, size.Mult, shiny),
+				value = math.floor(Config.GemValue(ring, rarity, size.Mult, shiny) * Config.MachinePolish(levels.Polish or 0) + 0.5),
 			}
 			d.gems = d.gems or {}
 			if #d.gems >= Config.Geodes.BagMax then
@@ -140,6 +216,25 @@ local function bind(base: Model)
 	prompt.MaxActivationDistance = 18 -- on l'active depuis la place, sans monter sur l'annexe
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = point
+	-- Deuxième invite : les améliorations, au-dessus de la première
+	local upgrade = Instance.new("ProximityPrompt")
+	upgrade.Name = "UpgradePrompt"
+	upgrade.ActionText = "Upgrade"
+	upgrade.ObjectText = "Machine"
+	upgrade.KeyboardKeyCode = Enum.KeyCode.Q
+	upgrade.GamepadKeyCode = Enum.KeyCode.ButtonL1
+	upgrade.HoldDuration = 0
+	upgrade.MaxActivationDistance = 18
+	upgrade.RequiresLineOfSight = false
+	upgrade.UIOffset = Vector2.new(0, -100)
+	upgrade.Parent = point
+	upgrade.Triggered:Connect(function(player)
+		if Bases.OwnerOf(base) ~= player then
+			GameService.Notice(player, "This is not your base", "warn")
+			return
+		end
+		Remotes.OpenShop:FireClient(player, "MachineUp")
+	end)
 	prompt.Triggered:Connect(function(player)
 		if Bases.OwnerOf(base) ~= player then
 			GameService.Notice(player, "This is not your base", "warn")
@@ -162,6 +257,40 @@ function MachineService.Start()
 	-- La boucle run() s'arrête d'elle-même quand le joueur quitte le jeu
 	for _, base in ipairs(WorldBuilder.Bases) do
 		bind(base)
+	end
+	Remotes.Machine.OnServerInvoke = function(player: Player, action: any, key: any)
+		if action == "buy" then
+			return buy(player, key)
+		end
+		return { ok = false, error = "Unknown action" }
+	end
+	DataService.Loaded:Connect(function(player: Player)
+		MachineService.Refresh(player)
+	end)
+	-- le joueur part : sa machine reprend la couleur de départ pour le suivant
+	Players.PlayerRemoving:Connect(function(player: Player)
+		local machine = machineOf(player)
+		if machine then
+			paint(machine, Config.Machine.Tiers[1])
+		end
+	end)
+	-- Studio seulement : ("set", clé, niveau) ; renvoie les niveaux
+	if game:GetService("RunService"):IsStudio() then
+		local bf = Instance.new("BindableFunction")
+		bf.Name = "MachineDebug"
+		bf.OnInvoke = function(cmd: string, key: string, level: number)
+			local player = Players:GetPlayers()[1]
+			local d = player and DataService.Get(player)
+			if not d then
+				return "pas de partie"
+			end
+			if cmd == "set" then
+				d.machine[key] = level
+				MachineService.Refresh(player)
+			end
+			return ("Speed %d Luck %d Polish %d, $%s"):format(d.machine.Speed, d.machine.Luck, d.machine.Polish, Format.Short(d.credits))
+		end
+		bf.Parent = game:GetService("ServerStorage")
 	end
 end
 

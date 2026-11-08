@@ -102,7 +102,7 @@ local loseCol = column(1, "YOU LOSE", "Red", {
 	{ "UpDrill", "Your drill" },
 	{ "Jetpack", "Jetpack level" },
 	{ "WindTunnel", "Wind tunnel" },
-	{ "UpScanner", "Scanner" },
+	{ "MachineUp", "Scanner & machine" },
 })
 local loseNote = label(loseCol, "(Robux drills stay!)", 8, 218, COL_W - 16, 22, 18, Color3.fromRGB(255, 200, 190))
 column(2, "YOU KEEP", "Green", {

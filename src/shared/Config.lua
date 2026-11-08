@@ -1213,6 +1213,7 @@ Config.Guide = {
 	GeodeSize = "Large",
 	Reward = { Money = 1000, Luck = 15, MoneyBoost = 15 }, -- fin du tutoriel : 5 000 $ et potions x2 de 15 min
 	Arrow = "rbxassetid://111578532993258", -- chevrons blancs à contour sombre (poutre au sol)
+	-- (Tips : « machine » = panneau de première fois des améliorations)
 	MachineNear = 18, -- studs : assez près de la machine pour appuyer sur E
 	PetCheer = 5, -- secondes de « ta créature rapporte des $ »
 	-- Nom de chaque étape dans l'entonnoir Onboarding (Tracking) ; l'étape 1 de l'entonnoir est « Join »
@@ -1221,7 +1222,7 @@ Config.Guide = {
 		"Egg placed", "Rare pet hatched", "Wind tunnel bought", "New drill bought",
 	},
 	-- Tutoriels au bon moment : une seule fois par joueur, quand il en a besoin (Guide.client)
-	Tips = { geode = true, gem = true, basefull = true, supernova = true, rewards = true, fuse = true, monsters = true, mailbox = true, scanner = true, starter = true },
+	Tips = { geode = true, gem = true, basefull = true, supernova = true, rewards = true, fuse = true, monsters = true, mailbox = true, scanner = true, starter = true, machine = true },
 	TipMax = 40, -- secondes avant qu'un tip non suivi s'efface tout seul
 	TipShort = 12, -- idem pour un tip sans endroit où aller
 	TipGap = 25, -- secondes de calme entre deux tips d'information (récompenses, fusion, monstres...)
@@ -1313,8 +1314,71 @@ Config.Geodes = {
 	BagMax = 200, -- minerais gardés au plus ; au-delà, le nouveau est vendu tout de suite
 }
 
+-- AMÉLIORATIONS DE LA MACHINE À DÉROCHER (MachineService, MachineUI.client) -------------------------
+-- Trois améliorations à 20 niveaux, payées en $, remises à zéro par la Supernova. Coût du niveau n = Base × Growth^n.
+-- Le total des niveaux donne à la machine une couleur de plus en plus rare (Tiers).
+Config.Machine = {
+	Max = 20,
+	MinTime = 1.8, -- secondes : en dessous, l'animation de la machine n'a plus le temps de se jouer
+	Order = { "Speed", "Luck", "Polish" },
+	Tracks = {
+		Speed = { Name = "Turbo Motor", Text = "Breaks the rock faster", Art = "MachineSpeed", Base = 1500, Growth = 3, PerLevel = 0.93, Color = Color3.fromRGB(255, 165, 50) },
+		Luck = { Name = "Lucky Core", Text = "Chance of +1 rarity", Art = "MachineLuck", Base = 4000, Growth = 3.1, PerLevel = 0.01, Color = Color3.fromRGB(110, 230, 80) },
+		Polish = { Name = "Gem Polisher", Text = "Gems sell for more", Art = "MachinePolish", Base = 2500, Growth = 3, PerLevel = 0.1, Color = Color3.fromRGB(80, 190, 255) },
+	},
+	Tiers = {
+		{ Min = 0, Name = "Standard", Accent = Color3.fromRGB(255, 208, 110), Glow = Color3.fromRGB(255, 176, 60) },
+		{ Min = 10, Name = "Emerald", Accent = Color3.fromRGB(120, 235, 120), Glow = Color3.fromRGB(70, 230, 110) },
+		{ Min = 25, Name = "Sapphire", Accent = Color3.fromRGB(100, 185, 255), Glow = Color3.fromRGB(60, 150, 255) },
+		{ Min = 40, Name = "Amethyst", Accent = Color3.fromRGB(205, 130, 255), Glow = Color3.fromRGB(180, 90, 255) },
+		{ Min = 52, Name = "Ruby", Accent = Color3.fromRGB(255, 105, 125), Glow = Color3.fromRGB(255, 60, 90) },
+		{ Min = 60, Name = "Legendary Gold", Accent = Color3.fromRGB(255, 225, 90), Glow = Color3.fromRGB(255, 200, 40) },
+	},
+}
+
+function Config.MachineCost(key: string, level: number): number
+	local t = Config.Machine.Tracks[key]
+	return math.floor(t.Base * t.Growth ^ level + 0.5)
+end
+
+-- Secondes pour dégager un œuf de cette rareté
+function Config.MachineTime(rarity: number, speedLevel: number): number
+	local time = (Config.Derock.Time + Config.Derock.PerRarity * (rarity - 1)) * Config.Machine.Tracks.Speed.PerLevel ^ speedLevel
+	return math.max(Config.Machine.MinTime, time)
+end
+
+-- Chance (0 à 1) de monter d'une rareté, et multiplicateur de valeur des minerais
+function Config.MachineLuck(level: number): number
+	return Config.Machine.Tracks.Luck.PerLevel * level
+end
+function Config.MachinePolish(level: number): number
+	return 1 + Config.Machine.Tracks.Polish.PerLevel * level
+end
+
+-- Texte court de l'effet à ce niveau (fenêtre)
+function Config.MachineEffect(key: string, level: number): string
+	if key == "Speed" then
+		return ("%.1fs"):format(Config.MachineTime(1, level))
+	elseif key == "Luck" then
+		return ("%d%%"):format(math.floor(Config.MachineLuck(level) * 100 + 0.5))
+	end
+	return ("x%.1f"):format(Config.MachinePolish(level))
+end
+
+-- Palier de couleur selon le total des niveaux : palier actuel, palier suivant (ou nil)
+function Config.MachineTier(total: number): (any, any?)
+	local tiers = Config.Machine.Tiers
+	local index = 1
+	for i, t in ipairs(tiers) do
+		if total >= t.Min then
+			index = i
+		end
+	end
+	return tiers[index], tiers[index + 1]
+end
+
 -- SUPERNOVA (renaissance, docs/Interfaces.md §11) ------------------------------------------
--- On repart de zéro : $, foreuse (sauf celle payée en Robux), scanner, niveau du jetpack, soufflerie
+-- On repart de zéro : $, foreuse (sauf celle payée en Robux), scanner, machine, niveau du jetpack, soufflerie
 -- et œuf porté. On garde : créatures (base et sac), œufs, Index, minerais, skins, passes et potions.
 -- En échange : +50 % de revenus des créatures pour toujours, cumulable (x1,5, x2, x2,5…).
 -- La première coûte 5 M$, chaque suivante coûte Growth fois plus. Le bouton SUPERNOVA n'apparaît

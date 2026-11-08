@@ -79,6 +79,9 @@
         },
         "Feedback": {
           "$className": "RemoteFunction"
+        },
+        "Machine": {
+          "$className": "RemoteFunction"
         }
       }
     },

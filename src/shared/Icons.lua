@@ -36,6 +36,10 @@ Icons.Ids = {
 	Eye = "rbxassetid://118287707219483",
 	Rift = "rbxassetid://88003725449676",
 	Sparkles = "rbxassetid://74527316576347",
+	MachineSpeed = "rbxassetid://72583628676499",
+	MachineLuck = "rbxassetid://90531167835964",
+	MachinePolish = "rbxassetid://126127533939603",
+	MachineUp = "rbxassetid://124846923096618",
 	OreRock = "rbxassetid://138611183043411", -- minerai brut sur sa roche (rendu Blender, ropilot_blender_render)
 }
 
