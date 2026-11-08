@@ -221,6 +221,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 
 - ✅ **Index** des créatures : compléter un anneau donne un bonus de chance permanent.
 - ✅ (7 nov.) Chaque nouvelle créature découverte rapporte une petite récompense : l'équivalent d'1 min de ses revenus, au moins 250 $ (`Config.IndexReward.NewSeconds`), avec le message « New in your Index: … +$… » juste après sa sortie de l'œuf.
+- ✅ **Tailles des créatures** (8 nov., `Config.PetSizes`) : une même créature sort de l'œuf Tiny (20 %), normale (50 %), Big (20 %), Huge (8 %) ou Giant (2 %). La taille multiplie sa hauteur, et son revenu ×taille² (Tiny ≈ ×0,5, Giant ≈ ×5). Le nom l'affiche partout (« Giant Dust Bunny », mot coloré au-dessus de la créature), avec un autocollant « GIANT! » sur la bannière d'éclosion. Les créatures (deux fois plus grandes depuis le 8 nov.) peuvent se chevaucher et dépasser de la base : seuls les œufs gardent leur place.
 - ✅ **Supernova** (rebirth), **dès la sortie** (8 nov., `SupernovaService`, `SupernovaUI.client`, `Config.Supernova`) :
   - Le bouton SUPERNOVA (colonne de gauche, croix bas à la manette) n'apparaît qu'à partir du **niveau 25 du jetpack** (Comet Pack, anneau 3) ; pastille « ! » quand on peut payer.
   - Prix : 5 M$, puis ×8 à chaque fois (40 M$, 320 M$…).

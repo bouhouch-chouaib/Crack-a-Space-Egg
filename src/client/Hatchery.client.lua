@@ -563,8 +563,9 @@ end)
 
 -- ÉCLATEMENT ET BANNIÈRE ------------------------------------------------------------------
 
-local function hatchBanner(ring: number, rarity: number, name: string, income: number)
+local function hatchBanner(ring: number, rarity: number, name: string, income: number, petSize: number?)
 	local r = rarityOf(rarity)
+	local tier = Config.PetSize(petSize)
 	local frame = new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.38),
@@ -635,10 +636,29 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 		Stroke = 3,
 		Parent = frame,
 	})
+	-- taille : autocollant penché « GIANT! » (plus elle est grande, plus elle rapporte)
+	if tier.Name ~= "" then
+		local sticker = new("Frame", {
+			Name = "Size",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(1, -70, 0, 64),
+			Size = UDim2.fromOffset(150, 48),
+			Rotation = 12,
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			ZIndex = 34,
+			Parent = frame,
+		}, { UIKit.corner(12), UIKit.stroke(3.5), UIKit.gradient(tier.Color:Lerp(Color3.new(1, 1, 1), 0.3), tier.Color:Lerp(Color3.new(0, 0, 0), 0.25)) })
+		UIKit.studs(sticker, 0.5, "Studs", 16)
+		UIKit.text({ Size = UDim2.new(1, -10, 1, -8), Position = UDim2.fromOffset(5, 4), Text = tier.Name:upper() .. "!", ZIndex = 35, Stroke = 3, Parent = sticker })
+		UIKit.wiggle(sticker, 5, 4)
+		if petSize and petSize >= 1.5 then
+			UIKit.sparkles(sticker, { count = 3, color = tier.Color:Lerp(Color3.new(1, 1, 1), 0.5), size = 16, z = 36 })
+		end
+	end
 	local nameLabel = UIKit.text({
 		Size = UDim2.new(1, 0, 0, 46),
 		Position = UDim2.new(0, 0, 1, -86),
-		Text = name:upper(),
+		Text = ((if tier.Name ~= "" then tier.Name .. " " else "") .. name):upper(),
 		TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2),
 		ZIndex = 33,
 		Stroke = 4,
@@ -668,7 +688,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 end
 
 Remotes:WaitForChild("Hatched").OnClientEvent
-	:Connect(function(owner: Player, pos: Vector3, ring: number, rarity: number, name: string, income: number)
+	:Connect(function(owner: Player, pos: Vector3, ring: number, rarity: number, name: string, income: number, size: number?)
 		-- l'œuf qui a éclaté : la charge partie de ce point (il a grossi et s'est peut-être élevé)
 		local fx = nil
 		for i = #recent, 1, -1 do
@@ -691,7 +711,7 @@ Remotes:WaitForChild("Hatched").OnClientEvent
 		end
 		if owner == player then
 			-- la bannière attend que la créature soit sortie de l'œuf
-			task.delay(0.7 + 0.12 * rarity, hatchBanner, ring, rarity, name, income)
+			task.delay(0.7 + 0.12 * rarity, hatchBanner, ring, rarity, name, income, size)
 		end
 	end)
 
@@ -712,6 +732,7 @@ local function trackCreature(m: Instance)
 		end
 		local r = rarityOf((m:GetAttribute("Rarity") or 1) :: number)
 		local h = (body:GetAttribute("Height") or 3) :: number
+		local tier = Config.PetSize((m:GetAttribute("Size") or 1) :: number)
 		local tag = new("BillboardGui", {
 			Name = "CreatureTag",
 			Size = UDim2.fromOffset(170, 46),
@@ -721,12 +742,18 @@ local function trackCreature(m: Instance)
 			Adornee = bcore,
 			Parent = gui,
 		})
-		UIKit.text({
+		-- nom (« Giant Dust Bunny ») : le mot de la taille à sa couleur
+		local shown = (m:GetAttribute("Creature") or "?") :: string
+		local nameText = UIKit.text({
 			Size = UDim2.fromScale(1, 0.55),
-			Text = (m:GetAttribute("Creature") or "?") :: string,
+			Text = shown,
 			TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2),
 			Parent = tag,
 		})
+		if tier.Name ~= "" and shown:sub(1, #tier.Name + 1) == tier.Name .. " " then
+			nameText.RichText = true
+			nameText.Text = ('<font color="#%s">%s</font>%s'):format(tier.Color:ToHex(), tier.Name, shown:sub(#tier.Name + 1))
+		end
 		UIKit.text({
 			Size = UDim2.fromScale(1, 0.45),
 			Position = UDim2.fromScale(0, 0.55),
@@ -744,6 +771,7 @@ local function trackCreature(m: Instance)
 	local ring = (m:GetAttribute("Ring") or 1) :: number
 	local rarity = (m:GetAttribute("Rarity") or 1) :: number
 	local name = (m:GetAttribute("Creature") or "?") :: string
+	local species = (m:GetAttribute("Species") or name) :: string
 	local size = (m:GetAttribute("Size") or 1) :: number
 	local income = (m:GetAttribute("Income") or 0) :: number
 	local r = rarityOf(rarity)
@@ -762,7 +790,7 @@ local function trackCreature(m: Instance)
 	if rarity >= 4 then
 		UIKit.glow(holder, { color = r.Color, size = 1.3, transparency = 0.45, position = UDim2.fromScale(0.5, 0.38) })
 	end
-	local art = artOf(ring, name)
+	local art = artOf(ring, species)
 	local img = UIKit.icon(art or "Creatures", { Size = UDim2.fromScale(1, 0.74), Parent = holder })
 	if not art then
 		img.ImageColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.3)

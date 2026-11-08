@@ -955,13 +955,14 @@ Config.Hatch = {
 	EggHeight = { 2.4, 2.7, 3.0, 3.4, 3.9, 4.5, 5.2 },
 	-- Place occupée par un œuf posé puis par sa créature (rayon en studs, selon la rareté) :
 	-- deux objets posés ne se touchent pas, et les créatures rares, plus grandes, prennent plus de place
-	-- Les Mythic et Cosmic sont immenses : elles prennent une grande partie de la base
-	-- (×1,5 le 8 nov. avec les créatures deux fois plus grandes et les bases de 36 studs)
-	Footprint = { 3.3, 3.6, 4.2, 5.1, 6.9, 9.6, 12.9 },
+	-- Depuis le 8 nov., seuls les œufs se gênent : les créatures, immenses, peuvent se chevaucher et
+	-- dépasser de la base (c'est le genre : petite base, créatures géantes). Rayon ≈ la largeur de l'œuf.
+	Footprint = { 1.6, 1.7, 1.8, 2.0, 2.3, 2.6, 3.0 },
 	Margin = 2.0, -- marge le long des murs (en plus de la moitié de la place occupée)
 	-- Zones interdites autour de la machine et du point d'apparition (rayon en studs)
 	KeepOut = { DerockMachine = 8.5, Spawn = 4 },
-	-- Revenu d'une créature en $/s = RarityIncome[rareté] × RingIncome[anneau] × taille tirée (0,8 à 1,9).
+	-- Revenu d'une créature en $/s = RarityIncome[rareté] × RingIncome[anneau] × taille² (Config.PetSizes :
+	-- de ×0,4 pour une Tiny à ×5,8 pour la plus grosse Giant).
 	-- De ~5 $/s (Common de l'anneau 1) à ~1 Qa/s = 10^15 (Cosmic de l'anneau 7).
 	-- Exemples (taille 1) : anneau 1 = 5 / 15 / 60 / 300 / 2,5K / 30K ; anneau 4 Mythic ≈ 1,3B ;
 	-- anneau 7 = 30B (Uncommon), 120B, 600B, 5T, 60T (Mythic), 1Qa (Cosmic).
@@ -1089,10 +1090,58 @@ Config.PetRules = {
 	StandRange = 26, -- studs : il faut être près du stand pour vendre ou fusionner
 }
 
--- Nom affiché (« Elder Pyrolynx ») et revenu d'une créature, stade compris
+-- TAILLES DES CRÉATURES (8 nov.) -----------------------------------------------------------------
+-- Une même créature sort de l'œuf plus ou moins grande : la taille (item.size) multiplie sa hauteur
+-- et son revenu ×taille² (plus elle est grande, plus elle rapporte, et nettement). Elle a un nom
+-- (« Giant Pebblepup ») et une couleur affichés partout. Chance = probabilité à l'éclosion ;
+-- Min / Max = taille tirée dans ce palier.
+Config.PetSizes = {
+	{ Name = "Tiny", Chance = 0.20, Min = 0.65, Max = 0.8, Color = Color3.fromRGB(170, 205, 255) },
+	{ Name = "", Chance = 0.50, Min = 0.85, Max = 1.1, Color = Color3.fromRGB(255, 255, 255) },
+	{ Name = "Big", Chance = 0.20, Min = 1.2, Max = 1.45, Color = Color3.fromRGB(120, 245, 80) },
+	{ Name = "Huge", Chance = 0.08, Min = 1.55, Max = 1.85, Color = Color3.fromRGB(255, 170, 40) },
+	{ Name = "Giant", Chance = 0.02, Min = 2.0, Max = 2.4, Color = Color3.fromRGB(255, 70, 90) },
+}
+Config.SizeIncomePower = 2
+
+-- Palier d'une taille (la limite entre deux paliers est à mi-chemin ; marche aussi pour les vieilles
+-- sauvegardes et les créatures fusionnées, dont la taille est la moyenne des trois)
+function Config.PetSize(size: number?): any
+	local tiers = Config.PetSizes
+	local s = size or 1
+	for i = #tiers, 2, -1 do
+		if s >= (tiers[i].Min + tiers[i - 1].Max) / 2 then
+			return tiers[i]
+		end
+	end
+	return tiers[1]
+end
+
+-- Taille tirée à l'éclosion
+function Config.RollPetSize(r: Random): number
+	local x = r:NextNumber()
+	local tier = Config.PetSizes[#Config.PetSizes]
+	for _, t in ipairs(Config.PetSizes) do
+		x -= t.Chance
+		if x <= 0 then
+			tier = t
+			break
+		end
+	end
+	return math.floor(r:NextNumber(tier.Min, tier.Max) * 100 + 0.5) / 100
+end
+
+-- Multiplicateur de revenu d'une taille
+function Config.SizeIncomeMult(size: number?): number
+	return (size or 1) ^ Config.SizeIncomePower
+end
+
+-- Nom affiché (« Giant Elder Pyrolynx ») et revenu d'une créature, taille et stade compris
 function Config.PetName(item): string
 	local st = Config.PetRules.Stages[item.stage or 1]
-	return if st and st.Name ~= "" then st.Name .. " " .. (item.name or "?") else (item.name or "?")
+	local name = if st and st.Name ~= "" then st.Name .. " " .. (item.name or "?") else (item.name or "?")
+	local tier = Config.PetSize(item.size)
+	return if tier.Name ~= "" then tier.Name .. " " .. name else name
 end
 function Config.PetIncome(item): number
 	local st = Config.PetRules.Stages[item.stage or 1] or Config.PetRules.Stages[1]
@@ -1106,7 +1155,7 @@ function Config.CreatureIncome(ringIndex: number, rarity: number, size: number):
 	local h = Config.Hatch
 	local r = h.RarityIncome[math.clamp(rarity, 1, #h.RarityIncome)]
 	local ring = h.RingIncome[math.clamp(ringIndex, 1, #h.RingIncome)]
-	local v = r * ring * (size or 1)
+	local v = r * ring * Config.SizeIncomeMult(size)
 	-- arrondi lisible : entier sous 1000, sinon 3 chiffres significatifs
 	if v < 1000 then
 		return math.max(1, math.floor(v + 0.5))

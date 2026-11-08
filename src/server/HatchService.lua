@@ -180,7 +180,7 @@ local function buildPet(player: Player, floor: BasePart, item, fresh: boolean?):
 	local pad = Instance.new("Part")
 	pad.Name = "Pad"
 	pad.Shape = Enum.PartType.Cylinder
-	local foot = (H.Footprint[item.rarity] or 3) * 1.5
+	local foot = (H.PetHeight[item.rarity] or 3.5) * (item.size or 1) * 0.55 -- disque sous la créature, à sa taille
 	pad.Size = Vector3.new(0.2, foot, foot)
 	pad.CFrame = at * CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.pi / 2)
 	pad.Color = r.Color
@@ -236,7 +236,8 @@ local function buildPet(player: Player, floor: BasePart, item, fresh: boolean?):
 	m:SetAttribute("ItemId", item.id)
 	m:SetAttribute("Ring", item.ring)
 	m:SetAttribute("Rarity", item.rarity)
-	m:SetAttribute("Creature", Config.PetName(item))
+	m:SetAttribute("Creature", Config.PetName(item)) -- nom affiché (taille et stade compris)
+	m:SetAttribute("Species", item.name) -- espèce seule (mouvements, image)
 	m:SetAttribute("Size", item.size)
 	m:SetAttribute("Income", item.income)
 	CollectionService:AddTag(m, "Creature")
@@ -444,7 +445,7 @@ function HatchService.Hatch(player: Player, id: string)
 	end
 	-- La créature est décidée tout de suite (pas de double éclosion possible)
 	local c = Config.CreatureFor(item.ring, item.rarity)
-	local size = rng:NextNumber(c.Size[1], c.Size[2])
+	local size = Config.RollPetSize(rng) -- Tiny à Giant (Config.PetSizes)
 	item.kind = "pet"
 	item.name = c.Name
 	item.size = math.floor(size * 100 + 0.5) / 100

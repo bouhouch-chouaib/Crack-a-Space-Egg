@@ -238,7 +238,7 @@ local function track(m: Instance)
 		home = core.CFrame,
 		seed = seedOf((m:GetAttribute("ItemId") or m.Name) :: string),
 		height = h,
-		motion = Config.CreatureMotion[(m:GetAttribute("Creature") or "") :: string] or DEFAULT,
+		motion = Config.CreatureMotion[(m:GetAttribute("Species") or m:GetAttribute("Creature") or "") :: string] or DEFAULT,
 		groups = {},
 		meshes = {},
 		limbs = {},
