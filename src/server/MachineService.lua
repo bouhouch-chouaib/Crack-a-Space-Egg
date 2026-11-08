@@ -137,7 +137,7 @@ local function bind(base: Model)
 	prompt.ObjectText = "Derock Machine"
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 12
+	prompt.MaxActivationDistance = 18 -- on l'active depuis la place, sans monter sur l'annexe
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = point
 	prompt.Triggered:Connect(function(player)

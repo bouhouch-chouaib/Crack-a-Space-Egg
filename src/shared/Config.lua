@@ -371,7 +371,7 @@ Config.Jetpack = {
 	-- Prix calés sur les revenus (entre les prix des anneaux).
 	TunnelRadius = 4.5,
 	TunnelHeight = 20,
-	TunnelOffset = Vector3.new(10, 0, 26.5), -- dans le repère du sol de la base : devant l'entrée, à droite de l'allée (la machine est à gauche)
+	TunnelOffset = Vector3.new(12, 0, 26), -- dans le repère du sol de la base : devant l'entrée ; le signe de x vient de l'attribut TunnelSide de la base (côté opposé à la machine)
 	Tunnels = {
 		{ Name = "Breeze Tunnel", Cost = 1000, XP = 2, Color = Color3.fromRGB(150, 235, 255) },
 		{ Name = "Gale Tunnel", Cost = 30000, XP = 8, Color = Color3.fromRGB(90, 200, 255) },
@@ -1213,7 +1213,7 @@ Config.Guide = {
 	GeodeSize = "Large",
 	Reward = { Money = 1000, Luck = 15, MoneyBoost = 15 }, -- fin du tutoriel : 5 000 $ et potions x2 de 15 min
 	Arrow = "rbxassetid://111578532993258", -- chevrons blancs à contour sombre (poutre au sol)
-	MachineNear = 14, -- studs : assez près de la machine pour appuyer sur E
+	MachineNear = 18, -- studs : assez près de la machine pour appuyer sur E
 	PetCheer = 5, -- secondes de « ta créature rapporte des $ »
 	-- Nom de chaque étape dans l'entonnoir Onboarding (Tracking) ; l'étape 1 de l'entonnoir est « Join »
 	Names = {

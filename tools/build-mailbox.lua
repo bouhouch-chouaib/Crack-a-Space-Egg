@@ -5,8 +5,8 @@
 
 local STUDS = "rbxassetid://99589690361139"
 local ICON = "rbxassetid://102151511950781" -- étoile (Icons.Ids.Star)
-local CORNER = Vector3.new(60, 0, 24) -- coin du quai, centre de l'arc
-local ANGLE, RADIUS = 145, 30
+local CORNER = Vector3.new(0, 0, 38) -- la boîte, sur le bord gauche du quai, regarde le quai
+local ANGLE, RADIUS = -90, 66
 
 local LIGHT = Color3.fromRGB(120, 245, 240)
 local DARK = Color3.fromRGB(30, 180, 200)

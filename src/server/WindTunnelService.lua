@@ -69,7 +69,8 @@ end
 local function spot(base: Model): Vector3
 	local floor = base:FindFirstChild("Floor") :: BasePart?
 	local cf = if floor then floor.CFrame else base:GetPivot()
-	local p = cf:PointToWorldSpace(J.TunnelOffset)
+	local side = (base:GetAttribute("TunnelSide") or 1) :: number -- côté opposé à la machine
+	local p = cf:PointToWorldSpace(Vector3.new(side * J.TunnelOffset.X, J.TunnelOffset.Y, J.TunnelOffset.Z))
 	return Vector3.new(p.X, deckY(p.X, p.Z), p.Z)
 end
 
