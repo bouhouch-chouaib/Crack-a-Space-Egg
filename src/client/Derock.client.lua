@@ -700,7 +700,6 @@ RunService.RenderStepped:Connect(function(dt)
 		local ring = (machine:GetAttribute("EggRing") or 1) :: number
 		local rarity = (machine:GetAttribute("EggRarity") or 1) :: number
 		local kind = (machine:GetAttribute("EggKind") or "egg") :: string
-		local queue = (machine:GetAttribute("Queue") or 0) :: number
 		local owner = Players:GetPlayerByUserId((machine:GetAttribute("Owner") or 0) :: number)
 		local spot = st.spot and st.spot.WorldPosition or pivot.Position
 		local eggCenter = spot + Vector3.new(0, EGG_H / 2, 0)
@@ -878,7 +877,8 @@ RunService.RenderStepped:Connect(function(dt)
 					s.icon.ImageColor3 = r.Color
 				end
 				local r = Config.Rarities[rarity] or Config.Rarities[1]
-				s.sub.Text = string.upper(r.Name) .. (if queue > 0 then "  ·  " .. queue .. " in line" else "")
+				local left = math.ceil(T - t)
+				s.sub.Text = string.upper(r.Name) .. (if t < revealAt and left > 2 then ("  ·  %d:%02d"):format(left // 60, left % 60) else "")
 				s.sub.TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.3)
 			end
 		else

@@ -12,6 +12,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local HatchService = require(script.Parent.HatchService)
+local MachineService = require(script.Parent.MachineService)
 local BoostService = require(script.Parent.BoostService)
 local Format = require(ReplicatedStorage.Shared.Format)
 
@@ -58,6 +59,14 @@ function MonetizationService.Start()
 		if s.ProductId ~= 0 then
 			HANDLERS[s.ProductId] = function(player)
 				return HatchService.SkipEgg(player, rarity)
+			end
+		end
+	end
+	-- Finir le travail de la machine tout de suite (du temps gagné)
+	for _, s in ipairs(Config.Derock.Skip) do
+		if s.ProductId ~= 0 then
+			HANDLERS[s.ProductId] = function(player)
+				return MachineService.FinishNow(player)
 			end
 		end
 	end

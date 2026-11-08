@@ -179,6 +179,67 @@ player.AttributeChanged:Connect(function(name)
 	end
 end)
 
+-- PASTILLE DE LA MACHINE (à gauche des deux carrés d'inventaire) : temps restant et « Finish » en Robux,
+-- visible de partout tant que sa machine travaille
+local MarketplaceService = game:GetService("MarketplaceService")
+local chip: Frame?, chipTime: TextLabel?, chipPrice: TextLabel?
+local chipRarity = 1
+
+local function makeChip()
+	local holder = player:WaitForChild("PlayerGui"):WaitForChild("Inventory"):WaitForChild("Holder")
+	local f = new("Frame", {
+		Name = "MachineChip",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromOffset(-10, 0),
+		Size = UDim2.fromOffset(250, 66),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Visible = false,
+		ZIndex = 5,
+		Parent = holder,
+	}, { UIKit.corner(14), UIKit.stroke(4), UIKit.gradient(UIKit.Colors.Dark[1], UIKit.Colors.Dark[2]) })
+	UIKit.studs(f, 0.45, "Studs", 16)
+	UIKit.icon("MachineUp", { Size = UDim2.fromOffset(58, 58), Position = UDim2.fromOffset(4, 4), ZIndex = 6, Parent = f })
+	chipTime = UIKit.text({ Size = UDim2.fromOffset(74, 44), Position = UDim2.fromOffset(62, 11), Text = "", ZIndex = 6, Stroke = 3, Parent = f })
+	local b, text = UIKit.priceButton({ parent = f, text = "", robux = true, size = UDim2.fromOffset(104, 50), position = UDim2.new(1, -112, 0, 8) })
+	b.Name = "Finish"
+	b.ZIndex = 6
+	text.TextSize = 24
+	chipPrice = text
+	b.MouseButton1Click:Connect(function()
+		local skip = Config.Derock.Skip[chipRarity]
+		if not skip or skip.ProductId == 0 then
+			UIKit.toast("Coming soon!", "info")
+			return
+		end
+		MarketplaceService:PromptProductPurchase(player, skip.ProductId)
+	end)
+	chip = f
+end
+
+task.spawn(function()
+	makeChip()
+	while true do
+		task.wait(0.2)
+		local bases = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Bases")
+		local base = bases and bases:FindFirstChild("Base" .. tostring(player:GetAttribute("Base")))
+		local machine = base and base:FindFirstChild("DerockMachine")
+		local job = machine and machine:GetAttribute("JobEnd") :: number?
+		local mine = machine and machine:GetAttribute("Owner") == player.UserId
+		local left = if job and mine then job - workspace:GetServerTimeNow() else 0
+		local show = left > 2
+		if chip then
+			chip.Visible = show
+		end
+		if show and chipTime and chipPrice then
+			chipRarity = ((machine :: Instance):GetAttribute("EggRarity") or 1) :: number
+			local secs = math.ceil(left)
+			chipTime.Text = ("%d:%02d"):format(secs // 60, secs % 60)
+			local skip = Config.Derock.Skip[chipRarity]
+			chipPrice.Text = if skip then tostring(skip.Price) else ""
+		end
+	end
+end)
+
 UIKit.Open.Event:Connect(function(what: string)
 	if what == "MachineUp" then
 		win.open(refresh)

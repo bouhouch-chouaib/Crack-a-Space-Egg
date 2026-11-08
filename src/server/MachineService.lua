@@ -7,6 +7,7 @@
 --   JobStart / JobEnd : temps serveur du travail en cours (absents = machine au repos)
 --   EggRing / EggRarity : l'œuf en cours ; Queue : œufs restants après lui ; Owner : UserId
 
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -23,6 +24,7 @@ local Remotes = ReplicatedStorage.Remotes
 local MachineService = {}
 
 local busy: { [Model]: boolean } = {}
+local skipped: { [Model]: boolean } = {} -- « Finish now » payé : le travail en cours se termine tout de suite
 local rng = Random.new()
 
 -- Taille d'un minerai (Config.Sizes, pondérée par Chance)
@@ -114,7 +116,7 @@ local function clearJob(machine: Model)
 	machine:SetAttribute("Queue", 0)
 end
 
--- Passe les œufs de la soute un par un ; s'arrête si la soute est vide ou si le joueur part
+-- Dégage l'œuf de la soute. Il quitte la soute dès le début : le joueur peut repartir forer pendant ce temps
 local function run(player: Player, base: Model, machine: Model)
 	busy[machine] = true
 	while player.Parent and Bases.OwnerOf(base) == player do
@@ -122,8 +124,10 @@ local function run(player: Player, base: Model, machine: Model)
 		if not d or #d.cargo == 0 then
 			break
 		end
-		-- L'œuf reste dans la soute tant qu'il n'est pas dégagé (rien n'est perdu si le joueur part)
-		local egg = d.cargo[1]
+		-- s'il quitte le jeu avant la fin, d.derocking est rendu à la soute à son retour (rien n'est perdu)
+		local egg = table.remove(d.cargo, 1)
+		d.derocking = egg
+		GameService.Sync(player)
 		local ring = if type(egg) == "table" then egg.ring or 1 else egg
 		local rarity = if type(egg) == "table" and egg.rarity then egg.rarity else GameService.RollRarity(d, ring)
 		if type(egg) == "table" then
@@ -137,25 +141,43 @@ local function run(player: Player, base: Model, machine: Model)
 			GameService.Notice(player, ("{MachineLuck} Lucky Core! Upgraded to %s!"):format(Config.Rarities[rarity].Name), "good")
 			GameService.Sync(player)
 		end
-		local duration = Config.MachineTime(rarity, levels.Speed or 0)
+		local duration = if (d.guide or 0) < Config.Guide.Steps then Config.Derock.Tutorial else Config.MachineTime(rarity, levels.Speed or 0)
 		local now = workspace:GetServerTimeNow()
 		local geode = type(egg) == "table" and egg.kind == "geode"
 		machine:SetAttribute("EggRing", ring)
 		machine:SetAttribute("EggRarity", rarity)
 		machine:SetAttribute("EggKind", if geode then "geode" else "egg")
-		machine:SetAttribute("Queue", #d.cargo - 1)
+		machine:SetAttribute("Queue", 0)
 		machine:SetAttribute("Owner", player.UserId)
 		machine:SetAttribute("JobStart", now)
 		machine:SetAttribute("JobEnd", now + duration)
-		task.wait(duration)
+		local derock = machine:FindFirstChild("DerockPrompt", true) :: ProximityPrompt?
+		if derock and Config.Derock.Skip[rarity] and duration > 2 then
+			derock.ActionText = "Finish now"
+			derock.ObjectText = "R$ " .. Config.Derock.Skip[rarity].Price
+		end
+		local ends = now + duration
+		while workspace:GetServerTimeNow() < ends and player.Parent do
+			if skipped[machine] then
+				skipped[machine] = nil
+				ends = workspace:GetServerTimeNow() + 1
+				machine:SetAttribute("JobEnd", ends)
+				GameService.Notice(player, "{Lightning} Machine boosted!", "good")
+			end
+			task.wait(0.1)
+		end
+		if derock then
+			derock.ActionText = "Derock"
+			derock.ObjectText = "Derock Machine"
+		end
 		if not player.Parent then
 			break
 		end
 		d = DataService.Get(player)
-		if not d or d.cargo[1] ~= egg then
+		if not d or d.derocking ~= egg then
 			break
 		end
-		table.remove(d.cargo, 1)
+		d.derocking = nil
 		if geode then
 			-- la géode s'ouvre : un minerai de l'anneau, d'une taille tirée au hasard, parfois brillant
 			-- la géode du tutoriel a sa taille imposée
@@ -192,8 +214,12 @@ local function run(player: Player, base: Model, machine: Model)
 			table.insert(d.ready, { ring = ring, rarity = rarity })
 			GameService.Sync(player)
 			Remotes.EggRevealed:FireClient(player, ring, rarity)
+			if duration >= 10 then
+				GameService.Notice(player, ("{Egg} Your %s egg is out of the rock!"):format(Config.Rarities[rarity].Name), "good")
+			end
 		end
 		task.wait(Config.Derock.Gap)
+		break
 	end
 	clearJob(machine)
 	busy[machine] = nil
@@ -240,8 +266,17 @@ local function bind(base: Model)
 			GameService.Notice(player, "This is not your base", "warn")
 			return
 		end
+		-- la machine travaille : ce même bouton sert à la finir tout de suite
 		if busy[machine] then
-			GameService.Notice(player, "The machine is already working!", "info")
+			local job = machine:GetAttribute("JobEnd") :: number?
+			local skip = Config.Derock.Skip[(machine:GetAttribute("EggRarity") or 1) :: number]
+			if job and skip and job - workspace:GetServerTimeNow() > 2 then
+				if skip.ProductId == 0 then
+					GameService.Notice(player, "Coming soon!", "info")
+				else
+					MarketplaceService:PromptProductPurchase(player, skip.ProductId)
+				end
+			end
 			return
 		end
 		local d = DataService.Get(player)
@@ -251,6 +286,16 @@ local function bind(base: Model)
 		end
 		task.spawn(run, player, base, machine)
 	end)
+end
+
+-- « Finish now » payé (MonetizationService) ; false si la machine ne travaille pas (Roblox redemandera plus tard)
+function MachineService.FinishNow(player: Player): boolean
+	local machine = machineOf(player)
+	if not machine or machine:GetAttribute("Owner") ~= player.UserId or not machine:GetAttribute("JobEnd") then
+		return false
+	end
+	skipped[machine] = true
+	return true
 end
 
 function MachineService.Start()
@@ -265,6 +310,11 @@ function MachineService.Start()
 		return { ok = false, error = "Unknown action" }
 	end
 	DataService.Loaded:Connect(function(player: Player)
+		local d = DataService.Get(player)
+		if d and d.derocking then
+			table.insert(d.cargo, 1, d.derocking)
+			d.derocking = nil
+		end
 		MachineService.Refresh(player)
 	end)
 	-- le joueur part : sa machine reprend la couleur de départ pour le suivant
@@ -287,6 +337,11 @@ function MachineService.Start()
 			if cmd == "set" then
 				d.machine[key] = level
 				MachineService.Refresh(player)
+			elseif cmd == "finish" then
+				return tostring(MachineService.FinishNow(player))
+			elseif cmd == "cargo" then -- ("cargo", anneau, rareté) : un œuf dans la soute
+				table.insert(d.cargo, { ring = key, rarity = level, kind = "egg" })
+				GameService.Sync(player)
 			end
 			return ("Speed %d Luck %d Polish %d, $%s"):format(d.machine.Speed, d.machine.Luck, d.machine.Polish, Format.Short(d.credits))
 		end

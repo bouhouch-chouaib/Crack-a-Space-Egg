@@ -52,6 +52,7 @@ local function default()
 		base = {},
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
 		pity = 0,
+		derocking = nil, -- l'œuf dans la machine (rendu à la soute si le joueur part avant la fin)
 		machine = { Speed = 0, Luck = 0, Polish = 0 }, -- niveaux de la machine à dérocher (MachineService)
 		guideRewarded = false, -- récompense de fin de tutoriel déjà donnée
 		tips = {}, -- ["clé"] = true : tutoriels au bon moment déjà montrés (Config.Guide.Tips)

@@ -244,9 +244,21 @@ Config.UpgradeOrder = { "Scanner" }
 -- Durée pour un œuf = Time + PerRarity × (rareté - 1) secondes ; Gap = pause entre deux œufs
 -- (le temps que l'œuf révélé vole jusqu'au joueur).
 Config.Derock = {
-	Time = 4,
-	PerRarity = 0.5,
+	-- Secondes pour dégager un œuf ou une géode, de Common à Cosmic (avant les améliorations de la machine).
+	-- Pendant ce temps le joueur est libre : il peut repartir forer.
+	Times = { 4, 8, 15, 30, 60, 120, 240 },
+	Tutorial = 4, -- durée pendant le tutoriel, quelle que soit la rareté
 	Gap = 1.6,
+	-- Finir tout de suite contre des Robux : un produit de développeur par rareté (0 = pas encore créé)
+	Skip = {
+		{ Price = 5, ProductId = 0 },
+		{ Price = 9, ProductId = 0 },
+		{ Price = 15, ProductId = 0 },
+		{ Price = 25, ProductId = 0 },
+		{ Price = 45, ProductId = 0 },
+		{ Price = 79, ProductId = 0 },
+		{ Price = 129, ProductId = 0 },
+	},
 }
 
 -- FOREUSES ------------------------------------------------------------------------
@@ -1322,7 +1334,7 @@ Config.Machine = {
 	MinTime = 1.8, -- secondes : en dessous, l'animation de la machine n'a plus le temps de se jouer
 	Order = { "Speed", "Luck", "Polish" },
 	Tracks = {
-		Speed = { Name = "Turbo Motor", Text = "Breaks the rock faster", Art = "MachineSpeed", Base = 1500, Growth = 3, PerLevel = 0.93, Color = Color3.fromRGB(255, 165, 50) },
+		Speed = { Name = "Turbo Motor", Text = "Less waiting at the machine", Art = "MachineSpeed", Base = 1500, Growth = 3, PerLevel = 0.93, Color = Color3.fromRGB(255, 165, 50) },
 		Luck = { Name = "Lucky Core", Text = "Chance of +1 rarity", Art = "MachineLuck", Base = 4000, Growth = 3.1, PerLevel = 0.01, Color = Color3.fromRGB(110, 230, 80) },
 		Polish = { Name = "Gem Polisher", Text = "Gems sell for more", Art = "MachinePolish", Base = 2500, Growth = 3, PerLevel = 0.1, Color = Color3.fromRGB(80, 190, 255) },
 	},
@@ -1343,7 +1355,8 @@ end
 
 -- Secondes pour dégager un œuf de cette rareté
 function Config.MachineTime(rarity: number, speedLevel: number): number
-	local time = (Config.Derock.Time + Config.Derock.PerRarity * (rarity - 1)) * Config.Machine.Tracks.Speed.PerLevel ^ speedLevel
+	local base = Config.Derock.Times[math.clamp(rarity, 1, #Config.Derock.Times)]
+	local time = base * Config.Machine.Tracks.Speed.PerLevel ^ speedLevel
 	return math.max(Config.Machine.MinTime, time)
 end
 
@@ -1358,7 +1371,7 @@ end
 -- Texte court de l'effet à ce niveau (fenêtre)
 function Config.MachineEffect(key: string, level: number): string
 	if key == "Speed" then
-		return ("%.1fs"):format(Config.MachineTime(1, level))
+		return ("-%d%%"):format(math.floor((1 - Config.Machine.Tracks.Speed.PerLevel ^ level) * 100 + 0.5))
 	elseif key == "Luck" then
 		return ("%d%%"):format(math.floor(Config.MachineLuck(level) * 100 + 0.5))
 	end
