@@ -3,9 +3,9 @@
 -- une flèche au sol qui file vers le but, une flèche qui rebondit au-dessus et un contour qui le fait
 -- briller, une main qui montre le geste à faire (maintenir, toucher), et une petite fête à chaque réussite.
 -- Il suit l'état réel du joueur, pas un script figé : s'il tombe, perd son œuf ou part ailleurs, la
--- bulle s'adapte (« Fly to a rock! », « Bring it home! »...). Le tutoriel : un chien commun guidé de A à Z,
--- une créature Épique avec peu d'aide (bulle sans flèche), une géode à vendre pour payer la soufflerie, la
--- soufflerie, une nouvelle foreuse, puis la récompense (Offers.client). Les prises sont imposées par le serveur.
+-- bulle s'adapte (« Fly to a rock! », « Bring it home! »...). Le tutoriel : une géode guidée de A à Z à vendre au
+-- stand SELL, puis « une surprise t'attend » : un œuf Épique (forage et machine sans flèche, pose et éclosion
+-- guidées), la soufflerie, une nouvelle foreuse, puis la récompense (Offers.client). Prises imposées par le serveur.
 -- Étape atteinte : attribut GuideStep (sauvegardé par le serveur via Remotes.Guide).
 -- La même bulle sert aux tutoriels au bon moment (Config.Guide.Tips), une seule fois par joueur et
 -- seulement quand il en a besoin : sa première géode, son premier minerai, sa base pleine, un cadeau à
@@ -518,41 +518,36 @@ local function decideStep(step: number): Hint?
 	local floor = base and base:FindFirstChild("Floor")
 
 	-- étapes franchies (dans l'ordre ; un joueur qui saute des étapes les franchit toutes d'un coup)
-	if step < 1 and (cargo > 0 or job or held or eggs > 0 or pets > 0) then
+	local gems, sold = attr("GemCount"), attr("GemsSold")
+	local later = eggs > 0 or pets > 0 or held ~= nil or attr("ReadyEggs") > 0
+	if step < 1 and (cargo > 0 or job or gems > 0 or sold > 0 or later) then
 		advance(1)
 		step = 1
 	end
-	if step < 2 and (job or held or attr("ReadyEggs") > 0 or eggs > 0 or pets > 0) then
+	if step < 2 and (job or gems > 0 or sold > 0 or later) then
 		advance(2)
 		step = 2
 	end
-	if step < 3 and (eggs > 0 or pets > 0) then
+	if step < 3 and (sold > 0 or later) then
 		advance(3)
 		step = 3
 	end
-	if step < 4 and pets > 0 then
-		advance(4, true) -- la bannière d'éclosion fait déjà la fête
+	if step == 3 and (cargo > 0 or later) then
+		advance(4)
 		step = 4
-		petCheerAt = os.clock()
 	end
-	if step == 4 then
-		if petCheerAt == 0 then
-			petCheerAt = os.clock()
-		end
-		if os.clock() - petCheerAt > G.PetCheer then
-			advance(5)
-			step = 5
-		else
-			return { icon = "Cash", text = "Your pet makes money!", sub = "Every second! Bigger pets earn more" }
-		end
+	if step == 4 and (job or later) then
+		advance(5)
+		step = 5
 	end
-	if step == 5 and pets >= 2 then
-		advance(6, true) -- la bannière de la créature rare fait la fête
+	if step == 5 and (eggs > 0 or pets > 0) then
+		advance(6)
 		step = 6
 	end
-	if step == 6 and attr("GemsSold") > 0 then
-		advance(7)
+	if step == 6 and pets > 0 then
+		advance(7, true) -- la bannière de la créature rare fait la fête
 		step = 7
+		petCheerAt = os.clock()
 	end
 	local tunnel = myTunnel()
 	if step == 7 and tunnel and tunnel:GetAttribute("OwnerId") == player.UserId and (tunnel:GetAttribute("Tier") or 0) >= 1 then
@@ -582,23 +577,28 @@ local function decideStep(step: number): Hint?
 	end
 
 	-- objectifs
-	if step <= 2 then
+	if step == 7 and petCheerAt > 0 and os.clock() - petCheerAt < G.PetCheer then
+		return { icon = "Cash", text = "Your pet makes money!", sub = "Every second! Bigger pets earn more" }
+	end
+	if step <= 1 then
+		return goRock(1)
+	elseif step == 2 then
+		if attr("GemCount") > 0 then
+			return { icon = "Sparkles", text = "You got a gem! Sell it!", sub = "Step on the SELL mat", target = sellMat() }
+		end
 		return goRock(1)
 	elseif step == 3 then
+		if player:GetAttribute("RockNear") then
+			return goRock(1, "A surprise is inside!")
+		end
+		return { icon = "Star", text = "A surprise awaits you!", sub = "Go drill another rock!" }
+	elseif step == 4 or step == 5 then
+		return goRock(1)
+	elseif step == 6 then
 		if anyEgg then
 			return { icon = "Hatch", text = "Your egg is hatching!", sub = "Just a few seconds...", target = anyEgg }
 		end
 		return goRock(1)
-	elseif step == 5 then
-		if eggs > 0 then
-			return { icon = "Hatch", text = "Your rare egg is hatching!", sub = "Just a few seconds..." }
-		end
-		return { icon = "Egg", text = "Get another egg!", sub = "You know the way now!" }
-	elseif step == 6 then
-		if attr("GemCount") > 0 then
-			return { icon = "Sparkles", text = "Sell your gem!", sub = "Step on the SELL mat: money for your wind tunnel", target = sellMat() }
-		end
-		return goRock(1, "Get a geode: gems sell for big money!")
 	elseif step == 7 then
 		local cost = Config.Jetpack.Tunnels[1].Cost
 		if attr("Credits") >= cost then
@@ -618,10 +618,11 @@ local function decideStep(step: number): Hint?
 	return nil
 end
 
--- Le guide, avec moins d'aide pour le deuxième œuf : la bulle reste, mais plus de flèche ni de main
+-- Une fois la géode vendue, on ne remontre plus le forage ni la machine : la bulle reste, sans flèche ni main.
+-- La pose et l'éclosion, jamais vues, restent guidées.
 local function decide(step: number): Hint?
 	local h = decideStep(step)
-	if h and reached == 5 then
+	if h and (reached == 3 or reached == 4) then
 		h.target = nil
 		h.hold = nil
 		local rarity = tonumber(string.split(player:GetAttribute("CargoRarities") or "", ",")[1] or "")

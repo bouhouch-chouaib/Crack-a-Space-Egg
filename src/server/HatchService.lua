@@ -64,8 +64,7 @@ end
 local function totalIncome(d): number
 	local sum = 0
 	for _, item in ipairs(d.base) do
-		-- la créature Épique du tutoriel ne rapporte qu'une fois le minerai vendu (Config.Guide.HoldUntil)
-		if item.kind == "pet" and not (item.hold and (d.guide or 0) < Config.Guide.HoldUntil) then
+		if item.kind == "pet" then
 			sum += item.income or 0
 		end
 	end
@@ -406,12 +405,7 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	nextId += 1
 	-- le tout premier œuf du joueur éclot en quelques secondes
 	local first = next(d.index) == nil and #d.base == 0
-	local hatchedOne = 0
-	for _, n in pairs(d.index) do
-		hatchedOne += n
-	end
-	local second = hatchedOne == 1 and rarity == Config.Guide.SecondRarity and (d.guide or 0) < 6
-	local total = if first then H.FirstTime elseif second then H.SecondTime else math.ceil((H.Time[rarity] or 60) * BoostService.HatchTimeMult(player))
+	local total = if first then H.FirstTime else math.ceil((H.Time[rarity] or 60) * BoostService.HatchTimeMult(player))
 	local item = {
 		kind = "egg",
 		id = ("%d%03d"):format(os.time(), nextId % 1000),
@@ -421,7 +415,6 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 		z = z,
 		hatchAt = os.time() + total,
 		hatchTotal = total,
-		tutorial = if second then "second" else nil,
 	}
 	table.insert(d.base, item)
 	build(player, item)
@@ -459,11 +452,11 @@ function HatchService.Hatch(player: Player, id: string)
 	end
 	-- La créature est décidée tout de suite (pas de double éclosion possible)
 	local c = Config.CreatureFor(item.ring, item.rarity)
-	-- tutoriel : le chien de taille normale, puis la créature Épique (moment « wow ») ; ensuite, Tiny à Giant
-	local special = if next(d.index) == nil then "first" elseif item.tutorial == "second" then "wow" else nil
+	-- tutoriel : la toute première est l'Épique surprise (moment « wow ») ; ensuite, Tiny à Giant
+	local special = if next(d.index) ~= nil then nil
+		elseif (d.guide or 0) < Config.Guide.Steps and item.rarity == Config.Guide.SecondRarity then "wow"
+		else "first"
 	local size = if special then H.FirstSize else Config.RollPetSize(rng)
-	item.hold = if special == "wow" then true else nil
-	item.tutorial = nil
 	item.kind = "pet"
 	item.name = c.Name
 	item.size = math.floor(size * 100 + 0.5) / 100
@@ -522,8 +515,8 @@ function HatchService.Hatch(player: Player, id: string)
 					if not dd or not player.Parent then
 						return
 					end
-					-- la creature rare du tutoriel : petite prime (sinon la geode ne servirait a rien)
-					local reward = if item.hold then Config.IndexReward.NewMin else math.max(Config.IndexReward.NewMin, math.floor(item.income * Config.IndexReward.NewSeconds))
+					-- la créature surprise du tutoriel : petite prime, sinon le tube et la foreuse ne comptent plus
+					local reward = if special == "wow" then Config.IndexReward.NewMin else math.max(Config.IndexReward.NewMin, math.floor(item.income * Config.IndexReward.NewSeconds))
 					dd.credits += reward
 					GameService.Sync(player)
 					GameService.Notice(player, ("{Star} New in your Index: %s! +$%s"):format(item.name, Format.Short(reward)), "good")

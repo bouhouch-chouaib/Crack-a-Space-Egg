@@ -22,7 +22,6 @@ local new = UIKit.new
 local BUTTON = 66
 local WIDTH, HEIGHT = 400, 440
 local MAX_ROWS = 40 -- au-delà, on garde les plus précieuses (chaque ligne a son aperçu 3D)
-local ORE_ICON = "R1_T3" -- minerai brut sur sa roche (Assets.Gems), dessiné sur le bouton avec un contour sombre
 
 local gui = new("ScreenGui", { Name = "Inventory", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 5, Parent = player:WaitForChild("PlayerGui") })
 local holder = new("Frame", {
@@ -84,24 +83,7 @@ end
 local pawButton = square("Creatures", 0)
 UIKit.icon("Creatures", { Size = UDim2.fromScale(0.86, 0.86), Position = UDim2.fromScale(0.07, 0.07), ZIndex = 3, Parent = pawButton })
 local gemButton = square("Gems", BUTTON + 10)
-task.spawn(function()
-	local assets = ReplicatedStorage:WaitForChild("Assets", 30)
-	local gems = assets and assets:WaitForChild("Gems", 30)
-	local model = gems and gems:WaitForChild(ORE_ICON, 30)
-	if not model then
-		return
-	end
-	-- contour épais comme les autres icônes : la silhouette en sombre, décalée tout autour
-	for i = 1, 8 do
-		local a = i / 8 * math.pi * 2
-		local back = viewport(gemButton, (model :: Model):Clone(), BUTTON - 8, UDim2.fromOffset(4 + math.cos(a) * 3, 4 + math.sin(a) * 3))
-		back.ImageColor3 = Color3.fromRGB(22, 22, 32)
-		back.ZIndex = 2
-	end
-	local front = viewport(gemButton, (model :: Model):Clone(), BUTTON - 8, UDim2.fromOffset(4, 4))
-	front.Ambient = Color3.fromRGB(235, 235, 245)
-	front.ZIndex = 3
-end)
+UIKit.icon("OreRock", { Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), ZIndex = 3, Parent = gemButton })
 
 -- LE MENU DÉROULANT ----------------------------------------------------------------------------
 
@@ -117,7 +99,7 @@ local drop = new("Frame", {
 	Parent = holder,
 }, { UIKit.corner(16), UIKit.stroke(4) })
 UIKit.studs(drop, 0.6, "Inlets", 26)
-local title = UIKit.text({ Size = UDim2.new(1, -24, 0, 34), Position = UDim2.fromOffset(12, 8), Text = "", TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12, Stroke = 3, Parent = drop })
+local title = UIKit.text({ Size = UDim2.new(1, -76, 0, 34), Position = UDim2.fromOffset(12, 8), Text = "", TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12, Stroke = 3, Parent = drop })
 local list = new("ScrollingFrame", {
 	Name = "List",
 	Size = UDim2.new(1, -12, 1, -52),
@@ -134,6 +116,21 @@ local list = new("ScrollingFrame", {
 	new("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 	new("UIPadding", { PaddingTop = UDim.new(0, 2), PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 8) }),
 })
+
+-- flèche pour refermer le menu
+local closeButton = new("TextButton", {
+	Name = "CloseArrow",
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -8, 0, 6),
+	Size = UDim2.fromOffset(40, 36),
+	BackgroundColor3 = Color3.new(1, 1, 1),
+	AutoButtonColor = false,
+	Text = "",
+	ZIndex = 12,
+	Parent = drop,
+}, { UIKit.corner(10), UIKit.stroke(3), UIKit.gradient(UIKit.Colors.Dark[1], UIKit.Colors.Dark[2]) })
+UIKit.icon("ArrowUp", { Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(5, 3), ZIndex = 13, Parent = closeButton })
+UIKit.juice(closeButton)
 
 local current: string? = nil
 local refresh: () -> ()
@@ -380,6 +377,10 @@ local function toggle(kind: string)
 	refresh()
 end
 
+closeButton.MouseButton1Click:Connect(function()
+	Sfx.Play("Click")
+	close()
+end)
 pawButton.MouseButton1Click:Connect(function()
 	toggle("Creatures")
 end)

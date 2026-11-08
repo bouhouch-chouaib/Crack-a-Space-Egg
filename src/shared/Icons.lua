@@ -36,6 +36,7 @@ Icons.Ids = {
 	Eye = "rbxassetid://118287707219483",
 	Rift = "rbxassetid://88003725449676",
 	Sparkles = "rbxassetid://74527316576347",
+	OreRock = "rbxassetid://138611183043411", -- minerai brut sur sa roche (rendu Blender, ropilot_blender_render)
 }
 
 local PAD = "     " -- place réservée devant le texte pour l'icône

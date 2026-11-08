@@ -953,10 +953,9 @@ Config.Hatch = {
 	Slots = 10,
 	-- Hauteur du corps de l'œuf posé (studs) selon la rareté : les rares sont plus gros
 	EggHeight = { 2.4, 2.7, 3.0, 3.4, 3.9, 4.5, 5.2 },
-	-- Tutoriel : premier œuf en 6 s, chien de taille normale ; œuf Épique en 12 s
+	-- Tutoriel : le premier œuf éclot en 6 s, créature de taille normale
 	FirstTime = 6,
 	FirstSize = 1,
-	SecondTime = 12,
 	-- Place occupée par un œuf posé puis par sa créature (rayon en studs, selon la rareté) :
 	-- deux objets posés ne se touchent pas, et les créatures rares, plus grandes, prennent plus de place
 	-- Depuis le 8 nov., seuls les œufs se gênent : les créatures, immenses, peuvent se chevaucher et
@@ -1205,22 +1204,21 @@ end
 --   8 acheter la foreuse n° Drill   9 acheter un niveau de Scanner (la chance)   10 (= Steps) terminé
 -- (ordre et niveaux revus après un test du 7 nov. : soufflerie avant la foreuse, niveau 3 suffit)
 Config.Guide = {
-	-- Tutoriel : chien commun guidé de A à Z, puis créature Épique avec peu d'aide, géode à vendre,
-	-- soufflerie, nouvelle foreuse, récompense.
+	-- Tutoriel : une géode guidée de A à Z à vendre au stand SELL, puis une surprise : un œuf Épique,
+	-- la soufflerie, la nouvelle foreuse et la récompense.
 	Steps = 9,
 	Drill = 2,
-	SecondRarity = 4, -- rareté forcée du deuxième œuf (Épique)
-	GeodeRarity = 2, -- minerai forcé de la géode du tutoriel : 15 x 60 x 1,6 = 1 440 $, de quoi payer la soufflerie
+	SecondRarity = 4, -- rareté de l'œuf surprise (Épique)
+	GeodeRarity = 2, -- minerai de la géode du tutoriel : 15 x 60 x 1,6 = 1 440 $, de quoi payer la soufflerie
 	GeodeSize = "Large",
-	HoldUntil = 7, -- la créature Épique rapporte à partir de cette étape (minerai vendu), sinon la géode ne sert à rien
 	Reward = { Money = 1000, Luck = 15, MoneyBoost = 15 }, -- fin du tutoriel : 5 000 $ et potions x2 de 15 min
 	Arrow = "rbxassetid://111578532993258", -- chevrons blancs à contour sombre (poutre au sol)
 	MachineNear = 14, -- studs : assez près de la machine pour appuyer sur E
 	PetCheer = 5, -- secondes de « ta créature rapporte des $ »
 	-- Nom de chaque étape dans l'entonnoir Onboarding (Tracking) ; l'étape 1 de l'entonnoir est « Join »
 	Names = {
-		"First egg drilled", "Machine used", "Egg placed", "First pet", "Pet money seen",
-		"Rare pet hatched", "Gem sold", "Wind tunnel bought", "New drill bought",
+		"Geode drilled", "Geode opened", "Gem sold", "Rare egg drilled", "Machine used",
+		"Egg placed", "Rare pet hatched", "Wind tunnel bought", "New drill bought",
 	},
 	-- Tutoriels au bon moment : une seule fois par joueur, quand il en a besoin (Guide.client)
 	Tips = { geode = true, gem = true, basefull = true, supernova = true, rewards = true, fuse = true, monsters = true, mailbox = true, scanner = true, starter = true },

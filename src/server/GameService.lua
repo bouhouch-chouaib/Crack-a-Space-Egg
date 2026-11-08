@@ -158,14 +158,14 @@ local function tutorialDrop(d, ringIndex: number)
 			pending += 1
 		end
 	end
-	if hatched == 0 and pending == 0 then
-		return { rarity = 1, kind = "egg" } -- le chien commun
-	elseif hatched == 1 and pending == 0 and step < 6 then
-		return { rarity = G.SecondRarity, kind = "egg" }
-	elseif step == 6 and #d.gems == 0 then
-		return { rarity = G.GeodeRarity, kind = "geode", size = G.GeodeSize }
+	if hatched > 0 or pending > 0 then
+		return nil
 	end
-	return nil
+	-- d'abord une géode à vendre ; une fois le minerai vendu, l'œuf surprise
+	if (d.stats.gemsSold or 0) == 0 then
+		return if #d.gems == 0 then { rarity = G.GeodeRarity, kind = "geode", size = G.GeodeSize } else nil
+	end
+	return { rarity = G.SecondRarity, kind = "egg" }
 end
 
 -- FORAGE ------------------------------------------------------------------
