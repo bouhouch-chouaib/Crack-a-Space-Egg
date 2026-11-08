@@ -113,30 +113,24 @@ local function toStand(standName: string, tab: string?)
 	end
 end
 
-local function toTunnel()
-	local index = player:GetAttribute("Base")
-	local folder = ship() and (ship() :: Instance):FindFirstChild("WindTunnels")
-	local tunnel = folder and folder:FindFirstChild("Tunnel" .. tostring(index)) :: Model?
+-- Debout sur un bouton rouge de sa base : le menu s'ouvre tout seul (ShipShops.client)
+local function toButton(name: string)
+	local bases = ship() and (ship() :: Instance):FindFirstChild("Bases")
+	local mine = bases and bases:FindFirstChild("Base" .. tostring(player:GetAttribute("Base")))
+	local button = mine and mine:FindFirstChild(name) :: Model?
 	local character = player.Character
-	if tunnel and character then
-		local cf = tunnel:GetBoundingBox()
-		character:PivotTo(CFrame.new(cf.Position.X, 4, cf.Position.Z + 8))
+	if button and character then
+		local p = button:GetPivot().Position
+		character:PivotTo(CFrame.new(p.X, 3.4, p.Z))
 	end
 end
 
--- Devant sa machine, avec la fenêtre des améliorations ouverte
+local function toTunnel()
+	toButton("TunnelButton")
+end
+
 local function toMachine()
-	local bases = ship() and (ship() :: Instance):FindFirstChild("Bases")
-	local mine = bases and bases:FindFirstChild("Base" .. tostring(player:GetAttribute("Base")))
-	local machine = mine and mine:FindFirstChild("DerockMachine") :: Model?
-	local character = player.Character
-	if mine and machine and character then
-		local floor = mine:FindFirstChild("Floor") :: BasePart
-		local box = machine:GetBoundingBox()
-		local p = box.Position - floor.CFrame.LookVector * 14
-		character:PivotTo(CFrame.lookAt(Vector3.new(p.X, 4, p.Z), Vector3.new(box.X, 4, box.Z)))
-	end
-	UIKit.Open:Fire("MachineUp")
+	toButton("MachineButton")
 end
 
 local function toFusion()

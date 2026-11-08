@@ -179,7 +179,7 @@ local function build(index: number, pos: Vector3, tier: number, owner: Player?):
 		light.Brightness = 1.5
 		light.Parent = emitterPart
 	end
-	-- panneau (rempli par le client) et invite d'achat / d'amélioration (propriétaire seulement)
+	-- panneau (rempli par le client) ; l'achat passe par le bouton rouge au sol (TunnelUI.client)
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "Sign"
 	bb.Size = UDim2.fromScale(13, 5.5)
@@ -188,21 +188,6 @@ local function build(index: number, pos: Vector3, tier: number, owner: Player?):
 	bb.LightInfluence = 0
 	bb.Adornee = emitterPart
 	bb.Parent = emitterPart
-	if nextDef and owner then
-		local prompt = Instance.new("ProximityPrompt")
-		prompt.Name = "BuyPrompt"
-		prompt.ActionText = if def then "Upgrade to " .. nextDef.Name else "Buy " .. nextDef.Name
-		prompt.ObjectText = money(nextDef.Cost)
-		prompt.KeyboardKeyCode = Enum.KeyCode.E
-		prompt.HoldDuration = 0.4
-		prompt.MaxActivationDistance = 14
-		prompt.RequiresLineOfSight = false
-		prompt.Parent = base
-		prompt.Triggered:Connect(function(player)
-			buy(player, index)
-		end)
-	end
-
 	addStuds(m)
 	m:SetAttribute("Base", index)
 	m:SetAttribute("OwnerId", if owner then owner.UserId else 0)
@@ -332,6 +317,16 @@ local function tick()
 end
 
 function WindTunnelService.Start()
+	Remotes.TunnelUp.OnServerInvoke = function(player: Player, action: any)
+		local d = DataService.Get(player)
+		local index = player:GetAttribute("Base")
+		if action ~= "buy" or not d or type(index) ~= "number" then
+			return { ok = false }
+		end
+		local before = d.tunnel or 0
+		buy(player, index)
+		return { ok = (d.tunnel or 0) > before }
+	end
 	local ship = workspace:WaitForChild("Ship")
 	local old = ship:FindFirstChild("WindTunnels")
 	if old then

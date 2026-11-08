@@ -113,11 +113,6 @@ local function register(m: Model)
 		rings = rings,
 	}
 	makeSign(m, mine)
-	-- l'invite d'achat / d'amélioration n'apparaît que chez le propriétaire
-	local prompt = m:FindFirstChild("BuyPrompt", true) :: ProximityPrompt?
-	if prompt then
-		prompt.Enabled = mine
-	end
 end
 
 local function tunnelAt(pos: Vector3): Tunnel?

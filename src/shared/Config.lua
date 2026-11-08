@@ -249,15 +249,15 @@ Config.Derock = {
 	Times = { 4, 8, 15, 30, 60, 120, 240 },
 	Tutorial = 4, -- durée pendant le tutoriel, quelle que soit la rareté
 	Gap = 1.6,
-	-- Finir tout de suite contre des Robux : un produit de développeur par rareté (0 = pas encore créé)
+	-- Finir tout de suite contre des Robux : un produit de développeur par rareté (créés le 9 nov.)
 	Skip = {
-		{ Price = 5, ProductId = 0 },
-		{ Price = 9, ProductId = 0 },
-		{ Price = 15, ProductId = 0 },
-		{ Price = 25, ProductId = 0 },
-		{ Price = 45, ProductId = 0 },
-		{ Price = 79, ProductId = 0 },
-		{ Price = 129, ProductId = 0 },
+		{ Price = 5, ProductId = 3729852711 },
+		{ Price = 9, ProductId = 3729852818 },
+		{ Price = 15, ProductId = 3729852834 },
+		{ Price = 25, ProductId = 3729852849 },
+		{ Price = 45, ProductId = 3729852872 },
+		{ Price = 79, ProductId = 3729852889 },
+		{ Price = 129, ProductId = 3729852911 },
 	},
 }
 

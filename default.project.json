@@ -68,6 +68,9 @@
         "TunnelXP": {
           "$className": "RemoteEvent"
         },
+        "TunnelUp": {
+          "$className": "RemoteFunction"
+        },
         "Rewards": {
           "$className": "RemoteFunction"
         },

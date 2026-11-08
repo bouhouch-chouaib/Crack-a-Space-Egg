@@ -242,25 +242,6 @@ local function bind(base: Model)
 	prompt.MaxActivationDistance = 18 -- on l'active depuis la place, sans monter sur l'annexe
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = point
-	-- Deuxième invite : les améliorations, au-dessus de la première
-	local upgrade = Instance.new("ProximityPrompt")
-	upgrade.Name = "UpgradePrompt"
-	upgrade.ActionText = "Upgrade"
-	upgrade.ObjectText = "Machine"
-	upgrade.KeyboardKeyCode = Enum.KeyCode.Q
-	upgrade.GamepadKeyCode = Enum.KeyCode.ButtonL1
-	upgrade.HoldDuration = 0
-	upgrade.MaxActivationDistance = 18
-	upgrade.RequiresLineOfSight = false
-	upgrade.UIOffset = Vector2.new(0, -100)
-	upgrade.Parent = point
-	upgrade.Triggered:Connect(function(player)
-		if Bases.OwnerOf(base) ~= player then
-			GameService.Notice(player, "This is not your base", "warn")
-			return
-		end
-		Remotes.OpenShop:FireClient(player, "MachineUp")
-	end)
 	prompt.Triggered:Connect(function(player)
 		if Bases.OwnerOf(base) ~= player then
 			GameService.Notice(player, "This is not your base", "warn")

@@ -1,4 +1,4 @@
--- Fenêtre MACHINE UPGRADES (invite « Upgrade » de la machine ou panneau de première fois).
+-- Fenêtre MACHINE UPGRADES : s'ouvre en marchant sur le bouton rouge devant la machine (ShipShops.client).
 -- En haut : niveau total de la machine, son palier de couleur et ce qu'il reste pour le suivant.
 -- Trois cartes : Moteur (vitesse), Cœur chanceux (+1 rareté), Polisseuse (valeur des minerais).
 -- Le serveur décide de tout (MachineService, Remotes.Machine).

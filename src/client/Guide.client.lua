@@ -443,12 +443,6 @@ local function sellMat(): Instance?
 	return stand and stand:FindFirstChild("Mat")
 end
 
--- Vrai si le joueur est assez près pour appuyer (machine, soufflerie)
-local function isNear(x: Instance?): boolean
-	local here, there = rootPos(), posOf(x)
-	return here ~= nil and there ~= nil and (here - there).Magnitude < G.MachineNear
-end
-
 local function windowOpen(name: string): boolean
 	local w = UIKit.Windows[name]
 	return w ~= nil and w.isOpen()
@@ -602,10 +596,10 @@ local function decideStep(step: number): Hint?
 	elseif step == 7 then
 		local cost = Config.Jetpack.Tunnels[1].Cost
 		if attr("Credits") >= cost then
-			if isNear(tunnel) then
-				return { icon = "WindTunnel", text = if Device.IsTouch() then "Tap the button!" else ("Hold %s to buy!"):format(Device.Key("machine")), sub = "It makes your jetpack stronger", target = tunnel }
+			if windowOpen("TunnelUp") then
+				return { icon = "WindTunnel", text = "Press BUY!", sub = "It makes your jetpack stronger" }
 			end
-			return { icon = "WindTunnel", text = "Buy your wind tunnel!", sub = "It makes your jetpack stronger", target = tunnel }
+			return { icon = "WindTunnel", text = "Step on the red button!", sub = "Buy your wind tunnel", target = base and base:FindFirstChild("TunnelButton") }
 		end
 		return goRock(nil, ("Save $%s for a wind tunnel  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
 	elseif step == 8 then

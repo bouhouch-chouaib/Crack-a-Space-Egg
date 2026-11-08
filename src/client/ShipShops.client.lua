@@ -5,6 +5,7 @@
 -- - Marcher sur le tapis (« Mat ») devant un stand ouvre directement son menu, sans touche à appuyer :
 --   STORE = boutique Robux, ITEMS = atelier des foreuses, SELL = comptoir de vente. Il faut quitter
 --   le tapis pour qu'il puisse se rouvrir (on peut donc fermer la fenêtre en restant dessus).
+--   Les boutons rouges de sa base (machine, tube) marchent pareil, et s'enfoncent sous le pied.
 --   En quittant le tapis, ses fenêtres se ferment toutes seules (SELL : aussi celle des créatures
 --   ouverte par SELL PETS).
 
@@ -65,9 +66,10 @@ end
 -- TAPIS DES STANDS : fenêtre ouverte en marchant dessus ----------------------------------------
 local OPEN = { Store = "Store", Items = "DrillShop", Sell = "Sell", Mail = "Feedback" } -- attribut Shop du stand -> fenêtre
 -- fenêtres fermées en quittant le tapis (noms des UIKit.window)
-local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop" }, Sell = { "Sell", "CreaturesWindow" }, Feedback = { "Feedback" } }
+local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop" }, Sell = { "Sell", "CreaturesWindow" }, Feedback = { "Feedback" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" } }
 local MAT_MARGIN = 1 -- studs autour du tapis qui comptent encore
-local mats: { { part: BasePart, window: string, on: boolean } } = {}
+type Mat = { part: BasePart, window: string, on: boolean, radius: number?, home: CFrame? }
+local mats: { Mat } = {}
 task.spawn(function()
 	local shops = workspace:WaitForChild("Ship"):WaitForChild("Shops", 30)
 	if not shops then
@@ -87,7 +89,27 @@ task.spawn(function()
 	end
 end)
 
-local function onMat(mat: BasePart, pos: Vector3): boolean
+-- boutons rouges de sa propre base
+task.spawn(function()
+	while not player:GetAttribute("Base") do
+		task.wait(0.5)
+	end
+	local base = workspace:WaitForChild("Ship"):WaitForChild("Bases"):WaitForChild("Base" .. tostring(player:GetAttribute("Base")))
+	for _, name in ipairs({ "MachineButton", "TunnelButton" }) do
+		local button = base:WaitForChild(name, 30)
+		local top = button and button:FindFirstChild("RedTop")
+		if button and top and top:IsA("BasePart") then
+			table.insert(mats, { part = top, window = button:GetAttribute("Window"), on = false, radius = 3.2, home = top.CFrame })
+		end
+	end
+end)
+
+local function onMat(m: Mat, pos: Vector3): boolean
+	local mat = m.part
+	if m.radius then
+		local d = Vector2.new(pos.X - mat.Position.X, pos.Z - mat.Position.Z).Magnitude
+		return d <= m.radius and pos.Y > mat.Position.Y - 1 and pos.Y < mat.Position.Y + 7
+	end
 	local p = mat.CFrame:PointToObjectSpace(pos)
 	return math.abs(p.X) <= mat.Size.X / 2 + MAT_MARGIN and math.abs(p.Z) <= mat.Size.Z / 2 + MAT_MARGIN and p.Y > -1 and p.Y < 7
 end
@@ -130,7 +152,10 @@ RunService.RenderStepped:Connect(function()
 	local hum = character:FindFirstChildOfClass("Humanoid")
 	local alive = hum ~= nil and hum.Health > 0
 	for _, m in ipairs(mats) do
-		local on = alive and onMat(m.part, hrp.Position)
+		local on = alive and onMat(m, hrp.Position)
+		if m.home and on ~= m.on then
+			m.part.CFrame = if on then m.home - Vector3.new(0, 0.28, 0) else m.home -- le bouton s'enfonce
+		end
 		if on and not m.on then
 			Sfx.Play("Open")
 			UIKit.Open:Fire(m.window, player:GetAttribute("ShopTab"))

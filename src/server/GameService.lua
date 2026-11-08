@@ -79,6 +79,7 @@ local function sync(player: Player)
 	end
 	player:SetAttribute("Drill", d.drill)
 	player:SetAttribute("Supernovas", d.supernovas or 0)
+	player:SetAttribute("TunnelTier", d.tunnel or 0)
 	for key, level in pairs(d.machine or {}) do
 		player:SetAttribute("Mach_" .. key, level)
 	end
