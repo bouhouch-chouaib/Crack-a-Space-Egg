@@ -395,7 +395,7 @@ Config.Gear = {
 	Carpet = { Speed = 1.35, Below = -3.2, Width = 5, Length = 8, Color = col(96, 46, 160), Accent = col(245, 195, 70) },
 	Boots = { Color = col(235, 240, 250), Sole = col(90, 225, 245), Strap = col(60, 110, 220) },
 	Hook = { Range = 110, Speed = 130, Cooldown = 6, Cone = 0.8, Arrive = 9 }, -- Cone : écart maximal avec le regard (cosinus)
-	Shield = { Name = "Monster Shield", Art = "Shield", Robux = 25, ProductId = 0 }, -- consommé quand un monstre attrape le joueur
+	Shield = { Name = "Monster Shield", Art = "Shield", Robux = 25, ProductId = 3729999814 }, -- consommé quand un monstre attrape le joueur
 }
 
 -- COMBINAISONS (SuitService, ColdService) : achetées une par une, en $ ou en Robux.
