@@ -161,10 +161,10 @@ local cheer = UIKit.text({
 	Name = "Cheer",
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.24), -- au-dessus des messages du jeu (toasts, au milieu)
-	Size = UDim2.fromOffset(520, 110),
+	Size = UDim2.fromOffset(220, 44),
 	Text = "",
 	TextColor3 = GOLD,
-	Stroke = 6,
+	Stroke = 4,
 	Visible = false,
 	ZIndex = 30,
 	Parent = gui,
@@ -174,18 +174,27 @@ local cheerScale = new("UIScale", { Parent = cheer })
 local fxLayer = new("Frame", { Name = "Fx", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 29, Parent = gui })
 local CHEERS = { "Great!", "Awesome!", "Nice job!", "Super!", "Amazing!" }
 
+local cheerToken = 0
+
 local function celebrate(text: string?)
+	cheerToken += 1
+	local token = cheerToken
 	cheer.Text = text or CHEERS[math.random(1, #CHEERS)]
 	cheer.Visible = true
 	cheer.TextTransparency = 0
 	cheerScale.Scale = 0.2
-	TweenService:Create(cheerScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	TweenService:Create(cheerScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	UIKit.burst(fxLayer, UDim2.fromScale(0.5, 0.24), GOLD)
 	Sfx.Play("Pop")
-	task.delay(1.4, function()
-		TweenService:Create(cheer, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
-		task.wait(0.4)
-		cheer.Visible = false
+	task.delay(0.7, function()
+		if token ~= cheerToken then
+			return
+		end
+		TweenService:Create(cheer, TweenInfo.new(0.2), { TextTransparency = 1 }):Play()
+		task.wait(0.2)
+		if token == cheerToken then
+			cheer.Visible = false
+		end
 	end)
 end
 

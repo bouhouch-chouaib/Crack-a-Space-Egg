@@ -76,11 +76,13 @@ local bar = Instance.new("BillboardGui")
 bar.Name = "RockBar"
 bar.Size = UDim2.fromOffset(250, 92)
 -- Pas AlwaysOnTop : les BillboardGui « toujours devant » ne s'affichent pas dans ce jeu (7 nov.).
--- La barre flotte assez haut pour ne pas être cachée par le joueur debout sur la roche.
+-- La barre est donc posée du côté de la caméra (voir plus bas) pour que la roche ne la cache pas.
 bar.AlwaysOnTop = false
 bar.LightInfluence = 0
-bar.MaxDistance = 180
+bar.MaxDistance = 400
 bar.Enabled = false
+-- Ce script ne tourne qu'une fois : sans ça, la barre est détruite à la première mort du joueur
+bar.ResetOnSpawn = false
 -- Directement dans PlayerGui : une BillboardGui rangée dans une ScreenGui ne s'affiche pas
 bar.Parent = player:WaitForChild("PlayerGui")
 
@@ -110,6 +112,7 @@ UIKit.new("Frame", {
 }, { UIKit.corner(6) })
 local barText = label({ Size = UDim2.new(1, -12, 0.78, 0), Position = UDim2.new(0, 6, 0.11, 0), Text = "", ZIndex = 3, Stroke = 2.5, Parent = barBack })
 
+local BAR_LIFT = 5 -- hauteur de la barre au-dessus de la roche, en studs
 local barRock: BasePart? = nil
 local shownHp = 0 -- vie affichée (défile vers eggLeft)
 local eggLeft = 0 -- vie restante de l'œuf en cours (le sien)
@@ -163,7 +166,12 @@ RunService.RenderStepped:Connect(function(dt)
 	barGrad.Color = ColorSequence.new(c1, c2)
 	barText.Text = Format.Short(math.max(0, shownHp)) .. "/" .. Format.Short(eggHP) .. " HP"
 	Icons.Apply(barEggs, "{Egg} " .. (rock:GetAttribute("Eggs") or 0) .. "/" .. (rock:GetAttribute("MaxEggs") or 0) .. " left")
-	bar.StudsOffsetWorldSpace = Vector3.new(0, rock.Size.Y / 2 + 10, 0)
+	-- Un peu au-dessus de la roche, et avancée vers la caméra pour rester visible sous tous les angles
+	local toCamera = camera.CFrame.Position - rock.Position
+	local reach = math.max(rock.Size.X, rock.Size.Z) / 2
+	local forward = toCamera.Unit * math.max(0, math.min(reach, toCamera.Magnitude - 6))
+	-- (jamais plus haut pour autant quand la caméra domine la roche)
+	bar.StudsOffsetWorldSpace = Vector3.new(forward.X, math.min(forward.Y, 0) + rock.Size.Y / 2 + BAR_LIFT, forward.Z)
 end)
 
 -- NOMBRES DE DÉGÂTS -----------------------------------------------------------------
@@ -459,6 +467,117 @@ local function shatter(rock: BasePart)
 	Debris:AddItem(a, 1.6)
 end
 
+-- INDICATEUR ŒUF / GÉODE ----------------------------------------------------------
+-- Au centre de l'écran, juste après le coup qui a sorti quelque chose : ce qu'on vient de trouver.
+
+local FIND_TIME = 1.3 -- secondes à l'écran
+local WHITE, BLACK = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
+
+local findGui = Instance.new("ScreenGui")
+findGui.Name = "DrillFind"
+findGui.ResetOnSpawn = false
+findGui.DisplayOrder = 15
+findGui.Parent = player:WaitForChild("PlayerGui")
+UIKit.autoScale(findGui)
+
+local findRoot = UIKit.new("Frame", {
+	Name = "Root",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.47), -- sous les messages du jeu, au-dessus du joueur
+	Size = UDim2.fromOffset(300, 64),
+	BackgroundTransparency = 1,
+	Visible = false,
+	Parent = findGui,
+})
+local findScale = UIKit.new("UIScale", { Parent = findRoot })
+local findRays = UIKit.rays(findRoot, { size = 250, transparency = 0.45, speed = 40, z = 1 })
+local findPill = UIKit.new("Frame", {
+	Name = "Pill",
+	Size = UDim2.fromScale(1, 1),
+	BackgroundColor3 = WHITE,
+	ZIndex = 2,
+	Parent = findRoot,
+}, { UIKit.corner(18), UIKit.stroke(3, OUTLINE) })
+local findGrad = UIKit.gradient(WHITE, WHITE)
+findGrad.Parent = findPill
+UIKit.studs(findPill, 0.7).ZIndex = 3
+local findView = UIKit.new("ViewportFrame", {
+	Name = "Preview",
+	Size = UDim2.fromOffset(76, 76),
+	Position = UDim2.fromOffset(-8, -6),
+	BackgroundTransparency = 1,
+	Ambient = Color3.fromRGB(190, 190, 200),
+	LightColor = WHITE,
+	ZIndex = 4,
+	Parent = findPill,
+})
+local findTitle = UIKit.text({
+	Name = "Title",
+	Size = UDim2.new(1, -84, 0, 40),
+	Position = UDim2.fromOffset(72, 12),
+	Text = "",
+	TextColor3 = WHITE,
+	Stroke = 3,
+	ZIndex = 4,
+	Parent = findPill,
+})
+
+local findModel: Model? = nil
+local findToken = 0
+
+RunService.RenderStepped:Connect(function()
+	if findModel and findRoot.Visible then
+		findModel:PivotTo(CFrame.Angles(0, os.clock() * 3, 0))
+	end
+end)
+
+-- Plusieurs trouvailles d'un coup : on affiche la plus rare, et combien d'autres
+local function showFind(ring: number, rarities: { number }, kinds: { string }?)
+	local best = 1
+	for i, r in ipairs(rarities) do
+		if r > rarities[best] then
+			best = i
+		end
+	end
+	local rarity = rarities[best]
+	local geode = kinds ~= nil and kinds[best] == "geode"
+	local cfg = Config.Rarities[rarity] or Config.Rarities[1]
+	local extra = #rarities - 1
+	findTitle.Text = string.upper(cfg.Name) .. (if geode then " GEODE!" else " EGG!") .. (if extra > 0 then " +" .. extra else "")
+	findGrad.Color = ColorSequence.new(cfg.Color:Lerp(WHITE, 0.15), cfg.Color:Lerp(BLACK, 0.35))
+	findRays.ImageColor3 = cfg.Color
+	-- le vrai modèle, qui tourne dans la pastille
+	findView:ClearAllChildren()
+	local model = EggModel.Make(ring, rarity, 3, if geode then "geode" else nil)
+	model.WorldPivot = CFrame.new(model:GetBoundingBox().Position)
+	model:PivotTo(CFrame.new())
+	model.Parent = findView
+	findModel = model
+	local _, size = model:GetBoundingBox()
+	local shot = Instance.new("Camera")
+	shot.FieldOfView = 30
+	shot.CFrame = CFrame.lookAt(Vector3.new(0, 0, size.Magnitude / 2 / math.tan(math.rad(15))), Vector3.zero)
+	shot.Parent = findView
+	findView.CurrentCamera = shot
+	-- apparition, puis disparition si rien d'autre n'est sorti entre-temps
+	findToken += 1
+	local token = findToken
+	findRoot.Visible = true
+	findScale.Scale = 0.3
+	tween(findScale, 0.18, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	UIKit.burst(findRoot, UDim2.fromScale(0.5, 0.5), cfg.Color)
+	task.delay(FIND_TIME, function()
+		if token ~= findToken then
+			return
+		end
+		tween(findScale, 0.14, { Scale = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+		task.wait(0.14)
+		if token == findToken then
+			findRoot.Visible = false
+		end
+	end)
+end
+
 -- COUPS DU SERVEUR ---------------------------------------------------------------
 
 Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, by: Player, damage: number, rarities: { number }, broken: boolean, left: number?, perEgg: number?, kinds: { string }?)
@@ -519,6 +638,9 @@ Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, by: Player, dam
 	end
 	-- Œufs qui jaillissent et volent vers le foreur
 	local ring = (rock:GetAttribute("Ring") or 1) :: number
+	if isMine and #rarities > 0 then
+		showFind(ring, rarities, kinds)
+	end
 	for i, rarity in ipairs(rarities) do
 		flyEgg(point, ring, rarity, function()
 			local c = by.Character
