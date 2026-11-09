@@ -381,7 +381,8 @@ RunService.PreSimulation:Connect(function()
 	local camPos = camera.CFrame.Position
 	for _, p in ipairs(Players:GetPlayers()) do
 		local character = p.Character
-		local egg = character and character:FindFirstChild("HeldEgg") :: Model?
+		-- l'œuf dérroché, ou la roche qu'on rapporte à la base (CarryService)
+		local egg = character and (character:FindFirstChild("HeldEgg") or character:FindFirstChild("CarriedRock")) :: Model?
 		local core = egg and egg.PrimaryPart
 		if character and core and (core.Position - camPos).Magnitude < 150 then
 			local h = (egg:GetAttribute("BodyHeight") or 2) :: number

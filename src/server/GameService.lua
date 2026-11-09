@@ -216,8 +216,7 @@ local function onDrill(player: Player, target: any, at: any)
 	local max = Config.CargoSlots()
 	local room = max - #d.cargo
 	if room <= 0 then
-		notice(player, "{Egg} You already carry an egg! Bring it back to your base", "warn")
-		return
+		return -- pas de message : la roche dans les mains le montre (CarryService)
 	end
 
 	local damage = Config.DrillPower(d.drill) * Config.DrillTick

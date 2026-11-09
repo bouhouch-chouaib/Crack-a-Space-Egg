@@ -32,10 +32,12 @@ local function blocked(_rock: BasePart): string?
 	if player:GetAttribute("Credits") == nil then
 		return "Loading your save..."
 	end
-	if (player:GetAttribute("Cargo") or 0) >= (player:GetAttribute("CargoMax") or 1) then
-		return "{Egg} You carry an egg! Bring it back to your base"
-	end
 	return nil
+end
+
+-- Soute pleine : le joueur tient sa roche à deux mains (CarryService), plus de forage jusqu'à la base
+local function carrying(): boolean
+	return (player:GetAttribute("Cargo") or 0) >= (player:GetAttribute("CargoMax") or 1)
 end
 local lastWarn = 0
 
@@ -172,9 +174,10 @@ RunService.RenderStepped:Connect(function()
 		return
 	end
 
+	local full = carrying()
 	if os.clock() - lastNear > 0.2 then
 		lastNear = os.clock()
-		player:SetAttribute("RockNear", nearestInRange(hrp.Position) ~= nil)
+		player:SetAttribute("RockNear", not full and nearestInRange(hrp.Position) ~= nil)
 	end
 
 	-- Foreuse : clic / doigt sur la roche, bouton DRILL (téléphone) ou gâchette RT / RB (manette) :
@@ -183,7 +186,7 @@ RunService.RenderStepped:Connect(function()
 	local padDrill = next(padHeld) ~= nil
 		and not player:GetAttribute("PlacingEgg")
 		and game:GetService("GuiService").SelectedObject == nil
-	local wantDrill = drilling or player:GetAttribute("DrillHeld") == true or padDrill
+	local wantDrill = (drilling or player:GetAttribute("DrillHeld") == true or padDrill) and not full
 	local hitPart, hitPos, tooFar = nil, nil, nil
 	if wantDrill then
 		hitPart, hitPos, tooFar = findTarget(if drilling then pointer else nil)
@@ -191,7 +194,7 @@ RunService.RenderStepped:Connect(function()
 			lastWarn = os.clock()
 			UIKit.toast(if tooFar then "{Jetpack} Too far! Fly closer" else "{Jetpack} No asteroid in reach! Fly to a rock", "warn")
 		end
-	elseif UserInputService.MouseEnabled then
+	elseif UserInputService.MouseEnabled and not full then
 		-- Survol à la souris : on montre déjà si la roche est à portée
 		local mouse = UserInputService:GetMouseLocation()
 		local inset = game:GetService("GuiService"):GetGuiInset()
@@ -214,6 +217,9 @@ RunService.RenderStepped:Connect(function()
 		outline.Adornee = shown and shown.Parent
 		outline.OutlineColor = if hitPart then IN_RANGE else TOO_FAR
 		outline.Enabled = shown ~= nil
+	end
+	if full then
+		outline.Enabled = false
 	end
 	target = hitPart
 	-- État lu par l'animation de forage (Drilling.client) : prêt à forer, et point d'impact

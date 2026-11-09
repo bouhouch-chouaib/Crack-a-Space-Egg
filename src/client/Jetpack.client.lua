@@ -454,6 +454,7 @@ RunService.PreSimulation:Connect(function(dt)
 		end
 		-- bras : écartés vers l'arrière (pas pendant le forage ni avec un œuf en main)
 		local busy = character:FindFirstChild("HeldEgg") ~= nil
+			or character:FindFirstChild("CarriedRock") ~= nil
 			or (if character == player.Character then player:GetAttribute("DrillReady") == true else (character:GetAttribute("DrillingUntil") or 0) > workspace:GetServerTimeNow())
 		if not busy then
 			for _, arm in ipairs({ { "LeftUpperArm", "LeftShoulder", 1 }, { "RightUpperArm", "RightShoulder", -1 } }) do

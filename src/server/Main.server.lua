@@ -9,6 +9,7 @@ local LeaderboardService = require(script.Parent.LeaderboardService)
 local MonetizationService = require(script.Parent.MonetizationService)
 local MachineService = require(script.Parent.MachineService)
 local HatchService = require(script.Parent.HatchService)
+local CarryService = require(script.Parent.CarryService)
 local BoostService = require(script.Parent.BoostService)
 local WindTunnelService = require(script.Parent.WindTunnelService)
 local ColdService = require(script.Parent.ColdService)
@@ -40,6 +41,7 @@ GemService.Start() -- sac de minerais et vente au stand SELL
 SupernovaService.Start() -- renaissance : tout recommence, +50 % de revenus pour toujours
 FeedbackService.Start() -- boîte à retours des joueurs
 MachineService.Start()
+CarryService.Start() -- la roche dans les mains du joueur tant qu'il la rapporte à sa base
 WindTunnelService.Start() -- souffleries : on y farme le niveau du jetpack
 ColdService.Start() -- gel et manque d'oxygène hors du couloir
 CreatureService.Start() -- sac, vente au Trading Post, fusion

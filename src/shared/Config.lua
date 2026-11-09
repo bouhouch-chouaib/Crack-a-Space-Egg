@@ -548,6 +548,12 @@ Config.DrillHold = {
 	Carry = CFrame.new(1.35, -0.55, 0.45) * CFrame.Angles(math.rad(-10), 0, math.rad(-12)),
 }
 
+-- La roche que le joueur rapporte à sa base, tenue à deux mains (CarryService)
+Config.CarriedRock = {
+	Size = 3, -- plus grande dimension, en studs
+	HandDelay = 0.9, -- secondes après le forage, le temps que l'œuf arrive jusqu'au joueur
+}
+
 function Config.DrillPower(tier: number): number
 	local d = Config.Drills[math.clamp(tier, 1, #Config.Drills)]
 	return d.Power
