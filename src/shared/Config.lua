@@ -333,6 +333,38 @@ function Config.DrillSkin(key: string?)
 	return Config.DrillSkins[1]
 end
 
+-- RELIQUES DES EXPLORATEURS PERDUS (RelicService, RelicUI.client, onglet RELICS de l'Index).
+-- Une par anneau, environ 10 fois le meilleur minerai de l'anneau. Chance = 1 sur N, à chaque œuf foré (sans bonus de chance).
+local function relic(key, name, ring, chance, value, color, story)
+	return { Key = key, Name = name, Ring = ring, Chance = chance, Value = value, Color = color, Story = story }
+end
+Config.RelicReveal = 14 -- secondes de la révélation : le froid et l'oxygène attendent pendant ce temps
+Config.Relics = {
+	relic("Compass", "Lost Compass", 1, 20000, 3e8, col(90, 225, 210), "It still points home, wherever home was."),
+	relic("Logbook", "Frozen Logbook", 2, 30000, 1e10, col(150, 220, 255), "Last entry: it is so cold, but the eggs are warm."),
+	relic("Visor", "Melted Visor", 3, 45000, 4e11, col(255, 140, 60), "Someone flew too close to the magma, and kept going."),
+	relic("Medal", "Explorer's Medal", 4, 70000, 1e13, col(190, 120, 255), "Given to the first crew to cross the Nebula. None came back."),
+	relic("Helmet", "Chewed Helmet", 5, 100000, 5e14, col(140, 240, 90), "Those are teeth marks. Do not ask."),
+	relic("Map", "Torn Star Map", 6, 150000, 2e16, col(90, 225, 245), "It shows a way past the Rift. Half of it is missing."),
+	relic("Flag", "The First Flag", 7, 250000, 6e17, col(255, 205, 80), "Planted by the first explorer to reach the Nest. Nobody knows their name."),
+}
+function Config.Relic(key: string)
+	for _, r in ipairs(Config.Relics) do
+		if r.Key == key then
+			return r
+		end
+	end
+	return nil
+end
+function Config.RelicOfRing(ring: number)
+	for _, r in ipairs(Config.Relics) do
+		if r.Ring == ring then
+			return r
+		end
+	end
+	return nil
+end
+
 -- OBJETS (GearService, GearBar.client, onglet GEAR du stand ITEMS).
 -- Battes : en $, une par une, perdues à la Supernova. Stun = secondes où un monstre est assommé, Push = force sur les joueurs.
 local function bat(name, art, cost, stun, push, bands, color, grip, accent)

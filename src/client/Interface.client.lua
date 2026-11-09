@@ -65,7 +65,7 @@ local function notice(text: string, kind: string?)
 end
 Remotes.Notice.OnClientEvent:Connect(notice)
 
-Remotes.Announcement.OnClientEvent:Connect(function(who: string, crystal: string, rarity: number)
+Remotes.Announcement.OnClientEvent:Connect(function(who: string, crystal: string, rarity: number, message: string?)
 	local r = Config.Rarities[rarity]
 	local banner = new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
@@ -77,7 +77,7 @@ Remotes.Announcement.OnClientEvent:Connect(function(who: string, crystal: string
 	label({
 		Size = UDim2.new(1, -20, 1, -12),
 		Position = UDim2.fromOffset(10, 6),
-		Text = string.format("%s just hatched a %s %s!", who, r.Name:upper(), crystal),
+		Text = message or string.format("%s just hatched a %s %s!", who, r.Name:upper(), crystal),
 		TextColor3 = Color3.new(0.05, 0.05, 0.1),
 		FontFace = Theme.Font,
 		Parent = banner,

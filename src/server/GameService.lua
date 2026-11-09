@@ -263,6 +263,10 @@ local function onDrill(player: Player, target: any, at: any)
 		end
 		sync(player)
 	end
+	-- reliques : tirage à part, une chance par œuf sorti (RelicService)
+	if eggs > 0 and GameService.RelicHook then
+		GameService.RelicHook(player, a.ring, eggs)
+	end
 	-- Coup visible par tous : nombres de dégâts, œufs qui jaillissent (avec leur rareté), casse.
 	-- Les effets ne passent pas par la position du modèle (il défile) : on envoie la roche visée.
 	-- eggLeft : vie restante de l'œuf en cours pour ce joueur (sa barre), eggHP : vie d'un œuf

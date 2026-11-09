@@ -80,6 +80,12 @@
         "Gear": {
           "$className": "RemoteEvent"
         },
+        "Relics": {
+          "$className": "RemoteFunction"
+        },
+        "RelicFound": {
+          "$className": "RemoteEvent"
+        },
         "Rewards": {
           "$className": "RemoteFunction"
         },

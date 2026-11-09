@@ -188,6 +188,9 @@ local function step()
 		if st.frozen or not hrp or not hum or hum.Health <= 0 then
 			continue
 		end
+		if ((player:GetAttribute("RelicGrace") or 0) :: number) > os.clock() then
+			continue -- le joueur regarde la relique qu'il vient de trouver (RelicService)
+		end
 		stepO2(player, st, character :: Model, hrp, hum)
 		if hum.Health <= 0 then
 			continue

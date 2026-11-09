@@ -2,6 +2,7 @@
 -- à gauche un onglet par anneau, au centre ses 6 créatures, à droite la créature choisie et la
 -- récompense de l'anneau. Une créature jamais eue dans sa base reste une silhouette noire « ??? ».
 -- Le serveur tient la liste (CreatureService : actions « index » et « claim »).
+-- Dernier onglet : les reliques des explorateurs perdus (RelicService), en silhouettes tant qu'elles ne sont pas trouvées.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -9,6 +10,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local RelicModel = require(ReplicatedStorage.Shared:WaitForChild("RelicModel"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = game:GetService("Players").LocalPlayer
@@ -133,6 +135,20 @@ local function ringCount(r: number): (number, number)
 	return n, total
 end
 
+local TAB_H = 60
+local relicMode = false
+local relicPick = 1
+local relicState = { owned = {} :: { [string]: number }, found = {} :: { [string]: boolean } }
+
+local function fetchRelics()
+	local ok, res = pcall(function()
+		return Remotes:WaitForChild("Relics"):InvokeServer("state")
+	end)
+	if ok and type(res) == "table" and res.ok then
+		relicState.owned, relicState.found = res.owned, res.found
+	end
+end
+
 local tabButtons: { [number]: { grad: UIGradient, frame: TextButton } } = {}
 for r, ringCfg in ipairs(Config.Rings) do
 	local biome = Config.Biomes[r]
@@ -140,23 +156,48 @@ for r, ringCfg in ipairs(Config.Rings) do
 	local grad = UIKit.gradient(color:Lerp(Color3.new(1, 1, 1), 0.3), color:Lerp(Color3.new(0, 0, 0), 0.35))
 	local b = new("TextButton", {
 		Name = "Ring" .. r,
-		Size = UDim2.fromOffset(190, 70),
+		Size = UDim2.fromOffset(190, TAB_H),
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		AutoButtonColor = false,
 		Text = "",
 		LayoutOrder = r,
 		Parent = tabs,
 	}, { UIKit.corner(12), UIKit.stroke(3.5), grad })
-	UIKit.text({ Size = UDim2.new(1, -12, 0, 32), Position = UDim2.fromOffset(6, 6), Text = "{" .. (biome and biome.Icon or "Star") .. "} " .. (biome and biome.Title or ringCfg.Name), Stroke = 3, Parent = b })
-	UIKit.text({ Name = "Count", Size = UDim2.new(1, -12, 0, 24), Position = UDim2.fromOffset(6, 40), Text = "", TextColor3 = Color3.fromRGB(255, 245, 190), Stroke = 2.5, Parent = b })
+	UIKit.text({ Size = UDim2.new(1, -12, 0, 28), Position = UDim2.fromOffset(6, 4), Text = "{" .. (biome and biome.Icon or "Star") .. "} " .. (biome and biome.Title or ringCfg.Name), Stroke = 3, Parent = b })
+	UIKit.text({ Name = "Count", Size = UDim2.new(1, -12, 0, 22), Position = UDim2.fromOffset(6, 33), Text = "", TextColor3 = Color3.fromRGB(255, 245, 190), Stroke = 2.5, Parent = b })
 	UIKit.juice(b)
 	b.MouseButton1Click:Connect(function()
 		ring = r
 		pick = 1
+		relicMode = false
 		refresh()
 	end)
 	tabButtons[r] = { grad = grad, frame = b }
 end
+
+-- Onglet des reliques, sous les anneaux
+local relicTab = new("TextButton", {
+	Name = "Relics",
+	Size = UDim2.fromOffset(190, TAB_H),
+	BackgroundColor3 = Color3.new(1, 1, 1),
+	AutoButtonColor = false,
+	Text = "",
+	LayoutOrder = #Config.Rings + 1,
+	Parent = tabs,
+}, { UIKit.corner(12), UIKit.gradient(UIKit.Colors.Gold[1], UIKit.Colors.Gold[2]) })
+local relicTabStroke = UIKit.stroke(3.5)
+relicTabStroke.Parent = relicTab
+UIKit.text({ Size = UDim2.new(1, -12, 0, 28), Position = UDim2.fromOffset(6, 4), Text = "{Star} RELICS", Stroke = 3, Parent = relicTab })
+local relicTabCount = UIKit.text({ Size = UDim2.new(1, -12, 0, 22), Position = UDim2.fromOffset(6, 33), Text = "", TextColor3 = Color3.fromRGB(255, 245, 190), Stroke = 2.5, Parent = relicTab })
+UIKit.juice(relicTab)
+relicTab.MouseButton1Click:Connect(function()
+	relicMode = true
+	fetchRelics()
+	refresh()
+end)
+
+-- Cartes des reliques : 4 en haut, 3 centrées en bas
+local relicCards = new("Frame", { Name = "Relics", Position = UDim2.fromOffset(0, 86), Size = UDim2.fromOffset(476, 460), BackgroundTransparency = 1, Visible = false, Parent = middle })
 
 -- RAFRAÎCHIR ----------------------------------------------------------------------------------
 
@@ -166,6 +207,130 @@ local function clear(f: Instance)
 			ch:Destroy()
 		end
 	end
+end
+
+-- Relique en 3D, en silhouette noire tant qu'elle n'est pas trouvée
+local function relicView(parent: GuiObject, relicKey: string, known: boolean, size: UDim2, pos: UDim2, z: number)
+	local vp = new("ViewportFrame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = pos,
+		Size = size,
+		BackgroundTransparency = 1,
+		Ambient = if known then Color3.fromRGB(165, 165, 180) else Color3.new(0, 0, 0),
+		LightColor = if known then Color3.new(1, 1, 1) else Color3.new(0, 0, 0),
+		LightDirection = Vector3.new(-1, -1.5, -1.5),
+		ImageColor3 = if known then Color3.new(1, 1, 1) else Color3.fromRGB(12, 12, 20),
+		ZIndex = z,
+		Parent = parent,
+	})
+	local m = RelicModel.Build(relicKey)
+	m.Parent = vp
+	local _, s = m:GetBoundingBox()
+	local cam = new("Camera", { FieldOfView = 30, Parent = vp })
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 0.2, 1).Unit * (s.Magnitude / 2 / math.tan(math.rad(15)) * 1.04), Vector3.zero)
+	vp.CurrentCamera = cam
+	if known then
+		table.insert(turning, { model = m, vp = vp, phase = math.random() * 6 })
+	end
+end
+
+local function relicDetail()
+	clear(detail)
+	local r = Config.Relics[relicPick]
+	local known = relicState.found[r.Key] == true
+	local owned = relicState.owned[r.Key] or 0
+	local ringName = Config.Rings[r.Ring].Name
+	UIKit.rays(detail, { color = r.Color, size = 300, transparency = if known then 0.45 else 0.75, position = UDim2.fromOffset(133, 124) })
+	relicView(detail, r.Key, known, UDim2.fromOffset(220, 210), UDim2.fromOffset(133, 124), 3)
+	if not known then
+		UIKit.text({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(133, 124), Size = UDim2.fromOffset(90, 90), Text = "?", TextColor3 = Color3.fromRGB(230, 235, 255), ZIndex = 4, Stroke = 5, Parent = detail })
+	end
+	local name = UIKit.text({ Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(8, 236), Text = if known then r.Name else "???", ZIndex = 4, Stroke = 3.5, Parent = detail })
+	if known then
+		UIKit.shinyText(name, r.Color)
+	end
+	UIKit.text({ Size = UDim2.new(1, -16, 0, 24), Position = UDim2.fromOffset(8, 272), Text = ringName:upper(), TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.3), ZIndex = 4, Stroke = 3, Parent = detail })
+	UIKit.text({ Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 300), Text = ("{Sparkles} Chance: 1 in %s"):format(Format.Short(r.Chance)), ZIndex = 4, Stroke = 2.5, Parent = detail })
+	UIKit.text({ Size = UDim2.new(1, -16, 0, 26), Position = UDim2.fromOffset(8, 326), Text = "{Cash} Worth " .. money(r.Value), TextColor3 = UIKit.Money, ZIndex = 4, Stroke = 3, Parent = detail })
+	UIKit.text({ Size = UDim2.new(1, -24, 0, 90), Position = UDim2.fromOffset(12, 358), Text = if known then r.Story else ("Lost somewhere in the %s... Keep drilling."):format(ringName), TextColor3 = Color3.fromRGB(225, 230, 250), ZIndex = 4, Stroke = 2.5, Parent = detail })
+	if owned > 0 then
+		local b, label = UIKit.priceButton({ parent = detail, text = "SELL  " .. money(r.Value), size = UDim2.new(1, -20, 0, 62), position = UDim2.new(0, 10, 1, -72) })
+		b.Name = "SellRelic"
+		b.ZIndex = 6
+		label.ZIndex = 7
+		local armed = false
+		b.MouseButton1Click:Connect(function()
+			if not armed then
+				armed = true
+				label.Text = "SURE? TAP AGAIN!"
+				task.delay(3, function()
+					if armed and label.Parent then
+						armed = false
+						label.Text = "SELL  " .. money(r.Value)
+					end
+				end)
+				return
+			end
+			armed = false
+			local ok, res = pcall(function()
+				return Remotes:WaitForChild("Relics"):InvokeServer("sell", r.Key)
+			end)
+			if ok and type(res) == "table" and res.ok then
+				relicState.owned, relicState.found = res.owned, res.found
+				UIKit.burst(W.frame, UDim2.fromScale(0.83, 0.75), r.Color)
+				refresh()
+			end
+		end)
+	elseif known then
+		UIKit.text({ Size = UDim2.new(1, -20, 0, 40), Position = UDim2.new(0, 10, 1, -56), Text = "Sold. Still in your collection!", TextColor3 = Color3.fromRGB(190, 230, 255), ZIndex = 4, Stroke = 3, Parent = detail })
+	end
+end
+
+local function relicPage()
+	clear(relicCards)
+	local total = #Config.Relics
+	local found = 0
+	for _, r in ipairs(Config.Relics) do
+		if relicState.found[r.Key] then
+			found += 1
+		end
+	end
+	ringTitle.Text = ("Lost Explorers' Relics   ·   %d/%d"):format(found, total)
+	barFill.Size = UDim2.fromScale(math.max(found / total, 0.02), 1)
+	barText.Text = ("%d/%d found"):format(found, total)
+	local CW, CH, GX = 112, 216, 9
+	for i, r in ipairs(Config.Relics) do
+		local known = relicState.found[r.Key] == true
+		local owned = relicState.owned[r.Key] or 0
+		local row2 = i > 4
+		local x = if row2 then 61 + (i - 5) * (CW + GX) else (i - 1) * (CW + GX)
+		local c = new("TextButton", {
+			Name = r.Key,
+			Position = UDim2.fromOffset(x, if row2 then CH + 12 else 0),
+			Size = UDim2.fromOffset(CW, CH),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			AutoButtonColor = false,
+			Text = "",
+			Parent = relicCards,
+		}, {
+			UIKit.corner(14),
+			UIKit.gradient(r.Color:Lerp(Color3.new(1, 1, 1), if known then 0.3 else 0.05), r.Color:Lerp(Color3.new(0, 0, 0), if known then 0.3 else 0.65)),
+		})
+		UIKit.stroke(if i == relicPick then 6 else 4, if i == relicPick then Color3.fromRGB(255, 235, 120) else nil).Parent = c
+		UIKit.studs(c, 0.6)
+		relicView(c, r.Key, known, UDim2.fromOffset(104, 112), UDim2.new(0.5, 0, 0, 66), 3)
+		if not known then
+			UIKit.text({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 66), Size = UDim2.fromOffset(50, 50), Text = "?", TextColor3 = Color3.fromRGB(230, 235, 255), ZIndex = 4, Stroke = 4, Parent = c })
+		end
+		UIKit.text({ Size = UDim2.new(1, -8, 0, 42), Position = UDim2.fromOffset(4, 124), Text = if known then r.Name else "???", ZIndex = 4, Stroke = 2.5, Parent = c })
+		UIKit.text({ Size = UDim2.new(1, -8, 0, 26), Position = UDim2.fromOffset(4, 176), Text = if owned > 0 then ("x%d"):format(owned) elseif known then "SOLD" else "1 in " .. Format.Short(r.Chance), TextColor3 = Color3.fromRGB(255, 240, 170), ZIndex = 4, Stroke = 2.5, Parent = c })
+		UIKit.hoverCard(c)
+		c.MouseButton1Click:Connect(function()
+			relicPick = i
+			refresh()
+		end)
+	end
+	relicDetail()
 end
 
 local function buildDetail()
@@ -244,9 +409,24 @@ refresh = function()
 		count.Text = ("%d/%d"):format(n, total) .. (if claimed[r] then "  CLAIMED" elseif n >= total then "  CLAIM!" else "")
 		local stroke = t.frame:FindFirstChildOfClass("UIStroke")
 		if stroke then
-			stroke.Thickness = if r == ring then 6 else 3.5
-			stroke.Color = if r == ring then Color3.fromRGB(255, 235, 120) else UIKit.Outline
+			stroke.Thickness = if r == ring and not relicMode then 6 else 3.5
+			stroke.Color = if r == ring and not relicMode then Color3.fromRGB(255, 235, 120) else UIKit.Outline
 		end
+	end
+	local foundRelics = 0
+	for _, r in ipairs(Config.Relics) do
+		if relicState.found[r.Key] then
+			foundRelics += 1
+		end
+	end
+	relicTabCount.Text = ("%d/%d"):format(foundRelics, #Config.Relics)
+	relicTabStroke.Thickness = if relicMode then 6 else 3.5
+	relicTabStroke.Color = if relicMode then Color3.fromRGB(255, 235, 120) else UIKit.Outline
+	cards.Visible = not relicMode
+	relicCards.Visible = relicMode
+	if relicMode then
+		relicPage()
+		return
 	end
 	local biome = Config.Biomes[ring]
 	local n, total = ringCount(ring)
@@ -291,6 +471,8 @@ UIKit.Open.Event:Connect(function(what: string)
 		ring = math.clamp((player:GetAttribute("Ring") or 1) :: number, 1, #Config.Rings)
 		pick = 1
 		call("index")
+		relicMode = false
+		fetchRelics()
 		refresh()
 		W.open()
 	elseif what == "Close" and W.isOpen() then
