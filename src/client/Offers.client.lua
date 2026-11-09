@@ -198,6 +198,13 @@ local function nextOffer(): Offer?
 			toStand("ItemsStand", "Upgrades")
 		end }
 	end
+	local suitTier = attr("Suit") + 1
+	local nextSuit = Config.Suits[suitTier]
+	if nextSuit and credits >= nextSuit.Cost and fresh("suit" .. suitTier) then
+		return { key = "suit" .. suitTier, art = nextSuit.Art, title = "New suit!", text = ("%s for $%s: survive longer outside"):format(nextSuit.Name, Format.Short(nextSuit.Cost)), button = "ITEMS", go = function()
+			toStand("ItemsStand", "Suits")
+		end }
+	end
 	local folder = ship() and (ship() :: Instance):FindFirstChild("WindTunnels")
 	local tunnel = folder and folder:FindFirstChild("Tunnel" .. tostring(player:GetAttribute("Base")))
 	local level = tunnel and (tunnel:GetAttribute("Tier") or 0) :: number or 0

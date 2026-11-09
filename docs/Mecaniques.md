@@ -145,7 +145,7 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 | Foreuse | Fore plus vite |
 | Soute | Plus d'œufs par voyage |
 | Scanner | Plus de chance ; repère les astéroïdes rares et les épaves |
-| Combinaison | ❌ Retirée le 7 nov. : **tous les anneaux sont ouverts**, on peut y aller et y forer à ses risques et périls. C'est la portée du jetpack (paliers) qui décide si on y arrive sans tomber dans le Vide |
+| Combinaison | ✅ De retour le 9 nov., sans bloquer aucun anneau (`Config.Suits`, `SuitService`, onglet SUITS du stand ITEMS) : 7 paliers, de 10 à 65 s avant de geler hors du couloir et jusqu'à +100 % d'oxygène pour ramener l'œuf. En $ (perdue à la Supernova) ou en Robux (gardée). Casque et plastron visibles sur l'avatar à partir du palier 2. C'est toujours la portée du jetpack qui décide si on arrive à un anneau sans tomber dans le Vide |
 
 ### Niveau du jetpack et souffleries (remplace l'oxygène, 7 nov.)
 

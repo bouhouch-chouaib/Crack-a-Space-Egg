@@ -60,6 +60,8 @@ local function default()
 		feedback = { day = 0, count = 0 }, -- retours envoyés aujourd'hui (FeedbackService)
 		supernovas = 0, -- renaissances faites (Config.Supernova) : revenus x Config.SupernovaMult
 		paidDrill = 1, -- meilleure foreuse payée en Robux : la Supernova ne la reprend pas
+		suit = 1, -- palier de combinaison (Config.Suits)
+		paidSuit = 1, -- meilleure combinaison payée en Robux : la Supernova ne la reprend pas
 		stats = { geodes = 0, best = 0 },
 	}
 end

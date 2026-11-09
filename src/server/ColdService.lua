@@ -1,5 +1,5 @@
 -- Gel hors du couloir : hors de la zone où l'on respire (SafeZone : couloir + vaisseau), le froid
--- et le manque d'oxygène gagnent. Après Config.Cold.Grace secondes (aucun répit si on est trop loin),
+-- et le manque d'oxygène gagnent. Après le répit de la combinaison (Config.Suits ; aucun répit si on est trop loin),
 -- la jauge « Cold » monte de 0 à 1. À 1, le joueur est pris dans un bloc de glace, puis renvoyé à sa
 -- base en perdant les œufs de sa soute (comme une chute dans le Vide).
 -- Le serveur décide ; il publie sur le joueur :
@@ -7,7 +7,7 @@
 --   ColdGrace (s)     secondes de répit restantes quand on est sorti (nil dans la zone)
 -- et sur le personnage : Cold (teinte de glace vue par tous), Frozen, FrozenAt (éclats).
 -- Oxygène de l'œuf (Config.Oxygen) : dès qu'un œuf est dans la soute et qu'on est hors du vaisseau, un
--- compte à rebours tourne (durée selon l'anneau de l'œuf). Publié : O2Left, O2Max (secondes, nil = pas
+-- compte à rebours tourne (durée selon l'anneau de l'œuf et la combinaison). Publié : O2Left, O2Max (secondes, nil = pas
 -- de compte à rebours). À zéro, le joueur meurt asphyxié et perd l'œuf (personnage : Suffocated).
 
 local Players = game:GetService("Players")
@@ -164,7 +164,7 @@ local function stepO2(player: Player, st: State, character: Model, hrp: BasePart
 	if not st.o2 then
 		local ring = if type(egg) == "table" then egg.ring or 1 else egg
 		local times = Config.Oxygen.Time
-		st.o2Max = times[math.clamp(ring, 1, #times)]
+		st.o2Max = math.floor(times[math.clamp(ring, 1, #times)] * (1 + Config.Suit(d and d.suit).Oxygen))
 		st.o2 = st.o2Max
 		player:SetAttribute("O2Max", st.o2Max)
 	end
@@ -192,6 +192,8 @@ local function step()
 		if hum.Health <= 0 then
 			continue
 		end
+		local d = DataService.Get(player)
+		local suit = Config.Suit(d and d.suit)
 		local _, dist = SafeZone.Nearest(hrp.Position)
 		local before = st.cold
 		if dist <= 0 then
@@ -203,10 +205,10 @@ local function step()
 		else
 			st.outside += STEP
 			local far = dist > C.FarDistance
-			if far or st.outside > C.Grace then
-				st.cold = math.min(1, st.cold + STEP / C.FreezeTime * (if far then 2 else 1))
+			if far or st.outside > suit.Grace then
+				st.cold = math.min(1, st.cold + STEP / suit.FreezeTime * (if far then 2 else 1))
 			end
-			player:SetAttribute("ColdGrace", if far then 0 else round(math.max(0, C.Grace - st.outside)))
+			player:SetAttribute("ColdGrace", if far then 0 else round(math.max(0, suit.Grace - st.outside)))
 		end
 		if st.cold ~= before then
 			player:SetAttribute("Cold", round(st.cold))

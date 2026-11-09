@@ -74,6 +74,9 @@
         "BaseSkin": {
           "$className": "RemoteFunction"
         },
+        "BuySuit": {
+          "$className": "RemoteEvent"
+        },
         "Rewards": {
           "$className": "RemoteFunction"
         },

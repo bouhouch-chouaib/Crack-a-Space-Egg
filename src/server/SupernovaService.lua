@@ -30,6 +30,7 @@ end
 local function reset(d)
 	d.credits = 0
 	d.drill = math.clamp(d.paidDrill or 1, 1, #Config.Drills)
+	d.suit = math.clamp(d.paidSuit or 1, 1, #Config.Suits)
 	for id in pairs(d.levels) do
 		d.levels[id] = 0
 	end

@@ -1,7 +1,8 @@
 -- ATELIER DES FOREUSES : ce qui s'achète en $ (docs/Boutique.md). Ouvert au stand Shop du vaisseau
--- (Remotes.OpenShop). Trois onglets :
+-- (Remotes.OpenShop). Quatre onglets :
 --   DRILLS   : les 11 foreuses en liste, détail à droite (aperçu 3D qui tourne, puissance actuelle
 --              → suivante, un seul bouton qui change d'état : équipée, possédée, acheter, verrouillée)
+--   SUITS    : les combinaisons (Config.Suits), une par une : plus de temps hors du couloir, plus d'oxygène
 --   SKINS    : apparences de foreuse (Config.DrillSkins), en $ ou en Robux pour les premium ;
 --              en haut, un panneau propose les skins de base (fenêtre BaseSkinUI.client)
 --   UPGRADES : le scanner (chance des œufs rares)
@@ -23,7 +24,7 @@ local player = Players.LocalPlayer
 local new = UIKit.new
 
 local W_SIZE = Vector2.new(1060, 650)
-local win = UIKit.window({ name = "DrillShop", title = "{Lightning} DRILL WORKSHOP", color = "Orange", size = W_SIZE })
+local win = UIKit.window({ name = "DrillShop", title = "{Lightning} WORKSHOP", color = "Orange", size = W_SIZE })
 win.body.Visible = false
 
 local GAP = 14
@@ -105,6 +106,7 @@ end
 -- ONGLETS ----------------------------------------------------------------------------------------
 local TABS = {
 	{ key = "Drills", text = "DRILLS", art = "UpDrill", color = "Orange" },
+	{ key = "Suits", text = "SUITS", art = "Suit", color = "Blue" },
 	{ key = "Skins", text = "SKINS", art = "Sparkles", color = "Pink" },
 	{ key = "Upgrades", text = "UPGRADES", art = "UpScanner", color = "Teal" },
 }
@@ -359,6 +361,179 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
+-- PAGE SUITS -------------------------------------------------------------------------------------
+local suitPage = pages.Suits
+local suitListPanel = panel(suitPage, 0, 0, LIST_W, PAGE_H)
+local suitList = new("ScrollingFrame", {
+	Size = UDim2.new(1, -12, 1, -12),
+	Position = UDim2.fromOffset(6, 6),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ScrollBarThickness = 8,
+	ScrollBarImageColor3 = Color3.fromRGB(200, 205, 220),
+	CanvasSize = UDim2.new(),
+	AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	ZIndex = 3,
+	Parent = suitListPanel,
+}, {
+	new("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+	new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 8) }),
+})
+
+local function outsideTime(s): string
+	return ("%ds"):format(s.Grace + s.FreezeTime)
+end
+local function oxygenBonus(s): string
+	return ("+%d%%"):format(math.floor(s.Oxygen * 100 + 0.5))
+end
+
+type SuitRow = { frame: TextButton, stroke: UIStroke, state: TextLabel, grad: UIGradient }
+local suitRows: { SuitRow } = {}
+local suitSelected = 1
+
+local suitDetail = panel(suitPage, DETAIL_X, 0, DETAIL_W, PAGE_H)
+suitDetail.Name = "Detail"
+local suitFx = new("Frame", { Size = UDim2.fromOffset(320, 320), Position = UDim2.fromOffset(24, 30), BackgroundTransparency = 1, ZIndex = 3, Parent = suitDetail })
+local suitRays = UIKit.rays(suitFx, { color = Color3.new(1, 1, 1), size = 380, speed = 16, transparency = 0.35, z = 3 })
+local suitGlow = UIKit.glow(suitFx, { color = Color3.new(1, 1, 1), size = 300, transparency = 0.35, z = 3, pulse = 2 })
+local suitIcon = UIKit.icon("Suit", { Size = UDim2.fromOffset(280, 280), Position = UDim2.fromOffset(44, 50), ZIndex = 4, Parent = suitDetail })
+UIKit.float(suitIcon, 4, 3, 2)
+local suitName = label(suitDetail, "", 352, 30, DETAIL_W - 368, 46, 38, nil, Enum.TextXAlignment.Left)
+local suitTier = label(suitDetail, "", 352, 76, DETAIL_W - 368, 24, 20, Color3.fromRGB(200, 205, 225), Enum.TextXAlignment.Left)
+local function suitStat(y: number, title: string): (TextLabel, TextLabel)
+	local box = new("Frame", { Size = UDim2.fromOffset(DETAIL_W - 368, 96), Position = UDim2.fromOffset(352, y), BackgroundColor3 = Color3.fromRGB(20, 22, 30), BackgroundTransparency = 0.3, ZIndex = 3, Parent = suitDetail }, { UIKit.corner(12) })
+	label(box, title, 12, 8, DETAIL_W - 392, 26, 20, Color3.fromRGB(190, 230, 255), Enum.TextXAlignment.Left)
+	local value = label(box, "", 12, 36, DETAIL_W - 392, 34, 30, nil, Enum.TextXAlignment.Left)
+	local gain = label(box, "", 12, 70, DETAIL_W - 392, 22, 18, UIKit.Money, Enum.TextXAlignment.Left)
+	return value, gain
+end
+local coldValue, coldGain = suitStat(108, "{Freezing} TIME OUTSIDE")
+local airValue, airGain = suitStat(212, "{Oxygen} EGG OXYGEN")
+local suitButton, suitText, suitGrad = UIKit.priceButton({ parent = suitDetail, text = "", size = UDim2.fromOffset(DETAIL_W - 140, 70), position = UDim2.new(0, 24, 1, -94) })
+suitButton.Name = "BuySuit"
+local suitButtonGlow = UIKit.buttonGlow(suitButton)
+local suitRobux, suitRobuxText = UIKit.priceButton({ parent = suitDetail, text = "…", robux = true, size = UDim2.fromOffset(92, 70), position = UDim2.new(1, -108, 1, -94) })
+suitRobuxText.TextSize = 24
+local suitAction = "none"
+
+for tier, s in ipairs(Config.Suits) do
+	local b = new("TextButton", {
+		Name = "Suit" .. tier,
+		Size = UDim2.new(1, 0, 0, 76),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		AutoButtonColor = false,
+		Text = "",
+		LayoutOrder = tier,
+		ZIndex = 3,
+		Parent = suitList,
+	}, { UIKit.corner(12) })
+	local grad = UIKit.gradient(UIKit.Colors.Dark[1], UIKit.Colors.Dark[2])
+	grad.Parent = b
+	local stroke = UIKit.stroke(3)
+	stroke.Parent = b
+	UIKit.studs(b, 0.55, "Inlets", 22)
+	new("Frame", { Size = UDim2.fromOffset(8, 56), Position = UDim2.fromOffset(8, 10), BackgroundColor3 = s.Accent, ZIndex = 4, Parent = b }, { UIKit.corner(4) })
+	UIKit.icon(s.Art, { Size = UDim2.fromOffset(66, 66), Position = UDim2.fromOffset(20, 5), ZIndex = 4, Parent = b })
+	label(b, s.Name, 92, 8, 172, 32, 26, nil, Enum.TextXAlignment.Left)
+	label(b, "{Freezing} " .. outsideTime(s), 92, 42, 170, 26, 20, Color3.fromRGB(190, 230, 255), Enum.TextXAlignment.Left)
+	local state = label(b, "", 270, 24, 116, 28, 20, nil, Enum.TextXAlignment.Right)
+	b.MouseButton1Click:Connect(function()
+		suitSelected = tier
+		refreshAll()
+	end)
+	suitRows[tier] = { frame = b, stroke = stroke, state = state, grad = grad }
+end
+
+local function refreshSuits()
+	local owned = (player:GetAttribute("Suit") or 1) :: number
+	local credits = (player:GetAttribute("Credits") or 0) :: number
+	for tier, r in ipairs(suitRows) do
+		local s = Config.Suits[tier]
+		local isSel = tier == suitSelected
+		r.stroke.Thickness = if isSel then 5 else 3
+		r.stroke.Color = if isSel then Color3.fromRGB(255, 240, 150) else UIKit.Outline
+		local colors = if tier <= owned then UIKit.Colors.Dark else { Color3.fromRGB(56, 58, 72), Color3.fromRGB(34, 35, 44) }
+		r.grad.Color = ColorSequence.new(colors[1], colors[2])
+		if tier == owned then
+			r.state.Text = "EQUIPPED"
+			r.state.TextColor3 = UIKit.Money
+		elseif tier < owned then
+			r.state.Text = "OWNED"
+			r.state.TextColor3 = Color3.fromRGB(190, 195, 215)
+		elseif tier == owned + 1 then
+			r.state.Text = money(s.Cost)
+			r.state.TextColor3 = if credits >= s.Cost then UIKit.Money else Color3.fromRGB(255, 110, 110)
+		else
+			UIKit.setIconText(r.state, "{Lock}")
+			r.state.TextColor3 = Color3.fromRGB(190, 195, 215)
+		end
+	end
+
+	local s = Config.Suits[suitSelected]
+	local current = Config.Suits[owned]
+	suitIcon.Image = UIKit.Art[s.Art] or s.Art
+	suitName.Text = s.Name
+	suitName.TextColor3 = s.Accent:Lerp(Color3.new(1, 1, 1), 0.35)
+	suitTier.Text = ("Suit %d of %d"):format(suitSelected, #Config.Suits)
+	suitRays.ImageColor3, suitGlow.ImageColor3 = s.Accent, s.Accent
+	if suitSelected > owned then
+		coldValue.Text = outsideTime(current) .. "  →  " .. outsideTime(s)
+		coldGain.Text = ("+%ds before you freeze"):format((s.Grace + s.FreezeTime) - (current.Grace + current.FreezeTime))
+		airValue.Text = oxygenBonus(current) .. "  →  " .. oxygenBonus(s)
+		airGain.Text = "more time to bring eggs back"
+	else
+		coldValue.Text = outsideTime(s)
+		coldGain.Text = ""
+		airValue.Text = oxygenBonus(s)
+		airGain.Text = ""
+	end
+	suitRobux.Visible = false
+	suitButtonGlow.Visible = false
+	if suitSelected == owned then
+		suitAction = "none"
+		suitText.Text = "EQUIPPED"
+		UIKit.recolor(suitGrad, "Grey")
+	elseif suitSelected < owned then
+		suitAction = "none"
+		suitText.Text = "OWNED"
+		UIKit.recolor(suitGrad, "Grey")
+	elseif suitSelected == owned + 1 then
+		suitAction = "buy"
+		local ok = credits >= s.Cost
+		suitText.Text = "BUY  " .. money(s.Cost)
+		UIKit.recolor(suitGrad, if ok then "Green" else "Grey")
+		suitButtonGlow.Visible = ok
+		if s.ProductId ~= 0 then
+			suitRobux.Visible = true
+			Prices.Show(suitRobuxText, s.ProductId, false, s.Robux)
+		end
+	else
+		suitAction = "locked"
+		UIKit.setIconText(suitText, "{Lock} LOCKED")
+		UIKit.recolor(suitGrad, "Grey")
+	end
+end
+
+suitButton.MouseButton1Click:Connect(function()
+	if suitAction == "buy" then
+		if ((player:GetAttribute("Credits") or 0) :: number) >= Config.Suits[suitSelected].Cost then
+			Remotes.BuySuit:FireServer()
+		else
+			UIKit.shake(suitButton)
+			UIKit.toast("Not enough $!", "bad")
+		end
+	elseif suitAction == "locked" then
+		UIKit.shake(suitButton)
+		UIKit.toast(("Buy the %s first."):format(Config.Suits[suitSelected - 1].Name), "warn")
+	end
+end)
+suitRobux.MouseButton1Click:Connect(function()
+	local s = Config.Suits[suitSelected]
+	if s and s.ProductId ~= 0 and suitSelected == ((player:GetAttribute("Suit") or 1) :: number) + 1 then
+		MarketplaceService:PromptProductPurchase(player, s.ProductId)
+	end
+end)
+
 -- PAGE SKINS -------------------------------------------------------------------------------------
 local skinPage = pages.Skins
 
@@ -546,6 +721,8 @@ end
 function refreshAll()
 	if currentTab == "Drills" then
 		refreshDrills()
+	elseif currentTab == "Suits" then
+		refreshSuits()
 	elseif currentTab == "Skins" then
 		refreshSkins()
 	else
@@ -554,8 +731,20 @@ function refreshAll()
 end
 
 local lastDrill = (player:GetAttribute("Drill") or 1) :: number
+local lastSuit = (player:GetAttribute("Suit") or 1) :: number
 player.AttributeChanged:Connect(function(name)
 	if not win.isOpen() then
+		return
+	end
+	if name == "Suit" then
+		local now = (player:GetAttribute("Suit") or 1) :: number
+		if now > lastSuit then
+			suitSelected = math.min(now + 1, #Config.Suits)
+			UIKit.burst(suitDetail, UDim2.fromOffset(184, 190), Config.Suits[now].Accent)
+			UIKit.flyText(suitDetail, "NEW SUIT!", UDim2.fromOffset(120, 80), Config.Suits[now].Accent)
+		end
+		lastSuit = now
+		refreshAll()
 		return
 	end
 	if name == "Drill" then
@@ -576,6 +765,8 @@ local function open(tab: string?)
 	local owned = (player:GetAttribute("Drill") or 1) :: number
 	lastDrill = owned
 	selected = math.min(owned + 1, #Config.Drills)
+	lastSuit = (player:GetAttribute("Suit") or 1) :: number
+	suitSelected = math.min(lastSuit + 1, #Config.Suits)
 	fetchSkins()
 	win.open(function()
 		showTab(tab or "Drills")

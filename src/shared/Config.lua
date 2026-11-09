@@ -332,6 +332,29 @@ function Config.DrillSkin(key: string?)
 	return Config.DrillSkins[1]
 end
 
+-- COMBINAISONS (SuitService, ColdService) : achetées une par une, en $ ou en Robux.
+-- Grace + FreezeTime = temps avant de geler hors du couloir ; Oxygen = bonus sur l'oxygène de l'œuf (0.1 = +10 %).
+-- Color, Accent, Visor : couleurs du casque et du plastron portés sur l'avatar.
+local function suit(name, art, grace, freeze, oxygen, cost, robux, color, accent, visor)
+	return { Name = name, Art = art, Grace = grace, FreezeTime = freeze, Oxygen = oxygen, Cost = cost, Robux = robux, ProductId = 0, Color = color, Accent = accent, Visor = visor }
+end
+Config.Suits = {
+	suit("Flight Suit", "Suit", Config.Cold.Grace, Config.Cold.FreezeTime, 0, 0, 0, col(205, 208, 220), col(120, 126, 145), col(90, 220, 240)),
+	suit("Padded Suit", "SuitPadded", 4, 10, 0.10, 5000, 29, col(240, 130, 50), col(255, 232, 196), col(90, 225, 245)),
+	suit("Thermal Suit", "SuitThermal", 6, 14, 0.20, 150000, 59, col(214, 56, 50), col(255, 205, 60), col(245, 190, 60)),
+	suit("Arctic Suit", "SuitArctic", 8, 20, 0.35, 4e6, 99, col(226, 240, 255), col(70, 150, 240), col(110, 200, 255)),
+	suit("Titan Suit", "SuitTitan", 11, 27, 0.50, 1.2e8, 149, col(78, 86, 106), col(240, 130, 40), col(245, 150, 50)),
+	suit("Stellar Suit", "SuitStellar", 15, 35, 0.70, 4e9, 249, col(118, 66, 205), col(245, 195, 70), col(245, 200, 80)),
+	suit("Void Suit", "SuitVoid", 20, 45, 1.00, 1.5e11, 399, col(34, 32, 52), col(80, 240, 230), col(70, 235, 225)),
+}
+-- Produits Robux des combinaisons (créés le 9 nov. sur Roblox, palier 2 à 7)
+for tier, id in pairs({ [2] = 3729865909, [3] = 3729865920, [4] = 3729865929, [5] = 3729865939, [6] = 3729865950, [7] = 3729865968 }) do
+	Config.Suits[tier].ProductId = id
+end
+function Config.Suit(tier: number?)
+	return Config.Suits[math.clamp(tier or 1, 1, #Config.Suits)]
+end
+
 -- Skins de base (BaseSkinService, BaseSkinUI.client) : purement esthétiques, gardés après une Supernova.
 -- Supernovas = nombre à avoir fait pour le débloquer ; Robux / PassId = vendu comme passe.
 -- Floor, Main (murets et annexe), Trim, Glass : couleurs ; sans couleur = celles d'origine de la base.

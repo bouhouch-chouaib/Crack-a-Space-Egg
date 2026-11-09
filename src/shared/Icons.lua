@@ -20,6 +20,7 @@ Icons.Ids = {
 	Lock = "rbxassetid://112490514299425",
 	Warning = "rbxassetid://101051646622504",
 	Freezing = "rbxassetid://105548630128276",
+	Oxygen = "rbxassetid://117165302090830",
 	Snowflake = "rbxassetid://81655278007754",
 	WindTunnel = "rbxassetid://124670815550762",
 	Lightning = "rbxassetid://124816685444573",
@@ -41,6 +42,13 @@ Icons.Ids = {
 	MachinePolish = "rbxassetid://126127533939603",
 	MachineUp = "rbxassetid://124846923096618",
 	BaseSkin = "rbxassetid://77089889111512",
+	Suit = "rbxassetid://125589140972749",
+	SuitPadded = "rbxassetid://102333416502789",
+	SuitThermal = "rbxassetid://135505642204384",
+	SuitArctic = "rbxassetid://98903776990393",
+	SuitTitan = "rbxassetid://140531267535108",
+	SuitStellar = "rbxassetid://101333545395906",
+	SuitVoid = "rbxassetid://73108506358912",
 	OreRock = "rbxassetid://138611183043411", -- minerai brut sur sa roche (rendu Blender, ropilot_blender_render)
 }
 

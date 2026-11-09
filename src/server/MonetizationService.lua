@@ -1,6 +1,6 @@
 -- Achats Robux (produits de développeur). Un seul ProcessReceipt pour tout le jeu :
 -- chaque produit connu dans Config est relié ici à ce qu'il donne.
--- Foreuses (Config.Drills[i].ProductId), « Hatch now » (Config.Hatch.Skip[rareté]), potions,
+-- Foreuses (Config.Drills[i].ProductId), combinaisons (Config.Suits[i].ProductId), « Hatch now » (Config.Hatch.Skip[rareté]), potions,
 -- paquets d'argent et offre du moment (Config.Shop). Les passes sont lus par BoostService.
 -- Règle : jamais d'œufs ni de créatures contre des Robux.
 
@@ -14,6 +14,7 @@ local GameService = require(script.Parent.GameService)
 local HatchService = require(script.Parent.HatchService)
 local MachineService = require(script.Parent.MachineService)
 local BoostService = require(script.Parent.BoostService)
+local SuitService = require(script.Parent.SuitService)
 local Format = require(ReplicatedStorage.Shared.Format)
 
 local MonetizationService = {}
@@ -51,6 +52,13 @@ function MonetizationService.Start()
 		if d.ProductId ~= 0 then
 			HANDLERS[d.ProductId] = function(player)
 				return GameService.GrantDrill(player, tier)
+			end
+		end
+	end
+	for tier, s in ipairs(Config.Suits) do
+		if s.ProductId ~= 0 then
+			HANDLERS[s.ProductId] = function(player)
+				return SuitService.Grant(player, tier)
 			end
 		end
 	end
