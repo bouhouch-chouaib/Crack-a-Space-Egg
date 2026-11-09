@@ -552,7 +552,11 @@ Config.DrillHold = {
 Config.CarriedRock = {
 	Size = 3, -- plus grande dimension, en studs
 	HandDelay = 0.9, -- secondes après le forage, le temps que l'œuf arrive jusqu'au joueur
+	StudTile = 1, -- taille d'une tuile de picots sur la roche, en studs
 }
+
+-- Taille d'une tuile de picots sur les astéroïdes à forer, en studs (comme sur le vaisseau)
+Config.AsteroidStudTile = 2
 
 function Config.DrillPower(tier: number): number
 	local d = Config.Drills[math.clamp(tier, 1, #Config.Drills)]

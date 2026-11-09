@@ -7,6 +7,8 @@ local ROOTS = {
 	workspace:FindFirstChild("Ship"),
 	game.ReplicatedStorage:FindFirstChild("Assets") and game.ReplicatedStorage.Assets:FindFirstChild("Corridor"),
 	game.ReplicatedStorage:FindFirstChild("Assets") and game.ReplicatedStorage.Assets:FindFirstChild("BaseKit"),
+	game.ReplicatedStorage:FindFirstChild("Assets") and game.ReplicatedStorage.Assets:FindFirstChild("Asteroids"),
+	game.ReplicatedStorage:FindFirstChild("Assets") and game.ReplicatedStorage.Assets:FindFirstChild("Monsters"),
 }
 local SKIP_MATERIALS = { [Enum.Material.Glass] = true, [Enum.Material.Neon] = true, [Enum.Material.ForceField] = true }
 local SKIP_NAMES = { SignText = true, NameBoard = true, CreatureArea = true, DockEnd = true }

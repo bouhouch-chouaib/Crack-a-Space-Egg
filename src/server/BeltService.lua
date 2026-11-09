@@ -110,6 +110,13 @@ local function build(ringIndex: number, diameter: number): Model
 	local model = WorldBuilder.Asset("Asteroids", "Ring" .. ringIndex)
 	if model then
 		model:ScaleTo(diameter / WorldBuilder.Width(model))
+		-- ScaleTo agrandit aussi les picots : on les ramène à la taille de ceux du vaisseau
+		for _, d in ipairs(model:GetDescendants()) do
+			if d:IsA("Texture") and d.Name == "Studs" then
+				d.StudsPerTileU = Config.AsteroidStudTile
+				d.StudsPerTileV = Config.AsteroidStudTile
+			end
+		end
 		return model
 	end
 	local ring = Config.Rings[ringIndex]

@@ -48,6 +48,9 @@ local function makeRock(character: Model, ring: number, key: string): Model?
 		end
 		if d:IsA("LuaSourceContainer") or d:IsA("ParticleEmitter") or d:IsA("BillboardGui") then
 			d:Destroy()
+		elseif d:IsA("Texture") and d.Name == "Studs" then
+			d.StudsPerTileU = Config.CarriedRock.StudTile
+			d.StudsPerTileV = Config.CarriedRock.StudTile
 		elseif d:IsA("BasePart") then
 			-- le nom « Asteroid » est celui des roches à forer
 			d.Name = if d == core then "Core" else "Rock"
