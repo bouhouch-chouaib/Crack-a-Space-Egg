@@ -32,6 +32,8 @@ type Chase = {
 	leaveAt: number,
 	size: number,
 	lastSent: number,
+	stunUntil: number?,
+	stunReady: number?,
 }
 
 local chases: { [Player]: Chase } = {}
@@ -72,6 +74,8 @@ local function inShip(pos: Vector3): boolean
 	end
 	return pos.X >= mn.X and pos.X <= mx.X and pos.Z >= mn.Z and pos.Z <= mx.Z
 end
+
+MonsterService.InShip = inShip
 
 local function senses(ring: number, what: string): boolean
 	local kind = M.Kinds[ring]
@@ -144,10 +148,36 @@ function MonsterService.Wake(player: Player, ring: number, from: Vector3?): bool
 	return true
 end
 
+-- Coup de batte : assomme les monstres à portée. Renvoie le nom du monstre touché, sinon nil.
+function MonsterService.Stun(pos: Vector3, range: number, seconds: number): string?
+	local t = now()
+	local name = nil
+	for _, c in pairs(chases) do
+		local awake = c.state == "Chase" or c.state == "Emerge"
+		if awake and t >= (c.stunReady or 0) and (c.pos - pos).Magnitude <= c.size / 2 + M.CatchRadius + range then
+			c.stunUntil = t + seconds
+			c.stunReady = t + seconds + M.StunGap
+			c.folder:SetAttribute("Stunned", c.stunUntil)
+			name = M.Kinds[c.ring].Name
+		end
+	end
+	return name
+end
+
 local function caught(c: Chase)
 	local player = c.player
 	local d = DataService.Get(player)
 	local kind = M.Kinds[c.ring]
+	-- bouclier : le monstre repart, le joueur garde tout
+	if d and (d.shields or 0) > 0 then
+		d.shields -= 1
+		GameService.Sync(player)
+		c.state = "Leave"
+		c.leaveAt = now()
+		player:SetAttribute("Chased", nil)
+		GameService.Notice(player, ("{Star} Your shield stopped the %s! %d left"):format(kind.Name, d.shields), "good")
+		return
+	end
 	c.state = "Caught"
 	publish(c)
 	local lost = if d then #d.cargo else 0
@@ -227,7 +257,7 @@ local function step(dt: number)
 				GameService.Notice(player, if inShip(target)
 					then "{Home} Safe! The ship scared it away"
 					else ("{Star} You escaped the %s!"):format(M.Kinds[c.ring].Name), "good")
-			else
+			elseif t >= (c.stunUntil or 0) then -- assommé par une batte : il ne bouge plus
 				local air = (player:GetAttribute("AirSpeed") or Config.Movement.Air) :: number
 				local speed = math.max(M.MinSpeed, air * M.Kinds[c.ring].Speed)
 				local delta = target - c.pos

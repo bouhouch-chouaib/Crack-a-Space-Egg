@@ -1,8 +1,9 @@
 -- ATELIER DES FOREUSES : ce qui s'achète en $ (docs/Boutique.md). Ouvert au stand Shop du vaisseau
--- (Remotes.OpenShop). Quatre onglets :
+-- (Remotes.OpenShop). Cinq onglets :
 --   DRILLS   : les 11 foreuses en liste, détail à droite (aperçu 3D qui tourne, puissance actuelle
 --              → suivante, un seul bouton qui change d'état : équipée, possédée, acheter, verrouillée)
 --   SUITS    : les combinaisons (Config.Suits), une par une : plus de temps hors du couloir, plus d'oxygène
+--   GEAR     : les objets (Config.Gear) : battes en $, tapis, bottes, grappin et bouclier en Robux
 --   SKINS    : apparences de foreuse (Config.DrillSkins), en $ ou en Robux pour les premium ;
 --              en haut, un panneau propose les skins de base (fenêtre BaseSkinUI.client)
 --   UPGRADES : le scanner (chance des œufs rares)
@@ -107,6 +108,7 @@ end
 local TABS = {
 	{ key = "Drills", text = "DRILLS", art = "UpDrill", color = "Orange" },
 	{ key = "Suits", text = "SUITS", art = "Suit", color = "Blue" },
+	{ key = "Gear", text = "GEAR", art = "Gear", color = "Red" },
 	{ key = "Skins", text = "SKINS", art = "Sparkles", color = "Pink" },
 	{ key = "Upgrades", text = "UPGRADES", art = "UpScanner", color = "Teal" },
 }
@@ -114,6 +116,7 @@ local pages: { [string]: Frame } = {}
 local tabButtons: { [string]: { button: TextButton, stroke: UIStroke } } = {}
 local currentTab = "Drills"
 
+local TAB_W = 190
 local tabRow = new("Frame", { Size = UDim2.fromOffset(PAGE_W, 54), Position = UDim2.fromOffset(GAP, 96), BackgroundTransparency = 1, ZIndex = 2, Parent = win.frame }, {
 	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }),
 })
@@ -130,7 +133,7 @@ for i, tab in ipairs(TABS) do
 	local colors = UIKit.Colors[tab.color]
 	local b = new("TextButton", {
 		Name = tab.key,
-		Size = UDim2.fromOffset(210, 54),
+		Size = UDim2.fromOffset(TAB_W, 54),
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		AutoButtonColor = false,
 		Text = "",
@@ -142,7 +145,7 @@ for i, tab in ipairs(TABS) do
 	stroke.Parent = b
 	UIKit.studs(b, 0.45, "Weld", 22)
 	UIKit.icon(tab.art, { Size = UDim2.fromOffset(52, 52), Position = UDim2.fromOffset(4, 1), ZIndex = 4, Parent = b })
-	label(b, tab.text, 58, 10, 146, 34, 26, nil, Enum.TextXAlignment.Left)
+	label(b, tab.text, 58, 10, TAB_W - 64, 34, 26, nil, Enum.TextXAlignment.Left)
 	UIKit.juice(b)
 	tabButtons[tab.key] = { button = b, stroke = stroke }
 end
@@ -159,7 +162,7 @@ local function showTab(key: string)
 		t.stroke.Thickness = if on then 5 else 3.5
 		t.stroke.Color = if on then Color3.fromRGB(255, 240, 150) else UIKit.Outline
 		t.button.BackgroundTransparency = 0
-		t.button.Size = UDim2.fromOffset(210, if on then 54 else 48)
+		t.button.Size = UDim2.fromOffset(TAB_W, if on then 54 else 48)
 	end
 	if refreshAll then
 		refreshAll()
@@ -534,6 +537,144 @@ suitRobux.MouseButton1Click:Connect(function()
 	end
 end)
 
+-- PAGE GEAR --------------------------------------------------------------------------------------
+local gearScroll = new("ScrollingFrame", {
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ScrollBarThickness = 10,
+	ScrollBarImageColor3 = Color3.fromRGB(200, 205, 220),
+	CanvasSize = UDim2.new(),
+	AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	ZIndex = 2,
+	Parent = pages.Gear,
+}, {
+	new("UIGridLayout", { CellSize = UDim2.fromOffset(236, 300), CellPadding = UDim2.fromOffset(14, 16), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }),
+	new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 12), PaddingRight = UDim.new(0, 14) }),
+})
+
+type GearCard = { button: TextButton, text: TextLabel, grad: UIGradient, note: TextLabel, refresh: () -> () }
+local gearCards: { GearCard } = {}
+
+local function gearCard(order: number, name: string, art: string, effect: string, color: Color3, robux: boolean, onClick: (TextButton) -> ()): GearCard
+	local c = new("Frame", { Name = name, BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = order, ZIndex = 3, Parent = gearScroll }, {
+		UIKit.corner(14),
+		UIKit.gradient(color:Lerp(Color3.fromRGB(40, 42, 54), 0.5), Color3.fromRGB(32, 34, 44)),
+	})
+	UIKit.stroke(4, color:Lerp(Color3.new(0, 0, 0), 0.25)).Parent = c
+	UIKit.studs(c, 0.55, "Studs", 24)
+	UIKit.hoverCard(c)
+	if robux then
+		UIKit.shinyStroke(c, UIKit.GoldShine, 4)
+	end
+	local fx = new("Frame", { Size = UDim2.fromOffset(150, 140), Position = UDim2.fromOffset(43, 36), BackgroundTransparency = 1, ZIndex = 3, Parent = c })
+	UIKit.rays(fx, { color = color, size = 180, speed = 20, transparency = 0.55, z = 3 })
+	local icon = UIKit.icon(art, { Size = UDim2.fromOffset(136, 136), Position = UDim2.fromOffset(50, 38), ZIndex = 4, Parent = c })
+	UIKit.float(icon, 3, 4, 2, order)
+	label(c, string.upper(name), 8, 6, 220, 30, 24)
+	label(c, effect, 10, 178, 216, 44, 18, Color3.fromRGB(230, 235, 250))
+	local note = label(c, "", 10, 222, 216, 18, 16, Color3.fromRGB(190, 230, 255))
+	local b, t, g = UIKit.priceButton({ parent = c, text = "", robux = robux, size = UDim2.new(1, -20, 0, 50), position = UDim2.new(0, 10, 1, -58) })
+	b.Name = "Action"
+	b.MouseButton1Click:Connect(function()
+		onClick(b)
+	end)
+	local data: GearCard = { button = b, text = t, grad = g, note = note, refresh = function() end }
+	table.insert(gearCards, data)
+	return data
+end
+
+local function hideRobux(card: GearCard, visible: boolean)
+	local robux = card.button:FindFirstChild("Robux", true)
+	if robux and robux:IsA("GuiObject") then
+		robux.Visible = visible
+	end
+end
+
+for tier, b in ipairs(Config.Bats) do
+	local card: GearCard
+	card = gearCard(tier, b.Name, b.Art, ("Stuns monsters %ds and pushes players away"):format(b.Stun), b.Color, false, function(button)
+		local owned = (player:GetAttribute("Bat") or 0) :: number
+		if tier ~= owned + 1 then
+			if tier > owned then
+				UIKit.shake(button)
+				UIKit.toast(("Buy the %s first."):format(Config.Bats[tier - 1].Name), "warn")
+			end
+		elseif ((player:GetAttribute("Credits") or 0) :: number) >= b.Cost then
+			Remotes.Gear:FireServer("buyBat")
+		else
+			UIKit.shake(button)
+			UIKit.toast("Not enough $!", "bad")
+		end
+	end)
+	card.refresh = function()
+		local owned = (player:GetAttribute("Bat") or 0) :: number
+		if tier <= owned then
+			card.text.Text = if tier == owned then "EQUIPPED" else "OWNED"
+			UIKit.recolor(card.grad, "Grey")
+		elseif tier == owned + 1 then
+			card.text.Text = money(b.Cost)
+			UIKit.recolor(card.grad, if ((player:GetAttribute("Credits") or 0) :: number) >= b.Cost then "Green" else "Grey")
+		else
+			UIKit.setIconText(card.text, "{Lock} LOCKED")
+			UIKit.recolor(card.grad, "Grey")
+		end
+	end
+end
+
+for i, key in ipairs(Config.Gear.PassOrder) do
+	local pass
+	for _, p in ipairs(Config.Shop.Passes) do
+		if p.Key == key then
+			pass = p
+		end
+	end
+	local card: GearCard
+	card = gearCard(#Config.Bats + i, pass.Name, pass.Art, pass.Text, Color3.fromRGB(170, 110, 255), true, function()
+		if player:GetAttribute("Pass_" .. key) then
+			return
+		end
+		if pass.Id ~= 0 then
+			MarketplaceService:PromptGamePassPurchase(player, pass.Id)
+		else
+			UIKit.toast("Coming soon!", "info")
+		end
+	end)
+	card.refresh = function()
+		local owned = player:GetAttribute("Pass_" .. key) == true
+		hideRobux(card, not owned)
+		if owned then
+			card.text.Text = "OWNED"
+			UIKit.recolor(card.grad, "Grey")
+		else
+			UIKit.recolor(card.grad, "Green")
+			Prices.Show(card.text, pass.Id, true, pass.Price)
+		end
+	end
+end
+
+do
+	local shield = Config.Gear.Shield
+	local card = gearCard(#Config.Bats + #Config.Gear.PassOrder + 1, shield.Name, shield.Art, "Saves you once when a monster catches you", Color3.fromRGB(110, 220, 255), true, function()
+		if shield.ProductId ~= 0 then
+			MarketplaceService:PromptProductPurchase(player, shield.ProductId)
+		else
+			UIKit.toast("Coming soon!", "info")
+		end
+	end)
+	card.refresh = function()
+		card.note.Text = ("You have %d"):format((player:GetAttribute("Shields") or 0) :: number)
+		UIKit.recolor(card.grad, "Green")
+		Prices.Show(card.text, shield.ProductId, false, shield.Robux)
+	end
+end
+
+local function refreshGear()
+	for _, card in ipairs(gearCards) do
+		card.refresh()
+	end
+end
+
 -- PAGE SKINS -------------------------------------------------------------------------------------
 local skinPage = pages.Skins
 
@@ -723,6 +864,8 @@ function refreshAll()
 		refreshDrills()
 	elseif currentTab == "Suits" then
 		refreshSuits()
+	elseif currentTab == "Gear" then
+		refreshGear()
 	elseif currentTab == "Skins" then
 		refreshSkins()
 	else
@@ -756,7 +899,7 @@ player.AttributeChanged:Connect(function(name)
 		end
 		lastDrill = now
 		refreshAll()
-	elseif name == "Credits" or name == "Lvl_Scanner" or name == "DrillSkin" then
+	elseif name == "Credits" or name == "Lvl_Scanner" or name == "DrillSkin" or name == "Bat" or name == "Shields" or name:sub(1, 5) == "Pass_" then
 		refreshAll()
 	end
 end)

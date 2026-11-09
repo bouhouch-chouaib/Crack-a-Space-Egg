@@ -17,6 +17,7 @@ local MonsterService = require(script.Parent.MonsterService)
 local SkinService = require(script.Parent.SkinService)
 local BaseSkinService = require(script.Parent.BaseSkinService)
 local SuitService = require(script.Parent.SuitService)
+local GearService = require(script.Parent.GearService)
 local RewardService = require(script.Parent.RewardService)
 local GemService = require(script.Parent.GemService)
 local SupernovaService = require(script.Parent.SupernovaService)
@@ -44,3 +45,4 @@ MonsterService.Start() -- monstres des anneaux 5 à 7 (bruit, gardiens, poursuit
 SkinService.Start() -- skins de foreuse (atelier des foreuses)
 BaseSkinService.Start() -- skins de base (Supernovas ou passes Robux)
 SuitService.Start() -- combinaisons : plus de temps hors du couloir, plus d'oxygène
+GearService.Start() -- objets : batte, tapis volant, bottes, grappin, bouclier

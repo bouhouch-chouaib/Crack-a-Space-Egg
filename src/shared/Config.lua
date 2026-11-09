@@ -77,6 +77,7 @@ Config.Monsters = {
 	CatchRadius = 6, -- en plus de son rayon
 	MinSpeed = 18, -- studs/s au minimum (sinon vitesse en vol du joueur × Speed)
 	Cooldown = 12, -- secondes de répit après une poursuite
+	StunGap = 4, -- secondes après un coup de batte où le monstre ne peut plus être assommé
 	RingMargin = 30, -- studs autour de l'épaisseur de l'anneau où il règne
 }
 
@@ -331,6 +332,29 @@ function Config.DrillSkin(key: string?)
 	end
 	return Config.DrillSkins[1]
 end
+
+-- OBJETS (GearService, GearBar.client, onglet GEAR du stand ITEMS).
+-- Battes : en $, une par une, perdues à la Supernova. Stun = secondes où un monstre est assommé, Push = force sur les joueurs.
+local function bat(name, art, cost, stun, push, bands, color, grip, accent)
+	return { Name = name, Art = art, Cost = cost, Stun = stun, Push = push, Bands = bands, Color = color, Grip = grip, Accent = accent }
+end
+Config.Bats = {
+	bat("Wooden Bat", "BatWood", 10000, 2, 70, 1, col(176, 120, 70), col(60, 44, 34), col(230, 205, 160)),
+	bat("Steel Bat", "BatSteel", 500000, 3, 110, 2, col(190, 200, 215), col(50, 90, 190), col(90, 110, 140)),
+	bat("Plasma Bat", "BatPlasma", 5e7, 5, 150, 3, col(90, 235, 255), col(60, 40, 110), col(170, 90, 240)),
+}
+Config.Gear = {
+	BatCooldown = 1.2, -- secondes entre deux coups
+	BatRange = 14, -- studs (contre un monstre : en plus de son rayon d'attrape)
+	BatHip = CFrame.new(-1.15, -0.1, 0) * CFrame.Angles(0, 0, math.rad(72)), -- batte portée à la hanche
+	PushUp = 30, -- poussée vers le haut du joueur repoussé
+	PushImmune = 4, -- secondes où un joueur repoussé ne peut plus l'être
+	PassOrder = { "Carpet", "Boots", "Hook" }, -- passes de l'onglet GEAR (Config.Shop.Passes)
+	Carpet = { Speed = 1.35, Below = -3.2, Width = 5, Length = 8, Color = col(96, 46, 160), Accent = col(245, 195, 70) },
+	Boots = { Color = col(235, 240, 250), Sole = col(90, 225, 245), Strap = col(60, 110, 220) },
+	Hook = { Range = 110, Speed = 130, Cooldown = 6, Cone = 0.8, Arrive = 9 }, -- Cone : écart maximal avec le regard (cosinus)
+	Shield = { Name = "Monster Shield", Art = "Shield", Robux = 25, ProductId = 0 }, -- consommé quand un monstre attrape le joueur
+}
 
 -- COMBINAISONS (SuitService, ColdService) : achetées une par une, en $ ou en Robux.
 -- Grace + FreezeTime = temps avant de geler hors du couloir ; Oxygen = bonus sur l'oxygène de l'œuf (0.1 = +10 %).
@@ -902,6 +926,9 @@ Config.Shop = {
 		{ Key = "Money2x", Name = "x2 Money", Text = "Creatures earn double, forever", Art = "PassMoney2x", Id = 2074467451, Price = 299 },
 		{ Key = "BaseSlots", Name = "+5 Base Slots", Text = "Room for 5 more eggs and creatures", Art = "PassPetSlot", Id = 2074281420, Price = 249 },
 		{ Key = "VIP", Name = "VIP", Text = "VIP chat tag, +10% money", Art = "PassVIP", Id = 2074857407, Price = 399 },
+		{ Key = "Carpet", Name = "Flying Carpet", Text = "Fly free and fast in the corridor", Art = "Carpet", Id = 2074924627, Price = 399 },
+		{ Key = "Boots", Name = "Space Boots", Text = "Walk on empty space in the corridor", Art = "Boots", Id = 2074858611, Price = 299 },
+		{ Key = "Hook", Name = "Grappling Hook", Text = "Pull yourself to an asteroid", Art = "Hook", Id = 2075482605, Price = 199 },
 	},
 	PassEffects = {
 		JetXP2x = 2, -- × XP de jetpack

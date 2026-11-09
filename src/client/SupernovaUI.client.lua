@@ -99,7 +99,7 @@ local function column(i: number, title: string, color: string, lines: { { string
 end
 local loseCol = column(1, "YOU LOSE", "Red", {
 	{ "Cash", "Your money" },
-	{ "UpDrill", "Drill & suit" },
+	{ "UpDrill", "Drill, suit & bat" },
 	{ "Jetpack", "Jetpack level" },
 	{ "WindTunnel", "Wind tunnel" },
 	{ "MachineUp", "Scanner & machine" },

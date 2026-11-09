@@ -205,6 +205,13 @@ local function nextOffer(): Offer?
 			toStand("ItemsStand", "Suits")
 		end }
 	end
+	local batTier = attr("Bat") + 1
+	local nextBat = Config.Bats[batTier]
+	if nextBat and credits >= nextBat.Cost and fresh("bat" .. batTier) then
+		return { key = "bat" .. batTier, art = nextBat.Art, title = "New bat!", text = ("%s for $%s: stun monsters"):format(nextBat.Name, Format.Short(nextBat.Cost)), button = "ITEMS", go = function()
+			toStand("ItemsStand", "Gear")
+		end }
+	end
 	local folder = ship() and (ship() :: Instance):FindFirstChild("WindTunnels")
 	local tunnel = folder and folder:FindFirstChild("Tunnel" .. tostring(player:GetAttribute("Base")))
 	local level = tunnel and (tunnel:GetAttribute("Tier") or 0) :: number or 0

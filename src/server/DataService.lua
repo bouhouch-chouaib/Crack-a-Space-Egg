@@ -62,6 +62,8 @@ local function default()
 		paidDrill = 1, -- meilleure foreuse payée en Robux : la Supernova ne la reprend pas
 		suit = 1, -- palier de combinaison (Config.Suits)
 		paidSuit = 1, -- meilleure combinaison payée en Robux : la Supernova ne la reprend pas
+		bat = 0, -- palier de batte (Config.Bats, 0 = aucune)
+		shields = 0, -- boucliers anti-monstre en réserve (produit Robux)
 		stats = { geodes = 0, best = 0 },
 	}
 end

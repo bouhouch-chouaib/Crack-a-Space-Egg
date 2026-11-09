@@ -253,6 +253,8 @@ end
 local fuel = Config.JetpackFuel(1)
 local lastJump = 0
 local sentState = 0
+local pushedUntil = 0 -- après un coup de batte, on laisse l'élan agir
+local CARPET = Config.Gear.Carpet
 
 local function maxFuel(): number
 	-- carburant calculé pour la portée du niveau (Config.Jetpack.Tiers)
@@ -288,21 +290,35 @@ RunService.RenderStepped:Connect(function(dt)
 		or os.clock() - lastJump < 0.15
 	local state = 0
 	-- la vitesse de déplacement suit l'état : marche au sol, vol en l'air
-	local want = if airborne then air else ground
+	local carpet = character:GetAttribute("Carpet") == true
+	local want = if airborne then air * (if carpet then CARPET.Speed else 1) else ground
 	-- le froid hors du couloir engourdit (ColdService) : on ralentit en gelant
 	want *= 1 - Config.Cold.SlowDown * ((player:GetAttribute("Cold") or 0) :: number)
 	if math.abs(hum.WalkSpeed - want) > 0.01 then
 		hum.WalkSpeed = want
 	end
 	local inTunnel = player:GetAttribute("InTunnel") == true
-	if inTunnel then
+	if player:GetAttribute("Hooking") then
+		state = 2 -- le grappin tire le joueur (GearBar.client)
+	elseif inTunnel then
 		-- soufflerie : le courant d'air porte le joueur (WindTunnel.client), effets en vol plané
 		fuel = math.min(maxFuel(), fuel + Config.JetpackRefill * dt)
 		state = 2
 	elseif airborne then
 		local v = hrp.AssemblyLinearVelocity
 		local vy = v.Y
-		if holding and fuel > 0 then
+		if carpet then
+			-- tapis volant : ni carburant ni chute ; on monte et descend en regardant vers le haut ou le bas
+			local dir = hum.MoveDirection
+			local look = camera.CFrame.LookVector
+			local flat = Vector3.new(look.X, 0, look.Z)
+			vy = if flat.Magnitude > 0.01 and dir.Magnitude > 0.05 then look.Y * want * math.max(0, dir:Dot(flat.Unit)) else 0
+			if holding then
+				vy = math.max(vy, MV.Climb)
+			end
+			vy += workspace.Gravity * dt * 0.5 -- compense la gravité de l'image, sinon le tapis s'enfonce
+			state = 2
+		elseif holding and fuel > 0 then
 			-- poussée : on monte jusqu'à la vitesse de montée
 			fuel = math.max(0, fuel - dt)
 			vy = math.min(MV.Climb * (0.85 + 0.15 * (air / MV.Air)), math.max(vy, 0) + MV.ClimbAccel * dt)
@@ -315,9 +331,9 @@ RunService.RenderStepped:Connect(function(dt)
 		-- inertie : la vitesse horizontale rejoint la direction voulue en douceur
 		local wantH = hum.MoveDirection * want
 		local curH = Vector3.new(v.X, 0, v.Z)
-		local h = curH:Lerp(wantH, 1 - math.exp(-MV.AirAccel * dt))
+		local h = if os.clock() < pushedUntil then curH else curH:Lerp(wantH, 1 - math.exp(-MV.AirAccel * dt))
 		hrp.AssemblyLinearVelocity = Vector3.new(h.X, vy, h.Z)
-	else
+	elseif not player:GetAttribute("VoidFloor") then -- sur le sol invisible des bottes, pas de recharge
 		fuel = math.min(maxFuel(), fuel + Config.JetpackRefill * dt)
 	end
 	player:SetAttribute("Fuel", fuel / maxFuel())
@@ -353,6 +369,21 @@ Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, _by: Player, _d
 		hrp.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, 45), v.Z)
 		UIKit.toast("{Jetpack} Your rock broke! Fly to the next one", "info")
 	end
+end)
+
+-- Coup de batte reçu (GearService) : on est repoussé, le réservoir plein pour pouvoir se rattraper
+Remotes:WaitForChild("Gear").OnClientEvent:Connect(function(kind: string, push: Vector3, who: string?)
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local hum = character and character:FindFirstChildOfClass("Humanoid")
+	if kind ~= "pushed" or not hrp or not hum then
+		return
+	end
+	fuel = maxFuel()
+	pushedUntil = os.clock() + 0.5
+	hum:ChangeState(Enum.HumanoidStateType.Freefall)
+	hrp.AssemblyLinearVelocity = push
+	UIKit.toast(("%s bonked you away!"):format(who or "Someone"), "warn")
 end)
 
 -- POSE EN VOL ET EFFETS DES AUTRES JOUEURS ---------------------------------------------------

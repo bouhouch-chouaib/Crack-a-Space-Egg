@@ -15,6 +15,7 @@ local HatchService = require(script.Parent.HatchService)
 local MachineService = require(script.Parent.MachineService)
 local BoostService = require(script.Parent.BoostService)
 local SuitService = require(script.Parent.SuitService)
+local GearService = require(script.Parent.GearService)
 local Format = require(ReplicatedStorage.Shared.Format)
 
 local MonetizationService = {}
@@ -61,6 +62,9 @@ function MonetizationService.Start()
 				return SuitService.Grant(player, tier)
 			end
 		end
+	end
+	if Config.Gear.Shield.ProductId ~= 0 then
+		HANDLERS[Config.Gear.Shield.ProductId] = GearService.GrantShield
 	end
 	-- Faire éclore tout de suite : du temps gagné, pas un œuf ni une créature
 	for rarity, s in ipairs(Config.Hatch.Skip) do

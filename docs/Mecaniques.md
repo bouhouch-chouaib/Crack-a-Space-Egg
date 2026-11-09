@@ -146,6 +146,7 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 | Soute | Plus d'œufs par voyage |
 | Scanner | Plus de chance ; repère les astéroïdes rares et les épaves |
 | Combinaison | ✅ De retour le 9 nov., sans bloquer aucun anneau (`Config.Suits`, `SuitService`, onglet SUITS du stand ITEMS) : 7 paliers, de 10 à 65 s avant de geler hors du couloir et jusqu'à +100 % d'oxygène pour ramener l'œuf. En $ (perdue à la Supernova) ou en Robux (gardée). Casque et plastron visibles sur l'avatar à partir du palier 2. C'est toujours la portée du jetpack qui décide si on arrive à un anneau sans tomber dans le Vide |
+| Objets | ✅ 9 nov. (`Config.Gear`, `Config.Bats`, `GearService`, `GearBar.client`, onglet GEAR du stand ITEMS, touches 1 à 4) : 3 battes en $ (assomment un monstre 2 à 5 s, repoussent les joueurs hors du vaisseau, sans rien leur faire perdre ; perdues à la Supernova) ; passes Robux : tapis volant (sans carburant, couloir et vaisseau), bottes (marcher dans le vide du couloir, sans recharge du jetpack), grappin (l'astéroïde le plus en face, recharge 6 s) ; bouclier anti-monstre à 25 R$ (consommable, produit encore à créer sur Roblox). Icônes provisoires à remplacer |
 
 ### Niveau du jetpack et souffleries (remplace l'oxygène, 7 nov.)
 
