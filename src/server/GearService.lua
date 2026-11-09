@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local SafeZone = require(ReplicatedStorage.Shared.SafeZone)
+local GearModel = require(ReplicatedStorage.Shared.GearModel)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local BoostService = require(script.Parent.BoostService)
@@ -24,7 +25,6 @@ local GearService = {}
 
 local STUDS = "rbxassetid://99589690361139"
 local CARPET_CHECK = 0.25
-local CYLINDER, BALL = Enum.PartType.Cylinder, Enum.PartType.Ball
 
 local lastSwing: { [Player]: number } = {}
 local lastHook: { [Player]: number } = {}
@@ -43,12 +43,9 @@ local function studs(p: BasePart, tile: number)
 	end
 end
 
-local function piece(parent: Instance, name: string, size: Vector3, color: Color3, shape: Enum.PartType?): Part
+local function piece(parent: Instance, name: string, size: Vector3, color: Color3): Part
 	local p = Instance.new("Part")
 	p.Name = name
-	if shape then
-		p.Shape = shape
-	end
 	p.Size = size
 	p.Color = color
 	p.Material = Enum.Material.SmoothPlastic
@@ -70,6 +67,25 @@ local function weldTo(p: BasePart, bone: BasePart, offset: CFrame, name: string?
 	w.Part1 = p
 	w.C0 = offset
 	w.Parent = p
+end
+
+-- Soude un modèle de GearModel : sa pièce racine sur l'os, toutes les autres sur la racine
+local function attach(model: Model, root: BasePart, bone: BasePart, offset: CFrame, weldName: string)
+	local place = bone.CFrame * offset
+	for _, p in ipairs(model:GetChildren()) do
+		if p:IsA("BasePart") and p ~= root then
+			local rel = root.CFrame:ToObjectSpace(p.CFrame)
+			local w = Instance.new("Weld")
+			w.Part0 = root
+			w.Part1 = p
+			w.C0 = rel
+			w.Parent = p
+			p.CFrame = place * rel
+			p.Anchored = false
+		end
+	end
+	weldTo(root, bone, offset, weldName)
+	root.Anchored = false
 end
 
 local function clear(character: Model, name: string)
@@ -94,20 +110,9 @@ local function equipBat(player: Player)
 	if tier <= 0 then
 		return
 	end
-	local b = Config.Bats[math.min(tier, #Config.Bats)]
-	local model = Instance.new("Model")
+	local model = GearModel.Bat(tier)
 	model.Name = "EquippedBat"
-	local handle = piece(model, "Handle", Vector3.new(1.7, 0.24, 0.24), b.Grip, CYLINDER)
-	weldTo(handle, hip, G.BatHip, "BatWeld")
-	local barrel = piece(model, "Barrel", Vector3.new(2, 0.56, 0.56), b.Color, CYLINDER)
-	studs(barrel, 1)
-	weldTo(barrel, handle, CFrame.new(1.8, 0, 0))
-	weldTo(piece(model, "Cap", Vector3.new(0.56, 0.56, 0.56), b.Color, BALL), handle, CFrame.new(2.8, 0, 0))
-	weldTo(piece(model, "Knob", Vector3.new(0.34, 0.34, 0.34), b.Grip, BALL), handle, CFrame.new(-0.85, 0, 0))
-	for i = 1, b.Bands do
-		weldTo(piece(model, "Band", Vector3.new(0.14, 0.62, 0.62), b.Accent, CYLINDER), handle, CFrame.new(1.2 + (i - 1) * 0.5, 0, 0))
-	end
-	model.PrimaryPart = handle
+	attach(model, model:FindFirstChild("Handle") :: BasePart, hip, G.BatHip, "BatWeld")
 	model.Parent = character
 end
 
@@ -175,24 +180,9 @@ end
 
 local function buildCarpet(character: Model, hrp: BasePart)
 	clear(character, "EquippedCarpet")
-	local model = Instance.new("Model")
+	local model = GearModel.Carpet()
 	model.Name = "EquippedCarpet"
-	local c = G.Carpet
-	local at = CFrame.new(0, c.Below, 0)
-	local base = piece(model, "Border", Vector3.new(c.Width + 0.5, 0.2, c.Length + 0.5), c.Accent)
-	studs(base, 1)
-	weldTo(base, hrp, at)
-	local main = piece(model, "Main", Vector3.new(c.Width, 0.26, c.Length), c.Color)
-	studs(main, 1)
-	weldTo(main, hrp, at)
-	local star = piece(model, "Star", Vector3.new(1.5, 0.3, 1.5), c.Accent)
-	weldTo(star, hrp, at * CFrame.Angles(0, math.rad(45), 0))
-	for _, z in ipairs({ -1, 1 }) do
-		for i = -2, 2 do
-			local tassel = piece(model, "Tassel", Vector3.new(0.34, 0.14, 0.55), c.Accent)
-			weldTo(tassel, hrp, at * CFrame.new(i * (c.Width / 5), 0, z * (c.Length / 2 + 0.5)))
-		end
-	end
+	attach(model, model:FindFirstChild("Main") :: BasePart, hrp, CFrame.new(0, G.Carpet.Below, 0), "CarpetWeld")
 	model.Parent = character
 end
 

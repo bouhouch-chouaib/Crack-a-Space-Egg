@@ -1,5 +1,6 @@
 -- Barre des objets (Config.Gear) : un bouton par objet possédé, au-dessus de la barre d'aide en bas d'écran.
 -- Touches 1, 2, 3, 4 selon la place du bouton ; toucher le bouton sur téléphone ; LB / LT à la manette pour les deux premiers.
+-- Chaque bouton montre le modèle 3D de l'objet (GearModel), qui tourne doucement et joue son animation au clic.
 -- Le serveur décide de ce qu'on a (GearService, Remotes.Gear). Ce script fait aussi :
 --   - l'animation du coup de batte (tous les joueurs, attribut BatSwing du personnage) ;
 --   - le sol invisible des bottes, seulement dans le couloir (attribut local VoidFloor : Jetpack.client ne recharge pas dessus) ;
@@ -12,6 +13,7 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local SafeZone = require(ReplicatedStorage.Shared:WaitForChild("SafeZone"))
+local GearModel = require(ReplicatedStorage.Shared:WaitForChild("GearModel"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
@@ -50,11 +52,118 @@ local bar = new("Frame", {
 })
 UIKit.autoScale(gui)
 
-type Slot = { key: string, art: string, color: string, use: () -> (), owned: () -> boolean, active: (() -> boolean)?, cooldown: number, frame: TextButton, shade: Frame, tag: TextLabel, stroke: UIStroke, lastUsed: number }
+-- APERÇUS 3D ------------------------------------------------------------------------------------
+local PLAY = 0.7 -- durée de l'animation au clic (s)
+local TAU = math.pi * 2
+local function rad(d: number): number
+	return math.rad(d)
+end
+
+type Preview = { view: ViewportFrame, camera: Camera, rays: ImageLabel, parts: { [BasePart]: CFrame }, dist: number, phase: number, playedAt: number }
+
+local function newPreview(parent: Instance, color: Color3, phase: number): Preview
+	local fx = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 3, Parent = parent })
+	local rays = UIKit.rays(fx, { color = color, size = 128, speed = 45, transparency = 0.3, z = 3 })
+	rays.Visible = false
+	local view = new("ViewportFrame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Ambient = Color3.fromRGB(135, 135, 150),
+		LightColor = Color3.new(1, 1, 1),
+		LightDirection = Vector3.new(-1, -2, -1.4),
+		ZIndex = 4,
+		Parent = parent,
+	})
+	local shot = new("Camera", { FieldOfView = 30, Parent = view })
+	view.CurrentCamera = shot
+	return { view = view, camera = shot, rays = rays, parts = {}, dist = 10, phase = phase, playedAt = -100 }
+end
+
+local function mount(p: Preview, model: Model)
+	local old = p.view:FindFirstChildOfClass("Model")
+	if old then
+		old:Destroy()
+	end
+	local cf, size = model:GetBoundingBox()
+	local center = CFrame.new(cf.Position)
+	p.parts = {}
+	for _, d in ipairs(model:GetChildren()) do
+		if d:IsA("BasePart") then
+			p.parts[d] = center:ToObjectSpace(d.CFrame)
+		end
+	end
+	model.Parent = p.view
+	p.dist = size.Magnitude / 2 / math.tan(math.rad(15)) * 1.04
+end
+
+local function ease(a: number): number
+	return 1 - (1 - a) ^ 3
+end
+
+-- Pose de chaque objet : t = temps, a = avancement du clic (0..1, au-delà : repos), on = objet activé.
+-- Renvoie la pose et, pour le grappin, de combien la tête est sortie.
+local POSES: { [string]: (number, number, boolean) -> (CFrame, number) } = {
+	Bat = function(t, a, _)
+		local swing = if a < 1 then rad(-420) * ease(a) else 0
+		return CFrame.Angles(0, t * 0.9, 0) * CFrame.Angles(0, 0, rad(50) + swing), 0
+	end,
+	Carpet = function(t, a, on)
+		local speed = if on then 3.4 else 1.5
+		local lift, roll = 0, 0
+		if a < 1 then
+			lift, roll = math.sin(math.pi * a) * 1.1, math.sin(a * TAU * 2) * 24
+		end
+		return CFrame.new(0, lift + math.sin(t * speed) * 0.2, 0) * CFrame.Angles(rad(24), t * 0.5, rad(roll + math.sin(t * speed) * (if on then 9 else 4))), 0
+	end,
+	Boots = function(t, a, on)
+		local hop = if a < 1 then math.abs(math.sin(a * TAU)) * 0.8 else 0
+		local bob = if on then math.abs(math.sin(t * 3)) * 0.2 else 0
+		local spin = if a < 1 then TAU * ease(a) else 0
+		return CFrame.new(0, hop + bob, 0) * CFrame.Angles(rad(8), t * 0.9 + spin, 0), 0
+	end,
+	Hook = function(t, a, _)
+		local out = if a < 1 then math.sin(math.pi * a) * 2.2 else 0
+		local recoil = if a < 1 then math.sin(math.pi * a) * -0.5 else 0
+		return CFrame.new(recoil, 0, 0) * CFrame.Angles(0, math.sin(t * 0.8) * 0.7 + rad(-20), rad(10)), out
+	end,
+	Shield = function(t, a, _)
+		local spin = if a < 1 then TAU * ease(a) else 0
+		return CFrame.Angles(0, math.sin(t * 1.1) * 0.5 + spin, 0), 0
+	end,
+}
+local MOVES = { Head = 1, Claw = 1, Cable = 0.5 } -- pièces du grappin qui sortent
+
+local function stepPreview(p: Preview, key: string, t: number, on: boolean)
+	local a = (t - p.playedAt) / PLAY
+	local pose, out = POSES[key](t + p.phase, a, on)
+	for part, rel in pairs(p.parts) do
+		local k = if out ~= 0 then MOVES[part.Name] else nil
+		part.CFrame = if k then pose * CFrame.new(out * k, 0, 0) * rel else pose * rel
+	end
+	local punch = if a < 1 then math.sin(math.pi * a) * 0.22 else 0
+	p.camera.CFrame = CFrame.lookAt(Vector3.new(0, 0.32, 1).Unit * p.dist * (1 - punch), Vector3.zero)
+	p.rays.Visible = on or a < 1
+end
+
+local function playPreview(p: Preview, frame: GuiObject, color: Color3)
+	p.playedAt = os.clock()
+	UIKit.bump(frame, 0.2)
+	UIKit.burst(frame, UDim2.fromScale(0.5, 0.5), color)
+end
+
+type Slot = { key: string, color: Color3, use: () -> (), owned: () -> boolean, active: (() -> boolean)?, cooldown: number, frame: TextButton, preview: Preview, shade: Frame, tag: TextLabel, stroke: UIStroke, lastUsed: number }
 local slots: { Slot } = {}
 
-local function makeSlot(key: string, art: string, color: string, order: number, cooldown: number, use: () -> (), owned: () -> boolean, active: (() -> boolean)?): Slot
-	local colors = UIKit.Colors[color]
+-- Appui (clic, touche, manette) : l'objet joue son animation, sauf s'il recharge encore
+local function press(s: Slot)
+	if s.cooldown <= 0 or os.clock() - s.lastUsed >= s.cooldown then
+		playPreview(s.preview, s.frame, s.color)
+	end
+	s.use()
+end
+
+local function makeSlot(key: string, build: () -> Model, colorName: string, order: number, cooldown: number, use: () -> (), owned: () -> boolean, active: (() -> boolean)?): Slot
+	local colors = UIKit.Colors[colorName]
 	local frame = new("TextButton", {
 		Name = key,
 		Size = UDim2.fromOffset(BUTTON, BUTTON),
@@ -69,22 +178,29 @@ local function makeSlot(key: string, art: string, color: string, order: number, 
 	local stroke = UIKit.stroke(3.5)
 	stroke.Parent = frame
 	UIKit.studs(frame, 0.5, "Weld", 18)
-	UIKit.icon(art, { Size = UDim2.fromOffset(BUTTON - 10, BUTTON - 10), Position = UDim2.fromOffset(5, 5), ZIndex = 3, Parent = frame })
-	local shade = new("Frame", { Size = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 4, Parent = frame }, { UIKit.corner(16) })
-	local tag = UIKit.text({ Size = UDim2.fromOffset(26, 22), Position = UDim2.fromOffset(2, 0), Text = "", TextColor3 = Color3.new(1, 1, 1), ZIndex = 5, Stroke = 2.5, Parent = frame })
+	local preview = newPreview(frame, Color3.new(1, 1, 1), order * 1.3)
+	mount(preview, build())
+	local shade = new("Frame", { Size = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 5, Parent = frame }, { UIKit.corner(16) })
+	local tag = UIKit.text({ Size = UDim2.fromOffset(26, 22), Position = UDim2.fromOffset(2, 0), Text = "", TextColor3 = Color3.new(1, 1, 1), ZIndex = 6, Stroke = 2.5, Parent = frame })
 	new("UITextSizeConstraint", { MaxTextSize = 20, MinTextSize = 10, Parent = tag })
 	UIKit.juice(frame)
-	local slot: Slot = { key = key, art = art, color = color, use = use, owned = owned, active = active, cooldown = cooldown, frame = frame, shade = shade, tag = tag, stroke = stroke, lastUsed = -100 }
+	local slot: Slot = { key = key, color = colors[1], use = use, owned = owned, active = active, cooldown = cooldown, frame = frame, preview = preview, shade = shade, tag = tag, stroke = stroke, lastUsed = -100 }
 	frame.MouseButton1Click:Connect(function()
-		slot.use()
+		press(slot)
 	end)
 	table.insert(slots, slot)
 	return slot
 end
 
-local shieldPill = new("Frame", { Name = "Shield", Size = UDim2.fromOffset(BUTTON, BUTTON), BackgroundColor3 = Color3.fromRGB(26, 28, 42), BackgroundTransparency = 0.15, LayoutOrder = 9, Visible = false, ZIndex = 2, Parent = bar }, { UIKit.corner(16), UIKit.stroke(3.5, Color3.fromRGB(120, 230, 255)) })
-UIKit.icon("Shield", { Size = UDim2.fromOffset(BUTTON - 16, BUTTON - 16), Position = UDim2.fromOffset(8, 4), ZIndex = 3, Parent = shieldPill })
-local shieldCount = UIKit.text({ Size = UDim2.fromOffset(BUTTON - 6, 26), Position = UDim2.new(0, 3, 1, -26), Text = "", TextColor3 = Color3.new(1, 1, 1), ZIndex = 5, Stroke = 3, Parent = shieldPill })
+local shieldPill = new("TextButton", { Name = "Shield", Size = UDim2.fromOffset(BUTTON, BUTTON), BackgroundColor3 = Color3.fromRGB(26, 28, 42), BackgroundTransparency = 0.15, AutoButtonColor = false, Text = "", LayoutOrder = 9, Visible = false, ZIndex = 2, Parent = bar }, { UIKit.corner(16), UIKit.stroke(3.5, Color3.fromRGB(120, 230, 255)) })
+local shieldPreview = newPreview(shieldPill, Color3.fromRGB(150, 235, 255), 7)
+mount(shieldPreview, GearModel.Shield())
+local shieldCount = UIKit.text({ Size = UDim2.fromOffset(BUTTON - 6, 24), Position = UDim2.new(0, 3, 1, -24), Text = "", TextColor3 = Color3.new(1, 1, 1), ZIndex = 6, Stroke = 3, Parent = shieldPill })
+shieldPill.MouseButton1Click:Connect(function()
+	playPreview(shieldPreview, shieldPill, Color3.fromRGB(150, 235, 255))
+	Sfx.Play("Click")
+	UIKit.toast("Saves you once when a monster catches you", "info")
+end)
 
 -- BATTE --------------------------------------------------------------------------------------------
 local function useBat(slot: () -> Slot)
@@ -357,28 +473,30 @@ end
 -- LES QUATRE BOUTONS ----------------------------------------------------------------------------------
 local batSlot: Slot
 local hookSlot: Slot
-batSlot = makeSlot("Bat", "BatWood", "Orange", 1, G.BatCooldown, function()
+batSlot = makeSlot("Bat", function()
+	return GearModel.Bat(1)
+end, "Orange", 1, G.BatCooldown, function()
 	useBat(function()
 		return batSlot
 	end)
 end, function()
 	return ((player:GetAttribute("Bat") or 0) :: number) > 0
 end)
-makeSlot("Carpet", "Carpet", "Purple", 2, 0, function()
+makeSlot("Carpet", GearModel.Carpet, "Purple", 2, 0, function()
 	toggle("Carpet", "carpet", "Boots", "boots")
 end, function()
 	return player:GetAttribute("Pass_Carpet") == true
 end, function()
 	return isOn("Carpet")
 end)
-makeSlot("Boots", "Boots", "Blue", 3, 0, function()
+makeSlot("Boots", GearModel.Boots, "Blue", 3, 0, function()
 	toggle("Boots", "boots", "Carpet", "carpet")
 end, function()
 	return player:GetAttribute("Pass_Boots") == true
 end, function()
 	return isOn("Boots")
 end)
-hookSlot = makeSlot("Hook", "Hook", "Teal", 4, G.Hook.Cooldown, function()
+hookSlot = makeSlot("Hook", GearModel.Hook, "Teal", 4, G.Hook.Cooldown, function()
 	useHook(function()
 		return hookSlot
 	end)
@@ -386,12 +504,13 @@ end, function()
 	return player:GetAttribute("Pass_Hook") == true
 end)
 
+-- L'aperçu de la batte suit le palier possédé
+local shownBat = 1
 local function refreshIcons()
-	local tier = (player:GetAttribute("Bat") or 0) :: number
-	local b = Config.Bats[math.clamp(tier, 1, #Config.Bats)]
-	local icon = batSlot.frame:FindFirstChildOfClass("ImageLabel")
-	if icon then
-		icon.Image = UIKit.Art[b.Art] or b.Art
+	local tier = math.clamp((player:GetAttribute("Bat") or 0) :: number, 1, #Config.Bats)
+	if tier ~= shownBat then
+		shownBat = tier
+		mount(batSlot.preview, GearModel.Bat(tier))
 	end
 end
 
@@ -413,7 +532,7 @@ local function rebind()
 			end
 			ContextActionService:BindAction("Gear" .. place, function(_, state)
 				if state == Enum.UserInputState.Begin then
-					s.use()
+					press(s)
 				end
 				return Enum.ContextActionResult.Pass
 			end, false, table.unpack(inputs))
@@ -448,5 +567,11 @@ RunService.RenderStepped:Connect(function()
 		local on = s.active ~= nil and (s.active :: () -> boolean)()
 		s.stroke.Color = if on then Color3.fromRGB(255, 240, 150) else UIKit.Outline
 		s.stroke.Thickness = if on then 5 else 3.5
+		if s.frame.Visible then
+			stepPreview(s.preview, s.key, t, on)
+		end
+	end
+	if shieldPill.Visible then
+		stepPreview(shieldPreview, "Shield", t, false)
 	end
 end)
