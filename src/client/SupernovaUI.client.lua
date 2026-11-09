@@ -117,7 +117,7 @@ local getBig = label(get, "+50%", 0, 56, COL_W, 80, 72, UIKit.Money)
 UIKit.shinyText(getBig, UIKit.Money)
 label(get, "MONEY", 0, 132, COL_W, 34, 30, Color3.new(1, 1, 1))
 label(get, "from creatures, forever!", 8, 166, COL_W - 16, 26, 21, Color3.fromRGB(230, 230, 245))
-label(get, "Stacks every Supernova", 8, 202, COL_W - 16, 24, 19, GOLD)
+label(get, "Stacks, and unlocks base skins!", 8, 202, COL_W - 16, 24, 19, GOLD)
 UIKit.sparkles(get, { count = 4, color = GOLD, size = 16, z = 6 })
 
 -- BAS : progression et gros bouton ------------------------------------------------------------

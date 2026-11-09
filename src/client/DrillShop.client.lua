@@ -2,7 +2,8 @@
 -- (Remotes.OpenShop). Trois onglets :
 --   DRILLS   : les 11 foreuses en liste, détail à droite (aperçu 3D qui tourne, puissance actuelle
 --              → suivante, un seul bouton qui change d'état : équipée, possédée, acheter, verrouillée)
---   SKINS    : apparences de foreuse (Config.DrillSkins), en $ ou en Robux pour les premium
+--   SKINS    : apparences de foreuse (Config.DrillSkins), en $ ou en Robux pour les premium ;
+--              en haut, un panneau propose les skins de base (fenêtre BaseSkinUI.client)
 --   UPGRADES : le scanner (chance des œufs rares)
 -- Le serveur décide de tout : BuyDrill, BuyUpgrade, Remotes.DrillShop (skins).
 
@@ -360,8 +361,34 @@ end)
 
 -- PAGE SKINS -------------------------------------------------------------------------------------
 local skinPage = pages.Skins
+
+-- Panneau qui propose les skins de base
+local BANNER_H = 92
+local baseBanner = new("Frame", { Name = "BaseSkinsPanel", Size = UDim2.fromOffset(PAGE_W, BANNER_H), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 3, Parent = skinPage }, {
+	UIKit.corner(14),
+	UIKit.gradient(UIKit.Colors.Purple[1], UIKit.Colors.Purple[2]),
+})
+UIKit.stroke(4, UIKit.Colors.Purple[2]:Lerp(Color3.new(0, 0, 0), 0.3)).Parent = baseBanner
+UIKit.studs(baseBanner, 0.55, "Studs", 24)
+do
+	local fx = new("Frame", { Size = UDim2.fromOffset(92, 92), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, ZIndex = 3, Parent = baseBanner })
+	UIKit.rays(fx, { color = Color3.new(1, 1, 1), size = 130, speed = 20, transparency = 0.55, z = 3 })
+	local icon = UIKit.icon("BaseSkin", { Size = UDim2.fromOffset(80, 80), Position = UDim2.fromOffset(18, 6), ZIndex = 4, Parent = baseBanner })
+	UIKit.float(icon, 3, 4, 2)
+	label(baseBanner, "BASE SKINS", 112, 10, 480, 40, 36, nil, Enum.TextXAlignment.Left)
+	label(baseBanner, "Give your whole base a new look!", 112, 50, 480, 30, 23, Color3.fromRGB(245, 235, 255), Enum.TextXAlignment.Left)
+	local button = UIKit.priceButton({ parent = baseBanner, text = "VIEW", size = UDim2.fromOffset(200, 64), position = UDim2.new(1, -214, 0, 14) })
+	button.Name = "Open"
+	UIKit.buttonGlow(button)
+	button.MouseButton1Click:Connect(function()
+		win.close()
+		UIKit.Open:Fire("BaseSkins")
+	end)
+end
+
 local skinScroll = new("ScrollingFrame", {
-	Size = UDim2.fromScale(1, 1),
+	Size = UDim2.new(1, 0, 1, -(BANNER_H + 8)),
+	Position = UDim2.fromOffset(0, BANNER_H + 8),
 	BackgroundTransparency = 1,
 	BorderSizePixel = 0,
 	ScrollBarThickness = 10,

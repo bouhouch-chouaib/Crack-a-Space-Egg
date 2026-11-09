@@ -133,7 +133,7 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 
 - ✅ (7 nov.) **Au départ, les 5 bases sont vides** : seulement la clôture et le sol, avec la même apparence pour toutes. L'ancien contenu (panneaux « FREE BASE », machine à casser, caisson, vitrine, zone des créatures) est rangé dans `ServerStorage.RemovedFromBases`.
 - ✅ La base accueillera la machine à dérocher, les emplacements où couvent les œufs, puis la vitrine à reliques, le terminal d'équipement et l'espace où se promènent les créatures.
-- ✅ **Skins de base** : des thèmes complets (sol, murs, lumière), trouvés dans les œufs ou achetés.
+- ✅ **Skins de base** (9 nov., `Config.BaseSkins`, `BaseSkinService`, `BaseSkinUI.client`) : thèmes complets (sol, murets, vitres, annexe), choisis depuis le panneau BASE SKINS de l'onglet SKINS du stand ITEMS. Station au départ ; Nebula, Ocean, Jungle, Magma et Frost débloqués à 1, 2, 3, 4 et 6 Supernovas ; Galaxy, Gold et Rainbow (animé) en passes Robux à 199, 299 et 399 R$. Aucun bonus, visibles par tout le serveur, gardés après une Supernova.
 - ✅ **Gardien de base** : un PNJ par base, acheté en $. 💡 Il casse les œufs et range les créatures pendant que le joueur est dehors.
 - ✅ Les mineurs et scientifiques du descriptif v2 sont remplacés par le gardien.
 - 💡 Le nom du joueur flotte au-dessus de sa base.

@@ -15,6 +15,7 @@ local ColdService = require(script.Parent.ColdService)
 local CreatureService = require(script.Parent.CreatureService)
 local MonsterService = require(script.Parent.MonsterService)
 local SkinService = require(script.Parent.SkinService)
+local BaseSkinService = require(script.Parent.BaseSkinService)
 local RewardService = require(script.Parent.RewardService)
 local GemService = require(script.Parent.GemService)
 local SupernovaService = require(script.Parent.SupernovaService)
@@ -40,3 +41,4 @@ ColdService.Start() -- gel et manque d'oxygène hors du couloir
 CreatureService.Start() -- sac, vente au Trading Post, fusion
 MonsterService.Start() -- monstres des anneaux 5 à 7 (bruit, gardiens, poursuites)
 SkinService.Start() -- skins de foreuse (atelier des foreuses)
+BaseSkinService.Start() -- skins de base (Supernovas ou passes Robux)

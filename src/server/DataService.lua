@@ -40,6 +40,7 @@ local function default()
 		indexClaimed = {}, -- ["anneau"] = true : récompense d'anneau de l'Index réclamée
 		skins = {}, -- ["clé"] = true : skins de foreuse achetés en $ (SkinService)
 		skin = "Classic", -- skin de foreuse équipé
+		baseSkin = "Station", -- skin de base choisi (BaseSkinService)
 		firstJoin = 0, -- os.time() de la première partie (fenêtre du Starter Pack)
 		guide = -1, -- étape du guide de la première minute atteinte (Guide.client) ; -1 = pas encore décidé
 		starterBought = false, -- Starter Pack déjà acheté (un seul par joueur)

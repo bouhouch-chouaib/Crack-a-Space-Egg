@@ -75,6 +75,11 @@ local function go(player: Player)
 	task.delay(Config.Supernova.Delay, function()
 		if player.Parent then
 			player:LoadCharacter()
+			for _, s in ipairs(Config.BaseSkins) do
+				if s.Supernovas == n then
+					GameService.Notice(player, ("{BaseSkin} %s base skin unlocked! See the ITEMS stand"):format(s.Name), "good")
+				end
+			end
 		end
 		busy[player] = nil
 	end)

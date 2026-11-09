@@ -79,6 +79,7 @@ refaits selon les règles ci-dessus, fenêtres plus aérées.
 - ✅ STORE et atelier des foreuses séparés, comme prévu ci-dessus ; ancien `Shop.client.lua` supprimé.
 - ✅ Prix Robux lus sur Roblox, « OWNED », Starter Pack honnête (3 jours, un seul achat), rubans retirés sauf « BEST VALUE! ».
 - ✅ Skins : 9 en $ et 3 en passes Robux (Galaxy, Rainbow, Supernova), créés sur Roblox avec leur icône.
+- ✅ Skins de base : 3 passes Robux (Galaxy 199, Gold 299, Rainbow 399), créés sur Roblox avec leur icône (`tools/store-icons/baseskin_*.png`).
 
 ## Sources
 - Monetization foundations : https://create.roblox.com/docs/production/game-design/monetization-foundations

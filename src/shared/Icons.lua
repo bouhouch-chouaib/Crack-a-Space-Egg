@@ -40,6 +40,7 @@ Icons.Ids = {
 	MachineLuck = "rbxassetid://90531167835964",
 	MachinePolish = "rbxassetid://126127533939603",
 	MachineUp = "rbxassetid://124846923096618",
+	BaseSkin = "rbxassetid://77089889111512",
 	OreRock = "rbxassetid://138611183043411", -- minerai brut sur sa roche (rendu Blender, ropilot_blender_render)
 }
 

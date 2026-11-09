@@ -7,7 +7,7 @@
 --   le tapis pour qu'il puisse se rouvrir (on peut donc fermer la fenêtre en restant dessus).
 --   Les boutons rouges de sa base (machine, tube) marchent pareil, et s'enfoncent sous le pied.
 --   En quittant le tapis, ses fenêtres se ferment toutes seules (SELL : aussi celle des créatures
---   ouverte par SELL PETS).
+--   ouverte par SELL PETS ; ITEMS : aussi BASE SKINS).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -66,7 +66,7 @@ end
 -- TAPIS DES STANDS : fenêtre ouverte en marchant dessus ----------------------------------------
 local OPEN = { Store = "Store", Items = "DrillShop", Sell = "Sell", Mail = "Feedback" } -- attribut Shop du stand -> fenêtre
 -- fenêtres fermées en quittant le tapis (noms des UIKit.window)
-local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop" }, Sell = { "Sell", "CreaturesWindow" }, Feedback = { "Feedback" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" } }
+local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop", "BaseSkins" }, Sell = { "Sell", "CreaturesWindow" }, Feedback = { "Feedback" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" } }
 local MAT_MARGIN = 1 -- studs autour du tapis qui comptent encore
 type Mat = { part: BasePart, window: string, on: boolean, radius: number?, home: CFrame? }
 local mats: { Mat } = {}

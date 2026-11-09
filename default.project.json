@@ -71,6 +71,9 @@
         "TunnelUp": {
           "$className": "RemoteFunction"
         },
+        "BaseSkin": {
+          "$className": "RemoteFunction"
+        },
         "Rewards": {
           "$className": "RemoteFunction"
         },

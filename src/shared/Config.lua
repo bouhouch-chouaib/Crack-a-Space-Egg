@@ -332,6 +332,40 @@ function Config.DrillSkin(key: string?)
 	return Config.DrillSkins[1]
 end
 
+-- Skins de base (BaseSkinService, BaseSkinUI.client) : purement esthétiques, gardés après une Supernova.
+-- Supernovas = nombre à avoir fait pour le débloquer ; Robux / PassId = vendu comme passe.
+-- Floor, Main (murets et annexe), Trim, Glass : couleurs ; sans couleur = celles d'origine de la base.
+local function baseSkin(key, rarity, floor, main, trim, glass)
+	return { Key = key, Name = key, Rarity = rarity, Floor = floor, Main = main, Trim = trim, Glass = glass }
+end
+Config.BaseSkins = {
+	baseSkin("Station", 1),
+	baseSkin("Nebula", 2, col(92, 62, 160), col(196, 168, 255), col(130, 84, 230), col(200, 150, 255)),
+	baseSkin("Ocean", 3, col(44, 128, 186), col(196, 236, 255), col(24, 150, 216), col(130, 225, 255)),
+	baseSkin("Jungle", 4, col(86, 158, 76), col(230, 242, 196), col(58, 128, 66), col(176, 240, 136)),
+	baseSkin("Magma", 5, col(70, 44, 44), col(255, 156, 76), col(210, 66, 34), col(255, 150, 70)),
+	baseSkin("Frost", 6, col(196, 232, 250), col(246, 252, 255), col(116, 194, 242), col(196, 242, 255)),
+	baseSkin("Galaxy", 6, col(30, 24, 82), col(128, 76, 216), col(255, 124, 222), col(190, 130, 255)),
+	baseSkin("Gold", 5, col(232, 180, 56), col(255, 238, 176), col(196, 134, 32), col(255, 226, 140)),
+	baseSkin("Rainbow", 7, col(255, 110, 150), col(255, 236, 190), col(120, 230, 90), col(120, 220, 255)),
+}
+for i, n in ipairs({ 0, 1, 2, 3, 4, 6 }) do
+	Config.BaseSkins[i].Supernovas = n
+end
+Config.BaseSkins[7].Robux, Config.BaseSkins[7].PassId = 199, 2074384534
+Config.BaseSkins[8].Robux, Config.BaseSkins[8].PassId = 299, 2075536455
+Config.BaseSkins[9].Robux, Config.BaseSkins[9].PassId = 399, 2074612468
+Config.BaseSkins[9].Rainbow = true
+Config.BaseSkinRainbowSpeed = 0.06 -- tours de la roue des couleurs par seconde
+function Config.BaseSkin(key: string?)
+	for _, s in ipairs(Config.BaseSkins) do
+		if s.Key == key then
+			return s
+		end
+	end
+	return Config.BaseSkins[1]
+end
+
 -- Mutations
 Config.Sizes = {
 	{ Name = "Small", Chance = 0.30, Mult = 0.7 },
