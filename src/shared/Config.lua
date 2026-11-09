@@ -19,8 +19,18 @@ Config.Rarities = {
 }
 -- Index à partir duquel le scanner augmente la chance
 Config.LuckFrom = 3
--- Une annonce serveur à partir de cette rareté
-Config.AnnounceFrom = 6
+-- Messages serveur (AnnounceService) : niveau d'une trouvaille selon sa rareté et sa taille (nil = pas de message)
+-- 1 Rare : Mythic, ou Legendary Giant ; 2 Épique : Cosmic, ou Mythic Giant ; 3 Légendaire (tous les serveurs) : Cosmic Giant.
+function Config.AnnounceLevel(rarity: number, giant: boolean): number?
+	if rarity >= 7 then
+		return if giant then 3 else 2
+	elseif rarity == 6 then
+		return if giant then 2 else 1
+	elseif rarity == 5 and giant then
+		return 1
+	end
+	return nil
+end
 -- Compteur de veine : Légendaire garanti après N géodes sans Légendaire ou mieux
 Config.PityLegendary = 1000
 

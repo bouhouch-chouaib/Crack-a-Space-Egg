@@ -16,6 +16,7 @@ local GameService = require(script.Parent.GameService)
 local WindTunnelService = require(script.Parent.WindTunnelService)
 local Tracking = require(script.Parent.Tracking)
 local MachineService = require(script.Parent.MachineService)
+local AnnounceService = require(script.Parent.AnnounceService)
 
 local Remotes = ReplicatedStorage.Remotes
 local SupernovaService = {}
@@ -67,12 +68,8 @@ local function go(player: Player)
 	local n = d.supernovas
 	Tracking.Funnel(player, "Supernova", 1, "Went Supernova")
 	Tracking.Event(player, "Supernova", n)
-	-- les autres joueurs l'apprennent
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player then
-			Remotes.Notice:FireClient(p, ("{Supernova} %s went SUPERNOVA! Money %s forever"):format(player.DisplayName, mult(n)), "good")
-		end
-	end
+	-- les autres joueurs l'apprennent (lui voit son explosion)
+	AnnounceService.Send(player, 2, ("%s went SUPERNOVA! Money %s forever"):format(player.DisplayName, mult(n)), Color3.fromRGB(255, 200, 70), "Supernova", true)
 	-- retour à la base pendant le flash blanc (foreuse, jetpack et soufflerie du nouveau départ)
 	task.delay(Config.Supernova.Delay, function()
 		if player.Parent then

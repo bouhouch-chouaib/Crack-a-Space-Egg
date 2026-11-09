@@ -4,7 +4,6 @@
 -- Remotes.Relics (RemoteFunction) : ("state") -> { ok, owned, found } ; ("sell", clé) -> idem + value
 -- Remotes.RelicFound (RemoteEvent) vers le joueur : (clé), lance la grande révélation (RelicUI.client).
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -14,6 +13,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local Tracking = require(script.Parent.Tracking)
+local AnnounceService = require(script.Parent.AnnounceService)
 
 local Remotes = ReplicatedStorage.Remotes
 local RelicService = {}
@@ -79,12 +79,8 @@ local function give(player: Player, d, relic)
 	-- le joueur regarde sa trouvaille : ColdService laisse passer ce moment
 	player:SetAttribute("RelicGrace", os.clock() + Config.RelicReveal)
 	Remotes.RelicFound:FireClient(player, relic.Key)
-	-- les autres joueurs l'apprennent ; le découvreur a sa révélation, le bandeau gâcherait la surprise
-	for _, other in ipairs(Players:GetPlayers()) do
-		if other ~= player then
-			Remotes.Announcement:FireClient(other, player.DisplayName, relic.Name, #Config.Rarities, ("%s found the lost relic: %s!"):format(player.DisplayName, relic.Name))
-		end
-	end
+	-- tous les serveurs l'apprennent ; le découvreur a sa révélation, le bandeau gâcherait la surprise
+	AnnounceService.Send(player, 3, ("%s found the lost relic: %s!"):format(player.DisplayName, relic.Name), relic.Color, "Star", true)
 end
 
 -- Appelé par GameService à chaque foret qui sort des œufs

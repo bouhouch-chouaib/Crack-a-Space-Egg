@@ -8,6 +8,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local DrillSkin = require(ReplicatedStorage.Shared.DrillSkin)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
+local AnnounceService = require(script.Parent.AnnounceService)
 local BeltService = require(script.Parent.BeltService)
 local Bases = require(script.Parent.Bases)
 local WorldBuilder = require(script.Parent.WorldBuilder)
@@ -326,9 +327,7 @@ local function crackAll(player: Player)
 		d.index[key] = (d.index[key] or 0) + 1
 		d.stats.geodes += 1
 		d.stats.best = math.max(d.stats.best, g.Rarity)
-		if g.Rarity >= Config.AnnounceFrom then
-			Remotes.Announcement:FireAllClients(player.DisplayName, g.Name, g.Rarity)
-		end
+		AnnounceService.Gem(player, g.Name, g.Rarity)
 	end
 	d.cargo = {}
 	d.credits += total

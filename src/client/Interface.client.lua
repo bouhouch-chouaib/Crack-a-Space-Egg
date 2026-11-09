@@ -65,28 +65,6 @@ local function notice(text: string, kind: string?)
 end
 Remotes.Notice.OnClientEvent:Connect(notice)
 
-Remotes.Announcement.OnClientEvent:Connect(function(who: string, crystal: string, rarity: number, message: string?)
-	local r = Config.Rarities[rarity]
-	local banner = new("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Size = UDim2.new(0.7, 0, 0, 46),
-		Position = UDim2.new(0.5, 0, 0, 120),
-		BackgroundColor3 = r.Color,
-		Parent = gui,
-	}, { corner(12) })
-	label({
-		Size = UDim2.new(1, -20, 1, -12),
-		Position = UDim2.fromOffset(10, 6),
-		Text = message or string.format("%s just hatched a %s %s!", who, r.Name:upper(), crystal),
-		TextColor3 = Color3.new(0.05, 0.05, 0.1),
-		FontFace = Theme.Font,
-		Parent = banner,
-	})
-	task.delay(5, function()
-		banner:Destroy()
-	end)
-end)
-
 -- La barre de vie de la roche visée est dans Impact.client.lua
 
 -- La boutique est dans Shop.client.lua

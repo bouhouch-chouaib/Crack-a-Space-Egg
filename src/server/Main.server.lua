@@ -19,6 +19,7 @@ local BaseSkinService = require(script.Parent.BaseSkinService)
 local SuitService = require(script.Parent.SuitService)
 local GearService = require(script.Parent.GearService)
 local RelicService = require(script.Parent.RelicService)
+local AnnounceService = require(script.Parent.AnnounceService)
 local RewardService = require(script.Parent.RewardService)
 local GemService = require(script.Parent.GemService)
 local SupernovaService = require(script.Parent.SupernovaService)
@@ -48,3 +49,4 @@ BaseSkinService.Start() -- skins de base (Supernovas ou passes Robux)
 SuitService.Start() -- combinaisons : plus de temps hors du couloir, plus d'oxygène
 GearService.Start() -- objets : batte, tapis volant, bottes, grappin, bouclier
 RelicService.Start() -- reliques des explorateurs perdus
+AnnounceService.Start() -- messages des trouvailles rares, sur tous les serveurs pour les plus grandes

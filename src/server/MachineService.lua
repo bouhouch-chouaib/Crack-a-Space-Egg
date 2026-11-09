@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
+local AnnounceService = require(script.Parent.AnnounceService)
 local Tracking = require(script.Parent.Tracking)
 local GameService = require(script.Parent.GameService)
 local Bases = require(script.Parent.Bases)
@@ -207,9 +208,7 @@ local function run(player: Player, base: Model, machine: Model)
 			GameService.Sync(player)
 			Tracking.Funnel(player, "Gems", 2, "Geode opened")
 			Remotes.EggRevealed:FireClient(player, ring, rarity, "geode", gem)
-			if rarity >= Config.AnnounceFrom then
-				Remotes.Announcement:FireAllClients(player.DisplayName, Config.GemName(ring, rarity), rarity)
-			end
+			AnnounceService.Gem(player, Config.GemName(ring, rarity), rarity)
 		else
 			table.insert(d.ready, { ring = ring, rarity = rarity })
 			GameService.Sync(player)

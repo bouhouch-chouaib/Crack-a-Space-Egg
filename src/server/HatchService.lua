@@ -22,6 +22,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
+local AnnounceService = require(script.Parent.AnnounceService)
 local GameService = require(script.Parent.GameService)
 local Bases = require(script.Parent.Bases)
 local BoostService = require(script.Parent.BoostService)
@@ -505,9 +506,7 @@ function HatchService.Hatch(player: Player, id: string)
 			build(player, item, true)
 			syncBase(player)
 			Remotes.Hatched:FireAllClients(player, pos, item.ring, item.rarity, item.name, item.income, item.size, special)
-			if item.rarity >= Config.AnnounceFrom then
-				Remotes.Announcement:FireAllClients(player.DisplayName, item.name, item.rarity)
-			end
+			AnnounceService.Creature(player, item)
 			if newSpecies then
 				-- laisse le temps de voir la créature sortir avant le message
 				task.delay(1.5, function()
