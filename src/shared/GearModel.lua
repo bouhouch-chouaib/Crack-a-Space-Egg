@@ -1,5 +1,8 @@
 -- Modèles 3D des objets (Config.Gear), construits autour de l'origine avec des pièces ancrées.
+-- GearModel.Detailed : le modèle détaillé de ReplicatedStorage.Assets.Gear, pour le menu GEAR.
 -- La batte et le tapis servent aussi sur l'avatar (GearService les soude) ; tous servent aux aperçus de GearBar.client.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(script.Parent:WaitForChild("Config"))
 
@@ -117,6 +120,65 @@ function GearModel.Shield(): Model
 	piece(m, "Disc", Vector3.new(0.3, 2.6, 2.6), facing, Color3.fromRGB(110, 225, 255), CYLINDER)
 	piece(m, "Star", Vector3.new(1.05, 1.05, 0.2), CFrame.new(0, 0, 0.2), gold)
 	piece(m, "Star", Vector3.new(1.05, 1.05, 0.2), CFrame.new(0, 0, 0.2) * CFrame.Angles(0, 0, math.rad(45)), gold)
+	return m
+end
+
+local SIMPLE: { [string]: () -> Model } = {
+	BatWood = function()
+		return GearModel.Bat(1)
+	end,
+	BatSteel = function()
+		return GearModel.Bat(2)
+	end,
+	BatPlasma = function()
+		return GearModel.Bat(3)
+	end,
+	Carpet = GearModel.Carpet,
+	Boots = GearModel.Boots,
+	Hook = GearModel.Hook,
+	Shield = GearModel.Shield,
+}
+
+-- Orientation des modèles générés qui ne sont pas de face
+local TURN: { [string]: CFrame } = {
+	Boots = CFrame.Angles(0, math.pi, 0),
+	Shield = CFrame.Angles(0, math.pi, 0),
+}
+
+local STUDS_ACROSS = 7 -- nombre de picots sur la plus grande largeur de l'objet
+
+-- Modèle détaillé d'un objet (clé = son Art dans Config), centré sur l'origine et couvert de picots.
+-- Sans le modèle détaillé, la version en pièces simples.
+function GearModel.Detailed(art: string): Model
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local folder = assets and assets:FindFirstChild("Gear")
+	local template = folder and folder:FindFirstChild(art) :: Model?
+	local m: Model = if template then template:Clone() else SIMPLE[art]()
+	if template then
+		local _, size = m:GetBoundingBox()
+		local tile = math.max(size.X, size.Y, size.Z) / STUDS_ACROSS
+		for _, p in ipairs(m:GetDescendants()) do
+			if p:IsA("BasePart") then
+				for _, face in ipairs(Enum.NormalId:GetEnumItems()) do
+					local t = Instance.new("Texture")
+					t.Name = "Studs"
+					t.Texture = STUDS
+					t.Face = face
+					t.StudsPerTileU = tile
+					t.StudsPerTileV = tile
+					t.ZIndex = 2
+					t.Parent = p
+				end
+			end
+		end
+		local turn = TURN[art]
+		if turn then
+			m:PivotTo(turn * m:GetPivot())
+		end
+	end
+	local cf = m:GetBoundingBox()
+	m.WorldPivot = CFrame.new(cf.Position)
+	m:PivotTo(CFrame.new())
 	return m
 end
 

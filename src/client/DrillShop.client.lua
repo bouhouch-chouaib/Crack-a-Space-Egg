@@ -17,6 +17,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local DrillSkin = require(ReplicatedStorage.Shared:WaitForChild("DrillSkin"))
+local GearModel = require(ReplicatedStorage.Shared:WaitForChild("GearModel"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Prices = require(script.Parent:WaitForChild("Prices"))
 
@@ -553,6 +554,16 @@ local gearScroll = new("ScrollingFrame", {
 	new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 12), PaddingRight = UDim.new(0, 14) }),
 })
 
+local gearSpins: { { model: Model, phase: number } } = {}
+RunService.RenderStepped:Connect(function()
+	if win.isOpen() and currentTab == "Gear" then
+		local t = os.clock()
+		for _, s in ipairs(gearSpins) do
+			s.model:PivotTo(CFrame.Angles(0, t * 0.9 + s.phase, 0))
+		end
+	end
+end)
+
 type GearCard = { button: TextButton, text: TextLabel, grad: UIGradient, note: TextLabel, refresh: () -> () }
 local gearCards: { GearCard } = {}
 
@@ -569,8 +580,15 @@ local function gearCard(order: number, name: string, art: string, effect: string
 	end
 	local fx = new("Frame", { Size = UDim2.fromOffset(150, 140), Position = UDim2.fromOffset(43, 36), BackgroundTransparency = 1, ZIndex = 3, Parent = c })
 	UIKit.rays(fx, { color = color, size = 180, speed = 20, transparency = 0.55, z = 3 })
-	local icon = UIKit.icon(art, { Size = UDim2.fromOffset(136, 136), Position = UDim2.fromOffset(50, 38), ZIndex = 4, Parent = c })
-	UIKit.float(icon, 3, 4, 2, order)
+	-- aperçu 3D de l'objet, qui tourne doucement
+	local view = viewport(c, 150, 43, 32, 4)
+	local model = GearModel.Detailed(art)
+	model.Parent = view
+	local _, size = model:GetBoundingBox()
+	local shot = new("Camera", { FieldOfView = 30, Parent = view })
+	shot.CFrame = CFrame.lookAt(Vector3.new(0, 0.22, 1).Unit * (size.Magnitude / 2 / math.tan(math.rad(15)) * 1.02), Vector3.zero)
+	view.CurrentCamera = shot
+	table.insert(gearSpins, { model = model, phase = order * 0.9 })
 	label(c, string.upper(name), 8, 6, 220, 30, 24)
 	label(c, effect, 10, 178, 216, 44, 18, Color3.fromRGB(230, 235, 250))
 	local note = label(c, "", 10, 222, 216, 18, 16, Color3.fromRGB(190, 230, 255))

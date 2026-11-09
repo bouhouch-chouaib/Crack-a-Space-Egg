@@ -49,15 +49,15 @@ Icons.Ids = {
 	SuitTitan = "rbxassetid://140531267535108",
 	SuitStellar = "rbxassetid://101333545395906",
 	SuitVoid = "rbxassetid://73108506358912",
-	-- objets : images provisoires (texte sur fond uni), à remplacer par de vraies illustrations
-	Gear = "rbxassetid://112794930806131",
-	BatWood = "rbxassetid://110498422380255",
-	BatSteel = "rbxassetid://102289257007173",
-	BatPlasma = "rbxassetid://106395438656254",
-	Carpet = "rbxassetid://112728120156393",
-	Boots = "rbxassetid://107884433356331",
-	Hook = "rbxassetid://123418017184855",
-	Shield = "rbxassetid://123570562845256",
+	-- objets : photos des modèles 3D (tools/store-icons/gear_*_icon.png)
+	Gear = "rbxassetid://137510781143272",
+	BatWood = "rbxassetid://98219912551926",
+	BatSteel = "rbxassetid://113540759293723",
+	BatPlasma = "rbxassetid://93245960232284",
+	Carpet = "rbxassetid://128329950682702",
+	Boots = "rbxassetid://90875294112727",
+	Hook = "rbxassetid://137510781143272",
+	Shield = "rbxassetid://79967956733104",
 	OreRock = "rbxassetid://138611183043411", -- minerai brut sur sa roche (rendu Blender, ropilot_blender_render)
 }
 
