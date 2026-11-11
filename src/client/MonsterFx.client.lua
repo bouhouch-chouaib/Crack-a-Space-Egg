@@ -1,8 +1,13 @@
 -- Monstres des anneaux 5 à 7, côté joueur (MonsterService décide, ce script montre) :
 -- - chaque monstre (dossier dans Workspace.World.Monsters) devient un modèle animé chez ce client,
 --   qui glisse vers la position publiée par le serveur, grandit en sortant, plonge en repartant ;
--- - pour le joueur poursuivi : bandeau « ESCAPE » avec le temps restant, bord rouge qui bat plus
---   fort quand il approche, icône de danger au bord de l'écran de son côté, secousses, sons ;
+--   au réveil son astéroïde vole en éclats (onde de choc) ; traînée, braises et yeux qui brillent ;
+--   il heurte les astéroïdes sur son passage ; arrivé à la base du joueur, un dôme s'allume, il
+--   s'y écrase puis rentre à son astéroïde (état Return) ;
+-- - pour le joueur poursuivi : bandeau « RUN HOME » et jauge vers sa base, flèche lumineuse jusqu'à
+--   sa base, bord rouge et battements de cœur qui montent quand il approche, lignes de vitesse et
+--   champ de vision élargi, bonds en claquant des mâchoires quand il est tout près, icône de danger
+--   au bord de l'écran de son côté, secousses, sons ; mâchoires qui se ferment s'il attrape ;
 -- - astéroïdes gardés (anneaux 6 et 7) : un petit gardien flotte au-dessus, avec une lueur ;
 -- - jauge de bruit : alerte quand elle dépasse Config.Monsters.Noise.Warn.
 
@@ -10,6 +15,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
@@ -62,9 +68,234 @@ local banner = new("Frame", {
 	BackgroundColor3 = Color3.fromRGB(40, 16, 24),
 	Parent = gui,
 }, { UIKit.corner(), UIKit.stroke(4) })
-local title = UIKit.text({ Text = "{Warning} ESCAPE!", Size = UDim2.new(1, -24, 0, 34), Position = UDim2.fromOffset(12, 5), TextColor3 = Color3.fromRGB(255, 90, 90), Parent = banner })
+local title = UIKit.text({ Text = "{Warning} RUN HOME!", Size = UDim2.new(1, -24, 0, 34), Position = UDim2.fromOffset(12, 5), TextColor3 = Color3.fromRGB(255, 90, 90), Parent = banner })
 local barBack = new("Frame", { Size = UDim2.new(1, -40, 0, 14), Position = UDim2.fromOffset(20, 44), BackgroundColor3 = Color3.fromRGB(20, 10, 14), Parent = banner }, { UIKit.corner(), UIKit.stroke(2) })
-local barFill = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(255, 80, 80), Parent = barBack }, { UIKit.corner() })
+-- jauge : le chemin déjà fait vers sa base
+local barFill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(110, 240, 120), Parent = barBack }, { UIKit.corner() })
+UIKit.studs(banner, 0.85).ZIndex = 0
+
+-- éclair de la couleur du monstre à son réveil
+local flash = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8, Parent = gui })
+
+-- lignes de vitesse : elles filent vers les bords quand il se rapproche
+local lines = new("Frame", { Name = "SpeedLines", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 2, Parent = gui })
+type Line = { frame: Frame, angle: number, phase: number, speed: number }
+local speedLines: { Line } = {}
+for i = 1, 22 do
+	local angle = (i / 22) * math.pi * 2 + math.random() * 0.2
+	table.insert(speedLines, {
+		frame = new("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(150, 4),
+			Rotation = math.deg(angle),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Parent = lines,
+		}, { UIKit.corner(2) }),
+		angle = angle,
+		phase = math.random(),
+		speed = 1.4 + math.random() * 1.2,
+	})
+end
+
+-- mâchoires qui se referment sur l'écran quand il attrape
+local JAW = Color3.fromRGB(28, 10, 16)
+local TOOTH = Color3.fromRGB(246, 240, 222)
+local function jaw(top: boolean): Frame
+	local f = new("Frame", {
+		Name = if top then "JawTop" else "JawBottom",
+		AnchorPoint = Vector2.new(0.5, if top then 1 else 0),
+		Position = UDim2.fromScale(0.5, if top then 0 else 1),
+		Size = UDim2.fromScale(1.2, 0.56),
+		BackgroundColor3 = JAW,
+		BorderSizePixel = 0,
+		ZIndex = 20,
+		Visible = false,
+		Parent = gui,
+	})
+	for i = 0, 13 do
+		new("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale((i + (if top then 0 else 0.5)) / 13, if top then 1 else 0),
+			Size = UDim2.fromOffset(62, 62),
+			Rotation = 45,
+			BackgroundColor3 = TOOTH,
+			ZIndex = 19,
+			Parent = f,
+		}, { UIKit.stroke(3) })
+	end
+	return f
+end
+local jawTop, jawBottom = jaw(true), jaw(false)
+
+local function bite()
+	jawTop.Position = UDim2.fromScale(0.5, 0)
+	jawBottom.Position = UDim2.fromScale(0.5, 1)
+	jawTop.Visible, jawBottom.Visible = true, true
+	local close = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	TweenService:Create(jawTop, close, { Position = UDim2.fromScale(0.5, 0.52) }):Play()
+	TweenService:Create(jawBottom, close, { Position = UDim2.fromScale(0.5, 0.48) }):Play()
+	-- le joueur est ramené à sa base pendant que la bouche est fermée
+	task.delay(0.95, function()
+		local open = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		TweenService:Create(jawTop, open, { Position = UDim2.fromScale(0.5, 0) }):Play()
+		TweenService:Create(jawBottom, open, { Position = UDim2.fromScale(0.5, 1) }):Play()
+		task.wait(0.45)
+		jawTop.Visible, jawBottom.Visible = false, false
+	end)
+end
+
+-- flèche lumineuse dans le monde, du joueur jusqu'à sa base
+local homeFrom = Instance.new("Attachment")
+homeFrom.Name = "MonsterHomeFrom"
+local homeTo = Instance.new("Attachment")
+homeTo.Name = "MonsterHomeTo"
+homeTo.Parent = workspace.Terrain
+local homeBeam = new("Beam", {
+	Name = "MonsterHomeArrow",
+	Attachment0 = homeFrom,
+	Attachment1 = homeTo,
+	Texture = Config.Guide.Arrow,
+	TextureMode = Enum.TextureMode.Static,
+	TextureLength = 3,
+	TextureSpeed = 2.4,
+	Width0 = 2.6,
+	Width1 = 2.6,
+	FaceCamera = true,
+	LightEmission = 0.4,
+	LightInfluence = 0,
+	Color = ColorSequence.new(Color3.fromRGB(120, 255, 140)),
+	Enabled = false,
+	Parent = workspace.Terrain,
+})
+
+-- Le sol de la base d'un joueur (Ship.Bases : attribut Index = attribut Base du joueur)
+local function baseFloor(userId: number): BasePart?
+	local p = Players:GetPlayerByUserId(userId)
+	local index = p and p:GetAttribute("Base")
+	local ship = workspace:FindFirstChild("Ship")
+	local bases = ship and ship:FindFirstChild("Bases")
+	if type(index) ~= "number" or not bases then
+		return nil
+	end
+	for _, b in ipairs(bases:GetChildren()) do
+		if b:GetAttribute("Index") == index then
+			return b:FindFirstChild("Floor") :: BasePart?
+		end
+	end
+	return nil
+end
+
+-- EFFETS DANS LE MONDE -----------------------------------------------------------------------
+
+local function piece(size: number, color: Color3, cf: CFrame): Part
+	local p = Instance.new("Part")
+	p.Size = Vector3.one * size
+	p.Color = color
+	p.Material = Enum.Material.SmoothPlastic
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.CFrame = cf
+	p.Parent = workspace
+	return p
+end
+
+local function randomUnit(): Vector3
+	local v = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
+	return if v.Magnitude > 0.01 then v.Unit else Vector3.yAxis
+end
+
+-- Éclats de roche qui volent dans tous les sens
+local function debris(at: Vector3, color: Color3, count: number, reach: number)
+	for _ = 1, count do
+		local p = piece(0.6 + math.random() * 1.6, color:Lerp(Color3.new(0, 0, 0), math.random() * 0.3), CFrame.new(at) * CFrame.Angles(math.random() * 6, math.random() * 6, 0))
+		local to = at + randomUnit() * reach * (0.5 + math.random() * 0.7)
+		TweenService:Create(p, TweenInfo.new(0.8 + math.random() * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			CFrame = CFrame.new(to) * CFrame.Angles(math.random() * 6, math.random() * 6, 0),
+			Size = Vector3.one * 0.1,
+		}):Play()
+		Debris:AddItem(p, 1.3)
+	end
+	local a = Instance.new("Attachment")
+	a.WorldPosition = at
+	a.Parent = workspace.Terrain
+	local dust = Instance.new("ParticleEmitter")
+	dust.Texture = UIKit.Art.FxGlow
+	dust.Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.3))
+	dust.Transparency = NumberSequence.new(0.35, 1)
+	dust.Size = NumberSequence.new(reach * 0.25, reach * 0.6)
+	dust.Lifetime = NumberRange.new(0.6, 1)
+	dust.Speed = NumberRange.new(reach * 0.4, reach * 0.9)
+	dust.SpreadAngle = Vector2.new(180, 180)
+	dust.LightInfluence = 0.3
+	dust.Enabled = false
+	dust.Parent = a
+	dust:Emit(14)
+	Debris:AddItem(a, 1.5)
+end
+
+-- Onde de choc : une bulle qui gonfle et s'efface
+local function shockwave(at: Vector3, color: Color3, size: number)
+	local p = piece(2, color, CFrame.new(at))
+	p.Shape = Enum.PartType.Ball
+	p.Transparency = 0.45
+	TweenService:Create(p, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * size, Transparency = 1 }):Play()
+	Debris:AddItem(p, 0.7)
+end
+
+local STUDS = "rbxassetid://99589690361139"
+
+-- Dôme de protection sur la base du joueur : le monstre s'y écrase
+local function dome(floor: BasePart, color: Color3)
+	local top = floor.CFrame * CFrame.new(0, floor.Size.Y / 2, 0)
+	local full = math.max(floor.Size.X, floor.Size.Z) * 1.35
+	local d = piece(2, color, top)
+	d.Shape = Enum.PartType.Ball
+	d.Transparency = 0.55
+	local textures = {}
+	for _, face in ipairs(Enum.NormalId:GetEnumItems()) do
+		local t = Instance.new("Texture")
+		t.Texture = STUDS
+		t.Face = face
+		t.StudsPerTileU = 6
+		t.StudsPerTileV = 6
+		t.Transparency = 0.4
+		t.Parent = d
+		table.insert(textures, t)
+	end
+	TweenService:Create(d, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.one * full }):Play()
+	shockwave(top.Position, color, full * 1.5)
+	Sfx.Play("Thaw", { at = top.Position, pitch = 0.6, volume = 3 })
+	task.delay(1.1, function()
+		local fade = TweenInfo.new(1.2)
+		TweenService:Create(d, fade, { Transparency = 1 }):Play()
+		for _, t in ipairs(textures) do
+			TweenService:Create(t, fade, { Transparency = 1 }):Play()
+		end
+	end)
+	Debris:AddItem(d, 2.6)
+end
+
+-- Couleur de l'astéroïde le plus proche (pour ses éclats)
+local function rockColorNear(ring: number, at: Vector3): Color3
+	local folder = beltFolder:FindFirstChild("Ring" .. ring)
+	local best, bestDist = nil, 80
+	if folder then
+		for _, p in ipairs(folder:GetDescendants()) do
+			if p:IsA("BasePart") and p.Name == "Asteroid" then
+				local dist = (p.Position - at).Magnitude
+				if dist < bestDist then
+					best, bestDist = p, dist
+				end
+			end
+		end
+	end
+	return if best then best.Color else Color3.fromRGB(150, 128, 110)
+end
 local arrow = new("ImageLabel", {
 	Name = "Arrow",
 	Image = UIKit.Art.Warning, -- icône de danger au bord de l'écran, du côté du monstre
@@ -90,6 +321,10 @@ type View = {
 	light: PointLight?,
 	mine: boolean,
 	leftAt: number?,
+	eyes: { Attachment }?,
+	lungeAt: number?,
+	startDist: number?,
+	nextRocks: number?,
 }
 local views: { [Instance]: View } = {}
 
@@ -111,6 +346,7 @@ local function shake(amount: number, duration: number)
 end
 
 local onState: (Instance) -> ()
+local fovPunch = 0 -- coup de zoom au réveil
 
 local function addView(f: Instance)
 	if views[f] then
@@ -151,11 +387,63 @@ local function addView(f: Instance)
 				hl.Parent = m
 			end
 			v.growl = Sfx.Loop("MonsterGrowl", body)
+			-- traînée lumineuse et braises de sa couleur
+			local a0 = Instance.new("Attachment")
+			a0.Position = Vector3.new(0, size * 0.2, 0)
+			a0.Parent = body
+			local a1 = Instance.new("Attachment")
+			a1.Position = Vector3.new(0, -size * 0.2, 0)
+			a1.Parent = body
+			local trail = Instance.new("Trail")
+			trail.Attachment0 = a0
+			trail.Attachment1 = a1
+			trail.Color = ColorSequence.new(kind.Color, Color3.new(1, 1, 1))
+			trail.Transparency = NumberSequence.new(0.35, 1)
+			trail.Lifetime = 0.55
+			trail.LightEmission = 1
+			trail.LightInfluence = 0
+			trail.FaceCamera = true
+			trail.Parent = body
+			local embers = Instance.new("ParticleEmitter")
+			embers.Texture = UIKit.Art.FxSparkle
+			embers.Color = ColorSequence.new(kind.Color, Color3.new(1, 1, 1))
+			embers.Size = NumberSequence.new(size * 0.06, 0)
+			embers.Lifetime = NumberRange.new(0.5, 1)
+			embers.Speed = NumberRange.new(3, 9)
+			embers.SpreadAngle = Vector2.new(180, 180)
+			embers.Rate = 28
+			embers.LightEmission = 1
+			embers.LightInfluence = 0
+			embers.Parent = body
+			-- deux yeux qui brillent, placés devant lui à chaque image
+			local eyes = {}
+			for _ = 1, 2 do
+				local e = Instance.new("Attachment")
+				e.Parent = workspace.Terrain
+				local bb = Instance.new("BillboardGui")
+				bb.Size = UDim2.fromScale(size * 0.16, size * 0.16)
+				bb.LightInfluence = 0
+				bb.Adornee = e
+				bb.Parent = e
+				local glow = Instance.new("ImageLabel")
+				glow.BackgroundTransparency = 1
+				glow.Size = UDim2.fromScale(1, 1)
+				glow.Image = UIKit.Art.FxGlow
+				glow.ImageColor3 = kind.Color:Lerp(Color3.new(1, 1, 1), 0.35)
+				glow.Parent = bb
+				table.insert(eyes, e)
+			end
+			v.eyes = eyes
 		end
 		m.Parent = workspace
 		v.model = m
 	end
 	views[f] = v
+	-- réveil : son astéroïde vole en éclats, onde de choc de sa couleur
+	if (pos - camera.CFrame.Position).Magnitude < 600 and kind then
+		debris(pos, rockColorNear(ring, pos), 26, size * 1.3)
+		shockwave(pos, kind.Color, size * 2.6)
+	end
 	f.AttributeChanged:Connect(function(name)
 		if name == "State" then
 			onState(f)
@@ -165,8 +453,15 @@ local function addView(f: Instance)
 	Sfx.Play("MonsterRoar", { at = pos, pitch = if ring == 6 then 1.25 elseif ring == 7 then 0.9 else 1 })
 	if v.mine then
 		Sfx.Play("Warning")
-		shake(0.6, 0.6)
+		shake(0.9, 0.8)
 		gui.Enabled = true
+		banner.Visible = true
+		if kind then
+			flash.BackgroundColor3 = kind.Color
+			flash.BackgroundTransparency = 0.6
+			TweenService:Create(flash, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
+		end
+		fovPunch = os.clock()
 	end
 end
 
@@ -182,9 +477,13 @@ local function removeView(f: Instance)
 	if v.model then
 		v.model:Destroy()
 	end
+	for _, e in ipairs(v.eyes or {}) do
+		e:Destroy()
+	end
 	if v.mine then
 		gui.Enabled = false
 		arrow.Visible = false
+		homeBeam.Enabled = false
 	end
 end
 
@@ -204,17 +503,35 @@ function onState(f: Instance)
 			Sfx.Play("MonsterCatch")
 			Sfx.Play("MonsterRoar", { pitch = 1.1 })
 			shake(1.2, 0.7)
-			-- écran qui se ferme comme une bouche
-			vignette.ImageTransparency = 0
-			vignette.ImageColor3 = Color3.new(0, 0, 0)
-			TweenService:Create(vignette, TweenInfo.new(1.2), { ImageTransparency = 1 }):Play()
+			-- les mâchoires se referment sur l'écran
+			gui.Enabled = true
+			banner.Visible = false
+			arrow.Visible = false
+			homeBeam.Enabled = false
+			vignette.ImageTransparency = 1
+			bite()
+		end
+	elseif state == "Return" then
+		-- le joueur est chez lui : dôme sur sa base, le monstre s'y écrase et rugit de rage
+		local floor = baseFloor((f:GetAttribute("Target") or 0) :: number)
+		if floor then
+			local trim = floor.Parent and floor.Parent:GetAttribute("TrimColor")
+			dome(floor, if typeof(trim) == "Color3" then trim else Color3.fromRGB(110, 210, 255))
+		end
+		Sfx.Play("MonsterRoar", { at = v.shown, pitch = 0.75 })
+		if v.mine then
+			Sfx.Play("Escape")
+			shake(0.8, 0.5)
+			gui.Enabled = false
+			arrow.Visible = false
+			homeBeam.Enabled = false
 		end
 	elseif state == "Leave" then
 		v.leftAt = os.clock()
 		if v.mine then
-			Sfx.Play("Escape")
 			gui.Enabled = false
 			arrow.Visible = false
+			homeBeam.Enabled = false
 		end
 	end
 end
@@ -289,11 +606,16 @@ end)
 
 -- IMAGE PAR IMAGE ----------------------------------------------------------------------------
 
+local fovBase: number? = nil -- champ de vision avant la poursuite (rendu à la fin)
+local nearShown = 0 -- proximité du monstre, lissée (lignes de vitesse, champ de vision, cœur)
+local hitRocks: { [BasePart]: number } = setmetatable({}, { __mode = "k" }) :: any
+
 RunService.RenderStepped:Connect(function(dt)
-	local now = workspace:GetServerTimeNow()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local camPos = camera.CFrame.Position
+	local chased = false
+	local nearNow = 0
 
 	for f, v in pairs(views) do
 		local target = (f:GetAttribute("Pos") or v.shown) :: Vector3
@@ -303,6 +625,11 @@ RunService.RenderStepped:Connect(function(dt)
 			v.look = v.look:Lerp(look.Unit, 1 - math.exp(-6 * dt))
 		end
 		local m = v.model
+		-- bond en claquant des mâchoires quand il est tout près du joueur poursuivi
+		local lunge = 0
+		if v.lungeAt then
+			lunge = math.sin(math.pi * math.clamp((os.clock() - v.lungeAt) / 0.45, 0, 1))
+		end
 		if m then
 			local age = os.clock() - v.born
 			-- taille : il grandit en sortant, rapetisse en repartant
@@ -325,30 +652,80 @@ RunService.RenderStepped:Connect(function(dt)
 			if dir.Magnitude < 0.01 then
 				dir = Vector3.zAxis
 			end
-			m:PivotTo(CFrame.lookAt(v.shown, v.shown + dir) * wobble)
+			local at = v.shown
+			if lunge > 0 and root then
+				local toward = root.Position - v.shown
+				if toward.Magnitude > 0.01 then
+					at += toward.Unit * v.size * 0.35 * lunge
+				end
+			end
+			local pivot = CFrame.lookAt(at, at + dir) * wobble
+			m:PivotTo(pivot)
+			-- les yeux, devant lui
+			if v.eyes then
+				local s2 = v.size * grow
+				v.eyes[1].WorldPosition = (pivot * CFrame.new(-s2 * 0.12, s2 * 0.14, -s2 * 0.42)).Position
+				v.eyes[2].WorldPosition = (pivot * CFrame.new(s2 * 0.12, s2 * 0.14, -s2 * 0.42)).Position
+			end
 			local _, s = m:GetBoundingBox()
 			local cur = math.max(s.X, s.Y, s.Z)
-			local want = math.max(0.5, v.size * grow)
+			local want = math.max(0.5, v.size * grow * (1 + 0.18 * lunge))
 			if math.abs(cur - want) > 0.05 then
 				m:ScaleTo(m:GetScale() * want / cur)
 			end
 			if v.growl then
-				v.growl:Set(if v.state == "Chase" or v.state == "Emerge" then 1 else 0)
+				v.growl:Set(if v.state == "Chase" or v.state == "Emerge" then 1 elseif v.state == "Return" then 0.6 else 0)
+			end
+			-- il heurte les astéroïdes sur son passage (éclats et poussière, la roche ne bouge pas)
+			if (v.state == "Chase" or v.state == "Return") and os.clock() >= (v.nextRocks or 0) then
+				v.nextRocks = os.clock() + 0.15
+				local folder = beltFolder:FindFirstChild("Ring" .. v.ring)
+				if folder and (v.shown - camPos).Magnitude < 500 then
+					for _, p in ipairs(folder:GetDescendants()) do
+						if p:IsA("BasePart") and p.Name == "Asteroid" and os.clock() - (hitRocks[p] or 0) > 1.2 then
+							local gap = (p.Position - v.shown).Magnitude
+							if gap < v.size * 0.5 + p.Size.X * 0.5 then
+								hitRocks[p] = os.clock()
+								local contact = p.Position + (v.shown - p.Position).Unit * p.Size.X * 0.5
+								debris(contact, p.Color, 10, p.Size.X * 0.8)
+								Sfx.Play("RockHit", { at = contact, volume = 0.8, pitch = 0.8 })
+							end
+						end
+					end
+				end
 			end
 		end
 
 		-- interface du joueur poursuivi
-		if v.mine and root and v.state ~= "Leave" and v.state ~= "Caught" then
-			local endsAt = (f:GetAttribute("EndsAt") or now) :: number
-			local startedAt = (f:GetAttribute("StartedAt") or now) :: number
-			local left = math.max(0, endsAt - now)
-			local total = math.max(1, endsAt - startedAt)
+		if v.mine and root and (v.state == "Emerge" or v.state == "Chase") then
+			chased = true
 			local name = M.Kinds[v.ring] and string.upper(M.Kinds[v.ring].Name) or "MONSTER"
-			UIKit.setIconText(title, ("{Warning} %s! ESCAPE %ds"):format(name, math.ceil(left)))
-			barFill.Size = UDim2.fromScale(left / total, 1)
+			UIKit.setIconText(title, ("{Warning} %s! RUN HOME"):format(name))
+			-- jauge et flèche lumineuse : le chemin jusqu'à sa base
+			local floor = baseFloor(player.UserId)
+			if floor then
+				local goal = floor.Position + Vector3.new(0, floor.Size.Y / 2 + 3, 0)
+				local toHome = (goal - root.Position).Magnitude
+				v.startDist = math.max(v.startDist or 0, toHome)
+				barFill.Size = UDim2.fromScale(math.clamp(1 - toHome / math.max(1, v.startDist :: number), 0.02, 1), 1)
+				homeTo.WorldPosition = goal
+				if homeFrom.Parent ~= root then
+					homeFrom.Parent = root
+				end
+				homeBeam.Enabled = true
+			end
 			-- bord rouge : plus il est près, plus ça bat fort
 			local dist = (v.shown - root.Position).Magnitude
 			local near = math.clamp(1 - (dist - v.size / 2) / 80, 0, 1)
+			nearNow = math.max(nearNow, near)
+			if v.state == "Chase" and dist - v.size / 2 < M.LungeDistance and os.clock() - (v.lungeAt or 0) > 2.4 then
+				v.lungeAt = os.clock()
+				Sfx.Play("MonsterRoar", { at = v.shown, pitch = 1.3, volume = 0.7 })
+				task.delay(0.3, function()
+					Sfx.Play("Clamp", { volume = 4, pitch = 0.7 })
+					shake(0.9, 0.35)
+				end)
+			end
 			vignette.ImageColor3 = Color3.fromRGB(255, 40, 40)
 			vignette.ImageTransparency = 1 - near * (0.55 + 0.25 * math.sin(os.clock() * (6 + 8 * near)))
 			if near > 0.6 and math.random() < dt * 4 then
@@ -373,6 +750,29 @@ RunService.RenderStepped:Connect(function(dt)
 				arrow.Visible = true
 			end
 		end
+	end
+
+	-- poursuite : lignes de vitesse, champ de vision élargi, cœur qui bat (Audio.client)
+	nearShown += ((if chased then nearNow else 0) - nearShown) * math.min(1, dt * 5)
+	player:SetAttribute("MonsterNear", if nearShown > 0.01 then nearShown else nil)
+	if not chased then
+		homeBeam.Enabled = false
+	end
+	local punch = math.max(0, 1 - (os.clock() - fovPunch) / 0.7)
+	if chased or nearShown > 0.01 or punch > 0 then
+		fovBase = fovBase or camera.FieldOfView
+		camera.FieldOfView = (fovBase :: number) + 12 * nearShown + 16 * punch
+	elseif fovBase then
+		camera.FieldOfView = fovBase
+		fovBase = nil
+	end
+	local vp = camera.ViewportSize
+	local half = math.min(vp.X, vp.Y) / 2
+	for _, l in ipairs(speedLines) do
+		local k = (os.clock() * l.speed + l.phase) % 1
+		local r = half * (0.45 + 0.8 * k)
+		l.frame.Position = UDim2.fromOffset(vp.X / 2 + math.cos(l.angle) * r, vp.Y / 2 + math.sin(l.angle) * r)
+		l.frame.BackgroundTransparency = 1 - nearShown * 0.6 * math.sin(math.pi * k)
 	end
 
 	-- gardiens : ils flottent au-dessus de leur astéroïde et regardent la caméra

@@ -77,8 +77,9 @@ Config.Map = {
 --   Noise : la jauge de bruit (forer, pousser au jetpack) ; à 1, il se réveille
 --   Guard : forer un astéroïde gardé (lueur et œil au-dessus) le réveille aussitôt
 --   Both  : les deux
--- Il poursuit le joueur un temps qui dépend de la rareté de l'œuf qu'il porte (ChaseTime), puis
--- abandonne. S'il l'attrape : l'œuf est perdu et le joueur revient à sa base. Le vaisseau protège.
+-- Il poursuit le joueur jusqu'à sa base, sur le vaisseau compris ; arrivé chez lui, le monstre
+-- s'écrase contre le dôme de la base et rentre à son astéroïde. S'il l'attrape : l'œuf est perdu
+-- et le joueur revient à sa base.
 Config.Monsters = {
 	Kinds = {
 		[5] = { Name = "Devourer", Model = "Devourer", Sense = "Noise", Speed = 0.85, Size = 30, Color = Color3.fromRGB(150, 255, 90) },
@@ -90,12 +91,18 @@ Config.Monsters = {
 	-- Astéroïdes gardés (anneaux Guard et Both) : part, œufs en plus, rareté tirée deux fois (la meilleure)
 	GuardShare = 0.22,
 	GuardEggs = 1.5,
-	-- Durée de la poursuite (s) selon la rareté de l'œuf porté (1 = Commun … 7 = Cosmique), sans œuf : NoEgg
-	ChaseTime = { 8, 10, 13, 16, 20, 25, 30 },
-	NoEgg = 5,
+	MaxChase = 180, -- secondes : sécurité si le joueur reste coincé quelque part (il rentre alors chez lui)
+	BaseMargin = 3, -- studs autour du sol de la base (et de son annexe) où l'on est à l'abri
+	BaseHeight = 30, -- studs au-dessus du sol de la base encore à l'abri
+	Recoil = 10, -- studs : il rebondit sur le dôme de la base
+	ReturnPause = 0.8, -- secondes de rage avant de rentrer
+	ReturnSpeed = 90, -- studs/s pour rentrer à son astéroïde
+	ReturnTime = 12, -- secondes au plus pour rentrer, puis il plonge où il est
+	LungeDistance = 22, -- studs (en plus de son rayon) : il bondit en claquant des mâchoires (effet seul)
 	Emerge = 1.4, -- secondes où il sort (on a le temps de fuir)
 	CatchRadius = 6, -- en plus de son rayon
-	MinSpeed = 18, -- studs/s au minimum (sinon vitesse en vol du joueur × Speed)
+	MinSpeed = 18, -- studs/s au minimum dans l'espace (sinon vitesse en vol du joueur × Speed) ;
+	-- sur le vaisseau : vitesse à pied du joueur × Speed
 	Cooldown = 12, -- secondes de répit après une poursuite
 	StunGap = 4, -- secondes après un coup de batte où le monstre ne peut plus être assommé
 	RingMargin = 30, -- studs autour de l'épaisseur de l'anneau où il règne

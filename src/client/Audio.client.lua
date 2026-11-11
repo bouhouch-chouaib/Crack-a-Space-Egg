@@ -158,7 +158,10 @@ RunService.Heartbeat:Connect(function(dt: number)
 
 	tunnel:Set(if inTunnel then 1 else 0)
 	void:Set(if outside then 0.35 + 0.65 * cold else 0)
-	heart:Set(if cold > 0.45 then (cold - 0.45) / 0.55 else 0)
+	-- le cœur bat avec le froid, et quand un monstre se rapproche (MonsterNear, MonsterFx.client)
+	local monster = (player:GetAttribute("MonsterNear") or 0) :: number
+	heart:Set(math.max(if cold > 0.45 then (cold - 0.45) / 0.55 else 0, monster))
+	heart:SetPitch(1 + 0.4 * monster)
 end)
 
 task.spawn(function()

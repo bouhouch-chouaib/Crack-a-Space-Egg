@@ -2,7 +2,7 @@
 -- Le serveur décide : bruit de chaque joueur, réveil, poursuite, prise, abandon. Il ne déplace pas
 -- de modèle : chaque monstre est un dossier dans Workspace.World.Monsters dont les attributs sont
 -- lus par MonsterFx.client, qui anime le modèle chez chaque joueur.
---   Kind (anneau), Target (UserId), Pos, Look, State (Emerge / Chase / Leave / Caught),
+--   Kind (anneau), Target (UserId), Pos, Look, State (Emerge / Chase / Return / Leave / Caught),
 --   StartedAt, EndsAt (temps serveur), Size
 -- Publié sur le joueur : Noise (0..1, seulement dans un anneau à bruit), Chased (EndsAt, pendant une poursuite).
 
@@ -34,6 +34,7 @@ type Chase = {
 	lastSent: number,
 	stunUntil: number?,
 	stunReady: number?,
+	home: Vector3, -- son astéroïde : il y rentre quand le joueur atteint sa base
 }
 
 local chases: { [Player]: Chase } = {}
@@ -77,6 +78,27 @@ end
 
 MonsterService.InShip = inShip
 
+-- Dans sa propre base (sol ou annexe) : le monstre abandonne
+local function inBase(player: Player, pos: Vector3): boolean
+	local base = Bases.Get(player)
+	if not base then
+		return false
+	end
+	local floors = { base:FindFirstChild("Floor") }
+	local annex = base:FindFirstChild("Annex")
+	table.insert(floors, annex and annex:FindFirstChild("AnnexFloor"))
+	for _, f in ipairs(floors) do
+		if f and f:IsA("BasePart") then
+			local p = f.CFrame:PointToObjectSpace(pos)
+			local s = f.Size
+			if math.abs(p.X) <= s.X / 2 + M.BaseMargin and math.abs(p.Z) <= s.Z / 2 + M.BaseMargin and p.Y > -4 and p.Y < M.BaseHeight then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 local function senses(ring: number, what: string): boolean
 	local kind = M.Kinds[ring]
 	return kind ~= nil and (kind.Sense == what or kind.Sense == "Both")
@@ -109,9 +131,7 @@ function MonsterService.Wake(player: Player, ring: number, from: Vector3?): bool
 	if not kind or not hrp or not d or chases[player] or (cooldown[player] or 0) > os.clock() then
 		return false
 	end
-	local egg = d.cargo[1]
-	local rarity = if type(egg) == "table" then egg.rarity else nil
-	local duration = if rarity then M.ChaseTime[math.clamp(rarity, 1, #M.ChaseTime)] else M.NoEgg
+	local duration = M.MaxChase
 	-- point de sortie : l'astéroïde voisin le plus proche, sinon sous le joueur, un peu à l'écart
 	local spawnAt = from or BeltService.NearestPosition(hrp.Position, ring, 90)
 	if not spawnAt then
@@ -138,13 +158,14 @@ function MonsterService.Wake(player: Player, ring: number, from: Vector3?): bool
 		leaveAt = 0,
 		size = kind.Size,
 		lastSent = 0,
+		home = spawnAt,
 	}
 	publish(c)
 	f.Parent = folder
 	chases[player] = c
 	player:SetAttribute("Chased", c.endsAt)
 	player:SetAttribute("Noise", if player:GetAttribute("Noise") ~= nil then 1 else nil)
-	GameService.Notice(player, ("{Warning} The %s woke up! Run!"):format(kind.Name), "bad")
+	-- pas de message : le bandeau RUN HOME et le rugissement suffisent (MonsterFx.client)
 	return true
 end
 
@@ -249,17 +270,30 @@ local function step(dt: number)
 				c.state = "Chase"
 			end
 		elseif c.state == "Chase" then
-			if inShip(target) or t >= c.endsAt then
-				-- le vaisseau protège, ou il se lasse : il repart
-				c.state = "Leave"
+			local home = inBase(player, target)
+			if home or t >= c.endsAt then
+				-- arrivé chez lui : le monstre s'écrase contre le dôme de la base, puis rentre à son astéroïde
+				c.state = "Return"
 				c.leaveAt = t
+				local away = c.pos - target
+				if away.Magnitude > 0.01 then
+					c.pos += away.Unit * M.Recoil
+				end
+				c.home = BeltService.NearestPosition(c.home, c.ring, 80) or c.home
 				player:SetAttribute("Chased", nil)
-				GameService.Notice(player, if inShip(target)
-					then "{Home} Safe! The ship scared it away"
-					else ("{Star} You escaped the %s!"):format(M.Kinds[c.ring].Name), "good")
+				if not home then
+					GameService.Notice(player, ("{Star} You escaped the %s!"):format(M.Kinds[c.ring].Name), "good")
+				end
 			elseif t >= (c.stunUntil or 0) then -- assommé par une batte : il ne bouge plus
-				local air = (player:GetAttribute("AirSpeed") or Config.Movement.Air) :: number
-				local speed = math.max(M.MinSpeed, air * M.Kinds[c.ring].Speed)
+				local speed
+				if inShip(target) then
+					-- sur le vaisseau on court : il se cale sur la vitesse à pied
+					local ground = (player:GetAttribute("GroundSpeed") or Config.Movement.Walk) :: number
+					speed = ground * M.Kinds[c.ring].Speed
+				else
+					local air = (player:GetAttribute("AirSpeed") or Config.Movement.Air) :: number
+					speed = math.max(M.MinSpeed, air * M.Kinds[c.ring].Speed)
+				end
 				local delta = target - c.pos
 				local dist = delta.Magnitude
 				if dist > 0.01 then
@@ -271,8 +305,22 @@ local function step(dt: number)
 					continue
 				end
 			end
+		elseif c.state == "Return" then
+			-- un moment de rage contre le dôme, puis il rentre à son astéroïde
+			if t >= c.leaveAt + M.ReturnPause then
+				local delta = c.home - c.pos
+				local dist = delta.Magnitude
+				if dist > 0.01 then
+					c.look = c.look:Lerp(delta.Unit, math.min(1, dt * 3)).Unit
+					c.pos += delta.Unit * math.min(dist, M.ReturnSpeed * dt)
+				end
+				if dist <= c.size * 0.5 or t >= c.leaveAt + M.ReturnTime then
+					c.state = "Leave"
+					c.leaveAt = t
+				end
+			end
 		elseif c.state == "Leave" then
-			-- il s'éloigne en plongeant, puis disparaît
+			-- il plonge dans son astéroïde, puis disparaît
 			c.pos += (-c.look + Vector3.new(0, -0.6, 0)).Unit * 40 * dt
 			if t >= c.leaveAt + 2.5 then
 				publish(c)
