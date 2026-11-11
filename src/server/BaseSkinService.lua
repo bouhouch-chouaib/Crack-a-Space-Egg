@@ -67,7 +67,11 @@ local function checkPasses(player: Player)
 	local found = {}
 	for _, s in ipairs(Config.BaseSkins) do
 		if s.PassId and s.PassId ~= 0 then
-			local ok, has = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, s.PassId)
+			-- mode testeur : tous les passes comptent comme achetés
+			local ok, has = true, Config.Testers.Everyone
+			if not has then
+				ok, has = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, s.PassId)
+			end
 			if ok and has then
 				found[s.Key] = true
 			end

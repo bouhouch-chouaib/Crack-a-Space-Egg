@@ -48,7 +48,11 @@ local function checkPasses(player: Player)
 	passOwned[player] = passOwned[player] or {}
 	for _, s in ipairs(Config.DrillSkins) do
 		if s.PassId and s.PassId ~= 0 then
-			local ok, has = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, s.PassId)
+			-- mode testeur : tous les passes comptent comme achetés
+			local ok, has = true, Config.Testers.Everyone
+			if not has then
+				ok, has = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, s.PassId)
+			end
 			if ok and has then
 				passOwned[player][s.Key] = true
 			end

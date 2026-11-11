@@ -4,6 +4,16 @@
 local Config = {}
 
 Config.SaveKey = "Player_v1" -- ne pas changer : le schéma est versionné dans DataService
+
+-- MODE TESTEUR (server/Testers.lua) : chaque joueur reçoit tout au niveau maximum à son arrivée.
+-- Les parties vont alors dans une sauvegarde à part (SaveKey) et les classements ne sont pas écrits.
+-- À METTRE À false AVANT D'OUVRIR LE JEU AU PUBLIC.
+Config.Testers = {
+	Everyone = true,
+	SaveKey = "Player_test_v1",
+	Money = 1e15,
+	Shields = 5,
+}
 Config.AutosaveSeconds = 60
 
 -- Raretés : nom affiché, valeur de base (crédits à l'anneau 1), couleur.

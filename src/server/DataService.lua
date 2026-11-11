@@ -5,13 +5,15 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local Testers = require(script.Parent.Testers)
 
 local DataService = {}
 
 local VERSION = 4 -- v2 : soute { ring, rarity } ; v3 : foreuses une par une ; v4 : œufs et créatures dans la base
 local store: DataStore? = nil
 local ok, err = pcall(function()
-	store = DataStoreService:GetDataStore(Config.SaveKey)
+	-- mode testeur : sauvegarde à part, les vraies parties restent intactes
+	store = DataStoreService:GetDataStore(if Testers.Enabled() then Config.Testers.SaveKey else Config.SaveKey)
 end)
 if not ok then
 	warn("[Data] DataStore indisponible (activer l'accès API dans Studio ?)", err)
@@ -143,6 +145,9 @@ function DataService.Load(player: Player)
 		canSave[player] = false
 		profiles[player] = default()
 		warn("[Data] Partie non chargée pour " .. player.Name .. " : rien ne sera sauvegardé cette session")
+	end
+	if Testers.Enabled() then
+		Testers.Grant(profiles[player])
 	end
 	loadedSignal:Fire(player, profiles[player])
 end

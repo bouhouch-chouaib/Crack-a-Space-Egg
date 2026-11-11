@@ -183,7 +183,8 @@ end
 local function submit()
 	for _, p in ipairs(Players:GetPlayers()) do
 		local d = DataService.Get(p)
-		if d and DataService.CanSave(p) then
+		-- (pas en mode testeur : des scores au maximum resteraient dans les classements)
+		if d and DataService.CanSave(p) and not Config.Testers.Everyone then
 			for stat, info in pairs(STATS) do
 				local s = store(stat)
 				if s then

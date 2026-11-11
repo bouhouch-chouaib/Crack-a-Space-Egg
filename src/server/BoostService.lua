@@ -41,7 +41,11 @@ local function loadPasses(player: Player)
 	owned[player] = owned[player] or {}
 	for _, pass in ipairs(SHOP.Passes) do
 		if pass.Id ~= 0 then
-			local ok, has = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, pass.Id)
+			-- mode testeur : tous les passes comptent comme achetés
+			local ok, has = true, Config.Testers.Everyone
+			if not has then
+				ok, has = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, pass.Id)
+			end
 			if ok and has then
 				setPass(player, pass.Key)
 			end
