@@ -3,13 +3,15 @@
 
 local Config = {}
 
-Config.SaveKey = "Player_v1" -- ne pas changer : le schéma est versionné dans DataService
+-- 15 nov. 2026 : tout le monde repart de zéro après la phase de test (Player_v1 garde les anciennes
+-- parties, plus lues). Ne changer qu'exprès pour tout remettre à zéro : le schéma est versionné dans DataService.
+Config.SaveKey = "Player_v2"
 
 -- MODE TESTEUR (server/Testers.lua) : chaque joueur reçoit tout au niveau maximum à son arrivée.
 -- Les parties vont alors dans une sauvegarde à part (SaveKey) et les classements ne sont pas écrits.
 -- À METTRE À false AVANT D'OUVRIR LE JEU AU PUBLIC.
 Config.Testers = {
-	Everyone = true,
+	Everyone = false, -- coupé le 15 nov. 2026 (tout le monde repart de zéro)
 	SaveKey = "Player_test_v1",
 	Money = 1e15,
 	Shields = 5,
