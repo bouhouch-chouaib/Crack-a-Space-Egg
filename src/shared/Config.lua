@@ -1107,11 +1107,12 @@ Config.Shop = {
 	-- pour qu'un paquet reste intéressant à toutes les étapes du jeu. × 5 le 15 nov., comme les prix en $ :
 	-- un paquet achète la même chose qu'avant.
 	MoneyPacks = {
-		{ Art = "Money1", Base = 30000, Id = 3729246128, Price = 19 },
-		{ Art = "Money2", Base = 100000, Id = 3729246160, Price = 49 },
-		{ Art = "Money3", Base = 225000, Id = 3729246196, Price = 99 },
-		{ Art = "Money4", Base = 600000, Id = 3729246217, Price = 249 },
-		{ Art = "Money5", Base = 1300000, Id = 3729246247, Price = 499 },
+		-- Name : nom affiché sur la carte ; Tag, TagColor : ruban penché (les trois plus gros paquets)
+		{ Name = "Small Pack", Art = "Money1", Base = 30000, Id = 3729246128, Price = 19 },
+		{ Name = "Medium Pack", Art = "Money2", Base = 100000, Id = 3729246160, Price = 49 },
+		{ Name = "Large Pack", Art = "Money3", Base = 225000, Id = 3729246196, Price = 99, Tag = "GOOD VALUE", TagColor = "Blue" },
+		{ Name = "Huge Pack", Art = "Money4", Base = 600000, Id = 3729246217, Price = 249, Tag = "GREAT VALUE", TagColor = "Orange" },
+		{ Name = "Mega Pack", Art = "Money5", Base = 1300000, Id = 3729246247, Price = 499, Tag = "BEST VALUE!", TagColor = "Red" },
 	},
 }
 
@@ -1553,6 +1554,18 @@ Config.Feedback = {
 	},
 }
 
+
+-- INTERFACE (UIKit) ---------------------------------------------------------------------------------
+-- Studs : où l'interface porte des picots (« l'effet lego »).
+--   "All"    : partout, comme depuis le début (panneaux, cartes, barre d'objets, bandeaux, boutons)
+--   "Titles" : seulement sur les bandeaux de titre et les boutons ; panneaux, cartes et barre d'objets sont lisses
+--   "None"   : nulle part
+-- Pour comparer en jeu sans republier : dans la barre de commande de Studio, côté client,
+--   game.Players.LocalPlayer:SetAttribute("StudsMode", "Titles")
+-- Les picots du monde en 3D ne sont pas concernés.
+Config.UI = {
+	Studs = "All",
+}
 
 -- Téléphones et tablettes (Mobile.client) : part des particules gardée en mode allégé
 Config.Mobile = {

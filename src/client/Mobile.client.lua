@@ -29,7 +29,7 @@ local size = SIZE
 local drill = UIKit.roundButton({ name = "Drill", art = "UpDrill", color = "Orange", size = SIZE, parent = gui })
 drill.AnchorPoint = Vector2.new(0.5, 0.5)
 drill.Position = UDim2.new(1, -220, 1, -150)
-UIKit.studs(drill, 0.5, "Studs", 18).UICorner.CornerRadius = UDim.new(0.5, 0)
+UIKit.studs(drill, 0.5, "Studs", 18, "button").UICorner.CornerRadius = UDim.new(0.5, 0)
 UIKit.text({
 	AnchorPoint = Vector2.new(0.5, 0),
 	Position = UDim2.new(0.5, 0, 1, -30),

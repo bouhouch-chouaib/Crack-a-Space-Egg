@@ -669,7 +669,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 			ZIndex = 34,
 			Parent = frame,
 		}, { UIKit.corner(12), UIKit.stroke(3.5), UIKit.gradient(tier.Color:Lerp(Color3.new(1, 1, 1), 0.3), tier.Color:Lerp(Color3.new(0, 0, 0), 0.25)) })
-		UIKit.studs(sticker, 0.5, "Studs", 16)
+		UIKit.studs(sticker, 0.5, "Studs", 16, "button")
 		UIKit.text({ Size = UDim2.new(1, -10, 1, -8), Position = UDim2.fromOffset(5, 4), Text = tier.Name:upper() .. "!", ZIndex = 35, Stroke = 3, Parent = sticker })
 		UIKit.wiggle(sticker, 5, 4)
 		if petSize and petSize >= 1.5 then
@@ -688,7 +688,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 			ZIndex = 34,
 			Parent = frame,
 		}, { UIKit.corner(12), UIKit.stroke(3.5), UIKit.gradient(mut.Color:Lerp(Color3.new(1, 1, 1), 0.35), mut.Color:Lerp(Color3.new(0, 0, 0), 0.2)) })
-		UIKit.studs(sticker, 0.5, "Studs", 16)
+		UIKit.studs(sticker, 0.5, "Studs", 16, "button")
 		UIKit.text({ Size = UDim2.new(1, -10, 1, -8), Position = UDim2.fromOffset(5, 4), Text = ("%s! x%s"):format(mut.Name:upper(), tostring(mut.Mult)), ZIndex = 35, Stroke = 3, Parent = sticker })
 		UIKit.wiggle(sticker, 5, 4)
 		UIKit.sparkles(sticker, { count = 4, color = mut.Color:Lerp(Color3.new(1, 1, 1), 0.5), size = 16, z = 36 })

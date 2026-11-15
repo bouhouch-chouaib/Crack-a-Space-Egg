@@ -144,7 +144,7 @@ for i, tab in ipairs(TABS) do
 	}, { UIKit.corner(14), UIKit.gradient(colors[1], colors[2]) })
 	local stroke = UIKit.stroke(3.5)
 	stroke.Parent = b
-	UIKit.studs(b, 0.45, "Weld", 22)
+	UIKit.studs(b, 0.45, "Weld", 22, "button")
 	UIKit.icon(tab.art, { Size = UDim2.fromOffset(52, 52), Position = UDim2.fromOffset(4, 1), ZIndex = 4, Parent = b })
 	label(b, tab.text, 58, 10, TAB_W - 64, 34, 26, nil, Enum.TextXAlignment.Left)
 	UIKit.juice(b)

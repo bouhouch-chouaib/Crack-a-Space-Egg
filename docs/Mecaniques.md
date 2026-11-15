@@ -27,7 +27,9 @@ Ce bloc l'emporte sur les sections plus bas quand elles le contredisent.
 - **Index** en défilement vertical : un bloc par anneau, avec l'aperçu de ses 3 astéroïdes, ses 6 créatures rangées sous l'astéroïde qui les donne, et la récompense au bout de la barre.
 - **Annonces serveur** : elles suivent maintenant la mutation (Ruby, Rainbow, et les géantes), plus la rareté.
 - **Temps d'attente raccourcis** : machine 4 à 60 s, éclosion 20 s à 8 min (les œufs des derniers rangs sont devenus courants).
-- **Pas encore fait** (lots suivants) : boutique plus propre, essai sans picots dans l'interface, nouveaux anneaux, vraies apparences dessinées pour les 3 types d'astéroïdes (aujourd'hui : forme + matière argent ou or).
+- **Boutique plus propre** (lot 4) : titres de section alignés à gauche avec leur icône et un trait, paquets d'argent nommés (Small à Mega Pack), montant dans une pastille sombre, rubans GOOD VALUE, GREAT VALUE et BEST VALUE! sur les trois plus gros. Toujours aucun œuf ni créature en vente.
+- **Picots de l'interface au choix** : `Config.UI.Studs` vaut `"All"` (partout, réglage actuel), `"Titles"` (bandeaux de titre et boutons seulement : panneaux, cartes et barre d'objets lisses) ou `"None"`. Pour comparer en jeu : `game.Players.LocalPlayer:SetAttribute("StudsMode", "Titles")` côté client. Captures côte à côte dans `references/interface-picots/` (dossier non versionné). Le choix reste à faire.
+- **Pas encore fait** (lots suivants) : nouveaux anneaux, vraies apparences dessinées pour les 3 types d'astéroïdes (aujourd'hui : forme + matière argent ou or).
 
 ## 1. Univers et ton
 

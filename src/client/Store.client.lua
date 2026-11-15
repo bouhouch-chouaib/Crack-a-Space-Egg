@@ -97,9 +97,9 @@ local function robuxButton(parent: Instance, id: number, isPass: boolean, fallba
 	return b, text, grad
 end
 
--- Titre de section (sert aussi de point d'arrivée du menu)
-local function section(key: string, title: string, color: Color3)
-	sections[key] = UIKit.sectionTitle(content, title, color, nextOrder())
+-- Titre de section, avec son icône (sert aussi de point d'arrivée du menu)
+local function section(key: string, title: string, color: Color3, icon: string)
+	sections[key] = UIKit.sectionTitle(content, title, color, nextOrder(), icon)
 end
 
 local function grid(cell: Vector2): Frame
@@ -122,7 +122,7 @@ end
 
 -- 1. STARTER PACK (vedette) --------------------------------------------------------------
 local F = Shop.Featured
-section("Starter", "Starter Pack", Color3.fromRGB(255, 214, 70))
+section("Starter", "Starter Pack", Color3.fromRGB(255, 214, 70), F.Art)
 local featured = UIKit.card({ parent = content, color = "Orange", order = nextOrder(), name = "Starter" })
 featured.Size = UDim2.fromOffset(CONTENT_W, 244)
 do
@@ -159,7 +159,7 @@ if F.Id ~= 0 then
 end
 
 -- 2. PASSES -------------------------------------------------------------------------------
-section("Passes", "Game Passes", Color3.fromRGB(120, 215, 255))
+section("Passes", "Game Passes", Color3.fromRGB(120, 215, 255), "PassVIP")
 -- Cartes larges, deux par ligne : grosse icône à gauche, nom, effet, prix (Break and Steal an Egg)
 local PASS_W = math.floor((CONTENT_W - 12) / 2)
 local passGrid = grid(Vector2.new(PASS_W, 196))
@@ -205,15 +205,16 @@ local function refreshPasses()
 end
 
 -- 3. CASH -----------------------------------------------------------------------------------
-section("Cash", "Cash", Color3.fromRGB(150, 245, 80))
+section("Cash", "Cash", Color3.fromRGB(150, 245, 80), "Cash")
 -- Trois petits paquets, puis les deux plus gros en grand sur la ligne suivante
 local SMALL = math.floor((CONTENT_W - 24) / 3)
 local BIG = math.floor((CONTENT_W - 12) / 2)
-local cashSmall = grid(Vector2.new(SMALL, 236))
-local cashBig = grid(Vector2.new(BIG, 290))
--- de l'air au-dessus : le ruban « BEST VALUE! » dépasse du haut de la carte
-local bigPadding = cashBig:FindFirstChildOfClass("UIPadding") :: UIPadding
-bigPadding.PaddingTop = UDim.new(0, 24)
+local cashSmall = grid(Vector2.new(SMALL, 262))
+local cashBig = grid(Vector2.new(BIG, 304))
+-- de l'air au-dessus : les rubans (« GOOD VALUE », « BEST VALUE! ») dépassent du haut des cartes
+for _, g in ipairs({ cashSmall, cashBig }) do
+	(g:FindFirstChildOfClass("UIPadding") :: UIPadding).PaddingTop = UDim.new(0, 24)
+end
 local cashAmounts: { TextLabel } = {}
 local nPacks = #Shop.MoneyPacks
 for i, pack in ipairs(Shop.MoneyPacks) do
@@ -221,14 +222,20 @@ for i, pack in ipairs(Shop.MoneyPacks) do
 	local big = i > nPacks - 2
 	local w = if big then BIG else SMALL
 	local c = UIKit.card({ parent = if big then cashBig else cashSmall, color = if best then "Gold" else "Green", order = i, name = "Cash" .. i })
-	local artSize = if big then 150 else 124
-	art(c, pack.Art, artSize, 10)
-	cashAmounts[i] = label(c, "", 6, artSize + 8, w - 12, 38, 32, UIKit.Money)
+	-- de haut en bas : le nom du paquet, son image, le montant dans une pastille sombre, le prix
+	local artSize = if big then 140 else 112
+	label(c, string.upper(pack.Name or "Cash Pack"), 8, 8, w - 16, 28, if big then 26 else 22)
+	art(c, pack.Art, artSize, 38)
+	local pill = new("Frame", { Name = "Amount", Size = UDim2.fromOffset(w - 40, 40), Position = UDim2.fromOffset(20, artSize + 44), BackgroundColor3 = Color3.fromRGB(14, 40, 16), BackgroundTransparency = 0.35, ZIndex = 4, Parent = c }, { UIKit.corner(12) })
+	cashAmounts[i] = label(pill, "", 6, 2, w - 52, 36, 32, UIKit.Money)
+	cashAmounts[i].ZIndex = 5
 	local _, _, grad = robuxButton(c, pack.Id, false, pack.Price, UDim2.new(1, -24, 0, 52), UDim2.new(0, 12, 1, -62))
+	if pack.Tag then
+		UIKit.ribbon(c, pack.Tag, pack.TagColor)
+	end
 	if best then
 		-- le plus gros paquet est vraiment le plus avantageux ($ par Robux) : prix arc-en-ciel
 		UIKit.shinyStroke(c, UIKit.GoldShine, 5)
-		UIKit.ribbon(c, "BEST VALUE!", "Red")
 		UIKit.rainbowButton(grad)
 	end
 	if pack.Id ~= 0 then
@@ -237,7 +244,7 @@ for i, pack in ipairs(Shop.MoneyPacks) do
 end
 
 -- 4. BOOSTS -----------------------------------------------------------------------------------
-section("Boosts", "Boosts", Color3.fromRGB(255, 150, 210))
+section("Boosts", "Boosts", Color3.fromRGB(255, 150, 210), "PotionLuck")
 local boostGrid = grid(Vector2.new(SMALL, 272))
 local BOOST_COLORS = { "Purple", "Green", "Teal" }
 local boostTimers: { [string]: TextLabel } = {}
@@ -320,7 +327,7 @@ local function refresh()
 	refreshPasses()
 	local ring = (player:GetAttribute("Ring") or 1) :: number
 	for i, pack in ipairs(Shop.MoneyPacks) do
-		cashAmounts[i].Text = "$" .. Format.Short(Config.MoneyPackAmount(pack.Base, ring))
+		cashAmounts[i].Text = "+$" .. Format.Short(Config.MoneyPackAmount(pack.Base, ring))
 	end
 end
 

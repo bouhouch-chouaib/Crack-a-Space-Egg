@@ -301,7 +301,7 @@ local bubble = new("TextButton", { Name = "Boost", Size = UDim2.fromScale(1, 1),
 	UIKit.stroke(5),
 	UIKit.gradient(Color3.fromRGB(255, 232, 110), Color3.fromRGB(255, 150, 40)),
 })
-UIKit.studs(bubble, 0.5, "Studs", 22)
+UIKit.studs(bubble, 0.5, "Studs", 22, "button")
 UIKit.text({ Name = "Big", Size = UDim2.new(1, -16, 0, 84), Position = UDim2.fromOffset(8, 10), Text = "x" .. BOOST.Mult, ZIndex = 4, Stroke = 5, Parent = bubble })
 UIKit.text({ Name = "Small", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(8, 92), Text = "XP!", TextColor3 = Color3.fromRGB(140, 245, 255), ZIndex = 4, Stroke = 3.5, Parent = bubble })
 -- temps restant pour l'attraper : une barre qui se vide sous le bouton

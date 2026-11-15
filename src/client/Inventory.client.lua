@@ -43,7 +43,7 @@ local function square(name: string, x: number): TextButton
 		Text = "",
 		Parent = holder,
 	}, { UIKit.corner(14), UIKit.stroke(4), UIKit.gradient(UIKit.Colors.Dark[1], UIKit.Colors.Dark[2]) })
-	UIKit.studs(b, 0.45, "Studs", 16)
+	UIKit.studs(b, 0.45, "Studs", 16, "button")
 	UIKit.juice(b)
 	return b
 end

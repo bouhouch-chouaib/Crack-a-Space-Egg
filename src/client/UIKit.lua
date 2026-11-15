@@ -3,6 +3,7 @@
 -- Règles : texte Montserrat très gras blanc à épais contour sombre, contours noirs épais,
 -- dégradés vifs, coins arrondis, et tout ce qui se touche réagit (survol, appui).
 
+local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -12,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 
 local Theme = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Theme"))
 local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 local Device = require(script.Parent:WaitForChild("Device"))
 local ContextActionService = game:GetService("ContextActionService")
@@ -449,7 +451,7 @@ function UIKit.menuButton(props: { name: string, text: string, art: string, colo
 		Text = "",
 		Parent = holder,
 	}, { UIKit.corner(16), UIKit.stroke(3.5), UIKit.gradient(colors[1], colors[2]) })
-	UIKit.studs(b, 0.37, "Studs", 20)
+	UIKit.studs(b, 0.37, "Studs", 20, "button")
 	-- Reflet clair sur le haut
 	new("Frame", {
 		Name = "Gloss",
@@ -478,7 +480,7 @@ function UIKit.roundButton(props: { name: string, art: string, color: string?, s
 		Text = "",
 		Parent = props.parent,
 	}, { UIKit.corner(size / 2), UIKit.stroke(3), UIKit.gradient(colors[1], colors[2]) })
-	UIKit.studs(b, 0.45, "Studs", 16).UICorner.CornerRadius = UDim.new(0.5, 0)
+	UIKit.studs(b, 0.45, "Studs", 16, "button").UICorner.CornerRadius = UDim.new(0.5, 0)
 	UIKit.icon(props.art, { Size = UDim2.fromScale(0.82, 0.82), Position = UDim2.fromScale(0.09, 0.07), ZIndex = 2, Parent = b })
 	UIKit.juice(b)
 	return b
@@ -910,9 +912,23 @@ end
 
 -- Motif de surface Roblox discret, en mosaïque, posé sur un panneau ou un bouton.
 -- pattern : "Studs" (relief, par défaut), "Inlets" (creux) ou "Weld" (croisillons) ; tile : taille d'une tuile
-function UIKit.studs(parent: GuiObject, transparency: number?, pattern: string?, tile: number?): ImageLabel
+-- role : "panel" (panneau, carte, barre d'objets : par défaut), "header" (bandeau de titre) ou "button".
+-- Config.UI.Studs décide quels rôles gardent leurs picots ; on peut changer en jeu (attribut StudsMode
+-- du joueur, ou UIKit.setStuds) pour comparer avec et sans.
+-- (les images portent l'étiquette STUDS_TAG et leur rôle en attribut : une table à clés faibles
+-- perdrait des images encore affichées)
+local STUDS_TAG = "UIStuds"
+UIKit.StudsMode = Config.UI.Studs
+
+local function studsShown(role: string): boolean
+	local mode = UIKit.StudsMode
+	return mode == "All" or (mode == "Titles" and role ~= "panel")
+end
+
+function UIKit.studs(parent: GuiObject, transparency: number?, pattern: string?, tile: number?, role: string?): ImageLabel
 	local size = tile or 28
-	return new("ImageLabel", {
+	local kind = role or "panel"
+	local image = new("ImageLabel", {
 		Name = "Studs",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
@@ -921,9 +937,32 @@ function UIKit.studs(parent: GuiObject, transparency: number?, pattern: string?,
 		ScaleType = Enum.ScaleType.Tile,
 		TileSize = UDim2.fromOffset(size, size),
 		ZIndex = parent.ZIndex,
+		Visible = studsShown(kind),
 		Parent = parent,
 	}, { UIKit.corner(14) })
+	image:SetAttribute("Role", kind)
+	CollectionService:AddTag(image, STUDS_TAG)
+	return image
 end
+
+-- Change le réglage des picots tout de suite, sur toute l'interface déjà affichée
+function UIKit.setStuds(mode: string)
+	if mode ~= "All" and mode ~= "Titles" and mode ~= "None" then
+		return
+	end
+	UIKit.StudsMode = mode
+	for _, image in ipairs(CollectionService:GetTagged(STUDS_TAG)) do
+		if image:IsA("GuiObject") then
+			image.Visible = studsShown((image:GetAttribute("Role") or "panel") :: string)
+		end
+	end
+end
+Players.LocalPlayer:GetAttributeChangedSignal("StudsMode"):Connect(function()
+	local mode = Players.LocalPlayer:GetAttribute("StudsMode")
+	if type(mode) == "string" then
+		UIKit.setStuds(mode)
+	end
+end)
 
 export type Window = {
 	gui: ScreenGui,
@@ -1012,7 +1051,7 @@ function UIKit.window(props: { name: string, title: string, color: string, size:
 			band.Position = UDim2.fromScale(x + math.sin(t * 0.8) * 0.04, -0.4)
 		end)
 	end
-	UIKit.studs(header, 0.53, "Weld", 34)
+	UIKit.studs(header, 0.53, "Weld", 34, "header")
 	-- Lueur derrière le titre et éclat qui balaie le bandeau
 	UIKit.glow(header, { size = 260, position = UDim2.new(0, 110, 0.5, 0), transparency = 0.6, z = 2 })
 	UIKit.shine(header, 3)
@@ -1250,20 +1289,52 @@ function UIKit.sideNav(win: Window, items: { NavItem }, onClick: (key: string) -
 	}
 end
 
--- Titre de section « -- Potions -- » en couleur, épais contour
-function UIKit.sectionTitle(parent: Instance, text: string, color: Color3, order: number): TextLabel
-	local t = UIKit.text({
+-- Titre de section : le nom en couleur à gauche (avec son icône si on en donne une), puis un trait qui
+-- file jusqu'au bord. Net et aligné, comme les boutiques des jeux de référence (15 nov. : avant,
+-- « -- Potions -- » centré et qui se balançait).
+function UIKit.sectionTitle(parent: Instance, text: string, color: Color3, order: number, art: string?): Frame
+	local row = new("Frame", {
 		Name = "Title_" .. text,
-		Size = UDim2.new(1, 0, 0, 48),
-		Text = "-- " .. text .. " --",
+		Size = UDim2.new(1, 0, 0, 46),
+		BackgroundTransparency = 1,
 		LayoutOrder = order,
-		Stroke = 4,
 		Parent = parent,
+	}, {
+		new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }),
+		new("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 10) }),
 	})
-	-- Reflet qui balaie le titre et léger balancement (la position est tenue par la liste)
+	if art then
+		-- l'icône flotte dans un support fixe (la liste tient le support)
+		local slot = new("Frame", { Name = "Icon", Size = UDim2.fromOffset(42, 42), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 3, Parent = row })
+		UIKit.float(UIKit.icon(art, { Size = UDim2.fromScale(1, 1), ZIndex = 3, Parent = slot }), 2, 3, 2)
+	end
+	local t = UIKit.text({
+		Name = "Text",
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 40),
+		Text = string.upper(text),
+		TextScaled = false,
+		TextSize = 34,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = 2,
+		ZIndex = 3,
+		Stroke = 4,
+		Parent = row,
+	})
+	-- Reflet qui balaie le titre
 	UIKit.shinyText(t, color)
-	UIKit.wiggle(t, 1.5, 2)
-	return t
+	-- le trait prend toute la place qui reste
+	new("Frame", {
+		Name = "Line",
+		Size = UDim2.fromOffset(20, 5),
+		BackgroundColor3 = color,
+		BackgroundTransparency = 0.45,
+		BorderSizePixel = 0,
+		LayoutOrder = 3,
+		ZIndex = 2,
+		Parent = row,
+	}, { new("UIFlexItem", { FlexMode = Enum.UIFlexMode.Fill }) })
+	return row
 end
 
 -- Grille de cartes qui grandit avec son contenu
@@ -1321,7 +1392,7 @@ function UIKit.priceButton(props: {
 		ZIndex = 4,
 		Parent = props.parent,
 	}, { UIKit.corner(10), UIKit.stroke(3.5), grad })
-	UIKit.studs(b, 0.41, "Studs", 18)
+	UIKit.studs(b, 0.41, "Studs", 18, "button")
 	local row = new("Frame", { Name = "Row", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 4, Parent = b }, {
 		new("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
@@ -1376,7 +1447,7 @@ function UIKit.giftButton(parent: Instance, position: UDim2?): TextButton
 		ZIndex = 4,
 		Parent = parent,
 	}, { UIKit.corner(10), UIKit.stroke(3.5), UIKit.gradient(UIKit.Colors.Purple[1], UIKit.Colors.Purple[2]) })
-	UIKit.studs(b, 0.41, "Studs", 18)
+	UIKit.studs(b, 0.41, "Studs", 18, "button")
 	UIKit.icon("Rewards", { Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), ZIndex = 5, Parent = b })
 	UIKit.juice(b)
 	return b
@@ -1395,7 +1466,7 @@ function UIKit.ribbon(parent: GuiObject, text: string, color: string?): Frame
 		ZIndex = 8,
 		Parent = parent,
 	}, { UIKit.corner(8), UIKit.stroke(3), UIKit.gradient(colors[1], colors[2]) })
-	UIKit.studs(r, 0.45, "Weld", 16)
+	UIKit.studs(r, 0.45, "Weld", 16, "button")
 	UIKit.text({ Size = UDim2.fromScale(0.9, 0.78), Position = UDim2.fromScale(0.05, 0.11), Text = text, ZIndex = 9, Stroke = 2.5, Parent = r })
 	UIKit.wiggle(r, 4, 3.5)
 	UIKit.shine(r, 2.5)
