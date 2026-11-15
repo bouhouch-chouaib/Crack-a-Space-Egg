@@ -140,6 +140,24 @@ function BUILD.Flag(m)
 	end
 end
 
+function BUILD.Bell(m)
+	local brass, dark, coral = rgb(214, 165, 72), rgb(130, 92, 40), rgb(255, 122, 110)
+	local up = CFrame.Angles(0, 0, math.rad(90)) -- un cylindre debout
+	piece(m, Vector3.new(0.35, 3.3, 3.3), CFrame.new(0, -1.6, 0) * up, dark, CYLINDER)
+	piece(m, Vector3.new(2.6, 3, 3), CFrame.new(0, -0.2, 0) * up, brass, CYLINDER, 1)
+	piece(m, ball(3), CFrame.new(0, 1.1, 0), brass, BALL)
+	piece(m, Vector3.new(0.3, 3.15, 3.15), CFrame.new(0, 0.6, 0) * up, dark, CYLINDER)
+	-- hublot
+	piece(m, Vector3.new(0.3, 1.5, 1.5), CFrame.new(0, 0.1, 1.42) * FACE, dark, CYLINDER)
+	piece(m, Vector3.new(0.34, 1.1, 1.1), CFrame.new(0, 0.1, 1.44) * FACE, rgb(120, 235, 240), CYLINDER)
+	-- anneau du haut
+	piece(m, Vector3.new(0.3, 1, 1), CFrame.new(0, 2.85, 0) * FACE, dark, CYLINDER)
+	-- un peu de corail
+	for i, x in ipairs({ -1.1, -0.8, 1 }) do
+		piece(m, Vector3.new(0.22, 0.7 + i * 0.15, 0.22), CFrame.new(x, -1.05 + i * 0.1, 1.05) * CFrame.Angles(0, 0, math.rad(x * 14)), coral)
+	end
+end
+
 -- Les modèles générés reçoivent aussi les picots du jeu, à l'échelle de chaque objet
 local function addStuds(m: Model)
 	local _, size = m:GetBoundingBox()

@@ -13,7 +13,7 @@ Ce bloc l'emporte sur les sections plus bas quand elles le contredisent.
 - **Sauvegarde `Player_v3`** : tout le monde repart de zéro, classements neufs.
 - **Plus de géodes ni de minerais** (la section 6 bis ne vaut plus) : un astéroïde ne donne que des œufs. Le stand SELL ouvre la vente des créatures. La machine a trois améliorations (Turbo Motor, Lucky Core, Mutation Ray).
 - **Plus de Supernova** (la renaissance de la section 15 ne vaut plus). Les skins de base gratuits se débloquent par l'anneau atteint.
-- **Niveaux du jetpack sans plafond**. XP d'un niveau : 20, puis +5 par niveau, et ce pas est multiplié par 1,4 tous les 10 niveaux. Paliers de jetpack aux niveaux 1, 18, 65, 120, 195, 270, 362, 455. Les vitesses suivent les paliers, pas le niveau brut.
+- **Niveaux du jetpack sans plafond**. XP d'un niveau : 20, puis +5 par niveau, et ce pas est multiplié par 1,4 tous les 10 niveaux. Paliers de jetpack aux niveaux 1, 18, 65, 120, 195, 270, 362, 412. Les vitesses suivent les paliers, pas le niveau brut.
 - **Bonus x2 dans la soufflerie** : toutes les 25 à 45 s, un bouton « x2 » apparaît 7 s ; cliqué à temps, l'XP est doublée 12 s.
 - **Revenu hors ligne** : 40 % du revenu des créatures, 6 h au plus, affiché au retour (« WELCOME BACK! »).
 - **Reliques** : on ne les vend plus. Chacune donne +5 % d'argent ou +5 % d'XP de jetpack pour toujours. Chance : 1 sur 300 (anneau 1) à 1 sur 3 000 (anneau 7).
@@ -29,7 +29,8 @@ Ce bloc l'emporte sur les sections plus bas quand elles le contredisent.
 - **Temps d'attente raccourcis** : machine 4 à 60 s, éclosion 20 s à 8 min (les œufs des derniers rangs sont devenus courants).
 - **Boutique plus propre** (lot 4) : titres de section alignés à gauche avec leur icône et un trait, paquets d'argent nommés (Small à Mega Pack), montant dans une pastille sombre, rubans GOOD VALUE, GREAT VALUE et BEST VALUE! sur les trois plus gros. Toujours aucun œuf ni créature en vente.
 - **Picots de l'interface** : seulement sur les bandeaux de titre et les boutons ; panneaux, cartes et barre d'objets sont lisses (choix de Chouaib du 15 nov., après comparaison). Réglage : `Config.UI.Studs` (`"All"`, `"Titles"`, `"None"`). Pour comparer en jeu : `game.Players.LocalPlayer:SetAttribute("StudsMode", "All")` côté client. Les picots du monde en 3D restent partout.
-- **Pas encore fait** (lots suivants) : nouveaux anneaux, vraies apparences dessinées pour les 3 types d'astéroïdes (aujourd'hui : forme + matière argent ou or).
+- **8e anneau, « Star Reef »** (lot 5) : un récif de corail dans l'espace, atteint vers 72 h de jeu (palier de jetpack 8, niveau 412). Six œufs (Bubble, Shell, Pearl, Tide, Abyss, Leviathan), six créatures de Uncommon à Cosmic (Bubble Guppy, Coral Crab, Lantern Jelly, Tide Seahorse, Abyss Shark, Star Leviathan), trois astéroïdes, sa relique (Diver's Bell, +5 % d'XP). Pas de monstre. Œufs : `tools/blender/Eggs_R8.blend` et `eggs_r8.py` ; astéroïdes et relique : générateur 3D de Studio.
+- **Pas encore fait** : anneaux 9 et suivants (un par un, après validation de l'anneau 8 sur captures), monstre de l'anneau 8, vraies apparences dessinées pour les 3 types d'astéroïdes (aujourd'hui : forme + matière argent ou or).
 
 ## 1. Univers et ton
 

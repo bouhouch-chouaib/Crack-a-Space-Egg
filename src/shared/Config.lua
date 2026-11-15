@@ -143,7 +143,7 @@ Config.Cold = {
 -- Un peu plus de temps pour les anneaux lointains, mais bien moins que la distance en plus : plus on va
 -- loin, plus il faut un bon jetpack pour revenir à temps.
 Config.Oxygen = {
-	Time = { 45, 50, 55, 60, 65, 70, 75 },
+	Time = { 45, 50, 55, 60, 65, 70, 75, 80 },
 	Low = 0.3, -- part restante sous laquelle l'alerte rouge commence
 	-- studs ajoutés à la boîte du vaisseau pour « de retour à bord » : négatif = un peu à l'intérieur du bord,
 	-- car les roches de l'anneau 1 frôlent le vaisseau (sinon le compte à rebours ne partirait pas)
@@ -168,7 +168,7 @@ Config.Movement = {
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 230, -- environ 160 en temps normal
+	MaxActive = 270, -- environ 200 en temps normal avec 8 anneaux
 	SpawnArc = 180, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
 	-- Hauteur : les astéroïdes s'étalent sur plusieurs étages, plus haut dans les grands anneaux
 	HeightBase = 10, -- ± studs au minimum
@@ -240,6 +240,8 @@ Config.Rings = {
 	newRing("Devourer Belt", 2.2, 24, 10800, 256, 3.2, 1e10, Color3.fromRGB(70, 60, 60)),
 	newRing("The Rift", 1.95, 28, 48000, 1024, 4.2, 5.5e11, Color3.fromRGB(60, 90, 120)),
 	newRing("The Nest", 1.7, 32, 210000, 4096, 5.5, 2.6e13, Color3.fromRGB(150, 120, 80)),
+	-- 8e anneau (15 nov.) : un récif de corail dans l'espace. Pas encore de monstre.
+	newRing("Star Reef", 1.5, 34, 945000, 16384, 7.0, 0, Color3.fromRGB(40, 170, 170)),
 }
 Config.CosmicMinRing = 5
 
@@ -404,6 +406,7 @@ Config.Relics = {
 	relic("Helmet", "Chewed Helmet", 5, 1800, "Money", col(140, 240, 90), "Those are teeth marks. Do not ask."),
 	relic("Map", "Torn Star Map", 6, 2400, "XP", col(90, 225, 245), "It shows a way past the Rift. Half of it is missing."),
 	relic("Flag", "The First Flag", 7, 3000, "Money", col(255, 205, 80), "Planted by the first explorer to reach the Nest. Nobody knows their name."),
+	relic("Bell", "Diver's Bell", 8, 4000, "XP", col(90, 230, 200), "It still rings when something huge swims past the reef."),
 }
 -- Texte court du bonus d'une relique (« +5% money »)
 function Config.RelicBonusText(r): string
@@ -557,9 +560,9 @@ Config.Jetpack = {
 		{ Level = 195, Name = "Nebula Wings", Model = "Jet5", Reach = 115, Color = Color3.fromRGB(190, 100, 255) },
 		{ Level = 270, Name = "Rift Striker", Model = "Jet6", Reach = 140, Color = Color3.fromRGB(60, 240, 230) },
 		{ Level = 362, Name = "Nova Titan", Model = "Jet7", Reach = 171, Color = Color3.fromRGB(255, 200, 60) },
-		{ Level = 455, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
+		{ Level = 412, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
 	},
-	TopLevel = 485, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
+	TopLevel = 440, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
 	MaxReach = 215, -- portée au niveau TopLevel
 	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client) : toutes les Every
 	-- secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » apparaît Offer secondes ;
@@ -972,6 +975,20 @@ Config.Biomes = {
 			layer("Glow", rgb(255, 200, 120), rgb(255, 160, 80), { 7, 10 }, 4, { 6, 9 }, { 0.1, 0.4 }, Vector3.zero, { 0.88, 1 }, 0.8),
 		},
 	},
+	{ -- 8. Star Reef : bulles qui montent et plancton lumineux
+		Title = "STAR REEF",
+		Icon = "Star",
+		Fog = rgb(12, 46, 58), -- couleur du brouillard lointain
+		Clouds = { rgb(110, 240, 225), rgb(255, 140, 130) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(205, 245, 240),
+		Saturation = 0.25,
+		Outdoor = rgb(120, 190, 190),
+		Particles = {
+			layer("Glow", rgb(210, 255, 250), rgb(140, 235, 230), { 0.35, 0.5 }, 45, { 5, 8 }, { 0.6, 1.4 }, Vector3.new(0, 0.9, 0), { 0.25, 1 }, 0.6),
+			layer("Sparkle", rgb(120, 255, 235), rgb(255, 150, 140), { 0.5, 0.3 }, 14, { 3, 5 }, { 0.1, 0.5 }, Vector3.zero, { 0, 1 }, 1, 40),
+			layer("Glow", rgb(90, 230, 220), rgb(255, 140, 130), { 7, 11 }, 4, { 6, 9 }, { 0.1, 0.4 }, Vector3.zero, { 0.88, 1 }, 0.8),
+		},
+	},
 }
 
 -- CRÉATURES (docs/Mecaniques.md §9) ----------------------------------------------
@@ -979,6 +996,8 @@ Config.Biomes = {
 -- anneaux 5 à 7 de Uncommon à Cosmic. Une espèce = (anneau, rareté), clé « anneau:rareté ».
 -- Size = échelle min/max, Weight = kg min/max (tirés au hasard à l'obtention).
 -- Art = portrait de l'index ("" tant qu'il n'est pas dessiné : l'index montre un œuf mystère).
+-- Portraits de l'anneau 8 (rendus Blender, à remplir quand ils sont envoyés sur Roblox)
+local ART_R8 = { "rbxassetid://134732604428031", "rbxassetid://75232846627348", "rbxassetid://80495239278501", "", "", "" }
 local function creature(name, look, size, weight, art)
 	return { Name = name, Look = look, Size = size, Weight = weight, Art = art or "" }
 end
@@ -1038,6 +1057,14 @@ Config.Creatures = {
 		creature("Nest Drake", "a drake that carries a nest of glowing eggs on its back", { 1, 1.6 }, { 50, 130 }, "rbxassetid://96247134569670"),
 		creature("Hive Queen", "a regal space bee queen with a crystal crown", { 1, 1.6 }, { 10, 30 }, "rbxassetid://138833453961916"),
 		creature("Cosmic Mother", "the cosmic mother of all eggs, a colossal galaxy dragon queen with a crystal crown", { 1.1, 1.9 }, { 200, 500 }, "rbxassetid://97121495935864"),
+	},
+	{ -- 8. Star Reef
+		creature("Bubble Guppy", "a chubby turquoise baby fish that carries a big bubble", { 0.8, 1.3 }, { 1, 3 }, ART_R8[1]),
+		creature("Coral Crab", "a pink crab with a coral garden growing on its shell", { 0.8, 1.4 }, { 3, 8 }, ART_R8[2]),
+		creature("Lantern Jelly", "a glowing jellyfish with a lantern light inside its dome", { 0.9, 1.5 }, { 4, 10 }, ART_R8[3]),
+		creature("Tide Seahorse", "a majestic seahorse in golden armor with coral antlers", { 1, 1.6 }, { 20, 60 }, ART_R8[4]),
+		creature("Abyss Shark", "a deep-sea shark with glowing eyes and crystal fins", { 1, 1.7 }, { 80, 200 }, ART_R8[5]),
+		creature("Star Leviathan", "a colossal sea serpent queen with a coral crown and fins full of stars", { 1.1, 1.9 }, { 250, 600 }, ART_R8[6]),
 	},
 }
 
@@ -1186,6 +1213,14 @@ Config.Eggs = {
 		[6] = egg("Celestial"),
 		[7] = egg("Cosmic"),
 	},
+	{ -- 8. Star Reef
+		[2] = egg("Bubble"),
+		[3] = egg("Shell"),
+		[4] = egg("Pearl"),
+		[5] = egg("Tide"),
+		[6] = egg("Abyss"),
+		[7] = egg("Leviathan"),
+	},
 }
 
 -- Nom affiché d'un œuf (« Desert King Egg »)
@@ -1226,7 +1261,7 @@ Config.Hatch = {
 	-- Exemples (taille 1, sans mutation) : anneau 1 = 10 / 16 / 30 / 45 / 80 / 120 $/s ; anneau 2 = 356 à 4,3K ;
 	-- anneau 7 = 20 Md à 240 Md.
 	SlotIncome = { 2, 3.2, 6, 9, 16, 24 },
-	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10 },
+	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11 },
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement, selon la rareté : l'œuf se charge (tremble,
 	-- brille, se fissure de rayons, s'élève...) de plus en plus longtemps et fort (HatchFx)
 	Burst = { 1.6, 2.1, 2.7, 3.4, 4.3, 5.4, 6.8 },
@@ -1324,6 +1359,13 @@ Config.CreatureMotion = {
 	["Nest Drake"] = motion("trot", "roar", 0.9),
 	["Hive Queen"] = motion("fly", "spin", 1.0, { Hover = 0.35, Flutter = true }),
 	["Cosmic Mother"] = motion("fly", "roar", 0.8, { Hover = 0.35 }),
+	-- 8. Star Reef
+	["Bubble Guppy"] = motion("swim", "spin", 1.1, { Hover = 0.3 }),
+	["Coral Crab"] = motion("scuttle", "sit", 1.2, { Sideways = true }),
+	["Lantern Jelly"] = motion("float", "pulse", 0.6, { Hover = 0.35 }),
+	["Tide Seahorse"] = motion("swim", "spin", 0.9, { Hover = 0.3 }),
+	["Abyss Shark"] = motion("swim", "charge", 1.2, { Hover = 0.3 }),
+	["Star Leviathan"] = motion("swim", "roar", 0.7, { Hover = 0.3 }),
 }
 
 -- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté

@@ -22,7 +22,7 @@ local Config = luau.load(fs.readFile("src/shared/Config.lua"), {
 
 local TUNNEL_SHARE = tonumber(process.args[1]) or 0.4 -- part du temps dans la soufflerie (une fois achetée)
 local RUNS = 25
-local HOURS = 60
+local HOURS = 140
 local OVERHEAD = 14 -- secondes perdues par voyage (viser, poser l'œuf, appuyer sur Hatch...)
 local BASE_WALK = 60 -- studs à pied entre la base et le bout du quai
 local BOOST_GRAB = 0.5 -- part des bonus x2 de la soufflerie attrapés
