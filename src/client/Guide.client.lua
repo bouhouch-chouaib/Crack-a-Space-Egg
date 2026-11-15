@@ -1,16 +1,16 @@
--- Guide de la première minute (docs/Mecaniques.md §16, Config.Guide).
+-- Guide des premières minutes (docs/Mecaniques.md §16, Config.Guide).
 -- Fait pour qu'un enfant le suive sans difficulté : une bulle de 3 à 5 mots avec une grosse icône,
 -- une flèche au sol qui file vers le but, une flèche qui rebondit au-dessus et un contour qui le fait
 -- briller, une main qui montre le geste à faire (maintenir, toucher), et une petite fête à chaque réussite.
 -- Il suit l'état réel du joueur, pas un script figé : s'il tombe, perd son œuf ou part ailleurs, la
--- bulle s'adapte (« Fly to a rock! », « Bring it home! »...). Le tutoriel : une géode guidée de A à Z à vendre au
--- stand SELL, puis « une surprise t'attend » : un œuf Épique (forage et machine sans flèche, pose et éclosion
--- guidées), la soufflerie, une nouvelle foreuse, puis la récompense (Offers.client). Prises imposées par le serveur.
+-- bulle s'adapte (« Fly to a rock! », « Bring it home! »...). Le tutoriel (15 nov., sans géode) : un premier
+-- œuf, rare, guidé de A à Z (forer, rapporter, machine, poser, faire éclore), puis la soufflerie, quelques
+-- niveaux de jetpack dedans, une nouvelle foreuse, et la récompense (Offers.client). Chaque objectif
+-- d'argent renvoie vers les roches avec la flèche : on n'attend jamais sans savoir quoi faire.
 -- Étape atteinte : attribut GuideStep (sauvegardé par le serveur via Remotes.Guide).
 -- La même bulle sert aux tutoriels au bon moment (Config.Guide.Tips), une seule fois par joueur et
--- seulement quand il en a besoin : sa première géode, son premier minerai, sa base pleine, un cadeau à
--- réclamer, la Supernova, les monstres, la boîte à retours. Les tips
--- d'information attendent Config.Guide.TipGap secondes entre eux, pour ne pas noyer le joueur.
+-- seulement quand il en a besoin : sa base pleine, un cadeau à réclamer, les monstres, la boîte à
+-- retours. Les tips d'information attendent Config.Guide.TipGap secondes entre eux, pour ne pas noyer le joueur.
 -- Publie l'attribut local Guide (texte en cours) : l'aide du bas (Hud) se cache pendant le guide.
 
 local CollectionService = game:GetService("CollectionService")
@@ -492,23 +492,26 @@ local function goRock(ring: number?, sub: string?): Hint
 	return { icon = "Jetpack", text = if ring and ring > 1 then ("Fly to Ring %d!"):format(ring) else "Fly to a rock!", sub = sub or ("Hold %s to fly"):format(if Device.IsTouch() then "jump" else Device.Key("jump")), target = rock }
 end
 
--- Rapporter ce qu'on porte à la machine (œuf ou géode)
-local function carryHint(machine: Model?, geode: boolean): Hint
+-- Rapporter la roche à la machine
+local function carryHint(machine: Model?): Hint
 	local here = rootPos()
 	local console = machine and machine:FindFirstChild("PromptPoint", true)
 	local mp = posOf(console or machine)
 	if here and mp and (here - mp).Magnitude < G.MachineNear then
-		return { icon = "Lightning", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(Device.Key("machine")), sub = if geode then "The machine opens your geode" else "Free your egg from the rock", target = machine }
+		return { icon = "Lightning", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(Device.Key("machine")), sub = "Free your egg from the rock", target = machine }
 	end
 	-- l'air de l'œuf s'épuise (ColdService) : on le dit à l'enfant, en secondes
 	local air = player:GetAttribute("O2Left")
 	return {
-		icon = if geode then "Sparkles" else "Home",
-		text = if geode then "A geode! Bring it home!" else "Bring it home!",
+		icon = "Home",
+		text = "Bring it home!",
 		sub = if type(air) == "number" then ("Fast! %d s of air left"):format(math.ceil(air)) else "Follow the arrow",
 		target = machine,
 	}
 end
+
+local tunnelTime = 0 -- secondes passées dans sa soufflerie pendant l'étape d'entraînement
+local lastDecide = os.clock()
 
 local function decideStep(step: number): Hint?
 	local cargo = attr("Cargo")
@@ -519,45 +522,46 @@ local function decideStep(step: number): Hint?
 	local pets = myPets()
 	local base = myBase()
 	local floor = base and base:FindFirstChild("Floor")
+	local now = os.clock()
+	local dt = math.min(now - lastDecide, 1)
+	lastDecide = now
 
 	-- étapes franchies (dans l'ordre ; un joueur qui saute des étapes les franchit toutes d'un coup)
-	local gems, sold = attr("GemCount"), attr("GemsSold")
 	local later = eggs > 0 or pets > 0 or held ~= nil or attr("ReadyEggs") > 0
-	if step < 1 and (cargo > 0 or job or gems > 0 or sold > 0 or later) then
+	if step < 1 and (cargo > 0 or job or later) then
 		advance(1)
 		step = 1
 	end
-	if step < 2 and (job or gems > 0 or sold > 0 or later) then
+	if step < 2 and (job or later) then
 		advance(2)
 		step = 2
 	end
-	if step < 3 and (sold > 0 or later) then
+	if step < 3 and (eggs > 0 or pets > 0) then
 		advance(3)
 		step = 3
 	end
-	if step == 3 and (cargo > 0 or later) then
-		advance(4)
+	if step < 4 and pets > 0 then
+		advance(4, true) -- la bannière de la créature rare fait la fête
 		step = 4
-	end
-	if step == 4 and (job or later) then
-		advance(5)
-		step = 5
-	end
-	if step == 5 and (eggs > 0 or pets > 0) then
-		advance(6)
-		step = 6
-	end
-	if step == 6 and pets > 0 then
-		advance(7, true) -- la bannière de la créature rare fait la fête
-		step = 7
 		petCheerAt = os.clock()
 	end
 	local tunnel = myTunnel()
-	if step == 7 and tunnel and tunnel:GetAttribute("OwnerId") == player.UserId and (tunnel:GetAttribute("Tier") or 0) >= 1 then
-		advance(8)
-		step = 8
+	local hasTunnel = tunnel ~= nil and tunnel:GetAttribute("OwnerId") == player.UserId and ((tunnel:GetAttribute("Tier") or 0) :: number) >= 1
+	if step == 4 and hasTunnel then
+		advance(5)
+		step = 5
 	end
-	if step == 8 and attr("Drill") >= G.Drill then
+	if step == 5 then
+		-- il faut y avoir vraiment été : le niveau seul ne suffit pas (on en gagne aussi en volant)
+		if player:GetAttribute("InTunnel") then
+			tunnelTime += dt
+		end
+		if attr("JetLevel") >= G.JetLevel and tunnelTime >= G.TunnelTime then
+			advance(6)
+			step = 6
+		end
+	end
+	if step == 6 and attr("Drill") >= G.Drill then
 		advance(G.Steps)
 		step = G.Steps
 	end
@@ -576,33 +580,21 @@ local function decideStep(step: number): Hint?
 		return { icon = "Lightning", text = "Watch the machine!", sub = "It breaks the rock", target = machine }
 	end
 	if cargo > 0 then
-		return carryHint(machine, string.split(player:GetAttribute("CargoKinds") or "", ",")[1] == "geode")
+		return carryHint(machine)
 	end
 
 	-- objectifs
-	if step == 7 and petCheerAt > 0 and os.clock() - petCheerAt < G.PetCheer then
+	if step == 4 and petCheerAt > 0 and os.clock() - petCheerAt < G.PetCheer then
 		return { icon = "Cash", text = "Your pet makes money!", sub = "Every second! Bigger pets earn more" }
 	end
-	if step <= 1 then
-		return goRock(1)
-	elseif step == 2 then
-		if attr("GemCount") > 0 then
-			return { icon = "Sparkles", text = "You got a gem! Sell it!", sub = "Step on the SELL mat", target = sellMat() }
-		end
+	if step <= 2 then
 		return goRock(1)
 	elseif step == 3 then
-		if player:GetAttribute("RockNear") then
-			return goRock(1, "A surprise is inside!")
-		end
-		return { icon = "Star", text = "A surprise awaits you!", sub = "Go drill another rock!" }
-	elseif step == 4 or step == 5 then
-		return goRock(1)
-	elseif step == 6 then
 		if anyEgg then
 			return { icon = "Hatch", text = "Your egg is hatching!", sub = "Just a few seconds...", target = anyEgg }
 		end
 		return goRock(1)
-	elseif step == 7 then
+	elseif step == 4 then
 		local cost = Config.Jetpack.Tunnels[1].Cost
 		if attr("Credits") >= cost then
 			if windowOpen("TunnelUp") then
@@ -611,7 +603,13 @@ local function decideStep(step: number): Hint?
 			return { icon = "WindTunnel", text = "Step on the red button!", sub = "Buy your wind tunnel", target = base and base:FindFirstChild("TunnelButton") }
 		end
 		return goRock(nil, ("Save $%s for a wind tunnel  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
-	elseif step == 8 then
+	elseif step == 5 then
+		local level = ("Jetpack Lv %d / %d"):format(math.min(attr("JetLevel"), G.JetLevel), G.JetLevel)
+		if player:GetAttribute("InTunnel") then
+			return { icon = "WindTunnel", text = "Your jetpack is training!", sub = level }
+		end
+		return { icon = "WindTunnel", text = "Jump into your wind tunnel!", sub = level, target = tunnel }
+	elseif step == 6 then
 		local cost = Config.Drills[G.Drill].Cost
 		if attr("Credits") >= cost then
 			return { icon = "Lightning", text = "Buy a new drill!", sub = "Step on the ITEMS mat", target = shopKiosk() }
@@ -621,15 +619,12 @@ local function decideStep(step: number): Hint?
 	return nil
 end
 
--- Une fois la géode vendue, on ne remontre plus le forage ni la machine : la bulle reste, sans flèche ni main.
--- La pose et l'éclosion, jamais vues, restent guidées.
+-- Le tout premier œuf est rare (imposé par le serveur) : on le fête pendant qu'il le rapporte
 local function decide(step: number): Hint?
 	local h = decideStep(step)
-	if h and (reached == 3 or reached == 4) then
-		h.target = nil
-		h.hold = nil
+	if h and reached <= 2 and attr("Cargo") > 0 then
 		local rarity = tonumber(string.split(player:GetAttribute("CargoRarities") or "", ",")[1] or "")
-		if attr("Cargo") > 0 and rarity and rarity >= G.SecondRarity then
+		if rarity and rarity >= G.FirstRarity then
 			h.text = "WOW! A rare egg!"
 		end
 	end
@@ -680,20 +675,9 @@ local function decideTip(): Hint?
 		return { icon = "Creatures", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(if Device.IsGamepad() then Device.Key("machine") else "F"), sub = "It opens the Fusion Machine", target = fusion }
 	end
 	local step = attr("GuideStep")
-	local guideDone = step >= G.Steps and attr("GemsSold") == 0 -- le tutoriel a déjà montré les géodes, sauf s'il a été passé
 	local cargo = attr("Cargo")
 	local machine = myMachine()
 	local job = machine and machine:GetAttribute("Owner") == player.UserId and machine:GetAttribute("JobEnd") ~= nil
-	local geode = cargo > 0 and string.split(player:GetAttribute("CargoKinds") or "", ",")[1] == "geode"
-	-- première géode portée : ce n'est pas un œuf, on explique où l'emmener
-	if guideDone and geode and not tipSeen("geode") then
-		if job then
-			finishTip("geode")
-		else
-			activeTip = "geode"
-			return carryHint(machine, true)
-		end
-	end
 	-- la boucle en cours passe d'abord : on n'interrompt pas un joueur qui a les mains pleines
 	local _, readyEgg = myEggs()
 	if cargo > 0 or job or player:GetAttribute("HeldEgg") or readyEgg then
@@ -701,21 +685,13 @@ local function decideTip(): Hint?
 	end
 	-- un œuf attend et la base est pleine
 	if not tipSeen("basefull") and attr("BaseSlots") > 0 and attr("BaseUsed") >= attr("BaseSlots") and attr("ReadyEggs") > 0 then
-		if windowOpen("Sell") or windowOpen("CreaturesWindow") then
+		if windowOpen("CreaturesWindow") then
 			finishTip("basefull")
 		else
 			return timedTip("basefull", G.TipMax, { icon = "Home", text = "Your base is full!", sub = "At SELL, sell a pet to make room", target = sellMat() })
 		end
 	end
-	-- premier minerai dans le sac
-	if guideDone and not tipSeen("gem") and attr("GemCount") > 0 then
-		if windowOpen("Sell") then
-			finishTip("gem")
-		else
-			return timedTip("gem", G.TipMax, { icon = "Sparkles", text = "You got a gem!", sub = "Step on the SELL mat to cash it in", target = sellMat() })
-		end
-	end
-	-- un panneau (récompense, nouveau matériel) est à l'écran : on ne parle pas en même temps
+	-- le grand panneau (récompense, retour de pause) est à l'écran : on ne parle pas en même temps
 	local offers = player.PlayerGui:FindFirstChild("Offers")
 	local offerCard = offers and offers:FindFirstChild("Holder") :: GuiObject?
 	if offerCard and offerCard.Visible then
@@ -723,18 +699,9 @@ local function decideTip(): Hint?
 		return nil
 	end
 	-- tips d'information : un à la fois, avec du calme entre eux. Un tip déjà affiché continue.
-	local running = tipStart.rewards and not tipSeen("rewards") or tipStart.supernova and not tipSeen("supernova") or tipStart.monsters and not tipSeen("monsters") or tipStart.mailbox and not tipSeen("mailbox")
+	local running = tipStart.rewards and not tipSeen("rewards") or tipStart.monsters and not tipSeen("monsters") or tipStart.mailbox and not tipSeen("mailbox")
 	if not running and os.clock() - lastTip < G.TipGap then
 		return nil
-	end
-	-- la Supernova vient de se débloquer
-	if not tipSeen("supernova") and attr("JetLevel") >= Config.Supernova.Level then
-		if windowOpen("Supernova") then
-			finishTip("supernova")
-		else
-			local where = if Device.IsGamepad() then "D-pad down" else "the SUPERNOVA button"
-			return timedTip("supernova", G.TipShort, { icon = "Supernova", text = "SUPERNOVA unlocked!", sub = ("Press %s: +50%% money forever"):format(where) })
-		end
 	end
 	-- un cadeau à réclamer, une fois le tutoriel fini
 	if not tipSeen("rewards") and step >= G.Steps and attr("RewardsReady") > 0 then

@@ -1,9 +1,8 @@
--- Inventaires rapides (en haut à droite) : deux petits carrés, une patte pour les créatures et une pierre
--- précieuse pour les minerais. Chacun ouvre un petit menu déroulant : aperçu, nom, et boutons.
---   créatures : EQUIP (sac -> base) ou UNEQUIP (base -> sac), et SELL
---   minerais  : SELL
+-- Inventaire rapide (en haut à droite) : un petit carré avec une patte, pour les créatures.
+-- Il ouvre un petit menu déroulant : aperçu, nom, et boutons EQUIP (sac -> base) ou UNEQUIP
+-- (base -> sac), et SELL.
 -- SELL affiche d'abord ce que le joueur va recevoir et demande confirmation, dans la ligne elle-même.
--- Le serveur décide de tout (Remotes.Creatures, Remotes.Gems).
+-- Le serveur décide de tout (Remotes.Creatures).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,7 +12,6 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
-local GemModel = require(script.Parent:WaitForChild("GemModel"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -28,7 +26,7 @@ local holder = new("Frame", {
 	Name = "Holder",
 	AnchorPoint = Vector2.new(1, 0),
 	Position = UDim2.new(1, -18, 0, 14),
-	Size = UDim2.fromOffset(BUTTON * 2 + 10, BUTTON),
+	Size = UDim2.fromOffset(BUTTON, BUTTON),
 	BackgroundTransparency = 1,
 	Parent = gui,
 })
@@ -82,8 +80,6 @@ end
 
 local pawButton = square("Creatures", 0)
 UIKit.icon("Creatures", { Size = UDim2.fromScale(0.86, 0.86), Position = UDim2.fromScale(0.07, 0.07), ZIndex = 3, Parent = pawButton })
-local gemButton = square("Gems", BUTTON + 10)
-UIKit.icon("OreRock", { Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), ZIndex = 3, Parent = gemButton })
 
 -- LE MENU DÉROULANT ----------------------------------------------------------------------------
 
@@ -281,56 +277,6 @@ local function showCreatures(data: any)
 	end
 end
 
--- MINERAIS ------------------------------------------------------------------------------------
-
-local function gemsCall(action: string, arg: any?): any
-	if busy then
-		return nil
-	end
-	busy = true
-	local ok, res = pcall(function()
-		return Remotes:WaitForChild("Gems"):InvokeServer(action, arg)
-	end)
-	busy = false
-	return if ok and type(res) == "table" then res else nil
-end
-
-local function showGems(gems: { any })
-	clearRows()
-	title.Text = ("GEMS  %d"):format(#gems)
-	if #gems == 0 then
-		empty("No gems yet: drill geodes!")
-	end
-	local order = {}
-	for i in ipairs(gems) do
-		table.insert(order, i)
-	end
-	table.sort(order, function(a, b)
-		return gems[a].value > gems[b].value
-	end)
-	for rank = 1, math.min(#order, MAX_ROWS) do
-		local index = order[rank]
-		local g = gems[index]
-		local r = Config.Rarities[g.rarity] or Config.Rarities[1]
-		local size = if g.size ~= "" then g.size .. " " else ""
-		local row = makeRow(rank, g.rarity, GemModel.Make("gem", g.ring, g.rarity, g.shiny), (if g.shiny then "Shiny " else "") .. size .. Config.GemName(g.ring, g.rarity), ("%s · worth %s"):format(r.Name, money(g.value)))
-		local sell = button(row, "SELL", "Orange", 98, 58, 268)
-		sell.MouseButton1Click:Connect(function()
-			confirmSell(row, g.value, function()
-				local res = gemsCall("sell", { index })
-				if res and res.ok then
-					Sfx.Play("Coin", { pitch = 1.2 })
-				elseif res and res.error then
-					UIKit.toast(res.error, "warn")
-				end
-				if res and res.gems then
-					showGems(res.gems)
-				end
-			end)
-		end)
-	end
-end
-
 -- OUVERTURE -----------------------------------------------------------------------------------
 
 local function close()
@@ -353,11 +299,6 @@ refresh = function()
 		local res = creatures("list")
 		if res and res.list then
 			showCreatures(res.list)
-		end
-	elseif current == "Gems" then
-		local res = gemsCall("list")
-		if res and res.gems then
-			showGems(res.gems)
 		end
 	end
 end
@@ -383,7 +324,4 @@ closeButton.MouseButton1Click:Connect(function()
 end)
 pawButton.MouseButton1Click:Connect(function()
 	toggle("Creatures")
-end)
-gemButton.MouseButton1Click:Connect(function()
-	toggle("Gems")
 end)

@@ -6,6 +6,7 @@
 -- chaque client anime la machine à partir de ces attributs (Derock.client).
 --   JobStart / JobEnd : temps serveur du travail en cours (absents = machine au repos)
 --   EggRing / EggRarity : l'œuf en cours ; Queue : œufs restants après lui ; Owner : UserId
+-- (15 nov. : plus de géodes ni de minerais, la machine ne dégage que des œufs)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -14,7 +15,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
-local AnnounceService = require(script.Parent.AnnounceService)
 local Tracking = require(script.Parent.Tracking)
 local GameService = require(script.Parent.GameService)
 local Bases = require(script.Parent.Bases)
@@ -27,22 +27,6 @@ local MachineService = {}
 local busy: { [Model]: boolean } = {}
 local skipped: { [Model]: boolean } = {} -- « Finish now » payé : le travail en cours se termine tout de suite
 local rng = Random.new()
-
--- Taille d'un minerai (Config.Sizes, pondérée par Chance)
-local function pickSize()
-	local total = 0
-	for _, s in ipairs(Config.Sizes) do
-		total += s.Chance
-	end
-	local x = rng:NextNumber() * total
-	for _, s in ipairs(Config.Sizes) do
-		x -= s.Chance
-		if x <= 0 then
-			return s
-		end
-	end
-	return Config.Sizes[1]
-end
 
 -- APPARENCE : les pièces orange et jaunes prennent la couleur du palier, chez tous les joueurs
 local ACCENTS = { Static_Orange = "Accent", Static_Yellow = "Accent", ClampL_Orange = "Accent", ClampR_Orange = "Accent", Static_Glow = "Glow", Drill_Glow = "Glow" }
@@ -89,7 +73,7 @@ local function buy(player: Player, key: any)
 	if not track then
 		return { ok = false, error = "Unknown upgrade" }
 	end
-	d.machine = d.machine or { Speed = 0, Luck = 0, Polish = 0 }
+	d.machine = d.machine or { Speed = 0, Luck = 0 }
 	local level = d.machine[key] or 0
 	if level >= Config.Machine.Max then
 		return { ok = false, error = "Already maxed!" }
@@ -111,7 +95,7 @@ local function buy(player: Player, key: any)
 end
 
 local function clearJob(machine: Model)
-	for _, k in ipairs({ "JobStart", "JobEnd", "EggRing", "EggRarity", "EggKind", "Owner" }) do
+	for _, k in ipairs({ "JobStart", "JobEnd", "EggRing", "EggRarity", "Owner" }) do
 		machine:SetAttribute(k, nil)
 	end
 	machine:SetAttribute("Queue", 0)
@@ -144,10 +128,8 @@ local function run(player: Player, base: Model, machine: Model)
 		end
 		local duration = if (d.guide or 0) < Config.Guide.Steps then Config.Derock.Tutorial else Config.MachineTime(rarity, levels.Speed or 0)
 		local now = workspace:GetServerTimeNow()
-		local geode = type(egg) == "table" and egg.kind == "geode"
 		machine:SetAttribute("EggRing", ring)
 		machine:SetAttribute("EggRarity", rarity)
-		machine:SetAttribute("EggKind", if geode then "geode" else "egg")
 		machine:SetAttribute("Queue", 0)
 		machine:SetAttribute("Owner", player.UserId)
 		machine:SetAttribute("JobStart", now)
@@ -179,43 +161,11 @@ local function run(player: Player, base: Model, machine: Model)
 			break
 		end
 		d.derocking = nil
-		if geode then
-			-- la géode s'ouvre : un minerai de l'anneau, d'une taille tirée au hasard, parfois brillant
-			-- la géode du tutoriel a sa taille imposée
-			local size = pickSize()
-			for _, s in ipairs(Config.Sizes) do
-				if type(egg) == "table" and s.Name == egg.size then
-					size = s
-				end
-			end
-			local shiny = rng:NextNumber() < Config.ShinyChance
-			local gem = {
-				ring = ring,
-				rarity = rarity,
-				size = size.Name,
-				mult = size.Mult,
-				shiny = shiny,
-				value = math.floor(Config.GemValue(ring, rarity, size.Mult, shiny) * Config.MachinePolish(levels.Polish or 0) + 0.5),
-			}
-			d.gems = d.gems or {}
-			if #d.gems >= Config.Geodes.BagMax then
-				d.credits += gem.value
-				GameService.Notice(player, "{Cash} Gem bag full! Sold for $" .. Format.Short(gem.value), "info")
-			else
-				table.insert(d.gems, gem)
-			end
-			d.stats.best = math.max(d.stats.best, rarity)
-			GameService.Sync(player)
-			Tracking.Funnel(player, "Gems", 2, "Geode opened")
-			Remotes.EggRevealed:FireClient(player, ring, rarity, "geode", gem)
-			AnnounceService.Gem(player, Config.GemName(ring, rarity), rarity)
-		else
-			table.insert(d.ready, { ring = ring, rarity = rarity })
-			GameService.Sync(player)
-			Remotes.EggRevealed:FireClient(player, ring, rarity)
-			if duration >= 10 then
-				GameService.Notice(player, ("{Egg} Your %s egg is out of the rock!"):format(Config.Rarities[rarity].Name), "good")
-			end
+		table.insert(d.ready, { ring = ring, rarity = rarity })
+		GameService.Sync(player)
+		Remotes.EggRevealed:FireClient(player, ring, rarity)
+		if duration >= 10 then
+			GameService.Notice(player, ("{Egg} Your %s egg is out of the rock!"):format(Config.Rarities[rarity].Name), "good")
 		end
 		task.wait(Config.Derock.Gap)
 		break
@@ -320,10 +270,10 @@ function MachineService.Start()
 			elseif cmd == "finish" then
 				return tostring(MachineService.FinishNow(player))
 			elseif cmd == "cargo" then -- ("cargo", anneau, rareté) : un œuf dans la soute
-				table.insert(d.cargo, { ring = key, rarity = level, kind = "egg" })
+				table.insert(d.cargo, { ring = key, rarity = level })
 				GameService.Sync(player)
 			end
-			return ("Speed %d Luck %d Polish %d, $%s"):format(d.machine.Speed, d.machine.Luck, d.machine.Polish, Format.Short(d.credits))
+			return ("Speed %d Luck %d, $%s"):format(d.machine.Speed, d.machine.Luck, Format.Short(d.credits))
 		end
 		bf.Parent = game:GetService("ServerStorage")
 	end

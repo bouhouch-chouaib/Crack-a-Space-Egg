@@ -95,8 +95,8 @@ end
 
 -- MULTIPLICATEURS ---------------------------------------------------------------------
 
--- Revenus des créatures
-function BoostService.IncomeMult(player: Player): number
+-- Revenus des créatures. permanent = true : sans la potion (revenu hors ligne, HatchService)
+function BoostService.IncomeMult(player: Player, permanent: boolean?): number
 	local m = 1
 	if BoostService.HasPass(player, "Money2x") then
 		m *= FX.Money2x
@@ -104,12 +104,12 @@ function BoostService.IncomeMult(player: Player): number
 	if BoostService.HasPass(player, "VIP") then
 		m *= FX.VIP
 	end
-	if BoostService.Active(player, "Money") then
+	if not permanent and BoostService.Active(player, "Money") then
 		m *= 2
 	end
-	-- Supernovas faites : +50 % chacune, pour toujours
+	-- reliques trouvées : +5 % chacune, pour toujours (Config.Relics)
 	local d = DataService.Get(player)
-	return m * Config.SupernovaMult(d and d.supernovas or 0)
+	return m * Config.RelicMult(d and d.relicsFound, "Money")
 end
 
 -- Chance des œufs rares (multiplie celle du scanner), à partir de la sauvegarde du joueur
@@ -135,7 +135,9 @@ function BoostService.JetXPMult(player: Player): number
 	if BoostService.Active(player, "JetXP") then
 		m *= 2
 	end
-	return m
+	-- reliques trouvées : +5 % chacune, pour toujours (Config.Relics)
+	local d = DataService.Get(player)
+	return m * Config.RelicMult(d and d.relicsFound, "XP")
 end
 
 -- Durée d'éclosion
@@ -182,7 +184,7 @@ function BoostService.Start()
 			elseif cmd == "pass" and key then
 				setPass(player, key)
 			end
-			return ("income x%.2f luck x%d jetXP x%d hatch x%.1f slots %d"):format(
+			return ("income x%.2f luck x%.2f jetXP x%.2f hatch x%.1f slots %d"):format(
 				BoostService.IncomeMult(player), BoostService.LuckMult(DataService.Get(player)),
 				BoostService.JetXPMult(player), BoostService.HatchTimeMult(player), BoostService.BaseSlots(player))
 		end

@@ -6,6 +6,22 @@ Légende : ✅ décidé · 💡 détail proposé, à ajuster en jeu · ❓ reste
 
 ---
 
+## 0. Changements du 15 nov. 2026 (économie revue après l'audit du coéquipier)
+
+Ce bloc l'emporte sur les sections plus bas quand elles le contredisent.
+
+- **Sauvegarde `Player_v3`** : tout le monde repart de zéro, classements neufs.
+- **Plus de géodes ni de minerais** (la section 6 bis ne vaut plus) : un astéroïde ne donne que des œufs. Le stand SELL ouvre la vente des créatures. La machine n'a plus que deux améliorations (Turbo Motor, Lucky Core).
+- **Plus de Supernova** (la renaissance de la section 15 ne vaut plus). Les skins de base gratuits se débloquent par l'anneau atteint.
+- **Niveaux du jetpack sans plafond**. XP d'un niveau : 20, puis +5 par niveau, et ce pas est multiplié par 1,4 tous les 10 niveaux. Paliers de jetpack aux niveaux 1, 18, 65, 120, 200, 280, 375, 470. Les vitesses suivent les paliers, pas le niveau brut.
+- **Bonus x2 dans la soufflerie** : toutes les 25 à 45 s, un bouton « x2 » apparaît 7 s ; cliqué à temps, l'XP est doublée 12 s.
+- **Revenu hors ligne** : 40 % du revenu des créatures, 6 h au plus, affiché au retour (« WELCOME BACK! »).
+- **Reliques** : on ne les vend plus. Chacune donne +5 % d'argent ou +5 % d'XP de jetpack pour toujours. Chance : 1 sur 300 (anneau 1) à 1 sur 3 000 (anneau 7).
+- **Prix en $** : environ ×5 au début, bien plus ensuite, avec des écarts irréguliers. Réglés avec `tools/eco-sim.luau` (`lune run tools/eco-sim`) pour un joueur qui passe 40 % de son temps en soufflerie : anneau 2 vers 12 min, 3 vers 40 min, 4 vers 2 h, 5 vers 4 h 30, 6 vers 12 h, 7 vers 29 h. Paquets d'argent ×5, récompenses en $ ×3.
+- **Tutoriel en 7 étapes** : premier œuf (toujours Rare), machine, pose, éclosion, soufflerie, jetpack niveau 5 dans la soufflerie, nouvelle foreuse. Le bouton REWARDS n'apparaît qu'à la fin.
+- **Retouches** : plus de contour vert ou rouge sur les astéroïdes ; mur de givre à picots sur les bords du couloir ; offres d'achat en petit bandeau en haut de l'écran ; batte qui reste en main (on alterne avec la foreuse dans la barre d'objets) ; bouton pour lâcher la roche portée (à tenir, touche G) ; son court pour les réclamations ; flash et léger tremblement à chaque niveau gagné dans la soufflerie.
+- **Pas encore fait** (lots suivants) : 3 types d'astéroïdes par anneau et tirage prévisible, mutations, compteur « 1 in X » à l'éclosion, Index en défilement vertical, boutique plus propre, essai sans picots dans l'interface, nouveaux anneaux.
+
 ## 1. Univers et ton
 
 - ✅ Le vaisseau des joueurs flotte au-dessus d'une planète géante, avec **7 anneaux** d'astéroïdes autour. Des créatures cosmiques y ont pondu des œufs, aujourd'hui pétrifiés.

@@ -1,8 +1,7 @@
 -- Suivi des joueurs (AnalyticsService de Roblox) : à lire dans le Creator Hub, Analytics > Funnels et Events.
 --   Tracking.Onboarding(joueur, n, nom)     entonnoir du premier parcours (Join, puis les étapes du guide)
 --   Tracking.Funnel(joueur, entonnoir, n, nom)  progression : Drills, WindTunnels, JetpackTiers, Rings,
---                                           Scanner, Hatches, Gems. Une session par Supernova : on voit
---                                           séparément la première partie et les suivantes.
+--                                           Scanner, Hatches.
 --   Tracking.Event(joueur, nom, valeur?)    événement libre : morts par anneau, base pleine, tips, retours...
 -- Une panne du suivi ne doit jamais gêner le jeu : tout passe par pcall.
 -- Studio seulement : ServerStorage.TrackDebug("log") renvoie ce qui a été envoyé (pour les tests).

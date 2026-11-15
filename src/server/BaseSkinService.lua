@@ -1,4 +1,4 @@
--- Skins de base (Config.BaseSkins) : débloqués par les Supernovas ou par un passe Robux, purement esthétiques.
+-- Skins de base (Config.BaseSkins) : débloqués par l'anneau atteint ou par un passe Robux, purement esthétiques.
 -- Le serveur décide et colore la base, que tout le serveur voit. Sauvegardé dans d.baseSkin.
 -- Remotes.BaseSkin (RemoteFunction) : ("state") -> { ok, owned, skin } ; ("equip", clé) -> idem
 -- Publié : BaseSkin sur le joueur, Skin sur sa base (lu par BaseSkinUI.client pour l'arc-en-ciel).
@@ -30,7 +30,7 @@ local function owns(player: Player, d, key: string): boolean
 	if s.Robux then
 		return passOwned[player] ~= nil and passOwned[player][key] == true
 	end
-	return (d.supernovas or 0) >= (s.Supernovas or 0)
+	return (d.ring or 1) >= (s.Ring or 1)
 end
 
 local function ownedList(player: Player, d): { [string]: boolean }

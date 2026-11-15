@@ -47,14 +47,6 @@ function AnnounceService.Creature(player: Player, item)
 	end
 end
 
-function AnnounceService.Gem(player: Player, name: string, rarity: number)
-	local level = Config.AnnounceLevel(rarity, false)
-	if level then
-		local r = Config.Rarities[rarity]
-		AnnounceService.Send(player, level, ("%s opened a %s %s!"):format(player.DisplayName, r.Name:upper(), name), r.Color, "OreRock")
-	end
-end
-
 function AnnounceService.Start()
 	task.spawn(function()
 		local ok, err = pcall(MessagingService.SubscribeAsync, MessagingService, TOPIC, function(message)

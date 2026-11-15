@@ -1,7 +1,8 @@
--- Reliques des explorateurs perdus (Config.Relics) : une par anneau, tirage à part à chaque œuf foré.
--- Ni le scanner ni les potions n'aident. Une relique trouvée est mise à l'abri tout de suite (sauvegarde immédiate) :
--- rien de ce qui arrive ensuite au joueur ne peut la lui faire perdre. La Supernova n'y touche pas.
--- Remotes.Relics (RemoteFunction) : ("state") -> { ok, owned, found } ; ("sell", clé) -> idem + value
+-- Reliques des explorateurs perdus (Config.Relics) : une par anneau, tirage à part à chaque œuf foré
+-- (tant qu'on ne l'a pas). Ni le scanner ni les potions n'aident. Une relique trouvée est mise à l'abri
+-- tout de suite (sauvegarde immédiate) et donne son bonus pour toujours (+5 % d'argent ou d'XP de jetpack :
+-- BoostService.IncomeMult et JetXPMult). On ne la vend plus (15 nov.).
+-- Remotes.Relics (RemoteFunction) : ("state") -> { ok, owned, found } (owned : mêmes clés que found, valeur 1)
 -- Remotes.RelicFound (RemoteEvent) vers le joueur : (clé), lance la grande révélation (RelicUI.client).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,7 +10,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local Tracking = require(script.Parent.Tracking)
@@ -21,7 +21,11 @@ local rng = Random.new()
 local BEAM_HEIGHT = 900
 
 local function state(d)
-	return { ok = true, owned = d.relics, found = d.relicsFound }
+	local owned = {}
+	for key in pairs(d.relicsFound) do
+		owned[key] = 1
+	end
+	return { ok = true, owned = owned, found = d.relicsFound }
 end
 
 -- Colonne de lumière à l'endroit de la trouvaille : tout le serveur la voit de loin
@@ -71,8 +75,9 @@ local function lightBeam(player: Player, relic)
 end
 
 local function give(player: Player, d, relic)
-	d.relics[relic.Key] = (d.relics[relic.Key] or 0) + 1
 	d.relicsFound[relic.Key] = true
+	-- le bonus compte tout de suite : revenu affiché à jour
+	GameService.Sync(player)
 	Tracking.Event(player, "Relic_" .. relic.Key)
 	task.spawn(DataService.Save, player) -- une trouvaille pareille ne doit jamais se perdre
 	lightBeam(player, relic)
@@ -87,17 +92,18 @@ end
 local function roll(player: Player, ring: number, eggs: number)
 	local d = DataService.Get(player)
 	local relic = Config.RelicOfRing(ring)
-	if not d or not relic or (d.guide or 0) < Config.Guide.Steps then
+	if not d or not relic or (d.guide or 0) < Config.Guide.Steps or d.relicsFound[relic.Key] then
 		return
 	end
 	for _ = 1, eggs do
 		if rng:NextNumber() * relic.Chance < 1 or player:GetAttribute("RelicForce") then
 			give(player, d, relic)
+			return
 		end
 	end
 end
 
-local function onInvoke(player: Player, action: any, key: any)
+local function onInvoke(player: Player, action: any)
 	local d = DataService.Get(player)
 	if not d then
 		return { ok = false, error = "Loading your save..." }
@@ -105,24 +111,7 @@ local function onInvoke(player: Player, action: any, key: any)
 	if action == "state" then
 		return state(d)
 	end
-	if action ~= "sell" or type(key) ~= "string" then
-		return { ok = false, error = "Unknown action" }
-	end
-	local relic = Config.Relic(key)
-	if not relic or (d.relics[key] or 0) <= 0 then
-		return { ok = false, error = "You don't have this relic" }
-	end
-	d.relics[key] -= 1
-	if d.relics[key] <= 0 then
-		d.relics[key] = nil
-	end
-	d.credits += relic.Value
-	GameService.Sync(player)
-	task.spawn(DataService.Save, player)
-	GameService.Notice(player, ("{Cash} Sold %s for $%s!"):format(relic.Name, Format.Short(relic.Value)), "good")
-	local res = state(d)
-	res.value = relic.Value
-	return res
+	return { ok = false, error = "Unknown action" }
 end
 
 function RelicService.Start()

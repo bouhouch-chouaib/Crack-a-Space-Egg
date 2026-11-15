@@ -11,6 +11,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local WorldBuilder = {}
 
 local M = Config.Map
+local STUDS = "rbxassetid://99589690361139" -- picots carrés (comme tools/apply-studs.lua)
 local rng = Random.new(20261211) -- graine fixe : la même carte à chaque serveur
 
 local function part(props): Part
@@ -119,7 +120,7 @@ local function prepareShip(): ({ Model }, { BasePart })
 		warn(string.format("[WorldBuilder] DockEnd est en z = %.1f, Config.Map.FrontZ vaut %d", dockEnd.Position.Z, M.FrontZ))
 	end
 
-	-- Bases : Base1, Base2… dans l'ordre ; chacune reçoit son numéro et l'invite de casse
+	-- Bases : Base1, Base2… dans l'ordre ; chacune reçoit son numéro
 	local bases = {}
 	local folder = ship:FindFirstChild("Bases")
 	while folder do
@@ -128,11 +129,6 @@ local function prepareShip(): ({ Model }, { BasePart })
 			break
 		end
 		base:SetAttribute("Index", #bases + 1)
-		-- Les bases sont vides au départ (clôture + sol) : la machine à casser viendra plus tard
-		local crack = base:FindFirstChild("CrackPoint", true)
-		if crack then
-			prompt(crack, "Crack eggs", "Cracking Machine", Enum.KeyCode.E)
-		end
 		table.insert(bases, base)
 	end
 
@@ -233,6 +229,41 @@ local function buildCorridor(world: Folder)
 					Parent = buoys,
 				})
 			end
+		end
+		z += M.BuoySpacing
+	end
+
+	-- Murs de givre à picots entre les bouées (15 nov.) : on voit où finit le couloir et où le gel commence.
+	-- Ils ne bloquent rien (on peut tout tenter à ses risques) : ni collision, ni requête.
+	local edges = Instance.new("Folder")
+	edges.Name = "Edges"
+	edges.Parent = corridor
+	local E = M.Edge
+	z = 0
+	while z < last do
+		local length = math.min(M.BuoySpacing, last - z)
+		for _, side in ipairs({ -1, 1 }) do
+			local wall = decor({
+				Name = "Edge",
+				Size = Vector3.new(E.Thickness, E.Height, length),
+				CFrame = CFrame.new(side * M.CorridorWidth / 2, 0, M.FrontZ + z + length / 2),
+				Material = Enum.Material.SmoothPlastic,
+				Color = E.Color,
+				Transparency = E.Transparency,
+				CastShadow = false,
+			})
+			for _, face in ipairs({ Enum.NormalId.Left, Enum.NormalId.Right }) do
+				local studs = Instance.new("Texture")
+				studs.Name = "Studs"
+				studs.Texture = STUDS
+				studs.Face = face
+				studs.StudsPerTileU = E.StudTile
+				studs.StudsPerTileV = E.StudTile
+				studs.Color3 = E.StudColor
+				studs.Transparency = E.StudTransparency
+				studs.Parent = wall
+			end
+			wall.Parent = edges
 		end
 		z += M.BuoySpacing
 	end

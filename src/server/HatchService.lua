@@ -453,9 +453,9 @@ function HatchService.Hatch(player: Player, id: string)
 	end
 	-- La créature est décidée tout de suite (pas de double éclosion possible)
 	local c = Config.CreatureFor(item.ring, item.rarity)
-	-- tutoriel : la toute première est l'Épique surprise (moment « wow ») ; ensuite, Tiny à Giant
+	-- tutoriel : la toute première est la créature rare imposée (moment « wow ») ; ensuite, Tiny à Giant
 	local special = if next(d.index) ~= nil then nil
-		elseif (d.guide or 0) < Config.Guide.Steps and item.rarity == Config.Guide.SecondRarity then "wow"
+		elseif (d.guide or 0) < Config.Guide.Steps and item.rarity == Config.Guide.FirstRarity then "wow"
 		else "first"
 	local size = if special then H.FirstSize else Config.RollPetSize(rng)
 	item.kind = "pet"
@@ -482,6 +482,7 @@ function HatchService.Hatch(player: Player, id: string)
 	d.seen = d.seen or {}
 	d.seen[key] = true -- l'Index la montre (plus de silhouette)
 	d.stats.best = math.max(d.stats.best, item.rarity)
+	d.stats.hatched = (d.stats.hatched or 0) + 1 -- classement EGGS HATCHED
 	-- L'œuf tremble et se fissure chez tous les clients, puis éclate
 	local prompt = m:FindFirstChild("HatchPrompt", true) :: ProximityPrompt?
 	if prompt then
@@ -687,6 +688,42 @@ local function payIncome()
 	end
 end
 
+-- REVENU HORS LIGNE (Config.Offline) ----------------------------------------------------------------
+-- À l'arrivée, le temps passé hors ligne (depuis la dernière sauvegarde) est mis de côté dans la partie
+-- (d.offlineDue) : si le joueur repart avant le paiement, rien n'est perdu. Il est payé quelques
+-- secondes plus tard, quand les passes sont chargés : Rate × revenu des créatures de la base, sans les
+-- potions. Publié sur le joueur : OfflineEarned ($) et OfflineSeconds, affichés par Offers.client.
+local OFFLINE_DELAY = 4
+
+local function bankOffline(d)
+	local O = Config.Offline
+	local last = d.lastSeen or 0
+	if last > 0 then
+		local away = os.time() - last
+		if away >= O.MinSeconds then
+			d.offlineDue = math.min((d.offlineDue or 0) + away, O.MaxHours * 3600)
+		end
+	end
+	d.lastSeen = os.time()
+end
+
+local function payOffline(player: Player)
+	local d = DataService.Get(player)
+	local seconds = d and d.offlineDue or 0
+	if not d or seconds <= 0 then
+		return
+	end
+	d.offlineDue = 0
+	local amount = math.floor(totalIncome(d) * BoostService.IncomeMult(player, true) * Config.Offline.Rate * seconds)
+	if amount <= 0 then
+		return
+	end
+	d.credits += amount
+	GameService.Sync(player)
+	player:SetAttribute("OfflineSeconds", seconds)
+	player:SetAttribute("OfflineEarned", amount)
+end
+
 -- Œufs prêts : on active le bouton « Hatch »
 local function refreshPrompts()
 	local now = os.time()
@@ -718,6 +755,8 @@ function HatchService.Start()
 			return
 		end
 		d.base = d.base or {}
+		bankOffline(d)
+		task.delay(OFFLINE_DELAY, payOffline, player)
 		-- Attendre la base (attribuée à l'arrivée du joueur)
 		for _ = 1, 50 do
 			if Bases.Get(player) then
@@ -769,6 +808,9 @@ function HatchService.Start()
 						HatchService.Hatch(player, item.id)
 					end
 				end
+			elseif cmd == "offline" then -- ("offline", secondes) : comme si le joueur revenait après ce temps
+				d.offlineDue = arg
+				payOffline(player)
 			elseif cmd == "skip" then
 				return tostring(HatchService.SkipEgg(player, arg))
 			elseif cmd == "finish" then

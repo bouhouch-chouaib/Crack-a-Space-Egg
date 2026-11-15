@@ -5,7 +5,9 @@ local Config = {}
 
 -- 15 nov. 2026 : tout le monde repart de zéro après la phase de test (Player_v1 garde les anciennes
 -- parties, plus lues). Ne changer qu'exprès pour tout remettre à zéro : le schéma est versionné dans DataService.
-Config.SaveKey = "Player_v2"
+-- 15 nov. 2026 : Player_v3, nouvelle économie (prix, niveaux sans plafond, plus de Supernova ni de géodes) :
+-- les parties Player_v2 restent stockées, plus lues.
+Config.SaveKey = "Player_v3"
 
 -- MODE TESTEUR (server/Testers.lua) : chaque joueur reçoit tout au niveau maximum à son arrivée.
 -- Les parties vont alors dans une sauvegarde à part (SaveKey) et les classements ne sont pas écrits.
@@ -62,6 +64,17 @@ Config.Map = {
 	RelaySize = 30, -- relais de pression, au milieu des vides assez larges entre deux anneaux
 	RelayMinGap = math.huge, -- relais retirés (7 nov.) : c'est le carburant du jetpack qui décide quels vides on traverse
 	BuoySpacing = 60,
+	-- Mur de givre à picots entre deux bouées, sur les deux bords du couloir (WorldBuilder) : il montre où
+	-- le gel commence. Presque transparent (on voit le décor à travers), il ne bloque rien.
+	Edge = {
+		Height = 46,
+		Thickness = 0.4,
+		Color = Color3.fromRGB(150, 225, 255),
+		Transparency = 0.9, -- la paroi
+		StudColor = Color3.fromRGB(190, 240, 255),
+		StudTransparency = 0.66, -- les picots dessinés dessus
+		StudTile = 4, -- studs par tuile de picots
+	},
 	-- Champ de décor : roches du biome de chaque côté du tapis, sur toute l'épaisseur et la hauteur
 	DecorArc = 750, -- studs d'arc couverts de chaque côté du couloir (au-delà, la brume cache tout)
 	DecorDensity = 1 / 2600, -- roches par stud² de champ
@@ -144,9 +157,11 @@ Config.Oxygen = {
 -- les souffleries du vaisseau (l'équivalent des tapis de course) et en volant pendant les missions.
 Config.Movement = {
 	Walk = 16, -- vitesse au sol au niveau 1 (studs/s)
-	PerLevel = 0.005, -- +0,5 % de vitesse au sol par niveau de jetpack
+	-- Les vitesses suivent l'avancée dans les paliers de jetpack (Config.JetProgress : 1 au palier 1,
+	-- 2 au palier 2..., 9 au niveau TopLevel), pas le niveau brut : il n'a plus de plafond (15 nov.)
+	PerTier = 0.1, -- +10 % de vitesse au sol par palier de jetpack (+80 % tout en haut)
 	Air = 20, -- vitesse horizontale en vol au niveau 1
-	AirPerLevel = 0.15, -- + studs/s en vol par niveau (42 au niveau 150)
+	AirPerTier = 2.8, -- + studs/s en vol par palier (42 tout en haut)
 	Climb = 32, -- vitesse de montée maximale quand on pousse
 	Gravity = 70, -- = Workspace.Gravity (sert au calcul de la portée d'un vol)
 	AirAccel = 5, -- réactivité en vol (plus haut = virages plus secs)
@@ -190,7 +205,7 @@ Config.CrackStages = { 0.75, 0.5, 0.25 }
 -- Les 7 anneaux. Speed = vitesse de défilement (studs/s) : les anneaux intérieurs vont plus vite.
 -- Active = astéroïdes visibles en même temps. EggHP = dégâts de forage pour détacher un œuf
 -- (la barre de vie d'un œuf ; triplée le 7 nov. pour que la soute se remplisse moins vite).
-local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost, color, crystals)
+local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost, color)
 	return {
 		Name = name,
 		Speed = speed,
@@ -200,7 +215,6 @@ local function newRing(name, speed, active, eggHP, valueMult, depth, unlockCost,
 		Depth = depth,
 		UnlockCost = unlockCost,
 		Color = color,
-		Crystals = crystals,
 	}
 end
 -- UnlockCost : plus utilisé depuis le 7 nov. (tous les anneaux sont ouverts, on y va à ses risques ;
@@ -208,27 +222,13 @@ end
 -- pleine de créatures plutôt communes de l'anneau précédent, il faut environ 10 min (anneau 2),
 -- 15 min (3), 20 min (4), 30 min (5), 45 min (6) et 1 h (7).
 Config.Rings = {
-	newRing("Dust Belt", 3.4, 20, 24, 1, 1.0, 0, Color3.fromRGB(120, 108, 98), {
-		"Grey Quartz", "Calcite", "Amethyst", "Topaz", "Stellar Opal", "Pluto Diamond", "",
-	}),
-	newRing("Ice Ring", 3.1, 18, 120, 4, 1.3, 75000, Color3.fromRGB(150, 200, 230), {
-		"Frostite", "Snow Crystal", "Aquamarine", "Boreal Sapphire", "Comet Tear", "Aurora Heart", "",
-	}),
-	newRing("Magma Field", 2.8, 20, 540, 16, 1.8, 4e6, Color3.fromRGB(110, 50, 40), {
-		"Obsidian", "Red Basalt", "Garnet", "Volcanic Ruby", "Phoenix Eye", "Sun Blood", "",
-	}),
-	newRing("Nebula", 2.5, 22, 2400, 64, 2.4, 2e8, Color3.fromRGB(120, 80, 170), {
-		"Haze Quartz", "Mist Pearl", "Violet Flux", "Dreamstone", "Nova Shard", "Nebula Heart", "",
-	}),
-	newRing("Devourer Belt", 2.2, 24, 10800, 256, 3.2, 1e10, Color3.fromRGB(70, 60, 60), {
-		"Bone Flint", "Fang Stone", "Maw Garnet", "Hunger Opal", "Devourer Eye", "Abyss Crown", "Void Pearl",
-	}),
-	newRing("The Rift", 1.95, 28, 48000, 1024, 4.2, 5.5e11, Color3.fromRGB(60, 90, 120), {
-		"Rift Shale", "Split Jade", "Fracture Gem", "Warp Sapphire", "Paradox Prism", "Time Shard", "Rift Singularity",
-	}),
-	newRing("The Nest", 1.7, 32, 210000, 4096, 5.5, 2.6e13, Color3.fromRGB(150, 120, 80), {
-		"Shell Quartz", "Nest Amber", "Brood Ruby", "Mother Opal", "Hatchling Star", "Queen's Tear", "Cosmic Yolk",
-	}),
+	newRing("Dust Belt", 3.4, 20, 24, 1, 1.0, 0, Color3.fromRGB(120, 108, 98)),
+	newRing("Ice Ring", 3.1, 18, 120, 4, 1.3, 75000, Color3.fromRGB(150, 200, 230)),
+	newRing("Magma Field", 2.8, 20, 540, 16, 1.8, 4e6, Color3.fromRGB(110, 50, 40)),
+	newRing("Nebula", 2.5, 22, 2400, 64, 2.4, 2e8, Color3.fromRGB(120, 80, 170)),
+	newRing("Devourer Belt", 2.2, 24, 10800, 256, 3.2, 1e10, Color3.fromRGB(70, 60, 60)),
+	newRing("The Rift", 1.95, 28, 48000, 1024, 4.2, 5.5e11, Color3.fromRGB(60, 90, 120)),
+	newRing("The Nest", 1.7, 32, 210000, 4096, 5.5, 2.6e13, Color3.fromRGB(150, 120, 80)),
 }
 Config.CosmicMinRing = 5
 
@@ -262,11 +262,22 @@ function Config.OrbitPosition(radius: number, angle: number, height: number): Ve
 	return Vector3.new(radius * math.sin(angle), height, radius * math.cos(angle) - m.AxisDistance + m.FrontZ)
 end
 
--- Améliorations : coût = Base * Growth^niveau
+-- Améliorations : coût du niveau n = Base × Growth^n × Config.PriceWobble (voir Config.StepCost)
 Config.Upgrades = {
-	-- Coût du niveau n = Base × Growth^n (de quelques centaines de $ aux milliers de milliards)
-	Scanner = { Name = "Scanner", Base = 800, Growth = 3.1, Max = 20 },
+	Scanner = { Name = "Scanner", Base = 4000, Growth = 3.5, Max = 20 },
 }
+-- Prix irréguliers (15 nov.) : d'un niveau au suivant, l'écart n'est jamais le même. Tantôt deux prix
+-- proches (deux achats coup sur coup), tantôt un grand saut (un vrai objectif). Le motif se répète
+-- tous les 6 niveaux ; chaque amélioration le prend à un endroit différent (Shift) pour que deux
+-- objets n'aient jamais le même rythme.
+Config.PriceWobble = { 1, 0.7, 1.7, 1, 0.55, 2 }
+-- Prix arrondi à 2 chiffres significatifs (4 200, 13 000, 1,7 M...)
+function Config.StepCost(base: number, growth: number, level: number, shift: number?): number
+	local w = Config.PriceWobble
+	local v = base * growth ^ level * w[(level + (shift or 0)) % #w + 1]
+	local p = 10 ^ (math.floor(math.log10(v)) - 1)
+	return math.floor(v / p + 0.5) * p
+end
 Config.UpgradeOrder = { "Scanner" }
 
 -- MACHINE À DÉROCHER (docs/Mecaniques.md §7) ---------------------------------------
@@ -274,7 +285,7 @@ Config.UpgradeOrder = { "Scanner" }
 -- Durée pour un œuf = Time + PerRarity × (rareté - 1) secondes ; Gap = pause entre deux œufs
 -- (le temps que l'œuf révélé vole jusqu'au joueur).
 Config.Derock = {
-	-- Secondes pour dégager un œuf ou une géode, de Common à Cosmic (avant les améliorations de la machine).
+	-- Secondes pour dégager un œuf, de Common à Cosmic (avant les améliorations de la machine).
 	-- Pendant ce temps le joueur est libre : il peut repartir forer.
 	Times = { 4, 8, 15, 30, 60, 120, 240 },
 	Tutorial = 4, -- durée pendant le tutoriel, quelle que soit la rareté
@@ -299,19 +310,22 @@ Config.Derock = {
 local function drill(name, power, cost, robux, color)
 	return { Name = name, Power = power, Cost = cost, Robux = robux, ProductId = 0, Color = color }
 end
--- Prix en $ calés sur les revenus des créatures : chaque foreuse vaut à peu près le déblocage d'un demi-anneau
+-- Prix en $ réglés avec tools/eco-sim.luau (15 nov.) : deux foreuses par anneau, écarts irréguliers
+-- (tantôt ×8 à ×16, tantôt ×33 ou ×75), de plus en plus longues à payer d'un anneau à l'autre.
+-- Joueur qui passe 40 % de son temps en soufflerie : foreuse 2 vers 5 min, 3 vers 18 min, 5 vers 1 h,
+-- 7 vers 2 h 30, 9 vers 5 h, 11 vers 15 h.
 Config.Drills = {
 	drill("Starter Drill", 5, 0, 0, Color3.fromRGB(170, 176, 190)),
-	drill("Rusty Drill", 14, 2000, 25, Color3.fromRGB(196, 120, 70)), -- 2K (retour de test du 7 nov. : 5K trop cher)
-	drill("Steel Drill", 40, 65000, 49, Color3.fromRGB(150, 170, 200)),
-	drill("Turbo Drill", 110, 850000, 79, Color3.fromRGB(80, 170, 255)),
-	drill("Laser Drill", 320, 1.1e7, 129, Color3.fromRGB(90, 230, 120)),
-	drill("Plasma Drill", 900, 1.4e8, 199, Color3.fromRGB(190, 100, 255)),
-	drill("Golden Drill", 2600, 1.8e9, 299, Color3.fromRGB(255, 200, 50)),
-	drill("Crystal Drill", 7500, 2.3e10, 449, Color3.fromRGB(120, 240, 255)),
-	drill("Nova Drill", 21000, 3e11, 699, Color3.fromRGB(255, 120, 80)),
-	drill("Galaxy Drill", 60000, 4e12, 999, Color3.fromRGB(255, 110, 210)),
-	drill("Cosmic Drill", 170000, 5e13, 1499, Color3.fromRGB(130, 255, 240)),
+	drill("Rusty Drill", 14, 12000, 25, Color3.fromRGB(196, 120, 70)), -- fin du tutoriel
+	drill("Steel Drill", 40, 400000, 49, Color3.fromRGB(150, 170, 200)),
+	drill("Turbo Drill", 110, 4e6, 79, Color3.fromRGB(80, 170, 255)),
+	drill("Laser Drill", 320, 3e8, 129, Color3.fromRGB(90, 230, 120)),
+	drill("Plasma Drill", 900, 3e9, 199, Color3.fromRGB(190, 100, 255)),
+	drill("Golden Drill", 2600, 3e10, 299, Color3.fromRGB(255, 200, 50)),
+	drill("Crystal Drill", 7500, 2.5e11, 449, Color3.fromRGB(120, 240, 255)),
+	drill("Nova Drill", 21000, 4e12, 699, Color3.fromRGB(255, 120, 80)),
+	drill("Galaxy Drill", 60000, 6e13, 999, Color3.fromRGB(255, 110, 210)),
+	drill("Cosmic Drill", 170000, 3e16, 1499, Color3.fromRGB(130, 255, 240)),
 }
 -- Produits Robux des foreuses (créés le 7 nov. sur Roblox, palier 2 à 11)
 for tier, id in pairs({
@@ -332,14 +346,14 @@ end
 local col = Color3.fromRGB
 Config.DrillSkins = {
 	{ Key = "Classic", Name = "Classic", Rarity = 1, Price = 0 }, -- couleurs d'origine de chaque foreuse
-	skin("Bubblegum", "Bubblegum", 2, 25000, col(255, 150, 205), col(255, 236, 246), col(205, 80, 150), col(255, 255, 255), col(255, 170, 225)),
-	skin("Mint", "Mint", 2, 60000, col(140, 240, 190), col(240, 255, 248), col(40, 140, 110), col(220, 255, 240), col(150, 255, 215)),
-	skin("Midnight", "Midnight", 3, 500000, col(45, 55, 115), col(90, 200, 255), col(22, 24, 52), col(175, 220, 255), col(90, 200, 255)),
-	skin("Lava", "Lava", 3, 5e6, col(55, 42, 42), col(255, 125, 40), col(30, 24, 24), col(255, 195, 95), col(255, 115, 30)),
-	skin("Toxic", "Toxic", 4, 5e7, col(135, 240, 60), col(150, 65, 205), col(60, 40, 85), col(225, 255, 150), col(175, 255, 80)),
-	skin("Frost", "Frost", 4, 5e8, col(205, 236, 255), col(255, 255, 255), col(90, 140, 195), col(232, 250, 255), col(160, 230, 255), "Sparkle"),
-	skin("Gold", "Gold", 5, 5e9, col(255, 200, 50), col(255, 245, 190), col(170, 110, 20), col(255, 235, 150), col(255, 222, 90), "Sparkle"),
-	skin("Diamond", "Diamond", 6, 5e10, col(135, 240, 255), col(255, 255, 255), col(60, 150, 220), col(232, 255, 255), col(175, 250, 255), "Sparkle"),
+	skin("Bubblegum", "Bubblegum", 2, 125000, col(255, 150, 205), col(255, 236, 246), col(205, 80, 150), col(255, 255, 255), col(255, 170, 225)),
+	skin("Mint", "Mint", 2, 300000, col(140, 240, 190), col(240, 255, 248), col(40, 140, 110), col(220, 255, 240), col(150, 255, 215)),
+	skin("Midnight", "Midnight", 3, 2.5e6, col(45, 55, 115), col(90, 200, 255), col(22, 24, 52), col(175, 220, 255), col(90, 200, 255)),
+	skin("Lava", "Lava", 3, 2.5e7, col(55, 42, 42), col(255, 125, 40), col(30, 24, 24), col(255, 195, 95), col(255, 115, 30)),
+	skin("Toxic", "Toxic", 4, 2.5e8, col(135, 240, 60), col(150, 65, 205), col(60, 40, 85), col(225, 255, 150), col(175, 255, 80)),
+	skin("Frost", "Frost", 4, 2.5e9, col(205, 236, 255), col(255, 255, 255), col(90, 140, 195), col(232, 250, 255), col(160, 230, 255), "Sparkle"),
+	skin("Gold", "Gold", 5, 2.5e10, col(255, 200, 50), col(255, 245, 190), col(170, 110, 20), col(255, 235, 150), col(255, 222, 90), "Sparkle"),
+	skin("Diamond", "Diamond", 6, 2.5e11, col(135, 240, 255), col(255, 255, 255), col(60, 150, 220), col(232, 255, 255), col(175, 250, 255), "Sparkle"),
 	-- skins premium (Robux)
 	skin("Galaxy", "Galaxy", 6, 0, col(110, 60, 200), col(255, 140, 230), col(30, 20, 70), col(205, 185, 255), col(255, 140, 240), "Sparkle"),
 	skin("Rainbow", "Rainbow", 7, 0, col(255, 90, 90), col(255, 255, 255), col(60, 50, 90), col(255, 255, 255), col(255, 255, 255), "Rainbow"),
@@ -363,20 +377,36 @@ function Config.DrillSkin(key: string?)
 end
 
 -- RELIQUES DES EXPLORATEURS PERDUS (RelicService, RelicUI.client, onglet RELICS de l'Index).
--- Une par anneau, environ 10 fois le meilleur minerai de l'anneau. Chance = 1 sur N, à chaque œuf foré (sans bonus de chance).
-local function relic(key, name, ring, chance, value, color, story)
-	return { Key = key, Name = name, Ring = ring, Chance = chance, Value = value, Color = color, Story = story }
+-- Une par anneau. Chance = 1 sur N, à chaque œuf foré dans cet anneau (sans bonus de chance), tant qu'on
+-- ne l'a pas. On ne la vend pas (15 nov.) : trouvée, elle donne un bonus pour toujours.
+-- Bonus.Kind : "Money" (revenus des créatures) ou "XP" (XP du jetpack) ; Value : 0.05 = +5 %.
+local function relic(key, name, ring, chance, kind, color, story)
+	return { Key = key, Name = name, Ring = ring, Chance = chance, Bonus = { Kind = kind, Value = 0.05 }, Color = color, Story = story }
 end
 Config.RelicReveal = 14 -- secondes de la révélation : le froid et l'oxygène attendent pendant ce temps
 Config.Relics = {
-	relic("Compass", "Lost Compass", 1, 20000, 3e8, col(90, 225, 210), "It still points home, wherever home was."),
-	relic("Logbook", "Frozen Logbook", 2, 30000, 1e10, col(150, 220, 255), "Last entry: it is so cold, but the eggs are warm."),
-	relic("Visor", "Melted Visor", 3, 45000, 4e11, col(255, 140, 60), "Someone flew too close to the magma, and kept going."),
-	relic("Medal", "Explorer's Medal", 4, 70000, 1e13, col(190, 120, 255), "Given to the first crew to cross the Nebula. None came back."),
-	relic("Helmet", "Chewed Helmet", 5, 100000, 5e14, col(140, 240, 90), "Those are teeth marks. Do not ask."),
-	relic("Map", "Torn Star Map", 6, 150000, 2e16, col(90, 225, 245), "It shows a way past the Rift. Half of it is missing."),
-	relic("Flag", "The First Flag", 7, 250000, 6e17, col(255, 205, 80), "Planted by the first explorer to reach the Nest. Nobody knows their name."),
+	relic("Compass", "Lost Compass", 1, 300, "Money", col(90, 225, 210), "It still points home, wherever home was."),
+	relic("Logbook", "Frozen Logbook", 2, 500, "XP", col(150, 220, 255), "Last entry: it is so cold, but the eggs are warm."),
+	relic("Visor", "Melted Visor", 3, 800, "Money", col(255, 140, 60), "Someone flew too close to the magma, and kept going."),
+	relic("Medal", "Explorer's Medal", 4, 1200, "XP", col(190, 120, 255), "Given to the first crew to cross the Nebula. None came back."),
+	relic("Helmet", "Chewed Helmet", 5, 1800, "Money", col(140, 240, 90), "Those are teeth marks. Do not ask."),
+	relic("Map", "Torn Star Map", 6, 2400, "XP", col(90, 225, 245), "It shows a way past the Rift. Half of it is missing."),
+	relic("Flag", "The First Flag", 7, 3000, "Money", col(255, 205, 80), "Planted by the first explorer to reach the Nest. Nobody knows their name."),
 }
+-- Texte court du bonus d'une relique (« +5% money »)
+function Config.RelicBonusText(r): string
+	return ("+%d%% %s"):format(math.floor(r.Bonus.Value * 100 + 0.5), if r.Bonus.Kind == "XP" then "jetpack XP" else "money")
+end
+-- Multiplicateur donné par les reliques trouvées (found : ["clé"] = true) pour ce genre de bonus
+function Config.RelicMult(found: { [string]: boolean }?, kind: string): number
+	local m = 1
+	for _, r in ipairs(Config.Relics) do
+		if found and found[r.Key] and r.Bonus.Kind == kind then
+			m += r.Bonus.Value
+		end
+	end
+	return m
+end
 function Config.Relic(key: string)
 	for _, r in ipairs(Config.Relics) do
 		if r.Key == key then
@@ -395,19 +425,20 @@ function Config.RelicOfRing(ring: number)
 end
 
 -- OBJETS (GearService, GearBar.client, onglet GEAR du stand ITEMS).
--- Battes : en $, une par une, perdues à la Supernova. Stun = secondes où un monstre est assommé, Push = force sur les joueurs.
+-- Battes : en $, une par une. Stun = secondes où un monstre est assommé, Push = force sur les joueurs.
 local function bat(name, art, cost, stun, push, bands, color, grip, accent)
 	return { Name = name, Art = art, Cost = cost, Stun = stun, Push = push, Bands = bands, Color = color, Grip = grip, Accent = accent }
 end
 Config.Bats = {
-	bat("Wooden Bat", "BatWood", 10000, 2, 70, 1, col(176, 120, 70), col(60, 44, 34), col(230, 205, 160)),
-	bat("Steel Bat", "BatSteel", 500000, 3, 110, 2, col(190, 200, 215), col(50, 90, 190), col(90, 110, 140)),
-	bat("Plasma Bat", "BatPlasma", 5e7, 5, 150, 3, col(90, 235, 255), col(60, 40, 110), col(170, 90, 240)),
+	bat("Wooden Bat", "BatWood", 60000, 2, 70, 1, col(176, 120, 70), col(60, 44, 34), col(230, 205, 160)),
+	bat("Steel Bat", "BatSteel", 4e6, 3, 110, 2, col(190, 200, 215), col(50, 90, 190), col(90, 110, 140)),
+	bat("Plasma Bat", "BatPlasma", 4e8, 5, 150, 3, col(90, 235, 255), col(60, 40, 110), col(170, 90, 240)),
 }
 Config.Gear = {
 	BatCooldown = 1.2, -- secondes entre deux coups
 	BatRange = 14, -- studs (contre un monstre : en plus de son rayon d'attrape)
 	BatHip = CFrame.new(-1.15, -0.1, 0) * CFrame.Angles(0, 0, math.rad(72)), -- batte portée à la hanche
+	BatHand = CFrame.new(0, -0.3, 0) * CFrame.Angles(0, math.rad(90), 0), -- batte tenue dans la main droite
 	PushUp = 30, -- poussée vers le haut du joueur repoussé
 	PushImmune = 4, -- secondes où un joueur repoussé ne peut plus l'être
 	PassOrder = { "Carpet", "Boots", "Hook" }, -- passes de l'onglet GEAR (Config.Shop.Passes)
@@ -425,12 +456,12 @@ local function suit(name, art, grace, freeze, oxygen, cost, robux, color, accent
 end
 Config.Suits = {
 	suit("Flight Suit", "Suit", Config.Cold.Grace, Config.Cold.FreezeTime, 0, 0, 0, col(205, 208, 220), col(120, 126, 145), col(90, 220, 240)),
-	suit("Padded Suit", "SuitPadded", 4, 10, 0.10, 5000, 29, col(240, 130, 50), col(255, 232, 196), col(90, 225, 245)),
-	suit("Thermal Suit", "SuitThermal", 6, 14, 0.20, 150000, 59, col(214, 56, 50), col(255, 205, 60), col(245, 190, 60)),
-	suit("Arctic Suit", "SuitArctic", 8, 20, 0.35, 4e6, 99, col(226, 240, 255), col(70, 150, 240), col(110, 200, 255)),
-	suit("Titan Suit", "SuitTitan", 11, 27, 0.50, 1.2e8, 149, col(78, 86, 106), col(240, 130, 40), col(245, 150, 50)),
-	suit("Stellar Suit", "SuitStellar", 15, 35, 0.70, 4e9, 249, col(118, 66, 205), col(245, 195, 70), col(245, 200, 80)),
-	suit("Void Suit", "SuitVoid", 20, 45, 1.00, 1.5e11, 399, col(34, 32, 52), col(80, 240, 230), col(70, 235, 225)),
+	suit("Padded Suit", "SuitPadded", 4, 10, 0.10, 25000, 29, col(240, 130, 50), col(255, 232, 196), col(90, 225, 245)),
+	suit("Thermal Suit", "SuitThermal", 6, 14, 0.20, 750000, 59, col(214, 56, 50), col(255, 205, 60), col(245, 190, 60)),
+	suit("Arctic Suit", "SuitArctic", 8, 20, 0.35, 5e8, 99, col(226, 240, 255), col(70, 150, 240), col(110, 200, 255)),
+	suit("Titan Suit", "SuitTitan", 11, 27, 0.50, 4e10, 149, col(78, 86, 106), col(240, 130, 40), col(245, 150, 50)),
+	suit("Stellar Suit", "SuitStellar", 15, 35, 0.70, 6e12, 249, col(118, 66, 205), col(245, 195, 70), col(245, 200, 80)),
+	suit("Void Suit", "SuitVoid", 20, 45, 1.00, 5e15, 399, col(34, 32, 52), col(80, 240, 230), col(70, 235, 225)),
 }
 -- Produits Robux des combinaisons (créés le 9 nov. sur Roblox, palier 2 à 7)
 for tier, id in pairs({ [2] = 3729865909, [3] = 3729865920, [4] = 3729865929, [5] = 3729865939, [6] = 3729865950, [7] = 3729865968 }) do
@@ -440,8 +471,8 @@ function Config.Suit(tier: number?)
 	return Config.Suits[math.clamp(tier or 1, 1, #Config.Suits)]
 end
 
--- Skins de base (BaseSkinService, BaseSkinUI.client) : purement esthétiques, gardés après une Supernova.
--- Supernovas = nombre à avoir fait pour le débloquer ; Robux / PassId = vendu comme passe.
+-- Skins de base (BaseSkinService, BaseSkinUI.client) : purement esthétiques.
+-- Ring = anneau le plus lointain à avoir atteint pour le débloquer (1 = dès le départ) ; Robux / PassId = vendu comme passe.
 -- Floor, Main (murets et annexe), Trim, Glass : couleurs ; sans couleur = celles d'origine de la base.
 local function baseSkin(key, rarity, floor, main, trim, glass)
 	return { Key = key, Name = key, Rarity = rarity, Floor = floor, Main = main, Trim = trim, Glass = glass }
@@ -457,8 +488,8 @@ Config.BaseSkins = {
 	baseSkin("Gold", 5, col(232, 180, 56), col(255, 238, 176), col(196, 134, 32), col(255, 226, 140)),
 	baseSkin("Rainbow", 7, col(255, 110, 150), col(255, 236, 190), col(120, 230, 90), col(120, 220, 255)),
 }
-for i, n in ipairs({ 0, 1, 2, 3, 4, 6 }) do
-	Config.BaseSkins[i].Supernovas = n
+for i, n in ipairs({ 1, 2, 3, 4, 5, 6 }) do
+	Config.BaseSkins[i].Ring = n
 end
 Config.BaseSkins[7].Robux, Config.BaseSkins[7].PassId = 199, 2074384534
 Config.BaseSkins[8].Robux, Config.BaseSkins[8].PassId = 299, 2075536455
@@ -474,16 +505,6 @@ function Config.BaseSkin(key: string?)
 	return Config.BaseSkins[1]
 end
 
--- Mutations
-Config.Sizes = {
-	{ Name = "Small", Chance = 0.30, Mult = 0.7 },
-	{ Name = "", Chance = 0.55, Mult = 1 },
-	{ Name = "Large", Chance = 0.13, Mult = 1.6 },
-	{ Name = "Colossal", Chance = 0.02, Mult = 4 },
-}
-Config.ShinyChance = 1 / 40
-Config.ShinyMult = 3
-
 -- Forage
 Config.DrillRange = 32 -- studs entre le joueur et la surface de l'astéroïde
 Config.DrillTick = 0.25 -- secondes entre deux coups envoyés au serveur
@@ -498,63 +519,103 @@ Config.RescueTime = 6
 -- chaque palier de jetpack permet de franchir le vide jusqu'à l'anneau suivant. Tomber = mourir.
 -- NIVEAU DU JETPACK -------------------------------------------------------------------
 -- On gagne de l'XP de jetpack en restant dans une soufflerie (même AFK) et en volant en mission.
--- XP pour passer du niveau L au niveau L+1 = XPBase × XPGrowth^(L-1).
+-- Pas de plafond de niveau (15 nov., comme les jeux de référence : on progresse toujours un peu).
+-- XP pour passer du niveau L au niveau L+1 : XPBase au niveau 1, puis + XPStep à chaque niveau ; tous les
+-- XPEvery niveaux, ce pas est multiplié par XPStepGrowth. Avec 20 / 5 / 10 / 1,4 : 65 XP au niveau 10,
+-- 3,4 K au niveau 100, 100 K au niveau 200, 2,9 M au niveau 300, 2,5 Md au niveau 500.
 Config.Jetpack = {
 	XPBase = 20,
-	XPGrowth = 1.12,
-	MaxLevel = 150,
+	XPStep = 5,
+	XPEvery = 10,
+	XPStepGrowth = 1.4,
 	FlightXP = 1, -- XP par seconde de vol réel (poussée ou plané, hors soufflerie)
 	-- Paliers de jetpack : un modèle de plus en plus impressionnant (Assets.Jetpacks.<Model>) et une
 	-- jauge de carburant de plus en plus stylée (Hud). Reach = portée d'un vol à ce niveau (studs, d'un
 	-- bord à l'autre, en poussant tout le carburant) ; entre deux paliers elle monte petit à petit.
 	-- Le vide entre l'anneau k-1 et l'anneau k fait 55 × 1,22^(k-2) studs : le palier k le franchit
 	-- avec 15 % de marge (le palier 1 ne quitte pas l'anneau 1).
+	-- Level : réglé avec tools/eco-sim.luau. Joueur qui passe 40 % de son temps en soufflerie : anneau 2
+	-- vers 12 min, 3 vers 40 min, 4 vers 2 h, 5 vers 4 h 30, 6 vers 12 h, 7 vers 29 h (on franchit un vide
+	-- un peu avant le niveau du palier, la portée montant entre deux paliers).
 	Tiers = {
 		{ Level = 1, Name = "Rusty Starter", Model = "Jet1", Reach = 44, Color = Color3.fromRGB(205, 130, 80) },
-		{ Level = 10, Name = "Scout Booster", Model = "Jet2", Reach = 63, Color = Color3.fromRGB(90, 190, 255) },
-		{ Level = 25, Name = "Comet Pack", Model = "Jet3", Reach = 77, Color = Color3.fromRGB(150, 235, 255) },
-		{ Level = 45, Name = "Blaze Thruster", Model = "Jet4", Reach = 94, Color = Color3.fromRGB(255, 120, 40) },
-		{ Level = 65, Name = "Nebula Wings", Model = "Jet5", Reach = 115, Color = Color3.fromRGB(190, 100, 255) },
-		{ Level = 90, Name = "Rift Striker", Model = "Jet6", Reach = 140, Color = Color3.fromRGB(60, 240, 230) },
-		{ Level = 115, Name = "Nova Titan", Model = "Jet7", Reach = 171, Color = Color3.fromRGB(255, 200, 60) },
-		{ Level = 140, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
+		{ Level = 18, Name = "Scout Booster", Model = "Jet2", Reach = 63, Color = Color3.fromRGB(90, 190, 255) },
+		{ Level = 65, Name = "Comet Pack", Model = "Jet3", Reach = 77, Color = Color3.fromRGB(150, 235, 255) },
+		{ Level = 120, Name = "Blaze Thruster", Model = "Jet4", Reach = 94, Color = Color3.fromRGB(255, 120, 40) },
+		{ Level = 200, Name = "Nebula Wings", Model = "Jet5", Reach = 115, Color = Color3.fromRGB(190, 100, 255) },
+		{ Level = 280, Name = "Rift Striker", Model = "Jet6", Reach = 140, Color = Color3.fromRGB(60, 240, 230) },
+		{ Level = 375, Name = "Nova Titan", Model = "Jet7", Reach = 171, Color = Color3.fromRGB(255, 200, 60) },
+		{ Level = 470, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
 	},
-	MaxReach = 215, -- portée au niveau 150
+	TopLevel = 500, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
+	MaxReach = 215, -- portée au niveau TopLevel
+	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client) : toutes les Every
+	-- secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » apparaît Offer secondes ;
+	-- cliqué à temps, l'XP de la soufflerie est multipliée par Mult pendant Duration secondes.
+	-- Rester devant l'écran rapporte donc un peu plus que l'AFK pur (environ +25 %).
+	Boost = { Every = { 25, 45 }, Offer = 7, Duration = 12, Mult = 2 },
 	-- Soufflerie personnelle : chaque joueur a la sienne devant sa base. On l'achète (Breeze Tunnel),
 	-- puis on l'améliore palier par palier ; XP gagnée par seconde dans le courant d'air, même AFK.
-	-- Prix calés sur les revenus (entre les prix des anneaux).
+	-- Prix réglés avec tools/eco-sim.luau : la soufflerie n se paie à l'arrivée dans l'anneau n (trop chère
+	-- avec les revenus de l'anneau d'avant, vite payée avec ceux du nouveau).
 	TunnelRadius = 4.5,
 	TunnelHeight = 20,
 	TunnelOffset = Vector3.new(12, 0, 26), -- dans le repère du sol de la base : devant l'entrée ; le signe de x vient de l'attribut TunnelSide de la base (côté opposé à la machine)
 	Tunnels = {
-		{ Name = "Breeze Tunnel", Cost = 1000, XP = 2, Color = Color3.fromRGB(150, 235, 255) },
-		{ Name = "Gale Tunnel", Cost = 30000, XP = 8, Color = Color3.fromRGB(90, 200, 255) },
-		{ Name = "Storm Tunnel", Cost = 1.5e6, XP = 30, Color = Color3.fromRGB(255, 140, 60) },
-		{ Name = "Cyclone Tunnel", Cost = 8e7, XP = 150, Color = Color3.fromRGB(190, 120, 255) },
-		{ Name = "Hurricane Tunnel", Cost = 4e9, XP = 800, Color = Color3.fromRGB(255, 80, 120) },
-		{ Name = "Tempest Tunnel", Cost = 2.2e11, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
-		{ Name = "Supernova Vortex", Cost = 1.1e13, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
+		{ Name = "Breeze Tunnel", Cost = 5000, XP = 2, Color = Color3.fromRGB(150, 235, 255) },
+		{ Name = "Gale Tunnel", Cost = 150000, XP = 8, Color = Color3.fromRGB(90, 200, 255) },
+		{ Name = "Storm Tunnel", Cost = 2e7, XP = 30, Color = Color3.fromRGB(255, 140, 60) },
+		{ Name = "Cyclone Tunnel", Cost = 2e10, XP = 150, Color = Color3.fromRGB(190, 120, 255) },
+		{ Name = "Hurricane Tunnel", Cost = 1.5e12, XP = 800, Color = Color3.fromRGB(255, 80, 120) },
+		{ Name = "Tempest Tunnel", Cost = 5e15, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
+		{ Name = "Supernova Vortex", Cost = 1.5e18, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
 	},
 }
 
+-- Table de la courbe d'XP, remplie au fur et à mesure : xpNeed[L] = XP du niveau L au niveau L+1,
+-- xpTotal[L] = XP totale pour arriver au niveau L (xpTotal[1] = 0)
+local xpNeed: { number } = {}
+local xpTotal: { number } = { 0 }
+local function fillXP(level: number)
+	local j = Config.Jetpack
+	for l = #xpNeed + 1, level do
+		local step = j.XPStep * j.XPStepGrowth ^ ((l - 2) // j.XPEvery)
+		xpNeed[l] = if l == 1 then j.XPBase else math.floor(xpNeed[l - 1] + step + 0.5)
+		xpTotal[l + 1] = xpTotal[l] + xpNeed[l]
+	end
+end
+
 -- XP pour passer au niveau suivant
 function Config.JetpackXPNeed(level: number): number
-	local j = Config.Jetpack
-	return math.floor(j.XPBase * j.XPGrowth ^ (level - 1) + 0.5)
+	level = math.max(1, math.floor(level))
+	fillXP(level)
+	return xpNeed[level]
+end
+
+-- XP totale pour arriver à ce niveau
+function Config.JetpackXPTotal(level: number): number
+	level = math.max(1, math.floor(level))
+	fillXP(level)
+	return xpTotal[level]
 end
 
 -- Niveau atteint avec cette XP totale, XP déjà faite dans ce niveau, XP du niveau
 function Config.JetpackLevel(totalXP: number): (number, number, number)
-	local level, rest = 1, totalXP
-	while level < Config.Jetpack.MaxLevel do
-		local need = Config.JetpackXPNeed(level)
-		if rest < need then
-			return level, rest, need
-		end
-		rest -= need
-		level += 1
+	-- la table grandit jusqu'à dépasser l'XP du joueur, puis recherche par dichotomie
+	totalXP = math.clamp(totalXP, 0, 1e300)
+	while xpTotal[#xpTotal] <= totalXP do
+		fillXP(#xpNeed + 50)
 	end
-	return level, 0, 0
+	local lo, hi = 1, #xpTotal
+	while hi - lo > 1 do
+		local mid = (lo + hi) // 2
+		if xpTotal[mid] <= totalXP then
+			lo = mid
+		else
+			hi = mid
+		end
+	end
+	return lo, totalXP - xpTotal[lo], xpNeed[lo]
 end
 Config.JetpackRefill = 2.5 -- secondes de carburant regagnées par seconde au sol
 
@@ -588,17 +649,6 @@ function Config.CargoSlots(_level: number?): number
 	return Config.CargoMax
 end
 
--- Multiplicateur de vitesse selon le niveau du jetpack (niveau 1 = ×1), et vitesses qui en découlent
-function Config.Speed(level: number): number
-	return 1 + Config.Movement.PerLevel * math.max(0, (level or 1) - 1)
-end
-function Config.GroundSpeed(level: number): number
-	return Config.Movement.Walk * Config.Speed(level)
-end
-function Config.AirSpeed(level: number): number
-	return Config.Movement.Air + Config.Movement.AirPerLevel * math.max(0, (level or 1) - 1)
-end
-
 -- Palier de jetpack d'un niveau (index dans Config.Jetpack.Tiers, et le palier)
 function Config.JetpackTier(level: number)
 	local tiers = Config.Jetpack.Tiers
@@ -611,14 +661,32 @@ function Config.JetpackTier(level: number)
 	return index, tiers[index]
 end
 
+-- Avancée dans les paliers : 1 au palier 1, 2,5 à mi-chemin entre les paliers 2 et 3..., nombre de
+-- paliers + 1 au niveau TopLevel et au-delà. Les vitesses et la portée en découlent.
+function Config.JetProgress(level: number): number
+	local tiers = Config.Jetpack.Tiers
+	local i, t = Config.JetpackTier(level)
+	local nextLevel = if tiers[i + 1] then tiers[i + 1].Level else Config.Jetpack.TopLevel
+	return i + math.clamp(((level or 1) - t.Level) / math.max(1, nextLevel - t.Level), 0, 1)
+end
+
+-- Multiplicateur de vitesse selon le niveau du jetpack (niveau 1 = ×1), et vitesses qui en découlent
+function Config.Speed(level: number): number
+	return 1 + Config.Movement.PerTier * (Config.JetProgress(level) - 1)
+end
+function Config.GroundSpeed(level: number): number
+	return Config.Movement.Walk * Config.Speed(level)
+end
+function Config.AirSpeed(level: number): number
+	return Config.Movement.Air + Config.Movement.AirPerTier * (Config.JetProgress(level) - 1)
+end
+
 -- Portée d'un vol à ce niveau : elle monte en ligne droite d'un palier à l'autre
 function Config.JetpackReach(level: number): number
 	local tiers = Config.Jetpack.Tiers
 	local i, t = Config.JetpackTier(level)
-	local nextLevel = if tiers[i + 1] then tiers[i + 1].Level else Config.Jetpack.MaxLevel
 	local nextReach = if tiers[i + 1] then tiers[i + 1].Reach else Config.Jetpack.MaxReach
-	local k = math.clamp(((level or 1) - t.Level) / math.max(1, nextLevel - t.Level), 0, 1)
-	return t.Reach + (nextReach - t.Reach) * k
+	return t.Reach + (nextReach - t.Reach) * (Config.JetProgress(level) - i)
 end
 
 -- Carburant (secondes de poussée) qui donne cette portée : on monte à Climb studs/s pendant F s
@@ -649,7 +717,7 @@ end
 
 function Config.UpgradeCost(id: string, level: number): number
 	local u = Config.Upgrades[id]
-	return math.floor(u.Base * u.Growth ^ level + 0.5)
+	return Config.StepCost(u.Base, u.Growth, level, 0)
 end
 
 -- BIOMES : chaque anneau a sa lumière, sa brume, sa teinte et ses particules ---------
@@ -728,7 +796,9 @@ Config.Sounds = {
 		Hatch = { Id = 9043151109, Volume = 0.5 }, -- commune à rare
 		HatchRare = { Id = 9038916885, Volume = 0.6 }, -- épique et au-delà
 		LevelUp = { Id = 1839881844, Volume = 0.45 },
-		Reward = { Id = 9038916885, Volume = 0.6 },
+		-- cadeau, quête ou achat réclamé : un petit « réussi » de 0,7 s (15 nov. : avant, la même fanfare de
+		-- 8 s que l'éclosion rare, pénible à chaque réclamation). Volume réglé à l'oreille restant à faire.
+		Reward = { Id = 91735091370012, Volume = 0.5 },
 		-- jetpack
 		JetStart = { Id = 104612149748953, Volume = 0.3 }, -- allumage
 		JetStop = { Id = 87598090301048, Volume = 0.12 }, -- extinction
@@ -984,7 +1054,7 @@ Config.Shop = {
 		Name = "Starter Pack",
 		Text = "Big money pack + x2 Luck + x2 Money potions",
 		Art = "Money4",
-		PackBase = 45000, -- comme le 3e paquet d'argent
+		PackBase = 225000, -- comme le 3e paquet d'argent
 		Id = 3729245985,
 		Price = 99,
 		Duration = 3 * 86400,
@@ -1018,14 +1088,15 @@ Config.Shop = {
 	},
 	-- Boost gratuit contre une pub récompensée
 	FreeBoost = { Name = "Free x2 Boost", Minutes = 5, Art = "FreeBoost" },
-	-- Paquets d'argent : montant = Base × Config.Hatch.RingIncome de l'anneau le plus loin débloqué
-	-- (environ 4 min à 35 min de revenus), pour qu'un paquet reste intéressant à toutes les étapes du jeu
+	-- Paquets d'argent : montant = Base × Config.Hatch.RingIncome de l'anneau le plus loin débloqué,
+	-- pour qu'un paquet reste intéressant à toutes les étapes du jeu. × 5 le 15 nov., comme les prix en $ :
+	-- un paquet achète la même chose qu'avant.
 	MoneyPacks = {
-		{ Art = "Money1", Base = 6000, Id = 3729246128, Price = 19 },
-		{ Art = "Money2", Base = 20000, Id = 3729246160, Price = 49 },
-		{ Art = "Money3", Base = 45000, Id = 3729246196, Price = 99 },
-		{ Art = "Money4", Base = 120000, Id = 3729246217, Price = 249 },
-		{ Art = "Money5", Base = 260000, Id = 3729246247, Price = 499 },
+		{ Art = "Money1", Base = 30000, Id = 3729246128, Price = 19 },
+		{ Art = "Money2", Base = 100000, Id = 3729246160, Price = 49 },
+		{ Art = "Money3", Base = 225000, Id = 3729246196, Price = 99 },
+		{ Art = "Money4", Base = 600000, Id = 3729246217, Price = 249 },
+		{ Art = "Money5", Base = 1300000, Id = 3729246247, Price = 499 },
 	},
 }
 
@@ -1360,36 +1431,33 @@ function Config.Probabilities(ringIndex: number, luck: number): { number }
 	return p
 end
 
--- GUIDE DE LA PREMIÈRE MINUTE (Guide.client) ------------------------------------------
+-- GUIDE DES PREMIÈRES MINUTES (Guide.client) ------------------------------------------
 -- Fait pour qu'un enfant suive sans lire : bulles de 3 à 5 mots, grosses icônes, flèche au sol,
 -- main qui montre le geste, petite fête à chaque réussite. Il accompagne le joueur pendant toute la
--- première boucle (et ses détours). Pas d'étape « va à l'anneau 2 » : le joueur ira de lui-même.
--- Étapes enregistrées (d.guide) :
---   0 voler jusqu'à une roche et forer   1 rapporter l'œuf à la machine   2 poser l'œuf
---   3 faire éclore (et aller chercher un 2e œuf pendant l'incubation)   4 « ta créature rapporte des $ »
---   5 avoir Pets créatures   6 acheter sa soufflerie   7 jetpack au niveau JetLevel
---   8 acheter la foreuse n° Drill   9 acheter un niveau de Scanner (la chance)   10 (= Steps) terminé
--- (ordre et niveaux revus après un test du 7 nov. : soufflerie avant la foreuse, niveau 3 suffit)
+-- première boucle : forer, rapporter, poser, faire éclore, puis s'entraîner et s'équiper.
+-- Pas d'étape « va à l'anneau 2 » : le joueur ira de lui-même.
+-- Étapes enregistrées (d.guide) = nombre d'étapes franchies (15 nov. : plus de géode à vendre) :
+--   0 voler jusqu'à une roche et forer   1 rapporter la roche à la machine   2 poser l'œuf dans sa base
+--   3 le faire éclore (« ta créature rapporte des $ »)   4 acheter sa soufflerie
+--   5 s'y entraîner jusqu'au niveau JetLevel du jetpack   6 acheter la foreuse n° Drill   7 (= Steps) terminé
 Config.Guide = {
-	-- Tutoriel : une géode guidée de A à Z à vendre au stand SELL, puis une surprise : un œuf Épique,
-	-- la soufflerie, la nouvelle foreuse et la récompense.
-	Steps = 9,
+	Steps = 7,
 	Drill = 2,
-	SecondRarity = 4, -- rareté de l'œuf surprise (Épique)
-	GeodeRarity = 2, -- minerai de la géode du tutoriel : 15 x 60 x 1,6 = 1 440 $, de quoi payer la soufflerie
-	GeodeSize = "Large",
-	Reward = { Money = 1000, Luck = 15, MoneyBoost = 15 }, -- fin du tutoriel : 5 000 $ et potions x2 de 15 min
+	JetLevel = 5, -- niveau du jetpack à atteindre dans sa soufflerie (étape 5)
+	TunnelTime = 5, -- secondes à passer dans le courant d'air pour valider l'étape 5, même si le niveau est déjà là
+	FirstRarity = 3, -- rareté du tout premier œuf (Rare) : un vrai « wow », et de quoi payer la soufflerie
+	Reward = { Money = 1000, Luck = 15, MoneyBoost = 15 }, -- fin du tutoriel : $ (× revenu de base de l'anneau 1) et potions x2 de 15 min
 	Arrow = "rbxassetid://111578532993258", -- chevrons blancs à contour sombre (poutre au sol)
 	-- (Tips : « machine » = panneau de première fois des améliorations)
 	MachineNear = 18, -- studs : assez près de la machine pour appuyer sur E
 	PetCheer = 5, -- secondes de « ta créature rapporte des $ »
 	-- Nom de chaque étape dans l'entonnoir Onboarding (Tracking) ; l'étape 1 de l'entonnoir est « Join »
 	Names = {
-		"Geode drilled", "Geode opened", "Gem sold", "Rare egg drilled", "Machine used",
-		"Egg placed", "Rare pet hatched", "Wind tunnel bought", "New drill bought",
+		"Egg drilled", "Machine used", "Egg placed", "Pet hatched",
+		"Wind tunnel bought", "Jetpack trained", "New drill bought",
 	},
 	-- Tutoriels au bon moment : une seule fois par joueur, quand il en a besoin (Guide.client)
-	Tips = { geode = true, gem = true, basefull = true, supernova = true, rewards = true, fuse = true, monsters = true, mailbox = true, scanner = true, starter = true, machine = true },
+	Tips = { basefull = true, rewards = true, fuse = true, monsters = true, mailbox = true, scanner = true, starter = true, machine = true },
 	TipMax = 40, -- secondes avant qu'un tip non suivi s'efface tout seul
 	TipShort = 12, -- idem pour un tip sans endroit où aller
 	TipGap = 25, -- secondes de calme entre deux tips d'information (récompenses, fusion, monstres...)
@@ -1422,22 +1490,22 @@ Config.Mobile = {
 -- bonus du groupe Roblox, boost gratuit contre une pub. Jamais d'œufs ni de créatures.
 -- Une récompense : { Money = unités, Luck / MoneyBoost / JetXP = minutes de potion }.
 -- Money est en « secondes de revenu de base » de l'anneau le plus lointain atteint
--- (Config.Hatch.RingIncome) : 200 = 1K $ dans l'anneau 1, 35,6K $ dans l'anneau 2... Elle reste
+-- (Config.Hatch.RingIncome) : 600 = 3K $ dans l'anneau 1, 107K $ dans l'anneau 2... Elle reste
 -- intéressante à toutes les étapes. Les journées changent à minuit UTC.
 Config.Rewards = {
 	Daily = {
-		{ Money = 200 },
+		{ Money = 600 },
 		{ Luck = 10 },
-		{ Money = 400 },
+		{ Money = 1200 },
 		{ MoneyBoost = 10 },
-		{ Money = 800 },
+		{ Money = 2400 },
 		{ JetXP = 15 },
-		{ Money = 2000, Luck = 15, MoneyBoost = 15 }, -- jour 7 : le gros cadeau
+		{ Money = 6000, Luck = 15, MoneyBoost = 15 }, -- jour 7 : le gros cadeau
 	},
 	Playtime = {
-		{ Minutes = 5, Reward = { Money = 100 } },
+		{ Minutes = 5, Reward = { Money = 300 } },
 		{ Minutes = 15, Reward = { Luck = 5 } },
-		{ Minutes = 30, Reward = { Money = 400 } },
+		{ Minutes = 30, Reward = { Money = 1200 } },
 		{ Minutes = 60, Reward = { MoneyBoost = 15, JetXP = 15 } },
 	},
 	-- Quêtes : 3 tirées chaque jour dans cette liste (les mêmes pour un joueur toute la journée).
@@ -1450,12 +1518,12 @@ Config.Rewards = {
 		{ Kind = "tunnel", Text = "Train %d s in your wind tunnel", Goal = { 90, 150 }, Art = "WindTunnel" },
 		{ Kind = "income", Text = "Earn %s from your pets", IncomeGoal = 600, Art = "Cash" },
 	},
-	QuestReward = { Money = 200 }, -- 1K $ dans l'anneau 1
+	QuestReward = { Money = 600 }, -- 3K $ dans l'anneau 1
 	AllQuestsReward = { Luck = 15 }, -- en plus, à la 3e quête réclamée
 	-- Groupe Roblox : 0 = le groupe propriétaire du jeu (s'il appartient à un groupe)
 	GroupId = 0,
 	GroupLuck = 0.1, -- +10 % de chance tant qu'on est membre
-	GroupReward = { Money = 500 }, -- une fois, au premier « Claim »
+	GroupReward = { Money = 1500 }, -- une fois, au premier « Claim »
 	-- Boost gratuit contre une pub récompensée (AdService) : la récompense passe par le produit de la
 	-- potion x2 Luck (canal AdReward), on donne alors ces potions-ci au lieu de l'achat normal
 	AdBoost = { Luck = 5, MoneyBoost = 5 },
@@ -1463,35 +1531,21 @@ Config.Rewards = {
 }
 -- Codes promo (en majuscules) : une fois par joueur
 Config.Codes = {
-	WELCOME = { Money = 500, Luck = 10 },
-	SPACEEGG = { Money = 1000 },
+	WELCOME = { Money = 1500, Luck = 10 },
+	SPACEEGG = { Money = 3000 },
 	DRILLTIME = { JetXP = 15, MoneyBoost = 10 },
 }
 
--- GÉODES (GameService, MachineService, GemService) -------------------------------------
--- Quand on fore, une fois sur 3 c'est une géode au lieu d'un œuf (même rareté tirée, même chance du
--- scanner). On la ramène au vaisseau comme un œuf (oxygène compris) ; la machine de la base la fend
--- et révèle un minerai de l'anneau (Config.Rings[anneau].Crystals[rareté]) qui va dans le sac de
--- minerais. On le vend au stand SELL.
--- Prix = revenu d'une créature de même anneau et même rareté (Config.CreatureIncome) × SellSeconds
--- × taille (Config.Sizes) × ShinyMult s'il est brillant (Config.ShinyChance).
-Config.Geodes = {
-	Chance = 1 / 3,
-	SellSeconds = 60,
-	BagMax = 200, -- minerais gardés au plus ; au-delà, le nouveau est vendu tout de suite
-}
-
 -- AMÉLIORATIONS DE LA MACHINE À DÉROCHER (MachineService, MachineUI.client) -------------------------
--- Trois améliorations à 20 niveaux, payées en $, remises à zéro par la Supernova. Coût du niveau n = Base × Growth^n.
+-- Deux améliorations à 20 niveaux, payées en $. Coût du niveau n = Base × Growth^n.
 -- Le total des niveaux donne à la machine une couleur de plus en plus rare (Tiers).
 Config.Machine = {
 	Max = 20,
 	MinTime = 1.8, -- secondes : en dessous, l'animation de la machine n'a plus le temps de se jouer
-	Order = { "Speed", "Luck", "Polish" },
+	Order = { "Speed", "Luck" },
 	Tracks = {
-		Speed = { Name = "Turbo Motor", Text = "Less waiting at the machine", Art = "MachineSpeed", Base = 1500, Growth = 3, PerLevel = 0.93, Color = Color3.fromRGB(255, 165, 50) },
-		Luck = { Name = "Lucky Core", Text = "Chance of +1 rarity", Art = "MachineLuck", Base = 4000, Growth = 3.1, PerLevel = 0.01, Color = Color3.fromRGB(110, 230, 80) },
-		Polish = { Name = "Gem Polisher", Text = "Gems sell for more", Art = "MachinePolish", Base = 2500, Growth = 3, PerLevel = 0.1, Color = Color3.fromRGB(80, 190, 255) },
+		Speed = { Name = "Turbo Motor", Text = "Less waiting at the machine", Art = "MachineSpeed", Base = 7500, Growth = 3.3, Shift = 2, PerLevel = 0.93, Color = Color3.fromRGB(255, 165, 50) },
+		Luck = { Name = "Lucky Core", Text = "Chance of +1 rarity", Art = "MachineLuck", Base = 20000, Growth = 3.7, Shift = 4, PerLevel = 0.01, Color = Color3.fromRGB(110, 230, 80) },
 	},
 	Tiers = {
 		{ Min = 0, Name = "Standard", Accent = Color3.fromRGB(255, 208, 110), Glow = Color3.fromRGB(255, 176, 60) },
@@ -1505,7 +1559,7 @@ Config.Machine = {
 
 function Config.MachineCost(key: string, level: number): number
 	local t = Config.Machine.Tracks[key]
-	return math.floor(t.Base * t.Growth ^ level + 0.5)
+	return Config.StepCost(t.Base, t.Growth, level, t.Shift)
 end
 
 -- Secondes pour dégager un œuf de cette rareté
@@ -1515,22 +1569,17 @@ function Config.MachineTime(rarity: number, speedLevel: number): number
 	return math.max(Config.Machine.MinTime, time)
 end
 
--- Chance (0 à 1) de monter d'une rareté, et multiplicateur de valeur des minerais
+-- Chance (0 à 1) de monter d'une rareté
 function Config.MachineLuck(level: number): number
 	return Config.Machine.Tracks.Luck.PerLevel * level
-end
-function Config.MachinePolish(level: number): number
-	return 1 + Config.Machine.Tracks.Polish.PerLevel * level
 end
 
 -- Texte court de l'effet à ce niveau (fenêtre)
 function Config.MachineEffect(key: string, level: number): string
 	if key == "Speed" then
 		return ("-%d%%"):format(math.floor((1 - Config.Machine.Tracks.Speed.PerLevel ^ level) * 100 + 0.5))
-	elseif key == "Luck" then
-		return ("%d%%"):format(math.floor(Config.MachineLuck(level) * 100 + 0.5))
 	end
-	return ("x%.1f"):format(Config.MachinePolish(level))
+	return ("%d%%"):format(math.floor(Config.MachineLuck(level) * 100 + 0.5))
 end
 
 -- Palier de couleur selon le total des niveaux : palier actuel, palier suivant (ou nil)
@@ -1545,45 +1594,14 @@ function Config.MachineTier(total: number): (any, any?)
 	return tiers[index], tiers[index + 1]
 end
 
--- SUPERNOVA (renaissance, docs/Interfaces.md §11) ------------------------------------------
--- On repart de zéro : $, foreuse (sauf celle payée en Robux), scanner, machine, niveau du jetpack, soufflerie
--- et œuf porté. On garde : créatures (base et sac), œufs, Index, minerais, skins, passes et potions.
--- En échange : +50 % de revenus des créatures pour toujours, cumulable (x1,5, x2, x2,5…).
--- La première coûte 5 M$, chaque suivante coûte Growth fois plus. Le bouton SUPERNOVA n'apparaît
--- qu'à partir du niveau Level du jetpack (25 = Comet Pack, celui de l'anneau 3), et il disparaît
--- après chaque Supernova jusqu'à ce qu'on y revienne.
-Config.Supernova = {
-	Base = 5e6,
-	Growth = 8,
-	MoneyBonus = 0.5, -- par Supernova, en plus (additif)
-	Level = 25, -- niveau du jetpack à atteindre pour voir le bouton et pouvoir exploser
-	Delay = 1.6, -- secondes d'explosion à l'écran avant le retour à la base
+-- REVENU HORS LIGNE (HatchService, Offers.client) --------------------------------------------------
+-- Les créatures de la base continuent de rapporter quand le joueur est parti : Rate × leur revenu
+-- (passes et reliques compris, pas les potions), pendant au plus MaxHours heures. Rester en jeu rapporte
+-- donc toujours plus que partir (revenu complet, et la soufflerie qui tourne).
+Config.Offline = {
+	Rate = 0.4, -- part du revenu en ligne (le revenu d'une heure ÷ 2,5)
+	MaxHours = 6,
+	MinSeconds = 120, -- en dessous, rien (une simple reconnexion)
 }
-
--- Prix de la prochaine Supernova quand on en a déjà fait n
-function Config.SupernovaCost(n: number): number
-	return Config.Supernova.Base * Config.Supernova.Growth ^ n
-end
-
--- Multiplicateur de revenus après n Supernovas
-function Config.SupernovaMult(n: number): number
-	return 1 + Config.Supernova.MoneyBonus * n
-end
-
--- Nom du minerai d'un anneau et d'une rareté
-function Config.GemName(ringIndex: number, rarity: number): string
-	local ring = Config.Rings[math.clamp(ringIndex, 1, #Config.Rings)]
-	local name = ring.Crystals[rarity]
-	if not name or name == "" then
-		name = ring.Crystals[#ring.Crystals - 1] or "Gem"
-	end
-	return name
-end
-
--- Valeur d'un minerai en $
-function Config.GemValue(ringIndex: number, rarity: number, sizeMult: number, shiny: boolean): number
-	local v = Config.CreatureIncome(ringIndex, rarity, 1) * Config.Geodes.SellSeconds * sizeMult * (if shiny then Config.ShinyMult else 1)
-	return math.max(1, math.floor(v + 0.5))
-end
 
 return Config

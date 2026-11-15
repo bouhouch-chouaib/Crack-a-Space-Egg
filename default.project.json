@@ -38,12 +38,6 @@
         "OpenCreatures": {
           "$className": "RemoteEvent"
         },
-        "CrackAll": {
-          "$className": "RemoteEvent"
-        },
-        "CrackResult": {
-          "$className": "RemoteEvent"
-        },
         "BuyUpgrade": {
           "$className": "RemoteEvent"
         },
@@ -87,12 +81,6 @@
           "$className": "RemoteEvent"
         },
         "Rewards": {
-          "$className": "RemoteFunction"
-        },
-        "Gems": {
-          "$className": "RemoteFunction"
-        },
-        "Supernova": {
           "$className": "RemoteFunction"
         },
         "Feedback": {

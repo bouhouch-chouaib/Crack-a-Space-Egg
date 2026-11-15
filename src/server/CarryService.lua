@@ -3,6 +3,7 @@
 -- on voit tout de suite qu'on porte déjà quelque chose. Visible par tous ; Hatchery.client lève les bras.
 
 local CollectionService = game:GetService("CollectionService")
+local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -102,6 +103,31 @@ function CarryService.Update(player: Player)
 			carried[player] = made
 		end
 	end
+end
+
+-- Le joueur lâche sa roche (GearService) : elle quitte ses mains et tombe, visible par tous
+function CarryService.Drop(player: Player)
+	local cur = carried[player]
+	carried[player] = nil
+	if not cur or not cur.Parent then
+		return
+	end
+	local core = cur.PrimaryPart
+	local weld = core and core:FindFirstChild("HoldWeld")
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not core or not weld then
+		cur:Destroy()
+		return
+	end
+	weld:Destroy()
+	cur.Name = "DroppedRock"
+	cur.Parent = workspace
+	core:SetNetworkOwner(nil)
+	local look = if hrp then hrp.CFrame.LookVector else Vector3.zAxis
+	core.AssemblyLinearVelocity = look * 12 + Vector3.new(0, 14, 0)
+	core.AssemblyAngularVelocity = Vector3.new(3, 1, 2)
+	Debris:AddItem(cur, 3)
 end
 
 local function watch(player: Player)

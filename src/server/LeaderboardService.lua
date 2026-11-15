@@ -27,10 +27,10 @@ local STATS = {
 		Read = function(d) return d.credits end,
 		Encode = function(v: number): number return math.floor(math.log10(math.max(1, v)) * 1e6) end,
 		Decode = function(x: number): number return 10 ^ (x / 1e6) end,
-		Key = "LB_Credits_v3", -- v3 : classements remis à zéro avec les parties (15 nov. 2026)
+		Key = "LB_Credits_v4", -- v4 : classements remis à zéro avec les parties (Player_v3, 15 nov. 2026)
 	},
-	Eggs = { Title = "EGGS CRACKED", Icon = "Egg", Read = function(d) return d.stats.geodes end, Key = "LB_Eggs_v2" },
-	Best = { Title = "BEST FIND", Icon = "Star", Read = function(d) return d.stats.best end, Key = "LB_Best_v2" },
+	Eggs = { Title = "EGGS HATCHED", Icon = "Egg", Read = function(d) return d.stats.hatched or 0 end, Key = "LB_Eggs_v3" },
+	Best = { Title = "BEST FIND", Icon = "Star", Read = function(d) return d.stats.best end, Key = "LB_Best_v3" },
 }
 
 local stores: { [string]: OrderedDataStore? } = {}

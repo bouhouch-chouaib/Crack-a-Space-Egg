@@ -33,11 +33,9 @@ end
 function Testers.Grant(d)
 	local T = Config.Testers
 	d.credits = math.max(d.credits or 0, T.Money)
-	-- équipement au plus haut palier (« payé » : une Supernova ne le reprend pas)
+	-- équipement au plus haut palier
 	d.drill = #Config.Drills
-	d.paidDrill = #Config.Drills
 	d.suit = #Config.Suits
-	d.paidSuit = #Config.Suits
 	d.bat = #Config.Bats
 	d.shields = math.max(d.shields or 0, T.Shields)
 	d.levels = d.levels or {}
@@ -49,29 +47,18 @@ function Testers.Grant(d)
 		d.machine[key] = Config.Machine.Max
 	end
 	d.tunnel = #Config.Jetpack.Tunnels
-	-- jetpack au niveau maximum : tous les anneaux à portée
-	local xp = 0
-	for level = 1, Config.Jetpack.MaxLevel - 1 do
-		xp += Config.JetpackXPNeed(level)
-	end
-	d.jetXP = math.max(d.jetXP or 0, xp)
+	-- jetpack au niveau où la portée est la plus grande : tous les anneaux à portée
+	d.jetXP = math.max(d.jetXP or 0, Config.JetpackXPTotal(Config.Jetpack.TopLevel))
 	d.ring = #Config.Rings
 	-- skins : ceux en $ ici, ceux en Robux par les passes (considérés comme achetés)
 	d.skins = d.skins or {}
 	for _, s in ipairs(Config.DrillSkins) do
 		d.skins[s.Key] = true
 	end
-	-- skins de base débloqués par les Supernovas
-	local need = 0
-	for _, s in ipairs(Config.BaseSkins) do
-		need = math.max(need, s.Supernovas or 0)
-	end
-	d.supernovas = math.max(d.supernovas or 0, need)
+	-- (les skins de base gratuits suivent d.ring, mis au dernier anneau juste au-dessus)
 	-- reliques
-	d.relics = d.relics or {}
 	d.relicsFound = d.relicsFound or {}
 	for _, r in ipairs(Config.Relics) do
-		d.relics[r.Key] = math.max(d.relics[r.Key] or 0, 1)
 		d.relicsFound[r.Key] = true
 	end
 	-- une créature de chaque espèce dans le sac, et l'Index complet

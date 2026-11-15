@@ -3,11 +3,10 @@
 -- - Chaque vendeur astronaute (tag « ShopVendor ») respire en boucle ; quand le joueur arrive à moins
 --   de WAVE_RANGE studs, il lui fait coucou (une fois, puis de nouveau s'il revient plus tard).
 -- - Marcher sur le tapis (« Mat ») devant un stand ouvre directement son menu, sans touche à appuyer :
---   STORE = boutique Robux, ITEMS = atelier des foreuses, SELL = comptoir de vente. Il faut quitter
---   le tapis pour qu'il puisse se rouvrir (on peut donc fermer la fenêtre en restant dessus).
---   Les boutons rouges de sa base (machine, tube) marchent pareil, et s'enfoncent sous le pied.
---   En quittant le tapis, ses fenêtres se ferment toutes seules (SELL : aussi celle des créatures
---   ouverte par SELL PETS ; ITEMS : aussi BASE SKINS).
+--   STORE = boutique Robux, ITEMS = atelier des foreuses, SELL = fenêtre des créatures en mode vente.
+--   Il faut quitter le tapis pour qu'il puisse se rouvrir (on peut donc fermer la fenêtre en restant
+--   dessus). Les boutons rouges de sa base (machine, tube) marchent pareil, et s'enfoncent sous le pied.
+--   En quittant le tapis, ses fenêtres se ferment toutes seules (ITEMS : aussi BASE SKINS).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -64,9 +63,11 @@ for _, m in ipairs(CollectionService:GetTagged("ShopVendor")) do
 end
 
 -- TAPIS DES STANDS : fenêtre ouverte en marchant dessus ----------------------------------------
-local OPEN = { Store = "Store", Items = "DrillShop", Sell = "Sell", Mail = "Feedback" } -- attribut Shop du stand -> fenêtre
+local OPEN = { Store = "Store", Items = "DrillShop", Sell = "Creatures", Mail = "Feedback" } -- attribut Shop du stand -> fenêtre
+-- mode imposé à l'ouverture : le stand SELL ouvre les créatures en mode vente
+local MODE = { Creatures = "sell" }
 -- fenêtres fermées en quittant le tapis (noms des UIKit.window)
-local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop", "BaseSkins" }, Sell = { "Sell", "CreaturesWindow" }, Feedback = { "Feedback" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" } }
+local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop", "BaseSkins" }, Creatures = { "CreaturesWindow" }, Feedback = { "Feedback" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" } }
 local MAT_MARGIN = 1 -- studs autour du tapis qui comptent encore
 type Mat = { part: BasePart, window: string, on: boolean, radius: number?, home: CFrame? }
 local mats: { Mat } = {}
@@ -158,7 +159,7 @@ RunService.RenderStepped:Connect(function()
 		end
 		if on and not m.on then
 			Sfx.Play("Open")
-			UIKit.Open:Fire(m.window, player:GetAttribute("ShopTab"))
+			UIKit.Open:Fire(m.window, MODE[m.window] or player:GetAttribute("ShopTab"))
 			player:SetAttribute("ShopTab", nil)
 		elseif m.on and not on then
 			for _, name in ipairs(CLOSE[m.window] or {}) do

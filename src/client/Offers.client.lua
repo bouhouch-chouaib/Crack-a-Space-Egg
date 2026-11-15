@@ -1,9 +1,11 @@
--- Petits panneaux qui arrivent la première fois qu'une situation se présente (après le tutoriel) :
+-- Petits bandeaux qui arrivent la première fois qu'une situation se présente (après le tutoriel) :
 --   3 créatures identiques   « Try fusion? » : OUI = devant la machine, avec des flèches (attribut FuseTour)
 --   nouveau matériel payable  foreuse ou Scanner : ITEMS ; soufflerie : TUNNEL ; Starter Pack : STORE.
 --                             Le bouton amène le joueur devant le stand et son menu s'ouvre tout seul.
--- Et le panneau de fin de tutoriel, avec sa récompense (attribut TutorialReward, RewardService).
--- « LATER » : on n'insiste plus pendant cette session ; l'offre revient à la prochaine partie.
+-- Ils sont discrets (retour de test du 15 nov. : le gros panneau au milieu de l'écran coupait le jeu) :
+-- un petit bandeau en haut de l'écran, qui s'en va tout seul au bout de MINI_TIME secondes.
+-- Et le grand panneau de fin de tutoriel, avec sa récompense (attribut TutorialReward, RewardService).
+-- Croix ou bandeau ignoré : on n'insiste plus pendant cette session ; l'offre revient à la prochaine partie.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -19,7 +21,8 @@ local player = Players.LocalPlayer
 local G = Config.Guide
 local new = UIKit.new
 
-local GAP = 20 -- secondes de calme entre deux panneaux
+local GAP = 45 -- secondes de calme entre deux bandeaux
+local MINI_TIME = 12 -- secondes avant qu'un bandeau ignoré s'en aille
 local W, H = 520, 240
 
 local gui = new("ScreenGui", { Name = "Offers", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 8, Parent = player:WaitForChild("PlayerGui") })
@@ -44,6 +47,26 @@ local later, laterText = UIKit.priceButton({ parent = card, text = "LATER", colo
 later.Name = "Later"
 laterText.TextSize = 24
 
+-- Bandeau discret en haut de l'écran : icône, deux lignes, bouton, croix
+local MW, MH = 440, 60
+local mini = new("Frame", { Name = "Mini", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(MW, MH), BackgroundTransparency = 1, Visible = false, Parent = gui })
+UIKit.autoScale(mini)
+local miniCard = new("Frame", { Name = "Card", Size = UDim2.fromScale(1, 1), BackgroundColor3 = UIKit.Panel, Parent = mini }, { UIKit.corner(12), UIKit.stroke(3.5) })
+UIKit.studs(miniCard, 0.5, "Inlets", 22)
+local miniIcon = UIKit.icon("Star", { Size = UDim2.fromOffset(52, 52), Position = UDim2.fromOffset(6, 4), ZIndex = 3, Parent = miniCard })
+local miniTitle = UIKit.text({ Size = UDim2.fromOffset(214, 26), Position = UDim2.fromOffset(64, 4), Text = "", TextColor3 = Color3.fromRGB(255, 225, 110), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Stroke = 2.5, Parent = miniCard })
+new("UITextSizeConstraint", { MaxTextSize = 22, MinTextSize = 10, Parent = miniTitle })
+local miniBody = UIKit.text({ Size = UDim2.fromOffset(214, 22), Position = UDim2.fromOffset(64, 32), Text = "", TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Stroke = 2, Parent = miniCard })
+new("UITextSizeConstraint", { MaxTextSize = 17, MinTextSize = 9, Parent = miniBody })
+local miniGo, miniGoText = UIKit.priceButton({ parent = miniCard, text = "", color = "Green", size = UDim2.fromOffset(104, 42), position = UDim2.fromOffset(284, 9) })
+miniGo.Name = "Go"
+miniGoText.TextSize = 20
+miniGoText.AutomaticSize = Enum.AutomaticSize.None
+miniGoText.Size = UDim2.fromOffset(96, 28)
+local miniClose = new("TextButton", { Name = "Close", Size = UDim2.fromOffset(36, 36), Position = UDim2.fromOffset(396, 12), BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, Text = "", ZIndex = 4, Parent = miniCard }, { UIKit.corner(8), UIKit.stroke(3), UIKit.gradient(UIKit.Colors.Red[1], UIKit.Colors.Red[2]) })
+UIKit.icon("Cross", { Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), ZIndex = 5, Parent = miniClose })
+UIKit.juice(miniClose)
+
 type Offer = { key: string?, art: string, title: string, text: string, button: string, go: (() -> ())?, single: boolean? }
 local shown: Offer? = nil
 local lastEnd = os.clock()
@@ -52,6 +75,28 @@ local dismissed: { [string]: boolean } = {}
 
 local function display(o: Offer)
 	shown = o
+	if not o.single then
+		-- bandeau discret : il glisse du haut de l'écran, un petit « pop », et s'en va tout seul
+		miniIcon.Image = UIKit.Art[o.art] or o.art
+		miniTitle.Text = o.title
+		miniBody.Text = o.text
+		miniGoText.Text = o.button
+		mini.Position = UDim2.new(0.5, 0, 0, -MH - 20)
+		mini.Visible = true
+		UIKit.tween(mini, 0.35, { Position = UDim2.new(0.5, 0, 0, 6) }, Enum.EasingStyle.Back)
+		Sfx.Play("Pop", { volume = 0.5 })
+		task.delay(MINI_TIME, function()
+			if shown == o then
+				if o.key then
+					dismissed[o.key] = true
+				end
+				mini.Visible = false
+				shown = nil
+				lastEnd = os.clock()
+			end
+		end)
+		return
+	end
 	icon.Image = UIKit.Art[o.art] or o.art
 	title.Text = o.title
 	body.Text = o.text
@@ -66,6 +111,7 @@ end
 
 local function hide()
 	holder.Visible = false
+	mini.Visible = false
 	shown = nil
 	lastEnd = os.clock()
 end
@@ -74,7 +120,7 @@ local function seen(key: string)
 	Remotes.Guide:FireServer("tip", key)
 end
 
-main.MouseButton1Click:Connect(function()
+local function accept()
 	local o = shown
 	if not o then
 		return
@@ -86,14 +132,18 @@ main.MouseButton1Click:Connect(function()
 	if o.go then
 		o.go()
 	end
-end)
-later.MouseButton1Click:Connect(function()
+end
+local function refuse()
 	local o = shown
 	if o and o.key then
 		dismissed[o.key] = true
 	end
 	hide()
-end)
+end
+main.MouseButton1Click:Connect(accept)
+later.MouseButton1Click:Connect(refuse)
+miniGo.MouseButton1Click:Connect(accept)
+miniClose.MouseButton1Click:Connect(refuse)
 
 -- VOYAGE ------------------------------------------------------------------------------------------
 
@@ -183,32 +233,32 @@ end
 local function nextOffer(): Offer?
 	local credits = attr("Credits")
 	if fresh("fuse") and canFuse() then
-		return { key = "fuse", art = "Creatures", title = "3 same pets!", text = "Fuse them into a stronger one. Want to try?", button = "YES!", go = toFusion }
+		return { key = "fuse", art = "Creatures", title = "3 same pets!", text = "Fuse them into a stronger one", button = "YES!", go = toFusion }
 	end
 	local tier = attr("Drill") + 1
 	local drill = Config.Drills[tier]
 	if drill and credits >= drill.Cost and fresh("drill" .. tier) then
-		return { key = "drill" .. tier, art = "UpDrill", title = "New drill!", text = ("%s for $%s: it drills much faster"):format(drill.Name, Format.Short(drill.Cost)), button = "ITEMS", go = function()
+		return { key = "drill" .. tier, art = "UpDrill", title = "New drill!", text = ("%s: $%s"):format(drill.Name, Format.Short(drill.Cost)), button = "ITEMS", go = function()
 			toStand("ItemsStand")
 		end }
 	end
 	local scanner = Config.UpgradeCost("Scanner", attr("Lvl_Scanner"))
 	if attr("Lvl_Scanner") == 0 and credits >= scanner and fresh("scanner") then
-		return { key = "scanner", art = "UpScanner", title = "Scanner!", text = ("$%s: find rarer eggs"):format(Format.Short(scanner)), button = "ITEMS", go = function()
+		return { key = "scanner", art = "UpScanner", title = "Scanner!", text = ("Rarer eggs: $%s"):format(Format.Short(scanner)), button = "ITEMS", go = function()
 			toStand("ItemsStand", "Upgrades")
 		end }
 	end
 	local suitTier = attr("Suit") + 1
 	local nextSuit = Config.Suits[suitTier]
 	if nextSuit and credits >= nextSuit.Cost and fresh("suit" .. suitTier) then
-		return { key = "suit" .. suitTier, art = nextSuit.Art, title = "New suit!", text = ("%s for $%s: survive longer outside"):format(nextSuit.Name, Format.Short(nextSuit.Cost)), button = "ITEMS", go = function()
+		return { key = "suit" .. suitTier, art = nextSuit.Art, title = "New suit!", text = ("%s: $%s"):format(nextSuit.Name, Format.Short(nextSuit.Cost)), button = "ITEMS", go = function()
 			toStand("ItemsStand", "Suits")
 		end }
 	end
 	local batTier = attr("Bat") + 1
 	local nextBat = Config.Bats[batTier]
 	if nextBat and credits >= nextBat.Cost and fresh("bat" .. batTier) then
-		return { key = "bat" .. batTier, art = nextBat.Art, title = "New bat!", text = ("%s for $%s: stun monsters"):format(nextBat.Name, Format.Short(nextBat.Cost)), button = "ITEMS", go = function()
+		return { key = "bat" .. batTier, art = nextBat.Art, title = "New bat!", text = ("%s: $%s"):format(nextBat.Name, Format.Short(nextBat.Cost)), button = "ITEMS", go = function()
 			toStand("ItemsStand", "Gear")
 		end }
 	end
@@ -217,13 +267,13 @@ local function nextOffer(): Offer?
 	local level = tunnel and (tunnel:GetAttribute("Tier") or 0) :: number or 0
 	local nextTunnel = Config.Jetpack.Tunnels[level + 1]
 	if level >= 1 and nextTunnel and credits >= nextTunnel.Cost and fresh("tunnel" .. (level + 1)) then
-		return { key = "tunnel" .. (level + 1), art = "WindTunnel", title = "Better wind tunnel!", text = ("%s for $%s: train faster"):format(nextTunnel.Name, Format.Short(nextTunnel.Cost)), button = "TUNNEL", go = toTunnel }
+		return { key = "tunnel" .. (level + 1), art = "WindTunnel", title = "Better wind tunnel!", text = ("%s: $%s"):format(nextTunnel.Name, Format.Short(nextTunnel.Cost)), button = "TUNNEL", go = toTunnel }
 	end
 	if credits >= Config.MachineCost("Speed", attr("Mach_Speed")) and fresh("machine") then
-		return { key = "machine", art = "MachineUp", title = "Upgrade your machine!", text = "Faster, luckier, and better gems", button = "MACHINE", go = toMachine }
+		return { key = "machine", art = "MachineUp", title = "Upgrade your machine!", text = "Faster and luckier", button = "MACHINE", go = toMachine }
 	end
 	if Config.Shop.Featured.Id ~= 0 and fresh("starter") and not player:GetAttribute("StarterBought") and attr("StarterEnds") > os.time() then
-		return { key = "starter", art = "Shop", title = "Starter Pack!", text = "A big bundle of boosts, only for new players", button = "STORE", go = function()
+		return { key = "starter", art = "Shop", title = "Starter Pack!", text = "Big bundle for new players", button = "STORE", go = function()
 			toStand("StoreStand")
 		end }
 	end
@@ -239,6 +289,29 @@ local function onReward()
 	end
 end
 player:GetAttributeChangedSignal("TutorialReward"):Connect(onReward)
+
+-- REVENU HORS LIGNE -----------------------------------------------------------------------------------
+-- Les créatures ont travaillé pendant l'absence (HatchService, Config.Offline) : l'argent est déjà sur
+-- le compte, le panneau le montre une fois à l'arrivée.
+local function awayText(seconds: number): string
+	local h, m = seconds // 3600, (seconds % 3600) // 60
+	return if h > 0 then ("%dh %02dm"):format(h, m) else ("%d min"):format(math.max(1, m))
+end
+local function onOffline()
+	local got = player:GetAttribute("OfflineEarned")
+	local away = player:GetAttribute("OfflineSeconds")
+	if type(got) == "number" and got > 0 then
+		table.insert(waiting, {
+			art = "Cash",
+			title = "WELCOME BACK!",
+			text = ("Your pets earned $%s\nwhile you were away (%s)"):format(Format.Short(got), awayText(if type(away) == "number" then away else 0)),
+			button = "AWESOME!",
+			single = true,
+		})
+	end
+end
+player:GetAttributeChangedSignal("OfflineEarned"):Connect(onOffline)
+onOffline()
 
 task.spawn(function()
 	while true do

@@ -1,6 +1,6 @@
 -- Fenêtre MACHINE UPGRADES : s'ouvre en marchant sur le bouton rouge devant la machine (ShipShops.client).
 -- En haut : niveau total de la machine, son palier de couleur et ce qu'il reste pour le suivant.
--- Trois cartes : Moteur (vitesse), Cœur chanceux (+1 rareté), Polisseuse (valeur des minerais).
+-- Une carte par amélioration (Config.Machine.Order) : Moteur (vitesse) et Cœur chanceux (+1 rareté).
 -- Le serveur décide de tout (MachineService, Remotes.Machine).
 
 local Players = game:GetService("Players")
@@ -18,8 +18,11 @@ local M = Config.Machine
 
 local W_SIZE = Vector2.new(980, 620)
 local GAP = 14
-local CARD_W = math.floor((W_SIZE.X - GAP * 4) / 3)
+-- les cartes se partagent la largeur de la fenêtre, la rangée reste centrée
+local CARD_COUNT = math.max(1, #M.Order)
+local CARD_W = math.floor((W_SIZE.X - GAP * (CARD_COUNT + 1)) / CARD_COUNT)
 local CARD_H = 408
+local CARD_LEFT = math.floor((W_SIZE.X - (CARD_COUNT * CARD_W + (CARD_COUNT - 1) * GAP)) / 2)
 
 local win = UIKit.window({ name = "MachineUp", title = "{MachineUp} MACHINE UPGRADES", color = "Orange", size = W_SIZE })
 win.body.Visible = false
@@ -95,7 +98,7 @@ for i, key in ipairs(M.Order) do
 	local c = new("Frame", {
 		Name = key,
 		Size = UDim2.fromOffset(CARD_W, CARD_H),
-		Position = UDim2.fromOffset(GAP + (i - 1) * (CARD_W + GAP), 192),
+		Position = UDim2.fromOffset(CARD_LEFT + (i - 1) * (CARD_W + GAP), 192),
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		ZIndex = 2,
 		Parent = win.frame,
@@ -179,7 +182,7 @@ player.AttributeChanged:Connect(function(name)
 	end
 end)
 
--- PASTILLE DE LA MACHINE (à gauche des deux carrés d'inventaire) : temps restant et « Finish » en Robux,
+-- PASTILLE DE LA MACHINE (à gauche du carré d'inventaire) : temps restant et « Finish » en Robux,
 -- visible de partout tant que sa machine travaille
 local MarketplaceService = game:GetService("MarketplaceService")
 local chip: Frame?, chipTime: TextLabel?, chipPrice: TextLabel?

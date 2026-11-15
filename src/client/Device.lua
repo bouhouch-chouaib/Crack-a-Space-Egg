@@ -20,7 +20,7 @@ Device.Pad = {
 	Store = Enum.KeyCode.DPadLeft,
 	Index = Enum.KeyCode.DPadRight,
 	Rewards = Enum.KeyCode.DPadUp,
-	Supernova = Enum.KeyCode.DPadDown,
+	Drop = Enum.KeyCode.DPadDown, -- maintenir : lâcher la roche portée (GearBar.client)
 }
 
 local GAMEPADS = {

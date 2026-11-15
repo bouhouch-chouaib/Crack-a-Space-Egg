@@ -9,7 +9,7 @@ local Testers = require(script.Parent.Testers)
 
 local DataService = {}
 
-local VERSION = 4 -- v2 : soute { ring, rarity } ; v3 : foreuses une par une ; v4 : œufs et créatures dans la base
+local VERSION = 5 -- v2 : soute { ring, rarity } ; v3 : foreuses une par une ; v4 : œufs et créatures dans la base ; v5 : économie du 15 nov. (Player_v3)
 local store: DataStore? = nil
 local ok, err = pcall(function()
 	-- mode testeur : sauvegarde à part, les vraies parties restent intactes
@@ -33,7 +33,6 @@ local function default()
 		ring = 1, -- plus haut anneau débloqué
 		cargo = {}, -- un œuf par entrée : { ring = anneau d'origine, rarity = rareté } (encore pris dans la roche)
 		ready = {}, -- œufs dérochés par la machine, prêts à couver : { ring, rarity }
-		gems = {}, -- sac de minerais (géodes ouvertes) : { ring, rarity, size, mult, shiny, value }
 		jetXP = 0, -- XP totale du jetpack (niveau : Config.JetpackLevel)
 		tunnel = 0, -- palier de la soufflerie personnelle (0 = pas encore achetée)
 		boosts = {}, -- potions actives : [clé] = os.time() de fin (BoostService)
@@ -56,19 +55,17 @@ local function default()
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
 		pity = 0,
 		derocking = nil, -- l'œuf dans la machine (rendu à la soute si le joueur part avant la fin)
-		machine = { Speed = 0, Luck = 0, Polish = 0 }, -- niveaux de la machine à dérocher (MachineService)
+		machine = { Speed = 0, Luck = 0 }, -- niveaux de la machine à dérocher (MachineService)
 		guideRewarded = false, -- récompense de fin de tutoriel déjà donnée
 		tips = {}, -- ["clé"] = true : tutoriels au bon moment déjà montrés (Config.Guide.Tips)
 		feedback = { day = 0, count = 0 }, -- retours envoyés aujourd'hui (FeedbackService)
-		supernovas = 0, -- renaissances faites (Config.Supernova) : revenus x Config.SupernovaMult
-		paidDrill = 1, -- meilleure foreuse payée en Robux : la Supernova ne la reprend pas
 		suit = 1, -- palier de combinaison (Config.Suits)
-		paidSuit = 1, -- meilleure combinaison payée en Robux : la Supernova ne la reprend pas
 		bat = 0, -- palier de batte (Config.Bats, 0 = aucune)
 		shields = 0, -- boucliers anti-monstre en réserve (produit Robux)
-		relics = {}, -- ["clé"] = nombre : reliques gardées (RelicService)
-		relicsFound = {}, -- ["clé"] = true : reliques déjà trouvées, même vendues (collection)
-		stats = { geodes = 0, best = 0 },
+		relicsFound = {}, -- ["clé"] = true : reliques trouvées (RelicService) : chacune donne son bonus pour toujours
+		lastSeen = 0, -- os.time() de la dernière sauvegarde : sert au revenu hors ligne (HatchService)
+		offlineDue = 0, -- secondes hors ligne pas encore payées (créditées quelques secondes après l'arrivée)
+		stats = { hatched = 0, best = 0 },
 	}
 end
 
@@ -158,6 +155,7 @@ function DataService.Save(player: Player)
 		return
 	end
 	local key = "u_" .. player.UserId
+	data.lastSeen = os.time()
 	withRetries(function()
 		(store :: DataStore):UpdateAsync(key, function(old)
 			-- Ne jamais remplacer une sauvegarde d'une version plus récente du jeu

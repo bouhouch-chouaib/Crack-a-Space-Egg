@@ -5,6 +5,9 @@
 -- Les achats et l'XP sont gérés par le serveur (WindTunnelService) ; ici rien ne compte.
 -- Chaque seconde d'entraînement, des « +XP » jaillissent du joueur : d'autant plus nombreux, gros et
 -- dorés que la soufflerie est haut de gamme (Remotes.TunnelXP : XP gagnée, boosts compris, et palier).
+-- Bonus à attraper (Config.Jetpack.Boost) : de temps en temps un gros bouton « x2 » apparaît quelques
+-- secondes (attribut TunnelBoostOffer) ; cliqué à temps, l'XP est doublée un court moment (TunnelBoostEnd).
+-- Chaque niveau gagné dans la soufflerie : un flash très léger et un petit tremblement de la caméra.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -200,14 +203,21 @@ local TweenService = game:GetService("TweenService")
 local OUTLINE = Color3.fromRGB(22, 22, 32)
 local XP_COLORS = { Color3.fromRGB(150, 235, 255), Color3.fromRGB(110, 210, 255), Color3.fromRGB(140, 255, 200), Color3.fromRGB(255, 200, 90), Color3.fromRGB(255, 140, 220), Color3.fromRGB(190, 150, 255), Color3.fromRGB(255, 225, 90) }
 
+local function boosted(): boolean
+	local ends = player:GetAttribute("TunnelBoostEnd")
+	return type(ends) == "number" and ends > workspace:GetServerTimeNow()
+end
+
 local function popXP(amount: number, tier: number, i: number)
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not hrp then
 		return
 	end
-	local color = XP_COLORS[math.clamp(tier, 1, #XP_COLORS)]
-	local big = 1 + (tier - 1) * 0.12
+	-- bonus x2 en cours : bulles dorées et plus grosses
+	local gold = boosted()
+	local color = if gold then GOLD else XP_COLORS[math.clamp(tier, 1, #XP_COLORS)]
+	local big = (1 + (tier - 1) * 0.12) * (if gold then 1.35 else 1)
 	-- part du corps du joueur dans une direction au hasard, monte en s'écartant
 	local a = math.random() * math.pi * 2
 	local out = Vector3.new(math.cos(a), 0, math.sin(a))
@@ -267,5 +277,132 @@ ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TunnelXP").OnClientEvent
 	local extra = gain - base * count
 	for i = 0, count - 1 do
 		task.delay(i / count, popXP, base + (if i < extra then 1 else 0), tier, i)
+	end
+end)
+
+-- BONUS x2 À ATTRAPER ----------------------------------------------------------------------------
+-- Le serveur décide quand il apparaît et s'il est attrapé à temps (WindTunnelService) ; ici le bouton.
+
+local ContextActionService = game:GetService("ContextActionService")
+local Device = require(script.Parent:WaitForChild("Device"))
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local new = UIKit.new
+local BOOST = J.Boost
+local BOOST_KEYS = { Enum.KeyCode.Q, Enum.KeyCode.ButtonX }
+
+local boostGui = new("ScreenGui", { Name = "TunnelBoost", ResetOnSpawn = false, DisplayOrder = 6, IgnoreGuiInset = true, Parent = player:WaitForChild("PlayerGui") })
+local flash = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, Active = false, Parent = boostGui })
+local holder = new("Frame", { Name = "Holder", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromOffset(150, 150), BackgroundTransparency = 1, Visible = false, Parent = boostGui })
+UIKit.autoScale(holder)
+UIKit.rays(holder, { color = GOLD, size = 300, speed = 50, transparency = 0.35, z = 1 })
+UIKit.glow(holder, { color = Color3.fromRGB(255, 210, 80), size = 260, transparency = 0.45, z = 1, pulse = 2.2 })
+local bubble = new("TextButton", { Name = "Boost", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, Text = "", ZIndex = 2, Parent = holder }, {
+	UIKit.corner(),
+	UIKit.stroke(5),
+	UIKit.gradient(Color3.fromRGB(255, 232, 110), Color3.fromRGB(255, 150, 40)),
+})
+UIKit.studs(bubble, 0.5, "Studs", 22)
+UIKit.text({ Name = "Big", Size = UDim2.new(1, -16, 0, 84), Position = UDim2.fromOffset(8, 10), Text = "x" .. BOOST.Mult, ZIndex = 4, Stroke = 5, Parent = bubble })
+UIKit.text({ Name = "Small", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(8, 92), Text = "XP!", TextColor3 = Color3.fromRGB(140, 245, 255), ZIndex = 4, Stroke = 3.5, Parent = bubble })
+-- temps restant pour l'attraper : une barre qui se vide sous le bouton
+local timeBack = new("Frame", { Name = "Time", Size = UDim2.new(1, 0, 0, 12), Position = UDim2.new(0, 0, 1, 12), BackgroundColor3 = Color3.fromRGB(25, 30, 48), ZIndex = 2, Parent = holder }, { UIKit.corner(), UIKit.stroke(3) })
+local timeFill = new("Frame", { Name = "Fill", Size = UDim2.fromScale(1, 1), BackgroundColor3 = GOLD, BorderSizePixel = 0, ZIndex = 3, Parent = timeBack })
+-- touche de la manette ou du clavier
+local keyTag = UIKit.text({ Name = "Key", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(44, 36), Position = UDim2.fromScale(1, 0), Text = "Q", ZIndex = 6, Stroke = 3.5, Parent = holder })
+UIKit.juice(bubble)
+
+local offerEnds = 0
+local grabbing = false
+
+local function hideOffer()
+	holder.Visible = false
+	offerEnds = 0
+	ContextActionService:UnbindAction("TunnelBoost")
+end
+
+local function grab()
+	if grabbing or not holder.Visible then
+		return
+	end
+	grabbing = true
+	local at = UDim2.fromScale(holder.Position.X.Scale, holder.Position.Y.Scale)
+	local ok, res = pcall(function()
+		return Remotes.TunnelUp:InvokeServer("boost")
+	end)
+	grabbing = false
+	hideOffer()
+	if ok and type(res) == "table" and res.ok then
+		Sfx.Play("LevelUp", { pitch = 1.25 })
+		UIKit.burst(flash, at, GOLD)
+		UIKit.flyText(boostGui, ("x%d XP!"):format(BOOST.Mult), at, GOLD)
+	end
+end
+bubble.MouseButton1Click:Connect(grab)
+
+local function showOffer(ends: number)
+	offerEnds = ends
+	-- jamais au même endroit : il faut regarder l'écran pour l'attraper
+	holder.Position = UDim2.fromScale(0.3 + math.random() * 0.4, 0.28 + math.random() * 0.3)
+	local kind = Device.Kind()
+	keyTag.Visible = kind ~= "Touch"
+	keyTag.Text = if kind == "Gamepad" then Device.PadName(Enum.KeyCode.ButtonX) else "Q"
+	holder.Visible = true
+	UIKit.popIn(holder)
+	Sfx.Play("Pop", { pitch = 1.4 })
+	ContextActionService:BindAction("TunnelBoost", function(_, state)
+		if state == Enum.UserInputState.Begin then
+			task.spawn(grab)
+		end
+		return Enum.ContextActionResult.Sink
+	end, false, table.unpack(BOOST_KEYS))
+end
+
+local function onOffer()
+	local ends = player:GetAttribute("TunnelBoostOffer")
+	if type(ends) == "number" and ends > workspace:GetServerTimeNow() then
+		showOffer(ends)
+	else
+		hideOffer()
+	end
+end
+player:GetAttributeChangedSignal("TunnelBoostOffer"):Connect(onOffer)
+onOffer()
+
+RunService.Heartbeat:Connect(function()
+	if not holder.Visible then
+		return
+	end
+	local left = offerEnds - workspace:GetServerTimeNow()
+	if left <= 0 or not player:GetAttribute("InTunnel") then
+		hideOffer()
+		return
+	end
+	timeFill.Size = UDim2.fromScale(math.clamp(left / BOOST.Offer, 0, 1), 1)
+end)
+
+-- NIVEAU GAGNÉ DANS LA SOUFFLERIE : flash très léger et petit tremblement ---------------------------
+
+local shownLevel = (player:GetAttribute("JetLevel") or 1) :: number
+player:GetAttributeChangedSignal("JetLevel"):Connect(function()
+	local level = (player:GetAttribute("JetLevel") or 1) :: number
+	local up = level > shownLevel
+	shownLevel = level
+	if not up or not player:GetAttribute("InTunnel") then
+		return
+	end
+	flash.BackgroundTransparency = 0.82
+	TweenService:Create(flash, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+	local character = player.Character
+	local hum = character and character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		task.spawn(function()
+			local base = hum.CameraOffset
+			for i = 1, 6 do
+				local k = 0.16 * (1 - i / 7)
+				hum.CameraOffset = base + Vector3.new((math.random() - 0.5) * 2 * k, (math.random() - 0.5) * 2 * k, 0)
+				task.wait(0.035)
+			end
+			hum.CameraOffset = base
+		end)
 	end
 end)

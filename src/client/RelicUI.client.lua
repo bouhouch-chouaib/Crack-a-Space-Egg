@@ -1,8 +1,8 @@
 -- Grande révélation d'une relique (Remotes.RelicFound), en quatre temps :
 --   1. l'attente : écran noir, lueur qui grossit, « SOMETHING ANCIENT AWAKENS... » ;
 --   2. l'explosion : flash, écran qui tremble, ondes de choc, la relique arrive en tournoyant, titre qui s'abat ;
---   3. l'histoire : nom, texte tapé lettre par lettre, valeur qui monte, pluie de billets ;
---   4. le choix : la vendre tout de suite ou la garder (onglet RELICS de l'Index).
+--   3. l'histoire : nom, texte tapé lettre par lettre, bonus gagné pour toujours, pluie d'icônes ;
+--   4. un bouton pour continuer (la relique reste dans l'onglet RELICS de l'Index, avec son bonus).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,7 +10,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
-local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local RelicModel = require(ReplicatedStorage.Shared:WaitForChild("RelicModel"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
@@ -24,7 +23,7 @@ local GOLD = Color3.fromRGB(255, 215, 90)
 local CENTER_POS = UDim2.fromScale(0.5, 0.5)
 local RELIC_AT = UDim2.fromOffset(410, 222) -- centre de la relique dans le cadre de 820 x 600
 local ANTICIPATION = 1.15 -- secondes d'attente avant l'explosion
-local STORY_AT, CHOICE_AT = 0.7, 1.9 -- après l'explosion
+local STORY_AT, BUTTON_AT = 0.7, 1.9 -- après l'explosion
 local ORBITERS = 10
 local COINS = 26
 
@@ -75,17 +74,16 @@ local titleScale = new("UIScale", { Scale = 1, Parent = title })
 local nameText = label(374, 50, 46)
 local nameScale = new("UIScale", { Scale = 1, Parent = nameText })
 local storyText = label(424, 34, 24, Color3.fromRGB(225, 230, 250), 3)
-local valueText = label(460, 42, 38, UIKit.Money, 4)
-UIKit.shinyText(valueText, UIKit.Money)
+-- le bonus gagné pour toujours (« +5% MONEY FOREVER! »)
+local bonusText = label(460, 42, 38, UIKit.Money, 4)
+UIKit.shinyText(bonusText, UIKit.Money)
 
-local sellButton, sellText = UIKit.priceButton({ parent = center, text = "", size = UDim2.fromOffset(370, 84), position = UDim2.new(0.5, -380, 0, 510) })
-sellButton.Name = "Sell"
-UIKit.buttonGlow(sellButton, Color3.fromRGB(150, 255, 120))
-local keepButton, keepText = UIKit.priceButton({ parent = center, text = "KEEP IT", color = "Blue", size = UDim2.fromOffset(370, 84), position = UDim2.new(0.5, 10, 0, 510) })
-keepButton.Name = "Keep"
-sellText.TextSize, keepText.TextSize = 36, 36
+local okButton, okText = UIKit.priceButton({ parent = center, text = "AWESOME!", size = UDim2.fromOffset(370, 84), position = UDim2.new(0.5, -185, 0, 510) })
+okButton.Name = "Continue"
+local okGlow = UIKit.buttonGlow(okButton, Color3.fromRGB(150, 255, 120))
+okText.TextSize = 36
 
-local PARTS: { GuiObject } = { title, nameText, storyText, valueText, sellButton, keepButton, view }
+local PARTS: { GuiObject } = { title, nameText, storyText, bonusText, okButton, okGlow, view }
 
 local current: string? = nil
 local model: Model? = nil
@@ -111,11 +109,12 @@ local function shockwave(color: Color3, after: number)
 	end)
 end
 
-local function coinRain()
+-- Pluie d'icônes du bonus gagné (billets ou jetpacks)
+local function coinRain(art: string)
 	for i = 1, COINS do
 		task.delay(i * 0.05, function()
 			local x = math.random()
-			local coin = UIKit.icon("Cash", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(46, 46), Position = UDim2.fromScale(x, -0.08), Rotation = math.random(-40, 40), ZIndex = 1, Parent = gui })
+			local coin = UIKit.icon(art, { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(46, 46), Position = UDim2.fromScale(x, -0.08), Rotation = math.random(-40, 40), ZIndex = 1, Parent = gui })
 			local time = 1.3 + math.random() * 0.8
 			tween(coin, time, { Position = UDim2.fromScale(x + (math.random() - 0.5) * 0.1, 1.1), Rotation = math.random(-300, 300) }, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
 			task.delay(time + 0.1, function()
@@ -168,8 +167,9 @@ local function show(key: string)
 	nameText.Text = relic.Name
 	storyText.Text = relic.Story
 	storyText.MaxVisibleGraphemes = 0
-	valueText.Text = "WORTH $0"
-	sellText.Text = "SELL  $" .. Format.Short(relic.Value)
+	-- bonus de la relique, gagné pour toujours : argent ou XP de jetpack
+	local bonusArt = if relic.Bonus and relic.Bonus.Kind == "XP" then "Jetpack" else "Cash"
+	UIKit.setIconText(bonusText, ("{%s} %s FOREVER!"):format(bonusArt, string.upper(Config.RelicBonusText(relic))))
 	for _, part in ipairs(PARTS) do
 		part.Visible = false
 	end
@@ -205,22 +205,19 @@ local function show(key: string)
 	end)
 	-- 3. l'histoire
 	at(ANTICIPATION + STORY_AT, function()
-		nameText.Visible, storyText.Visible, valueText.Visible = true, true, true
+		nameText.Visible, storyText.Visible, bonusText.Visible = true, true, true
 		nameScale.Scale = 1.8
 		tween(nameScale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
 		storyAt = os.clock()
-		UIKit.countTo(valueText, 0, relic.Value, function(n: number): string
-			return "WORTH $" .. Format.Short(n)
-		end, 1.1)
-		coinRain()
+		UIKit.bump(bonusText, 0.6)
+		coinRain(bonusArt)
 		Sfx.Play("Coin")
 		UIKit.burst(center, UDim2.fromOffset(410, 480), UIKit.Money)
 	end)
-	-- 4. le choix
-	at(ANTICIPATION + CHOICE_AT, function()
-		sellButton.Visible, keepButton.Visible = true, true
-		UIKit.popIn(sellButton)
-		UIKit.popIn(keepButton, 0.08)
+	-- 4. le bouton pour continuer
+	at(ANTICIPATION + BUTTON_AT, function()
+		okButton.Visible, okGlow.Visible = true, true
+		UIKit.popIn(okButton)
 	end)
 	task.delay(AUTO_CLOSE, function()
 		if token == mine then
@@ -231,29 +228,9 @@ end
 
 Remotes:WaitForChild("RelicFound").OnClientEvent:Connect(show)
 
-keepButton.MouseButton1Click:Connect(function()
+okButton.MouseButton1Click:Connect(function()
 	Sfx.Play("Click")
 	close()
-end)
-
-local selling = false
-sellButton.MouseButton1Click:Connect(function()
-	local key = current
-	if not key or selling then
-		return
-	end
-	selling = true
-	local ok, res = pcall(function()
-		return Remotes:WaitForChild("Relics"):InvokeServer("sell", key)
-	end)
-	selling = false
-	if ok and type(res) == "table" and res.ok then
-		Sfx.Play("Buy")
-		close()
-	else
-		Sfx.Play("Error")
-		UIKit.toast("Try again", "warn")
-	end
 end)
 
 RunService.RenderStepped:Connect(function(dt)

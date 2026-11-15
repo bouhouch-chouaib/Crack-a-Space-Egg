@@ -48,17 +48,6 @@ onlyParams.FilterType = Enum.RaycastFilterType.Include
 
 local belt = workspace:WaitForChild("World"):WaitForChild("Belt")
 
--- Contour de la roche visée : vert = à portée, rouge = trop loin (lisible sans texte)
-local outline = Instance.new("Highlight")
-outline.Name = "DrillOutline"
-outline.FillTransparency = 1
-outline.OutlineTransparency = 0
-outline.DepthMode = Enum.HighlightDepthMode.Occluded
-outline.Enabled = false
-outline.Parent = player:WaitForChild("PlayerGui")
-local IN_RANGE = Color3.fromRGB(120, 255, 90)
-local TOO_FAR = Color3.fromRGB(255, 80, 70)
-
 -- Roche sous le curseur (ou le doigt), quelle que soit sa distance
 local function rockUnder(screen: Vector2, character: Model): (BasePart?, Vector3?)
 	rayParams.FilterDescendantsInstances = { character }
@@ -99,7 +88,7 @@ local function nearestInRange(from: Vector3): (BasePart?, Vector3?)
 end
 
 -- Cible du forage : la roche visée si elle est à portée, sinon la plus proche à portée.
--- Renvoie aussi la roche visée trop loin (pour le contour rouge et le message).
+-- Renvoie aussi la roche visée trop loin (pour le message).
 local function findTarget(screen: Vector2?): (BasePart?, Vector3?, BasePart?)
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -163,6 +152,7 @@ end)
 -- Bouton FORER des téléphones (Mobile.client) : tant qu'il est enfoncé, on fore la roche la plus proche
 -- à portée (attribut local DrillHeld). Roche à portée : attribut local RockNear (bouton et guide), 5 fois par seconde.
 local lastNear = 0
+local lastSwingAsk = 0
 
 -- BOUCLE PAR IMAGE ----------------------------------------------------------
 
@@ -186,7 +176,14 @@ RunService.RenderStepped:Connect(function()
 	local padDrill = next(padHeld) ~= nil
 		and not player:GetAttribute("PlacingEgg")
 		and game:GetService("GuiService").SelectedObject == nil
-	local wantDrill = (drilling or player:GetAttribute("DrillHeld") == true or padDrill) and not full
+	local asked = drilling or player:GetAttribute("DrillHeld") == true or padDrill
+	-- batte en main (GearService) : le même geste donne un coup de batte au lieu de forer (GearBar.client)
+	local batHeld = character:GetAttribute("BatHeld") == true
+	if batHeld and asked and os.clock() - lastSwingAsk > 0.15 then
+		lastSwingAsk = os.clock()
+		player:SetAttribute("SwingAsk", lastSwingAsk)
+	end
+	local wantDrill = asked and not full and not batHeld
 	local hitPart, hitPos, tooFar = nil, nil, nil
 	if wantDrill then
 		hitPart, hitPos, tooFar = findTarget(if drilling then pointer else nil)
@@ -194,32 +191,6 @@ RunService.RenderStepped:Connect(function()
 			lastWarn = os.clock()
 			UIKit.toast(if tooFar then "{Jetpack} Too far! Fly closer" else "{Jetpack} No asteroid in reach! Fly to a rock", "warn")
 		end
-	elseif UserInputService.MouseEnabled and not full then
-		-- Survol à la souris : on montre déjà si la roche est à portée
-		local mouse = UserInputService:GetMouseLocation()
-		local inset = game:GetService("GuiService"):GetGuiInset()
-		local aimed, aimedPoint = rockUnder(Vector2.new(mouse.X, mouse.Y - inset.Y), character)
-		if aimed and aimedPoint then
-			if (aimedPoint - hrp.Position).Magnitude <= Config.DrillRange then
-				outline.Adornee = aimed.Parent
-				outline.OutlineColor = IN_RANGE
-			else
-				outline.Adornee = aimed.Parent
-				outline.OutlineColor = TOO_FAR
-			end
-			outline.Enabled = true
-		else
-			outline.Enabled = false
-		end
-	end
-	if wantDrill then
-		local shown = hitPart or tooFar
-		outline.Adornee = shown and shown.Parent
-		outline.OutlineColor = if hitPart then IN_RANGE else TOO_FAR
-		outline.Enabled = shown ~= nil
-	end
-	if full then
-		outline.Enabled = false
 	end
 	target = hitPart
 	-- État lu par l'animation de forage (Drilling.client) : prêt à forer, et point d'impact

@@ -3,6 +3,7 @@
 -- récompense de l'anneau. Une créature jamais eue dans sa base reste une silhouette noire « ??? ».
 -- Le serveur tient la liste (CreatureService : actions « index » et « claim »).
 -- Dernier onglet : les reliques des explorateurs perdus (RelicService), en silhouettes tant qu'elles ne sont pas trouvées.
+-- Chaque relique donne un bonus pour toujours (Config.RelicBonusText) : vert quand elle est trouvée, grisé sinon.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -138,14 +139,14 @@ end
 local TAB_H = 60
 local relicMode = false
 local relicPick = 1
-local relicState = { owned = {} :: { [string]: number }, found = {} :: { [string]: boolean } }
+local relicState = { found = {} :: { [string]: boolean } }
 
 local function fetchRelics()
 	local ok, res = pcall(function()
 		return Remotes:WaitForChild("Relics"):InvokeServer("state")
 	end)
 	if ok and type(res) == "table" and res.ok then
-		relicState.owned, relicState.found = res.owned, res.found
+		relicState.found = res.found or {}
 	end
 end
 
@@ -234,11 +235,26 @@ local function relicView(parent: GuiObject, relicKey: string, known: boolean, si
 	end
 end
 
+-- Bonus d'une relique (gagné pour toujours une fois trouvée) : icône et pourcentage court
+local BONUS_OFF = Color3.fromRGB(150, 155, 172) -- texte d'un bonus pas encore gagné
+local function relicBonusArt(r): string
+	return if r.Bonus and r.Bonus.Kind == "XP" then "Jetpack" else "Cash"
+end
+local function relicBonusPercent(r): string
+	return ("+%d%%"):format(math.floor(((r.Bonus and r.Bonus.Value) or 0) * 100 + 0.5))
+end
+-- Grise l'icône collée devant un texte (bonus pas encore gagné)
+local function dimIcon(t: TextLabel)
+	local img = t:FindFirstChild("InlineIcon")
+	if img and img:IsA("ImageLabel") then
+		img.ImageColor3 = Color3.fromRGB(110, 115, 130)
+	end
+end
+
 local function relicDetail()
 	clear(detail)
 	local r = Config.Relics[relicPick]
 	local known = relicState.found[r.Key] == true
-	local owned = relicState.owned[r.Key] or 0
 	local ringName = Config.Rings[r.Ring].Name
 	UIKit.rays(detail, { color = r.Color, size = 300, transparency = if known then 0.45 else 0.75, position = UDim2.fromOffset(133, 124) })
 	relicView(detail, r.Key, known, UDim2.fromOffset(220, 210), UDim2.fromOffset(133, 124), 3)
@@ -251,38 +267,24 @@ local function relicDetail()
 	end
 	UIKit.text({ Size = UDim2.new(1, -16, 0, 24), Position = UDim2.fromOffset(8, 272), Text = ringName:upper(), TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.3), ZIndex = 4, Stroke = 3, Parent = detail })
 	UIKit.text({ Size = UDim2.new(1, -16, 0, 22), Position = UDim2.fromOffset(8, 300), Text = ("{Sparkles} Chance: 1 in %s"):format(Format.Short(r.Chance)), ZIndex = 4, Stroke = 2.5, Parent = detail })
-	UIKit.text({ Size = UDim2.new(1, -16, 0, 26), Position = UDim2.fromOffset(8, 326), Text = "{Cash} Worth " .. money(r.Value), TextColor3 = UIKit.Money, ZIndex = 4, Stroke = 3, Parent = detail })
-	UIKit.text({ Size = UDim2.new(1, -24, 0, 90), Position = UDim2.fromOffset(12, 358), Text = if known then r.Story else ("Lost somewhere in the %s... Keep drilling."):format(ringName), TextColor3 = Color3.fromRGB(225, 230, 250), ZIndex = 4, Stroke = 2.5, Parent = detail })
-	if owned > 0 then
-		local b, label = UIKit.priceButton({ parent = detail, text = "SELL  " .. money(r.Value), size = UDim2.new(1, -20, 0, 62), position = UDim2.new(0, 10, 1, -72) })
-		b.Name = "SellRelic"
-		b.ZIndex = 6
-		label.ZIndex = 7
-		local armed = false
-		b.MouseButton1Click:Connect(function()
-			if not armed then
-				armed = true
-				label.Text = "SURE? TAP AGAIN!"
-				task.delay(3, function()
-					if armed and label.Parent then
-						armed = false
-						label.Text = "SELL  " .. money(r.Value)
-					end
-				end)
-				return
-			end
-			armed = false
-			local ok, res = pcall(function()
-				return Remotes:WaitForChild("Relics"):InvokeServer("sell", r.Key)
-			end)
-			if ok and type(res) == "table" and res.ok then
-				relicState.owned, relicState.found = res.owned, res.found
-				UIKit.burst(W.frame, UDim2.fromScale(0.83, 0.75), r.Color)
-				refresh()
-			end
-		end)
-	elseif known then
-		UIKit.text({ Size = UDim2.new(1, -20, 0, 40), Position = UDim2.new(0, 10, 1, -56), Text = "Sold. Still in your collection!", TextColor3 = Color3.fromRGB(190, 230, 255), ZIndex = 4, Stroke = 3, Parent = detail })
+	UIKit.text({ Size = UDim2.new(1, -24, 0, 90), Position = UDim2.fromOffset(12, 328), Text = if known then r.Story else ("Lost somewhere in the %s... Keep drilling."):format(ringName), TextColor3 = Color3.fromRGB(225, 230, 250), ZIndex = 4, Stroke = 2.5, Parent = detail })
+	-- Bonus de la relique : doré et vert quand elle est trouvée, grisé sinon
+	local top = if known then UIKit.Colors.Gold[1]:Lerp(Color3.new(0, 0, 0), 0.55) else Color3.fromRGB(58, 60, 74)
+	local bottom = if known then UIKit.Colors.Gold[2]:Lerp(Color3.new(0, 0, 0), 0.65) else Color3.fromRGB(38, 40, 52)
+	local box = new("Frame", { Name = "Bonus", Position = UDim2.new(0, 10, 1, -118), Size = UDim2.new(1, -20, 0, 108), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 4, Parent = detail }, {
+		UIKit.corner(12),
+		UIKit.stroke(3),
+		UIKit.gradient(top, bottom),
+	})
+	local boxTitle = UIKit.text({ Size = UDim2.new(1, -12, 0, 24), Position = UDim2.fromOffset(6, 6), Text = "{Star} RELIC BONUS", TextColor3 = if known then Color3.fromRGB(255, 230, 110) else BONUS_OFF, ZIndex = 5, Stroke = 3, Parent = box })
+	local bonus = UIKit.text({ Size = UDim2.new(1, -12, 0, 36), Position = UDim2.fromOffset(6, 34), Text = ("{%s} %s"):format(relicBonusArt(r), string.upper(Config.RelicBonusText(r))), TextColor3 = if known then UIKit.Money else BONUS_OFF, ZIndex = 5, Stroke = 3, Parent = box })
+	local status = UIKit.text({ Size = UDim2.new(1, -12, 0, 24), Position = UDim2.fromOffset(6, 76), Text = if known then "ACTIVE FOREVER!" else "{Lock} Find it to activate", TextColor3 = if known then Color3.fromRGB(190, 255, 150) else BONUS_OFF, ZIndex = 5, Stroke = 2.5, Parent = box })
+	if known then
+		UIKit.shinyText(bonus, UIKit.Money)
+	else
+		dimIcon(boxTitle)
+		dimIcon(bonus)
+		dimIcon(status)
 	end
 end
 
@@ -301,7 +303,6 @@ local function relicPage()
 	local CW, CH, GX = 112, 216, 9
 	for i, r in ipairs(Config.Relics) do
 		local known = relicState.found[r.Key] == true
-		local owned = relicState.owned[r.Key] or 0
 		local row2 = i > 4
 		local x = if row2 then 61 + (i - 5) * (CW + GX) else (i - 1) * (CW + GX)
 		local c = new("TextButton", {
@@ -323,7 +324,11 @@ local function relicPage()
 			UIKit.text({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 66), Size = UDim2.fromOffset(50, 50), Text = "?", TextColor3 = Color3.fromRGB(230, 235, 255), ZIndex = 4, Stroke = 4, Parent = c })
 		end
 		UIKit.text({ Size = UDim2.new(1, -8, 0, 42), Position = UDim2.fromOffset(4, 124), Text = if known then r.Name else "???", ZIndex = 4, Stroke = 2.5, Parent = c })
-		UIKit.text({ Size = UDim2.new(1, -8, 0, 26), Position = UDim2.fromOffset(4, 176), Text = if owned > 0 then ("x%d"):format(owned) elseif known then "SOLD" else "1 in " .. Format.Short(r.Chance), TextColor3 = Color3.fromRGB(255, 240, 170), ZIndex = 4, Stroke = 2.5, Parent = c })
+		-- son bonus : vert quand elle est trouvée, grisé sinon
+		local bonus = UIKit.text({ Size = UDim2.new(1, -8, 0, 26), Position = UDim2.fromOffset(4, 176), Text = ("{%s} %s"):format(relicBonusArt(r), relicBonusPercent(r)), TextColor3 = if known then UIKit.Money else BONUS_OFF, ZIndex = 4, Stroke = 2.5, Parent = c })
+		if not known then
+			dimIcon(bonus)
+		end
 		UIKit.hoverCard(c)
 		c.MouseButton1Click:Connect(function()
 			relicPick = i

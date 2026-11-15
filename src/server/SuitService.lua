@@ -1,5 +1,5 @@
 -- Combinaisons (Config.Suits) : on tient plus longtemps hors du couloir et on a plus d'oxygène (ColdService lit d.suit).
--- Achetées une par une, en $ ou en Robux (MonetizationService) ; une combinaison payée en Robux reste après une Supernova.
+-- Achetées une par une, en $ ou en Robux (MonetizationService).
 -- Porter une combinaison (à partir de la deuxième) met un casque et un plastron sur l'avatar, visibles par tous.
 -- Remotes.BuySuit (RemoteEvent) : achète la combinaison suivante. Publié sur le joueur : Suit (palier, GameService.Sync).
 
@@ -188,7 +188,6 @@ function SuitService.Grant(player: Player, tier: number): boolean
 	if not d or not Config.Suits[tier] then
 		return false
 	end
-	d.paidSuit = math.max(d.paidSuit or 1, tier) -- gardée après une Supernova
 	if tier > (d.suit or 1) then
 		d.suit = tier
 		Tracking.Funnel(player, "Suits", tier, Config.Suits[tier].Name)

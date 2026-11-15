@@ -1,5 +1,9 @@
 -- Barre des objets (Config.Gear) : un bouton par objet possédé, au-dessus de la barre d'aide en bas d'écran.
--- Touches 1, 2, 3, 4 selon la place du bouton ; toucher le bouton sur téléphone ; LB / LT à la manette pour les deux premiers.
+-- Touches 1 à 5 selon la place du bouton ; toucher le bouton sur téléphone ; LB / LT à la manette pour les deux premiers.
+-- Foreuse et batte (15 nov.) : dès qu'on a une batte, la barre montre aussi la foreuse. On prend l'une ou
+-- l'autre en main (attribut BatHeld du personnage, GearService) ; batte en main, le geste de forage
+-- (clic, bouton DRILL, gâchette) donne un coup de batte (attribut local SwingAsk, posé par Controls.client).
+-- Roche portée : un bouton rouge pour la lâcher, à tenir DROP_HOLD secondes (touche G, croix bas à la manette).
 -- Chaque bouton montre le modèle 3D de l'objet (GearModel), qui tourne doucement et joue son animation au clic.
 -- Le serveur décide de ce qu'on a (GearService, Remotes.Gear). Ce script fait aussi :
 --   - l'animation du coup de batte (tous les joueurs, attribut BatSwing du personnage) ;
@@ -10,6 +14,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local SafeZone = require(ReplicatedStorage.Shared:WaitForChild("SafeZone"))
@@ -23,7 +28,7 @@ local camera = workspace.CurrentCamera
 local new = UIKit.new
 local G = Config.Gear
 
-local KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four }
+local KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five }
 local PADS = { Enum.KeyCode.ButtonL1, Enum.KeyCode.ButtonL2 }
 local BUTTON = 74
 local GAP = 12
@@ -44,7 +49,7 @@ local bar = new("Frame", {
 	Name = "Bar",
 	AnchorPoint = Vector2.new(0.5, 1),
 	Position = UDim2.new(0.5, 0, 1, -62),
-	Size = UDim2.fromOffset(4 * BUTTON + 3 * GAP, BUTTON + 8),
+	Size = UDim2.fromOffset(5 * BUTTON + 4 * GAP, BUTTON + 8),
 	BackgroundTransparency = 1,
 	Parent = gui,
 }, {
@@ -87,8 +92,9 @@ local function mount(p: Preview, model: Model)
 	local cf, size = model:GetBoundingBox()
 	local center = CFrame.new(cf.Position)
 	p.parts = {}
-	for _, d in ipairs(model:GetChildren()) do
+	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then
+			d.Anchored = true
 			p.parts[d] = center:ToObjectSpace(d.CFrame)
 		end
 	end
@@ -103,6 +109,10 @@ end
 -- Pose de chaque objet : t = temps, a = avancement du clic (0..1, au-delà : repos), on = objet activé.
 -- Renvoie la pose et, pour le grappin, de combien la tête est sortie.
 local POSES: { [string]: (number, number, boolean) -> (CFrame, number) } = {
+	Drill = function(t, a, _)
+		local spin = if a < 1 then TAU * ease(a) else 0
+		return CFrame.Angles(rad(14), t * 0.9 + spin, 0), 0
+	end,
 	Bat = function(t, a, _)
 		local swing = if a < 1 then rad(-420) * ease(a) else 0
 		return CFrame.Angles(0, t * 0.9, 0) * CFrame.Angles(0, 0, rad(50) + swing), 0
@@ -470,17 +480,68 @@ local function stepRopes()
 	end
 end
 
--- LES QUATRE BOUTONS ----------------------------------------------------------------------------------
+-- LES BOUTONS ------------------------------------------------------------------------------------------
 local batSlot: Slot
 local hookSlot: Slot
+local drillSlot: Slot
+
+local function hasBat(): boolean
+	return ((player:GetAttribute("Bat") or 0) :: number) > 0
+end
+
+-- Modèle de la foreuse du joueur (ReplicatedStorage.Assets.Drills.DrillN), pour l'aperçu du bouton
+local function drillTier(): number
+	return math.clamp((player:GetAttribute("Drill") or 1) :: number, 1, #Config.Drills)
+end
+local function drillModel(): Model
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local drills = assets and assets:FindFirstChild("Drills")
+	local template = drills and drills:FindFirstChild("Drill" .. drillTier())
+	if template and template:IsA("Model") then
+		local m = template:Clone()
+		for _, d in ipairs(m:GetDescendants()) do
+			-- (les soudures aussi : l'aperçu place chaque pièce lui-même)
+			if d:IsA("LuaSourceContainer") or d:IsA("ParticleEmitter") or d:IsA("Sound") or d:IsA("JointInstance") or d:IsA("WeldConstraint") then
+				d:Destroy()
+			end
+		end
+		return m
+	end
+	-- modèle pas encore arrivé : un bloc à la couleur de la foreuse, remplacé dès que possible
+	local m = Instance.new("Model")
+	new("Part", { Size = Vector3.new(1.2, 1.2, 3), Color = Config.Drills[drillTier()].Color, Material = Enum.Material.SmoothPlastic, Parent = m })
+	return m
+end
+
+-- La foreuse n'apparaît dans la barre qu'avec une batte : sans elle, il n'y a rien à échanger
+drillSlot = makeSlot("Drill", drillModel, "Blue", 0, 0, function()
+	if isOn("BatHeld") then
+		Sfx.Play("Click")
+		Remotes.Gear:FireServer("hold", false)
+	end
+end, hasBat, function()
+	return not isOn("BatHeld")
+end)
 batSlot = makeSlot("Bat", function()
 	return GearModel.Bat(1)
 end, "Orange", 1, G.BatCooldown, function()
+	-- batte rangée : on la prend en main ; déjà en main : on frappe
+	if not isOn("BatHeld") then
+		Sfx.Play("Click")
+		Remotes.Gear:FireServer("hold", true)
+		return
+	end
 	useBat(function()
 		return batSlot
 	end)
-end, function()
-	return ((player:GetAttribute("Bat") or 0) :: number) > 0
+end, hasBat, function()
+	return isOn("BatHeld")
+end)
+-- batte en main : le geste de forage frappe (Controls.client pose SwingAsk)
+player:GetAttributeChangedSignal("SwingAsk"):Connect(function()
+	if isOn("BatHeld") and hasBat() then
+		press(batSlot)
+	end
 end)
 makeSlot("Carpet", GearModel.Carpet, "Purple", 2, 0, function()
 	toggle("Carpet", "carpet", "Boots", "boots")
@@ -504,13 +565,18 @@ end, function()
 	return player:GetAttribute("Pass_Hook") == true
 end)
 
--- L'aperçu de la batte suit le palier possédé
+-- Les aperçus de la batte et de la foreuse suivent le palier possédé
 local shownBat = 1
+local shownDrill = drillTier()
 local function refreshIcons()
 	local tier = math.clamp((player:GetAttribute("Bat") or 0) :: number, 1, #Config.Bats)
 	if tier ~= shownBat then
 		shownBat = tier
 		mount(batSlot.preview, GearModel.Bat(tier))
+	end
+	if drillTier() ~= shownDrill then
+		shownDrill = drillTier()
+		mount(drillSlot.preview, drillModel())
 	end
 end
 
@@ -545,7 +611,7 @@ local function rebind()
 end
 
 player.AttributeChanged:Connect(function(name)
-	if name == "Bat" or name == "Shields" or name == "Pass_Carpet" or name == "Pass_Boots" or name == "Pass_Hook" then
+	if name == "Bat" or name == "Drill" or name == "Shields" or name == "Pass_Carpet" or name == "Pass_Boots" or name == "Pass_Hook" then
 		rebind()
 	end
 end)
@@ -556,11 +622,73 @@ player.CharacterAdded:Connect(function()
 	floorY = nil
 end)
 
+-- LÂCHER LA ROCHE PORTÉE ---------------------------------------------------------------------------------
+-- On tient le bouton DROP_HOLD secondes (il se remplit) : un appui par erreur ne fait rien perdre.
+local DROP_HOLD = 0.7
+local dropButton = new("TextButton", { Name = "Drop", Size = UDim2.fromOffset(BUTTON, BUTTON), BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, Text = "", LayoutOrder = 10, Visible = false, ZIndex = 2, Parent = bar }, {
+	UIKit.corner(16),
+	UIKit.stroke(3.5),
+	UIKit.gradient(UIKit.Colors.Red[1], UIKit.Colors.Red[2]),
+})
+UIKit.studs(dropButton, 0.5, "Weld", 18)
+UIKit.icon("Egg", { Size = UDim2.fromScale(0.62, 0.62), Position = UDim2.fromScale(0.19, 0.06), ZIndex = 3, Parent = dropButton })
+UIKit.icon("ArrowUp", { Size = UDim2.fromScale(0.4, 0.4), Position = UDim2.fromScale(0.3, 0.58), Rotation = 180, ZIndex = 4, Parent = dropButton })
+local dropFill = new("Frame", { Name = "Fill", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 5, Parent = dropButton })
+local dropTag = UIKit.text({ Size = UDim2.fromOffset(26, 22), Position = UDim2.fromOffset(2, 0), Text = "G", TextColor3 = Color3.new(1, 1, 1), ZIndex = 6, Stroke = 2.5, Parent = dropButton })
+new("UITextSizeConstraint", { MaxTextSize = 20, MinTextSize = 10, Parent = dropTag })
+local dropStart: number? = nil
+
+local function canDrop(): boolean
+	local step = player:GetAttribute("GuideStep")
+	return ((player:GetAttribute("Cargo") or 0) :: number) > 0 and not player:GetAttribute("HeldEgg") and type(step) == "number" and step >= Config.Guide.Steps
+end
+dropButton.MouseButton1Down:Connect(function()
+	dropStart = os.clock()
+end)
+dropButton.MouseButton1Up:Connect(function()
+	dropStart = nil
+end)
+dropButton.MouseLeave:Connect(function()
+	dropStart = nil
+end)
+ContextActionService:BindAction("DropEgg", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		if canDrop() and game:GetService("GuiService").SelectedObject == nil then
+			dropStart = os.clock()
+		end
+	else
+		dropStart = nil
+	end
+	return Enum.ContextActionResult.Pass
+end, false, Enum.KeyCode.G, Enum.KeyCode.DPadDown)
+
+local function stepDrop(t: number)
+	local can = canDrop()
+	if dropButton.Visible ~= can then
+		dropButton.Visible = can
+		dropTag.Visible = UserInputService.KeyboardEnabled
+		if can then
+			UIKit.popIn(dropButton)
+		end
+	end
+	if not can then
+		dropStart = nil
+	end
+	local k = if dropStart then math.clamp((t - dropStart) / DROP_HOLD, 0, 1) else 0
+	dropFill.Size = UDim2.fromScale(1, k)
+	if k >= 1 then
+		dropStart = nil
+		Sfx.Play("Pop", { pitch = 0.7 })
+		Remotes.Gear:FireServer("drop")
+	end
+end
+
 RunService.RenderStepped:Connect(function()
 	stepBoots()
 	stepHook()
 	stepRopes()
 	local t = os.clock()
+	stepDrop(t)
 	for _, s in ipairs(slots) do
 		local left = if s.cooldown > 0 then math.max(0, 1 - (t - s.lastUsed) / s.cooldown) else 0
 		s.shade.Size = UDim2.fromScale(1, left)

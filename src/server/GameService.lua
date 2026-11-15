@@ -8,9 +8,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local DrillSkin = require(ReplicatedStorage.Shared.DrillSkin)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
-local AnnounceService = require(script.Parent.AnnounceService)
 local BeltService = require(script.Parent.BeltService)
-local Bases = require(script.Parent.Bases)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 local BoostService = require(script.Parent.BoostService)
 local Tracking = require(script.Parent.Tracking)
@@ -48,20 +46,6 @@ local function sync(player: Player)
 		table.insert(rarities, tostring(if type(egg) == "table" then egg.rarity or 1 else 1))
 	end
 	player:SetAttribute("CargoRarities", table.concat(rarities, ","))
-	-- « egg » ou « geode » pour chaque entrée de la soute (HUD)
-	local kinds = {}
-	for _, egg in ipairs(d.cargo) do
-		table.insert(kinds, if type(egg) == "table" and egg.kind == "geode" then "geode" else "egg")
-	end
-	player:SetAttribute("CargoKinds", table.concat(kinds, ","))
-	-- sac de minerais (stand SELL)
-	local gemValue = 0
-	for _, g in ipairs(d.gems or {}) do
-		gemValue += g.value
-	end
-	player:SetAttribute("GemCount", #(d.gems or {}))
-	player:SetAttribute("GemValue", gemValue)
-	player:SetAttribute("GemsSold", d.stats.gemsSold or 0)
 	player:SetAttribute("ReadyEggs", #(d.ready or {}))
 	-- Œufs dérochés prêts à poser (« 1:5,2:3 » = anneau:rareté), pour la barre des œufs (Hatchery.client)
 	local ready = {}
@@ -79,7 +63,6 @@ local function sync(player: Player)
 		player:SetAttribute("Tip_" .. key, true)
 	end
 	player:SetAttribute("Drill", d.drill)
-	player:SetAttribute("Supernovas", d.supernovas or 0)
 	player:SetAttribute("TunnelTier", d.tunnel or 0)
 	player:SetAttribute("Suit", d.suit or 1)
 	player:SetAttribute("Bat", d.bat or 0)
@@ -149,31 +132,19 @@ local function rollRarity(d, ringIndex: number): number
 	return rarity
 end
 
--- Ce que le tutoriel impose au prochain forage : { rarity, kind, size? } ou nil
-local function tutorialDrop(d, ringIndex: number)
+-- Rareté que le tutoriel impose au prochain forage (ou nil) : le tout premier œuf du joueur est
+-- toujours de rareté Config.Guide.FirstRarity (un vrai « wow », et de quoi payer la suite du tutoriel)
+local function tutorialDrop(d, ringIndex: number): number?
 	local G = Config.Guide
-	local step = d.guide or 0
-	if step >= G.Steps or ringIndex ~= 1 then
+	if (d.guide or 0) >= G.Steps or ringIndex ~= 1 or next(d.index) ~= nil or #d.ready > 0 or d.derocking then
 		return nil
 	end
-	local hatched = 0
-	for _, n in pairs(d.index) do
-		hatched += n
-	end
-	local pending = #d.ready
 	for _, item in ipairs(d.base) do
 		if item.kind == "egg" then
-			pending += 1
+			return nil
 		end
 	end
-	if hatched > 0 or pending > 0 then
-		return nil
-	end
-	-- d'abord une géode à vendre ; une fois le minerai vendu, l'œuf surprise
-	if (d.stats.gemsSold or 0) == 0 then
-		return if #d.gems == 0 then { rarity = G.GeodeRarity, kind = "geode", size = G.GeodeSize } else nil
-	end
-	return { rarity = G.SecondRarity, kind = "egg" }
+	return G.FirstRarity
 end
 
 -- FORAGE ------------------------------------------------------------------
@@ -233,7 +204,6 @@ local function onDrill(player: Player, target: any, at: any)
 		GameService.Quest(player, "break", 1)
 	end
 	local rarities = {}
-	local kinds = {}
 	if eggs > 0 then
 		local forced = tutorialDrop(d, a.ring)
 		for _ = 1, eggs do
@@ -242,17 +212,9 @@ local function onDrill(player: Player, target: any, at: any)
 				-- astéroïde gardé : la rareté est tirée deux fois, on garde la meilleure
 				rarity = math.max(rarity, rollRarity(d, a.ring))
 			end
-			-- une fois sur 3 : une géode à la place de l'œuf (Config.Geodes)
-			local kind = if rng:NextNumber() < Config.Geodes.Chance then "geode" else "egg"
-			if forced then
-				rarity, kind = forced.rarity, forced.kind
-			end
-			if kind == "geode" then
-				Tracking.Funnel(player, "Gems", 1, "Geode drilled")
-			end
-			table.insert(d.cargo, { ring = a.ring, rarity = rarity, kind = kind, size = forced and forced.size })
+			rarity = forced or rarity
+			table.insert(d.cargo, { ring = a.ring, rarity = rarity })
 			table.insert(rarities, rarity)
-			table.insert(kinds, kind)
 		end
 		-- tous les anneaux sont ouverts (on y va à ses risques) : d.ring retient le plus lointain
 		-- où l'on a déjà sorti un œuf (onglets de l'Index, montant des paquets d'argent)
@@ -271,67 +233,12 @@ local function onDrill(player: Player, target: any, at: any)
 	-- Les effets ne passent pas par la position du modèle (il défile) : on envoie la roche visée.
 	-- eggLeft : vie restante de l'œuf en cours pour ce joueur (sa barre), eggHP : vie d'un œuf
 	local eggHP = Config.Rings[a.ring].EggHP
-	Remotes.DrillHit:FireAllClients(a.part, player, damage, rarities, broken, eggHP - progress, eggHP, kinds)
+	Remotes.DrillHit:FireAllClients(a.part, player, damage, rarities, broken, eggHP - progress, eggHP)
 end
-
--- CASSE DES ŒUFS -----------------------------------------------------------
 
 -- egg : { ring, rarity } ; les anciennes sauvegardes n'ont que l'anneau (rareté tirée maintenant)
 GameService.RollRarity = function(d, ringIndex: number): number
 	return rollRarity(d, ringIndex)
-end
-
-local function crackEgg(d, egg)
-	local ringIndex = egg.ring
-	local rarity = egg.rarity or rollRarity(d, ringIndex)
-
-	local sizeWeights = {}
-	for i, s in ipairs(Config.Sizes) do
-		sizeWeights[i] = s.Chance
-	end
-	local size = Config.Sizes[pick(sizeWeights)]
-	local shiny = rng:NextNumber() < Config.ShinyChance
-
-	local ring = Config.Rings[ringIndex]
-	local r = Config.Rarities[rarity]
-	local value = r.Value * ring.ValueMult * size.Mult * (if shiny then Config.ShinyMult else 1)
-	value = math.max(1, math.floor(value + 0.5))
-	return {
-		Ring = ringIndex,
-		Rarity = rarity,
-		Name = ring.Crystals[rarity],
-		Size = size.Name,
-		Shiny = shiny,
-		Value = value,
-		Chance = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner) * BoostService.LuckMult(d))[rarity],
-	}
-end
-
-local function crackAll(player: Player)
-	local d = DataService.Get(player)
-	if not d then
-		return
-	end
-	if #d.cargo == 0 then
-		notice(player, "No space eggs to crack. Drill asteroids out there!", "warn")
-		return
-	end
-	local results = {}
-	local total = 0
-	for _, egg in ipairs(d.cargo) do
-		local g = crackEgg(d, egg)
-		table.insert(results, g)
-		total += g.Value
-		local key = g.Ring .. ":" .. g.Rarity
-		d.index[key] = (d.index[key] or 0) + 1
-		d.stats.geodes += 1
-		d.stats.best = math.max(d.stats.best, g.Rarity)
-		AnnounceService.Gem(player, g.Name, g.Rarity)
-	end
-	d.cargo = {}
-	d.credits += total
-	sync(player)
-	Remotes.CrackResult:FireClient(player, results, total)
 end
 
 -- AMÉLIORATIONS ET ANNEAUX ---------------------------------------------------
@@ -486,7 +393,6 @@ function GameService.GrantDrill(player: Player, tier: number): boolean
 	if not d or not Config.Drills[tier] then
 		return false
 	end
-	d.paidDrill = math.max(d.paidDrill or 1, tier) -- gardée après une Supernova
 	if tier > d.drill then
 		d.drill = tier
 		Tracking.Funnel(player, "Drills", tier, Config.Drills[tier].Name)
@@ -538,22 +444,6 @@ local function watchFalls()
 	end
 end
 
--- La machine à casser d'une base ne sert qu'à son propriétaire
-local function bindBase(base: Model)
-	local point = base:FindFirstChild("CrackPoint", true)
-	local crackPrompt = point and point:FindFirstChildOfClass("ProximityPrompt")
-	if not crackPrompt then
-		return
-	end
-	crackPrompt.Triggered:Connect(function(p)
-		if Bases.OwnerOf(base) == p then
-			crackAll(p)
-		else
-			notice(p, "This is not your base", "warn")
-		end
-	end)
-end
-
 -- Points de service du pont (stands de Ship.Shops, tools/build-shops.lua) : STORE ouvre la boutique
 -- Robux, ITEMS l'atelier des foreuses, SELL la vente des créatures, la machine la fusion
 local function bindShopPoint(point: BasePart)
@@ -571,7 +461,7 @@ local function bindShopPoint(point: BasePart)
 		elseif point.Name == "ShopPoint" then
 			Remotes.OpenShop:FireClient(p)
 		elseif point.Name == "SellPoint" then
-			-- comptoir de vente : minerais et créatures (SellUI.client)
+			-- comptoir de vente des créatures (CreaturesUI.client, mode vente)
 			Remotes.OpenShop:FireClient(p, "Sell")
 		else
 			Remotes.OpenCreatures:FireClient(p, "fuse")
@@ -589,7 +479,8 @@ function GameService.Start()
 			return
 		end
 		if step == "tip" then
-			local known = type(key) == "string" and (Config.Guide.Tips[key] or string.match(key, "^drill%d%d?$") or string.match(key, "^tunnel%d%d?$"))
+			local known = type(key) == "string"
+				and (Config.Guide.Tips[key] or string.match(key, "^drill%d%d?$") or string.match(key, "^tunnel%d%d?$") or string.match(key, "^suit%d%d?$") or string.match(key, "^bat%d$"))
 			if known and not d.tips[key] then
 				d.tips[key] = true
 				player:SetAttribute("Tip_" .. key, true)
@@ -626,9 +517,6 @@ function GameService.Start()
 	Remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
 	Remotes.BuyDrill.OnServerEvent:Connect(buyDrill)
 
-	for _, base in ipairs(WorldBuilder.Bases) do
-		bindBase(base)
-	end
 	for _, point in ipairs(WorldBuilder.ShopPoints) do
 		bindShopPoint(point)
 	end
@@ -695,11 +583,7 @@ function GameService.Start()
 			if not d then
 				return "pas de données"
 			end
-			local xp = 0
-			for l = 1, level - 1 do
-				xp += Config.JetpackXPNeed(l)
-			end
-			d.jetXP = xp
+			d.jetXP = Config.JetpackXPTotal(level)
 			sync(player)
 			return ("niveau %d, palier %s, carburant %.2f s, vitesse %.1f"):format(level, tostring(player:GetAttribute("JetTier")), Config.JetpackFuel(level), Config.AirSpeed(level))
 		end

@@ -123,16 +123,15 @@ local function refreshMoney()
 end
 
 -- GROS BOUTONS (à gauche) : la boutique (améliorations, passes, potions, récompenses…
--- tout s'y trouve en faisant défiler), l'index des créatures, les récompenses, et SUPERNOVA
--- (renaissance) qui n'apparaît qu'à partir du niveau Config.Supernova.Level du jetpack
-local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -46), UDim2.fromOffset(220, 4 * 76))
+-- tout s'y trouve en faisant défiler), l'index des créatures et les récompenses (REWARDS n'apparaît
+-- qu'une fois le tutoriel fini : avant, il détourne l'attention)
+local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -46), UDim2.fromOffset(220, 3 * 76))
 new("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = menu })
 local buttons = {}
 for i, b in ipairs({
 	{ "Store", "STORE", "Shop", "Green" }, -- tout ce qui s'achète en Robux (Store.client)
 	{ "Index", "INDEX", "Index", "Blue" },
 	{ "Rewards", "REWARDS", "Rewards", "Purple" }, -- cadeaux, quêtes, codes (RewardsUI.client)
-	{ "Supernova", "SUPERNOVA", "Supernova", "Orange" }, -- renaissance (SupernovaUI.client)
 }) do
 	local button, badge = UIKit.menuButton({ name = b[1], text = b[2], art = b[3], color = b[4], parent = menu })
 	button.Parent.LayoutOrder = i
@@ -149,18 +148,16 @@ local function refreshBadges()
 	buttons.Store.badge.Visible = Config.Shop.Featured.Id ~= 0 and not player:GetAttribute("StarterBought") and ends > os.time()
 	-- REWARDS : cadeaux, quêtes et connexion quotidienne à réclamer (RewardService)
 	buttons.Rewards.badge.Visible = ((player:GetAttribute("RewardsReady") or 0) :: number) > 0
-	-- SUPERNOVA : visible à partir du niveau Config.Supernova.Level du jetpack, pastille quand on peut payer
-	local done = (player:GetAttribute("Supernovas") or 0) :: number
-	local credits = (player:GetAttribute("Credits") or 0) :: number
-	local holder = buttons.Supernova.button.Parent :: Frame
-	local unlocked = ((player:GetAttribute("JetLevel") or 1) :: number) >= Config.Supernova.Level
+	-- caché pendant le tutoriel ; il saute aux yeux quand il arrive
+	local holder = buttons.Rewards.button.Parent :: Frame
+	local step = player:GetAttribute("GuideStep")
+	local unlocked = type(step) == "number" and step >= Config.Guide.Steps
 	if unlocked and not holder.Visible then
-		-- il vient d'apparaître : il saute aux yeux (le guide explique à quoi il sert)
+		holder.Visible = true
 		UIKit.popIn(holder)
-		UIKit.burst(holder, UDim2.fromScale(0.5, 0.5), Color3.fromRGB(255, 170, 60))
+		UIKit.burst(holder, UDim2.fromScale(0.5, 0.5), Color3.fromRGB(190, 120, 255))
 	end
 	holder.Visible = unlocked
-	buttons.Supernova.badge.Visible = credits >= Config.SupernovaCost(done)
 end
 
 -- Emplacement en haut à droite : les deux carrés d'inventaire (Inventory.client) y sont, et la jauge
@@ -363,7 +360,7 @@ player:GetAttributeChangedSignal("Guide"):Connect(refreshHint)
 
 -- MANETTE : croix gauche = STORE, croix droite = INDEX, croix haut = REWARDS (petite flèche) ------
 local padTags: { GuiObject } = {}
-for name, dir in pairs({ Store = -1, Index = 1, Rewards = 0, Supernova = 2 }) do
+for name, dir in pairs({ Store = -1, Index = 1, Rewards = 0 }) do
 	local b = buttons[name].button
 	local tag = new("Frame", {
 		Name = "PadTag",
@@ -390,8 +387,13 @@ local function padShortcut(window: string)
 end
 ContextActionService:BindAction("PadStore", padShortcut("Store"), false, Device.Pad.Store)
 ContextActionService:BindAction("PadIndex", padShortcut("Index"), false, Device.Pad.Index)
-ContextActionService:BindAction("PadRewards", padShortcut("Rewards"), false, Device.Pad.Rewards)
-ContextActionService:BindAction("PadSupernova", padShortcut("Supernova"), false, Device.Pad.Supernova)
+ContextActionService:BindAction("PadRewards", function(name, state, input)
+	-- pas de raccourci tant que le bouton REWARDS est caché (tutoriel)
+	if not (buttons.Rewards.button.Parent :: Frame).Visible then
+		return Enum.ContextActionResult.Pass
+	end
+	return padShortcut("Rewards")(name, state, input)
+end, false, Device.Pad.Rewards)
 
 -- TÉLÉPHONE : le joystick de Roblox est en bas à gauche ; on monte l'argent en haut à gauche et les
 -- gros boutons juste dessous, pour que le pouce ne les cache pas
@@ -422,11 +424,9 @@ layout()
 player.AttributeChanged:Connect(function(name)
 	if name == "Credits" or name == "Income" then
 		refreshMoney()
-		refreshBadges()
 	elseif name == "JetLevel" or name == "JetXP" or name == "JetXPNeed" then
 		refreshSpeed()
-		refreshBadges()
-	elseif name == "StarterBought" or name == "StarterEnds" or name == "RewardsReady" or name == "Supernovas" then
+	elseif name == "StarterBought" or name == "StarterEnds" or name == "RewardsReady" or name == "GuideStep" then
 		refreshBadges()
 	end
 end)

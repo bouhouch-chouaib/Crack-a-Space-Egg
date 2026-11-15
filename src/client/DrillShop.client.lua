@@ -936,8 +936,13 @@ end
 
 Remotes.OpenShop.OnClientEvent:Connect(function(which: string?)
 	-- stand STORE du vaisseau : c'est la boutique Robux (Store.client) qui s'ouvre
-	if which == "Store" or which == "Sell" or which == "MachineUp" then
+	if which == "Store" or which == "MachineUp" then
 		UIKit.Open:Fire(which)
+		return
+	end
+	-- stand SELL : la fenêtre des créatures en mode vente (CreaturesUI.client)
+	if which == "Sell" then
+		UIKit.Open:Fire("Creatures", "sell")
 		return
 	end
 	if not win.isOpen() then

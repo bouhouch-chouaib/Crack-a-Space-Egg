@@ -5,6 +5,9 @@
 -- Dans le courant d'air de SA soufflerie, il flotte (WindTunnel.client) et gagne de l'XP de jetpack
 -- chaque seconde, même AFK. Hors soufflerie, chaque seconde de vol réel rapporte un peu d'XP.
 -- Le serveur décide de l'XP et des achats ; le client ne fait que l'affichage.
+-- Bonus à attraper (Config.Jetpack.Boost) : pendant l'entraînement, un bouton « x2 » est proposé de temps
+-- en temps (attribut TunnelBoostOffer = heure serveur de fin de l'offre). Remotes.TunnelUp("boost") dans
+-- les temps : XP de la soufflerie × Mult pendant Duration secondes (attribut TunnelBoostEnd).
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -28,6 +31,44 @@ local STUDS = "rbxassetid://99589690361139" -- picots carrés (comme tools/apply
 local EMPTY_COLOR = Color3.fromRGB(120, 130, 150)
 
 local WindTunnelService = {}
+
+local B = J.Boost
+local rng = Random.new()
+local nextOffer: { [Player]: number } = {} -- os.clock() de la prochaine offre (nil = pas en train de s'entraîner)
+local offerUntil: { [Player]: number } = {}
+local boostUntil: { [Player]: number } = {}
+
+-- Le bonus x2 n'est proposé qu'à un joueur qui s'entraîne, tutoriel fini, hors bonus en cours
+local function stepBoost(player: Player, d, training: boolean)
+	local now = os.clock()
+	if offerUntil[player] and now >= offerUntil[player] then
+		offerUntil[player] = nil
+		player:SetAttribute("TunnelBoostOffer", nil)
+	end
+	if not training or (d.guide or 0) < Config.Guide.Steps or (boostUntil[player] or 0) > now or offerUntil[player] then
+		nextOffer[player] = nil
+		return
+	end
+	if not nextOffer[player] then
+		nextOffer[player] = now + rng:NextNumber(B.Every[1], B.Every[2])
+	elseif now >= nextOffer[player] then
+		nextOffer[player] = nil
+		offerUntil[player] = now + B.Offer
+		player:SetAttribute("TunnelBoostOffer", workspace:GetServerTimeNow() + B.Offer)
+	end
+end
+
+local function grabBoost(player: Player): boolean
+	local now = os.clock()
+	if not offerUntil[player] or now > offerUntil[player] + 0.5 then
+		return false
+	end
+	offerUntil[player] = nil
+	boostUntil[player] = now + B.Duration
+	player:SetAttribute("TunnelBoostOffer", nil)
+	player:SetAttribute("TunnelBoostEnd", workspace:GetServerTimeNow() + B.Duration)
+	return true
+end
 
 type Tunnel = { model: Model, base: Vector3, tier: number, owner: Player? }
 local tunnels: { [number]: Tunnel } = {} -- par numéro de base
@@ -261,14 +302,6 @@ buy = function(player: Player, index: number)
 end
 WindTunnelService.Buy = buy
 
--- Reconstruit la soufflerie de la base d'un joueur (après une Supernova : elle redevient à acheter)
-function WindTunnelService.Refresh(player: Player)
-	local index = player:GetAttribute("Base")
-	if type(index) == "number" then
-		refresh(index)
-	end
-end
-
 -- Soufflerie où se trouve ce point (ou nil)
 local function tunnelAt(pos: Vector3): Tunnel?
 	for _, t in pairs(tunnels) do
@@ -283,14 +316,10 @@ end
 WindTunnelService.TunnelAt = tunnelAt
 
 local function addXP(player: Player, d, xp: number): number
-	local before = Config.JetpackLevel(d.jetXP or 0)
+	-- (pas de message à chaque niveau : ils s'enchaînent vite, le HUD et la soufflerie fêtent chacun)
 	local gain = xp * BoostService.JetXPMult(player)
 	d.jetXP = (d.jetXP or 0) + gain
-	local after = Config.JetpackLevel(d.jetXP)
 	GameService.Sync(player)
-	if after > before then
-		GameService.Notice(player, ("{Jetpack} Jetpack level %d! You are faster"):format(after), "good")
-	end
 	return gain
 end
 
@@ -302,11 +331,14 @@ local function tick()
 		local hum = character and character:FindFirstChildOfClass("Humanoid")
 		if d and hrp and hum then
 			local t = tunnelAt(hrp.Position)
+			-- seulement dans sa propre soufflerie, une fois achetée
+			local training = t ~= nil and t.owner == player and t.tier >= 1
+			stepBoost(player, d, training)
 			if t then
-				-- seulement dans sa propre soufflerie, une fois achetée
-				if t.owner == player and t.tier >= 1 then
+				if training then
+					local mult = if (boostUntil[player] or 0) > os.clock() then B.Mult else 1
 					-- XP gagnée (boosts compris) et palier : le client fait jaillir des « +XP » du joueur
-					Remotes.TunnelXP:FireClient(player, addXP(player, d, J.Tunnels[t.tier].XP), t.tier)
+					Remotes.TunnelXP:FireClient(player, addXP(player, d, J.Tunnels[t.tier].XP * mult), t.tier)
 					GameService.Quest(player, "tunnel", 1)
 				end
 			elseif hum.FloorMaterial == Enum.Material.Air and (character:GetAttribute("Jet") or 0) ~= 0 then
@@ -320,6 +352,9 @@ function WindTunnelService.Start()
 	Remotes.TunnelUp.OnServerInvoke = function(player: Player, action: any)
 		local d = DataService.Get(player)
 		local index = player:GetAttribute("Base")
+		if action == "boost" then
+			return { ok = d ~= nil and grabBoost(player) }
+		end
 		if action ~= "buy" or not d or type(index) ~= "number" then
 			return { ok = false }
 		end
@@ -350,6 +385,7 @@ function WindTunnelService.Start()
 		if type(i) == "number" then
 			refresh(i, player)
 		end
+		nextOffer[player], offerUntil[player], boostUntil[player] = nil, nil, nil
 	end)
 	task.spawn(function()
 		while true do

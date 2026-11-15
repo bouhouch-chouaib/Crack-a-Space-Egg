@@ -62,10 +62,10 @@ end
 local function needs(s): string
 	if s.Robux then
 		return "Premium"
-	elseif (s.Supernovas or 0) == 0 then
+	elseif (s.Ring or 1) <= 1 then
 		return "Starter"
 	end
-	return if s.Supernovas == 1 then "1 Supernova" else ("%d Supernovas"):format(s.Supernovas)
+	return ("Reach Ring %d"):format(s.Ring)
 end
 
 type Card = { frame: Frame, view: ViewportFrame, button: TextButton, text: TextLabel, grad: UIGradient, mode: string }
@@ -139,7 +139,7 @@ for i, s in ipairs(SKINS) do
 			end
 		elseif c.mode == "locked" then
 			UIKit.shake(button)
-			UIKit.toast(if s.Supernovas == 1 then "Go Supernova once to unlock it!" else ("Go Supernova %d times to unlock it!"):format(s.Supernovas), "warn")
+			UIKit.toast(("Reach Ring %d to unlock it!"):format(s.Ring or 1), "warn")
 		end
 	end)
 end
@@ -252,7 +252,8 @@ player.AttributeChanged:Connect(function(name)
 	if name == "BaseSkin" then
 		state.skin = player:GetAttribute("BaseSkin") or SKINS[1].Key
 	end
-	if win.isOpen() and (name == "BaseSkin" or name == "Supernovas") then
+	-- Ring : anneau le plus lointain atteint, qui débloque les thèmes gratuits
+	if win.isOpen() and (name == "BaseSkin" or name == "Ring") then
 		task.spawn(fetch)
 	end
 end)

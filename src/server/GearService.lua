@@ -1,11 +1,13 @@
 -- Objets (Config.Gear, onglet GEAR du stand ITEMS, barre de boutons GearBar.client).
--- Batte en $ (3 paliers, perdue à la Supernova) ; tapis, bottes et grappin en passes Robux (BoostService) ;
+-- Batte en $ (3 paliers) ; tapis, bottes et grappin en passes Robux (BoostService) ;
 -- bouclier en produit Robux (consommé par MonsterService.Caught).
 -- Remotes.Gear (RemoteEvent) :
---   client -> serveur : ("buyBat"), ("swing"), ("carpet", bool), ("boots", bool), ("hook", Vector3), ("hookEnd")
+--   client -> serveur : ("buyBat"), ("swing"), ("hold", bool) batte en main ou rangée, ("drop") lâcher la roche portée,
+--                       ("carpet", bool), ("boots", bool), ("hook", Vector3), ("hookEnd")
 --   serveur -> client : ("pushed", Vector3) coup de batte reçu (appliqué par Jetpack.client)
 -- Publié sur le joueur : Bat, Shields (GameService.Sync).
--- Sur le personnage : BatSwing (horodatage du coup), Carpet, Boots, HookTo (lus par GearBar.client et Jetpack.client).
+-- Sur le personnage : BatHeld (batte en main), BatSwing (horodatage du coup), Carpet, Boots, HookTo
+-- (lus par GearBar.client, Controls.client et Jetpack.client).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,6 +19,7 @@ local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local BoostService = require(script.Parent.BoostService)
 local MonsterService = require(script.Parent.MonsterService)
+local CarryService = require(script.Parent.CarryService)
 local Tracking = require(script.Parent.Tracking)
 
 local G = Config.Gear
@@ -97,7 +100,8 @@ end
 
 -- BATTE --------------------------------------------------------------------------------------------
 
--- Portée à la hanche ; au moment du coup, GearBar.client la met dans la main le temps de l'animation
+-- Rangée, elle est portée à la hanche (GearBar.client la met dans la main le temps d'un coup) ;
+-- prise en main (attribut BatHeld du personnage), elle reste dans la main droite
 local function equipBat(player: Player)
 	local d = DataService.Get(player)
 	local character = player.Character
@@ -108,12 +112,44 @@ local function equipBat(player: Player)
 	clear(character, "EquippedBat")
 	local tier = d.bat or 0
 	if tier <= 0 then
+		character:SetAttribute("BatHeld", nil)
 		return
 	end
 	local model = GearModel.Bat(tier)
 	model.Name = "EquippedBat"
-	attach(model, model:FindFirstChild("Handle") :: BasePart, hip, G.BatHip, "BatWeld")
+	local hand = (character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")) :: BasePart?
+	if character:GetAttribute("BatHeld") and hand then
+		attach(model, model:FindFirstChild("Handle") :: BasePart, hand, G.BatHand, "BatWeld")
+	else
+		attach(model, model:FindFirstChild("Handle") :: BasePart, hip, G.BatHip, "BatWeld")
+	end
 	model.Parent = character
+end
+
+-- Prendre la batte en main ou la ranger (la foreuse reprend alors la main)
+local function holdBat(player: Player, on: boolean)
+	local d = DataService.Get(player)
+	local character = player.Character
+	if not d or not character or (on and (d.bat or 0) <= 0) then
+		return
+	end
+	if (character:GetAttribute("BatHeld") == true) == on then
+		return
+	end
+	character:SetAttribute("BatHeld", if on then true else nil)
+	equipBat(player)
+end
+
+-- Lâcher la roche portée : elle tombe dans le vide, la soute est vidée (jamais pendant le tutoriel)
+local function dropEgg(player: Player)
+	local d = DataService.Get(player)
+	if not d or #d.cargo == 0 or (d.guide or 0) < Config.Guide.Steps then
+		return
+	end
+	CarryService.Drop(player)
+	d.cargo = {}
+	GameService.Sync(player)
+	Tracking.Event(player, "EggDropped")
 end
 
 local function buyBat(player: Player)
@@ -259,7 +295,7 @@ local function hook(player: Player, at: any)
 	end)
 end
 
--- Bouclier acheté en Robux (MonetizationService) : un de plus, gardé après une Supernova
+-- Bouclier acheté en Robux (MonetizationService) : un de plus
 function GearService.GrantShield(player: Player): boolean
 	local d = DataService.Get(player)
 	if not d then
@@ -277,6 +313,10 @@ function GearService.Start()
 			buyBat(player)
 		elseif action == "swing" then
 			swing(player)
+		elseif action == "hold" then
+			holdBat(player, arg == true)
+		elseif action == "drop" then
+			dropEgg(player)
 		elseif action == "carpet" then
 			setCarpet(player, arg == true)
 		elseif action == "boots" then
