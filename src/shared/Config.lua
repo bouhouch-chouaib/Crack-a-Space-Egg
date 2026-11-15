@@ -143,7 +143,7 @@ Config.Cold = {
 -- Un peu plus de temps pour les anneaux lointains, mais bien moins que la distance en plus : plus on va
 -- loin, plus il faut un bon jetpack pour revenir à temps.
 Config.Oxygen = {
-	Time = { 45, 50, 55, 60, 65, 70, 75, 80 },
+	Time = { 45, 50, 55, 60, 65, 70, 75, 80, 85 },
 	Low = 0.3, -- part restante sous laquelle l'alerte rouge commence
 	-- studs ajoutés à la boîte du vaisseau pour « de retour à bord » : négatif = un peu à l'intérieur du bord,
 	-- car les roches de l'anneau 1 frôlent le vaisseau (sinon le compte à rebours ne partirait pas)
@@ -242,6 +242,8 @@ Config.Rings = {
 	newRing("The Nest", 1.7, 32, 210000, 4096, 5.5, 2.6e13, Color3.fromRGB(150, 120, 80)),
 	-- 8e anneau (15 nov.) : un récif de corail dans l'espace. Pas encore de monstre.
 	newRing("Star Reef", 1.5, 34, 945000, 16384, 7.0, 0, Color3.fromRGB(40, 170, 170)),
+	-- 9e anneau (15 nov.) : un anneau d'orages violets traversé d'éclairs. Pas de monstre.
+	newRing("Storm Halo", 1.35, 36, 4.25e6, 65536, 8.5, 0, Color3.fromRGB(110, 90, 200)),
 }
 Config.CosmicMinRing = 5
 
@@ -407,6 +409,7 @@ Config.Relics = {
 	relic("Map", "Torn Star Map", 6, 2400, "XP", col(90, 225, 245), "It shows a way past the Rift. Half of it is missing."),
 	relic("Flag", "The First Flag", 7, 3000, "Money", col(255, 205, 80), "Planted by the first explorer to reach the Nest. Nobody knows their name."),
 	relic("Bell", "Diver's Bell", 8, 4000, "XP", col(90, 230, 200), "It still rings when something huge swims past the reef."),
+	relic("Rod", "Bent Lightning Rod", 9, 5000, "Money", col(255, 225, 90), "Struck a thousand times. It still hums before every storm."),
 }
 -- Texte court du bonus d'une relique (« +5% money »)
 function Config.RelicBonusText(r): string
@@ -561,9 +564,10 @@ Config.Jetpack = {
 		{ Level = 270, Name = "Rift Striker", Model = "Jet6", Reach = 140, Color = Color3.fromRGB(60, 240, 230) },
 		{ Level = 362, Name = "Nova Titan", Model = "Jet7", Reach = 171, Color = Color3.fromRGB(255, 200, 60) },
 		{ Level = 412, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
+		{ Level = 470, Name = "Storm Breaker", Model = "Jet9", Reach = 255, Color = Color3.fromRGB(255, 225, 90) },
 	},
-	TopLevel = 440, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
-	MaxReach = 215, -- portée au niveau TopLevel
+	TopLevel = 500, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
+	MaxReach = 270, -- portée au niveau TopLevel
 	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client) : toutes les Every
 	-- secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » apparaît Offer secondes ;
 	-- cliqué à temps, l'XP de la soufflerie est multipliée par Mult pendant Duration secondes.
@@ -584,6 +588,7 @@ Config.Jetpack = {
 		{ Name = "Hurricane Tunnel", Cost = 1.5e12, XP = 800, Color = Color3.fromRGB(255, 80, 120) },
 		{ Name = "Tempest Tunnel", Cost = 4e14, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
 		{ Name = "Supernova Vortex", Cost = 6e16, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
+		{ Name = "Thunder Vortex", Cost = 1e20, XP = 200000, Color = Color3.fromRGB(190, 140, 255) }, -- fin de partie (anneau 9)
 	},
 }
 
@@ -989,6 +994,20 @@ Config.Biomes = {
 			layer("Glow", rgb(90, 230, 220), rgb(255, 140, 130), { 7, 11 }, 4, { 6, 9 }, { 0.1, 0.4 }, Vector3.zero, { 0.88, 1 }, 0.8),
 		},
 	},
+	{ -- 9. Storm Halo : étincelles électriques et éclairs dans des nuages violets
+		Title = "STORM HALO",
+		Icon = "Lightning",
+		Fog = rgb(36, 24, 70), -- couleur du brouillard lointain
+		Clouds = { rgb(150, 110, 255), rgb(255, 225, 90) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(230, 220, 255),
+		Saturation = 0.25,
+		Outdoor = rgb(150, 130, 210),
+		Particles = {
+			layer("Shard", rgb(255, 240, 120), rgb(255, 255, 255), { 0.45, 0.2 }, 30, { 0.3, 0.8 }, { 0.5, 2 }, Vector3.zero, { 0, 1 }, 1, 120),
+			layer("Sparkle", rgb(190, 160, 255), rgb(255, 235, 120), { 0.5, 0.25 }, 18, { 2, 4 }, { 0.2, 0.8 }, Vector3.zero, { 0, 1 }, 1, 60),
+			layer("Glow", rgb(150, 110, 255), rgb(255, 220, 100), { 8, 12 }, 5, { 5, 8 }, { 0.1, 0.4 }, Vector3.zero, { 0.86, 1 }, 0.9),
+		},
+	},
 }
 
 -- CRÉATURES (docs/Mecaniques.md §9) ----------------------------------------------
@@ -997,6 +1016,8 @@ Config.Biomes = {
 -- Size = échelle min/max, Weight = kg min/max (tirés au hasard à l'obtention).
 -- Art = portrait de l'index ("" tant qu'il n'est pas dessiné : l'index montre un œuf mystère).
 -- Portraits de l'anneau 8 (rendus Blender, à remplir quand ils sont envoyés sur Roblox)
+-- Portraits de l'anneau 9 (même chose)
+local ART_R9 = { "rbxassetid://72182875240147", "rbxassetid://111568020541594", "rbxassetid://72532651453041", "rbxassetid://102020727143175", "rbxassetid://136462327382734", "rbxassetid://132837422445999" }
 local ART_R8 = { "rbxassetid://92057898992099", "rbxassetid://75232846627348", "rbxassetid://109346830247682", "rbxassetid://113502786478445", "rbxassetid://105924569565355", "rbxassetid://130244536757928" }
 local function creature(name, look, size, weight, art)
 	return { Name = name, Look = look, Size = size, Weight = weight, Art = art or "" }
@@ -1065,6 +1086,14 @@ Config.Creatures = {
 		creature("Tide Seahorse", "a majestic seahorse in golden armor with coral antlers", { 1, 1.6 }, { 20, 60 }, ART_R8[4]),
 		creature("Abyss Shark", "a deep-sea shark with glowing eyes and crystal fins", { 1, 1.7 }, { 80, 200 }, ART_R8[5]),
 		creature("Star Leviathan", "a colossal sea serpent queen with a coral crown and fins full of stars", { 1.1, 1.9 }, { 250, 600 }, ART_R8[6]),
+	},
+	{ -- 9. Storm Halo
+		creature("Zap Pup", "a fluffy yellow puppy with a lightning-bolt tail and purple ears", { 0.8, 1.3 }, { 2, 6 }, ART_R9[1]),
+		creature("Volt Beetle", "a beetle whose shell is a glowing battery with lightning marks", { 0.8, 1.4 }, { 1, 4 }, ART_R9[2]),
+		creature("Thunder Owl", "an owl with storm-cloud wings and glowing yellow eyes", { 0.9, 1.5 }, { 3, 8 }, ART_R9[3]),
+		creature("Storm Ram", "a mighty ram with thundercloud wool and lightning horns", { 1, 1.6 }, { 60, 150 }, ART_R9[4]),
+		creature("Plasma Tiger", "a powerful tiger with glowing plasma stripes and electric claws", { 1, 1.7 }, { 120, 300 }, ART_R9[5]),
+		creature("Tempest Dragon", "a colossal storm dragon with lightning wings and a crown of thunderclouds", { 1.1, 1.9 }, { 300, 700 }, ART_R9[6]),
 	},
 }
 
@@ -1221,6 +1250,14 @@ Config.Eggs = {
 		[6] = egg("Abyss"),
 		[7] = egg("Leviathan"),
 	},
+	{ -- 9. Storm Halo
+		[2] = egg("Spark"),
+		[3] = egg("Static"),
+		[4] = egg("Volt"),
+		[5] = egg("Thunder"),
+		[6] = egg("Plasma"),
+		[7] = egg("Tempest"),
+	},
 }
 
 -- Nom affiché d'un œuf (« Desert King Egg »)
@@ -1261,7 +1298,7 @@ Config.Hatch = {
 	-- Exemples (taille 1, sans mutation) : anneau 1 = 10 / 16 / 30 / 45 / 80 / 120 $/s ; anneau 2 = 356 à 4,3K ;
 	-- anneau 7 = 20 Md à 240 Md.
 	SlotIncome = { 2, 3.2, 6, 9, 16, 24 },
-	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11 },
+	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13 },
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement, selon la rareté : l'œuf se charge (tremble,
 	-- brille, se fissure de rayons, s'élève...) de plus en plus longtemps et fort (HatchFx)
 	Burst = { 1.6, 2.1, 2.7, 3.4, 4.3, 5.4, 6.8 },
@@ -1366,6 +1403,13 @@ Config.CreatureMotion = {
 	["Tide Seahorse"] = motion("swim", "spin", 0.9, { Hover = 0.3 }),
 	["Abyss Shark"] = motion("swim", "charge", 1.2, { Hover = 0.3 }),
 	["Star Leviathan"] = motion("swim", "roar", 0.7, { Hover = 0.3 }),
+	-- 9. Storm Halo
+	["Zap Pup"] = motion("trot", "spin", 1.5),
+	["Volt Beetle"] = motion("scuttle", "flip", 1.2),
+	["Thunder Owl"] = motion("fly", "dive", 1.0, { Hover = 0.5 }),
+	["Storm Ram"] = motion("stomp", "charge", 0.9),
+	["Plasma Tiger"] = motion("trot", "pounce", 1.3),
+	["Tempest Dragon"] = motion("fly", "roar", 0.8, { Hover = 0.4 }),
 }
 
 -- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté

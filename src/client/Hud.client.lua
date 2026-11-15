@@ -209,7 +209,7 @@ local noiseGauge, noiseFill = UIKit.gauge({ name = "Noise", art = "Noise", color
 -- couleur du palier, contour coloré (palier 2), halo qui pulse (3), reflet qui balaie (4),
 -- étincelles (5), rayons qui tournent (6), contour brillant (7), contour arc-en-ciel (8).
 -- Elle clignote en rouge quand le carburant passe sous 25 %.
-local ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII" }
+local ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII" }
 local jetHolder = new("Frame", { Name = "Jetpack", BackgroundTransparency = 1, LayoutOrder = 2, Size = UDim2.fromOffset(70, 212), Parent = gauges })
 local fuelFill: Frame = new("Frame")
 local lowFlash: Frame = new("Frame")
