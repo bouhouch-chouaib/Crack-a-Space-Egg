@@ -21,7 +21,14 @@ Chaîne pour une créature (clé `R<anneau>_T<rareté>`) :
 4. `Creatures.client` anime les membres selon `Config.CreatureMotion` : pattes en trot diagonal, ailes qui
    battent, queue qui remue, tête qui regarde autour, mâchoire qui s'ouvre pour rugir ; oreilles,
    mâchoire et pièces « Follow » suivent la tête ou leur membre.
-5. Portraits (`Art` de `Config.Creatures`) : rendus Blender des modèles installés, style standard Ropilot
+5. Référence de forme sans crédits Ropilot (15 nov., anneau 8) : sans planche de référence, partir d'un cube
+   donne des créatures qui se lisent mal (le premier guppy ressemblait à une boîte, la première méduse à une
+   maison). Méthode qui a marché : générer l'animal avec l'IA 3D de Roblox Studio (`generate_mesh`, gratuite),
+   l'importer dans Blender, en rendre des vues orthogonales (face, côté, dos, dessus, style « clean », fond uni)
+   et les passer à `m.reference()`, puis construire au kit en suivant `compare()`. Supprimer ensuite le modèle
+   généré. Exemples : `tools/blender/creature_r8_t2.py` à `t7.py`.
+   Après `Install`, vérifier les joints : il peut mettre celui de la queue trop haut (corrigé à la main sur R8_T7).
+6. Portraits (`Art` de `Config.Creatures`) : rendus Blender des modèles installés, style standard Ropilot
    (dossier Renders/Creatures, ids dans renders.json).
 
 ---

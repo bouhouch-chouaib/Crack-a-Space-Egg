@@ -997,7 +997,7 @@ Config.Biomes = {
 -- Size = échelle min/max, Weight = kg min/max (tirés au hasard à l'obtention).
 -- Art = portrait de l'index ("" tant qu'il n'est pas dessiné : l'index montre un œuf mystère).
 -- Portraits de l'anneau 8 (rendus Blender, à remplir quand ils sont envoyés sur Roblox)
-local ART_R8 = { "rbxassetid://134732604428031", "rbxassetid://75232846627348", "rbxassetid://80495239278501", "", "", "" }
+local ART_R8 = { "rbxassetid://92057898992099", "rbxassetid://75232846627348", "rbxassetid://109346830247682", "rbxassetid://113502786478445", "rbxassetid://105924569565355", "rbxassetid://130244536757928" }
 local function creature(name, look, size, weight, art)
 	return { Name = name, Look = look, Size = size, Weight = weight, Art = art or "" }
 end
