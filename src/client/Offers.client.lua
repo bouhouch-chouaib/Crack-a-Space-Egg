@@ -244,7 +244,7 @@ local function nextOffer(): Offer?
 	end
 	local scanner = Config.UpgradeCost("Scanner", attr("Lvl_Scanner"))
 	if attr("Lvl_Scanner") == 0 and credits >= scanner and fresh("scanner") then
-		return { key = "scanner", art = "UpScanner", title = "Scanner!", text = ("Rarer eggs: $%s"):format(Format.Short(scanner)), button = "ITEMS", go = function()
+		return { key = "scanner", art = "UpScanner", title = "Scanner!", text = ("More mutations: $%s"):format(Format.Short(scanner)), button = "ITEMS", go = function()
 			toStand("ItemsStand", "Upgrades")
 		end }
 	end
@@ -270,7 +270,7 @@ local function nextOffer(): Offer?
 		return { key = "tunnel" .. (level + 1), art = "WindTunnel", title = "Better wind tunnel!", text = ("%s: $%s"):format(nextTunnel.Name, Format.Short(nextTunnel.Cost)), button = "TUNNEL", go = toTunnel }
 	end
 	if credits >= Config.MachineCost("Speed", attr("Mach_Speed")) and fresh("machine") then
-		return { key = "machine", art = "MachineUp", title = "Upgrade your machine!", text = "Faster and luckier", button = "MACHINE", go = toMachine }
+		return { key = "machine", art = "MachineUp", title = "Upgrade your machine!", text = "Faster, luckier, more mutations", button = "MACHINE", go = toMachine }
 	end
 	if Config.Shop.Featured.Id ~= 0 and fresh("starter") and not player:GetAttribute("StarterBought") and attr("StarterEnds") > os.time() then
 		return { key = "starter", art = "Shop", title = "Starter Pack!", text = "Big bundle for new players", button = "STORE", go = function()

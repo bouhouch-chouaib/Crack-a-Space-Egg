@@ -132,7 +132,7 @@ local function showBar(rock: BasePart)
 	if barRock ~= rock then
 		barRock = rock
 		local ringCfg = Config.Rings[rock:GetAttribute("Ring") or 1]
-		eggHP = if ringCfg then ringCfg.EggHP else 1
+		eggHP = (rock:GetAttribute("EggHP") or (if ringCfg then ringCfg.EggHP else 1)) :: number
 		eggLeft = eggHP
 		shownHp = eggHP
 		bar.Adornee = rock

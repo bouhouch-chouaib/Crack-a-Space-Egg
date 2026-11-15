@@ -18,6 +18,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Icons = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Icons"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
+local Mutation = require(ReplicatedStorage.Shared:WaitForChild("Mutation"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
 local HatchFx = require(script.Parent:WaitForChild("HatchFx"))
@@ -500,6 +501,7 @@ local function startCharge(m: Model)
 		grow = (m:GetAttribute("HatchGrow") or 1) :: number,
 		duration = math.max(0.3, dur - (workspace:GetServerTimeNow() - started)),
 		owner = mine,
+		odds = m:GetAttribute("HatchOdds") :: number?,
 		onCrack = function(i: number)
 			Sfx.Play("Crack", { at = core.Position, volume = if mine then 0.5 else 0.25, pitch = 0.8 + 0.08 * i })
 		end,
@@ -564,9 +566,10 @@ end)
 
 -- ÉCLATEMENT ET BANNIÈRE ------------------------------------------------------------------
 
-local function hatchBanner(ring: number, rarity: number, name: string, income: number, petSize: number?, special: string?)
+local function hatchBanner(ring: number, rarity: number, name: string, income: number, petSize: number?, special: string?, mutation: string?, odds: number?)
 	local r = rarityOf(rarity)
 	local tier = Config.PetSize(petSize)
+	local mut = Config.Mutation(mutation)
 	local frame = new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.38),
@@ -578,11 +581,18 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 	UIKit.autoScale(frame)
 	-- la toute première éclosion est une fête : rayons dorés plus grands, éclats, son de récompense
 	local wow = special == "wow" -- la créature rare du tutoriel
-	local fxColor = if wow then Color3.fromRGB(255, 205, 60) else r.Color
+	local fxColor = if wow then Color3.fromRGB(255, 205, 60) elseif mut then mut.Color else r.Color
 	UIKit.rays(frame, { color = fxColor, size = if wow then 900 else 620, transparency = 0.25, z = 30 })
 	UIKit.glow(frame, { color = fxColor, size = if wow then 760 else 500, transparency = if wow then 0.45 else 0.7, z = 30 })
-	if rarity >= 4 or wow then
-		UIKit.sparkles(frame, { count = if wow then 12 else 6 + rarity, color = fxColor, z = 33 })
+	if rarity >= 4 or wow or mut then
+		UIKit.sparkles(frame, { count = if wow or mut then 12 else 6 + rarity, color = fxColor, z = 33 })
+	end
+	if mut then
+		-- une mutation : la fête monte d'un cran
+		UIKit.burst(frame, UDim2.fromScale(0.5, 0.42), fxColor)
+		task.delay(0.3, UIKit.burst, frame, UDim2.fromScale(0.2, 0.35), fxColor)
+		task.delay(0.5, UIKit.burst, frame, UDim2.fromScale(0.8, 0.35), fxColor)
+		Sfx.Play("LevelUp", { pitch = 1.15 })
 	end
 	if wow then
 		UIKit.burst(frame, UDim2.fromScale(0.5, 0.42), fxColor)
@@ -607,6 +617,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 			Parent = frame,
 		})
 		local c = template:Clone()
+		Mutation.Apply(c, mutation)
 		c:PivotTo(CFrame.new())
 		c.Parent = vp
 		local _, size = c:GetBoundingBox()
@@ -665,17 +676,40 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 			UIKit.sparkles(sticker, { count = 3, color = tier.Color:Lerp(Color3.new(1, 1, 1), 0.5), size = 16, z = 36 })
 		end
 	end
+	-- mutation : autocollant penché de l'autre côté (« GOLD! x3 »)
+	if mut then
+		local sticker = new("Frame", {
+			Name = "Mutation",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(74, 70),
+			Size = UDim2.fromOffset(170, 52),
+			Rotation = -12,
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			ZIndex = 34,
+			Parent = frame,
+		}, { UIKit.corner(12), UIKit.stroke(3.5), UIKit.gradient(mut.Color:Lerp(Color3.new(1, 1, 1), 0.35), mut.Color:Lerp(Color3.new(0, 0, 0), 0.2)) })
+		UIKit.studs(sticker, 0.5, "Studs", 16)
+		UIKit.text({ Size = UDim2.new(1, -10, 1, -8), Position = UDim2.fromOffset(5, 4), Text = ("%s! x%s"):format(mut.Name:upper(), tostring(mut.Mult)), ZIndex = 35, Stroke = 3, Parent = sticker })
+		UIKit.wiggle(sticker, 5, 4)
+		UIKit.sparkles(sticker, { count = 4, color = mut.Color:Lerp(Color3.new(1, 1, 1), 0.5), size = 16, z = 36 })
+		if mut.Rainbow then
+			local grad = sticker:FindFirstChildOfClass("UIGradient")
+			if grad then
+				UIKit.rainbowButton(grad)
+			end
+		end
+	end
 	local nameLabel = UIKit.text({
 		Size = UDim2.new(1, 0, 0, 46),
 		Position = UDim2.new(0, 0, 1, -86),
-		Text = ((if tier.Name ~= "" then tier.Name .. " " else "") .. name):upper(),
-		TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2),
+		Text = ((if mut then mut.Name .. " " else "") .. (if tier.Name ~= "" then tier.Name .. " " else "") .. name):upper(),
+		TextColor3 = (if mut then mut.Color else r.Color):Lerp(Color3.new(1, 1, 1), 0.2),
 		ZIndex = 33,
 		Stroke = 4,
 		Parent = frame,
 	})
-	if rarity >= 5 then
-		UIKit.shinyText(nameLabel, r.Color)
+	if rarity >= 5 or mut then
+		UIKit.shinyText(nameLabel, if mut then mut.Color else r.Color)
 	end
 	UIKit.text({
 		Size = UDim2.new(1, 0, 0, 34),
@@ -686,6 +720,18 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 		Stroke = 3,
 		Parent = frame,
 	})
+	-- la chance de cette créature, comme sur le compteur de l'œuf
+	if odds and odds >= 2 then
+		UIKit.text({
+			Size = UDim2.new(1, 0, 0, 30),
+			Position = UDim2.new(0, 0, 1, -4),
+			Text = "1 in " .. Format.Commas(odds),
+			TextColor3 = HatchFx.OddsColor(odds),
+			ZIndex = 33,
+			Stroke = 3,
+			Parent = frame,
+		})
+	end
 	UIKit.popIn(frame)
 	task.delay(if wow then 4.6 else 3.2, function()
 		local s = frame:FindFirstChild("AnimScale") :: UIScale?
@@ -698,7 +744,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 end
 
 Remotes:WaitForChild("Hatched").OnClientEvent
-	:Connect(function(owner: Player, pos: Vector3, ring: number, rarity: number, name: string, income: number, size: number?, special: string?)
+	:Connect(function(owner: Player, pos: Vector3, ring: number, rarity: number, name: string, income: number, size: number?, special: string?, mutation: string?, odds: number?)
 		-- l'œuf qui a éclaté : la charge partie de ce point (il a grossi et s'est peut-être élevé)
 		local fx = nil
 		for i = #recent, 1, -1 do
@@ -722,7 +768,7 @@ Remotes:WaitForChild("Hatched").OnClientEvent
 		end
 		if owner == player then
 			-- la bannière attend que la créature soit sortie de l'œuf
-			task.delay(0.7 + 0.12 * rarity, hatchBanner, ring, rarity, name, income, size, special)
+			task.delay(0.7 + 0.12 * rarity, hatchBanner, ring, rarity, name, income, size, special, mutation, odds)
 		end
 	end)
 
@@ -761,9 +807,21 @@ local function trackCreature(m: Instance)
 			TextColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.2),
 			Parent = tag,
 		})
-		if tier.Name ~= "" and shown:sub(1, #tier.Name + 1) == tier.Name .. " " then
+		-- le mot de la mutation et celui de la taille, chacun à sa couleur (« Gold Giant Dust Bunny »)
+		local mut = Config.Mutation(m:GetAttribute("Mutation") :: string?)
+		local rest = shown
+		local rich = ""
+		if mut and rest:sub(1, #mut.Name + 1) == mut.Name .. " " then
+			rich ..= ('<font color="#%s">%s</font> '):format(mut.Color:ToHex(), mut.Name)
+			rest = rest:sub(#mut.Name + 2)
+		end
+		if tier.Name ~= "" and rest:sub(1, #tier.Name + 1) == tier.Name .. " " then
+			rich ..= ('<font color="#%s">%s</font> '):format(tier.Color:ToHex(), tier.Name)
+			rest = rest:sub(#tier.Name + 2)
+		end
+		if rich ~= "" then
 			nameText.RichText = true
-			nameText.Text = ('<font color="#%s">%s</font>%s'):format(tier.Color:ToHex(), tier.Name, shown:sub(#tier.Name + 1))
+			nameText.Text = rich .. rest
 		end
 		UIKit.text({
 			Size = UDim2.fromScale(1, 0.45),

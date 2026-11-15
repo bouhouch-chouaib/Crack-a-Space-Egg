@@ -20,6 +20,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Mutation = require(ReplicatedStorage.Shared.Mutation)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local AnnounceService = require(script.Parent.AnnounceService)
@@ -210,6 +211,26 @@ local function buildPet(player: Player, floor: BasePart, item, fresh: boolean?):
 		local h = (H.PetHeight[item.rarity] or 3.5) * (item.size or 1) * stage.Scale
 		body:ScaleTo(body:GetScale() * h / ((body:GetAttribute("Height") or 1) :: number))
 		body:SetAttribute("Height", h)
+		-- créature mutée : tout son corps prend la matière et la couleur de la mutation, et elle scintille
+		local mut = Config.Mutation(item.mut)
+		if mut then
+			Mutation.Apply(body, mut.Key)
+			local core = body.PrimaryPart
+			if core then
+				local sp = Instance.new("ParticleEmitter")
+				sp.Name = "MutationSparkle"
+				sp.Texture = Config.DrillSkinArt.Sparkle
+				sp.Color = ColorSequence.new(mut.Color:Lerp(Color3.new(1, 1, 1), 0.4))
+				sp.LightEmission = 0.8
+				sp.LightInfluence = 0
+				sp.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, h * 0.14), NumberSequenceKeypoint.new(1, 0) })
+				sp.Lifetime = NumberRange.new(0.8, 1.4)
+				sp.Speed = NumberRange.new(h * 0.25, h * 0.5)
+				sp.SpreadAngle = Vector2.new(180, 180)
+				sp.Rate = 5
+				sp.Parent = core
+			end
+		end
 		if fresh then
 			-- elle jaillit de l'œuf (Creatures.client)
 			m:SetAttribute("BornAt", workspace:GetServerTimeNow())
@@ -242,6 +263,7 @@ local function buildPet(player: Player, floor: BasePart, item, fresh: boolean?):
 	m:SetAttribute("Species", item.name) -- espèce seule (mouvements, image)
 	m:SetAttribute("Stage", item.stage or 1) -- stade (le guide repère 3 créatures à fusionner)
 	m:SetAttribute("Size", item.size)
+	m:SetAttribute("Mutation", item.mut)
 	m:SetAttribute("Income", item.income)
 	CollectionService:AddTag(m, "Creature")
 	m.Parent = folderOf(floor.Parent :: Model)
@@ -402,6 +424,7 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 		GameService.Notice(player, why or "You can't place it here", "warn")
 		return
 	end
+	local rock = d.ready[index].rock -- type de l'astéroïde d'origine (chance affichée à l'éclosion)
 	table.remove(d.ready, index)
 	nextId += 1
 	-- le tout premier œuf du joueur éclot en quelques secondes
@@ -412,6 +435,7 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 		id = ("%d%03d"):format(os.time(), nextId % 1000),
 		ring = ring,
 		rarity = rarity,
+		rock = rock,
 		x = x,
 		z = z,
 		hatchAt = os.time() + total,
@@ -458,11 +482,19 @@ function HatchService.Hatch(player: Player, id: string)
 		elseif (d.guide or 0) < Config.Guide.Steps and item.rarity == Config.Guide.FirstRarity then "wow"
 		else "first"
 	local size = if special then H.FirstSize else Config.RollPetSize(rng)
+	-- mutation : la chance du joueur (scanner, potion, Index, groupe) et le rayon de la machine la favorisent ;
+	-- jamais sur la toute première créature (le tutoriel reste simple)
+	local luck = Config.Luck(d.levels.Scanner) * BoostService.LuckMult(d) * Config.MachineMutation((d.machine or {}).Mutation or 0)
 	item.kind = "pet"
 	item.name = c.Name
 	item.size = math.floor(size * 100 + 0.5) / 100
 	item.weight = math.floor(rng:NextNumber(c.Weight[1], c.Weight[2]) * 10 + 0.5) / 10
-	item.income = Config.CreatureIncome(item.ring, item.rarity, item.size)
+	item.mut = if special then nil else Config.RollMutation(rng, luck)
+	item.income = Config.PetIncome(item)
+	-- « 1 in N » montré pendant l'éclosion : la vraie chance d'obtenir exactement cette créature
+	local p = Config.HatchOdds(item.ring, item.rarity, item.rock, item.size, item.mut, luck)
+	item.odds = if p > 0 then math.max(1, math.floor(1 / p + 0.5)) else nil
+	item.rock = nil
 	item.hatchAt = nil
 	GameService.Quest(player, "hatch", 1)
 	local key = item.ring .. ":" .. item.rarity
@@ -496,6 +528,7 @@ function HatchService.Hatch(player: Player, id: string)
 	m:SetAttribute("Rarity", item.rarity)
 	m:SetAttribute("HatchDuration", dur)
 	m:SetAttribute("HatchGrow", math.max(H.MinGrow, petHeight * H.Grow / eggHeight))
+	m:SetAttribute("HatchOdds", item.odds)
 	m:SetAttribute("Hatching", workspace:GetServerTimeNow())
 	local pos = m:GetPivot().Position
 	task.delay(dur, function()
@@ -506,7 +539,7 @@ function HatchService.Hatch(player: Player, id: string)
 		if player.Parent then
 			build(player, item, true)
 			syncBase(player)
-			Remotes.Hatched:FireAllClients(player, pos, item.ring, item.rarity, item.name, item.income, item.size, special)
+			Remotes.Hatched:FireAllClients(player, pos, item.ring, item.rarity, item.name, item.income, item.size, special, item.mut, item.odds)
 			AnnounceService.Creature(player, item)
 			if newSpecies then
 				-- laisse le temps de voir la créature sortir avant le message

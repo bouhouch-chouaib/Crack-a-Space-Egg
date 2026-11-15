@@ -36,6 +36,8 @@ local function view(item, where: string)
 		species = item.name,
 		stage = item.stage or 1,
 		size = item.size,
+		mut = item.mut,
+		odds = item.odds,
 		weight = item.weight,
 		income = item.income,
 		price = Config.PetPrice(item),
@@ -303,6 +305,14 @@ function ACTIONS.fuse(player, d, ids)
 	end
 	local size = (items[1].size + items[2].size + items[3].size) / 3
 	local weight = ((items[1].weight or 1) + (items[2].weight or 1) + (items[3].weight or 1)) / 3
+	-- la créature fusionnée garde la meilleure mutation des trois
+	local best = nil
+	for _, item in ipairs(items) do
+		local mut = Config.Mutation(item.mut)
+		if mut and (not best or mut.Mult > best.Mult) then
+			best = mut
+		end
+	end
 	local result = {
 		kind = "pet",
 		id = ("%d%04d"):format(os.time(), math.random(0, 9999)),
@@ -312,6 +322,7 @@ function ACTIONS.fuse(player, d, ids)
 		stage = stage + 1,
 		size = math.floor(size * 100 + 0.5) / 100,
 		weight = math.floor(weight * 10 + 0.5) / 10,
+		mut = if best then best.Key else nil,
 	}
 	result.income = Config.PetIncome(result)
 	local placed = fromBase and HatchService.PlacePet(player, result)
@@ -353,7 +364,7 @@ function CreatureService.Start()
 	Players.PlayerRemoving:Connect(function(player)
 		busy[player] = nil
 	end)
-	-- Studio seulement : mettre des créatures dans le sac ({ {anneau, rareté, stade, nombre} })
+	-- Studio seulement : mettre des créatures dans le sac ({ {anneau, rareté, stade, nombre, mutation} })
 	if game:GetService("RunService"):IsStudio() then
 		local bf = Instance.new("BindableFunction")
 		bf.Name = "CreatureDebug"
@@ -375,6 +386,7 @@ function CreatureService.Start()
 						stage = e[3] or 1,
 						size = math.floor(math.random(80, 120)) / 100,
 						weight = 1,
+						mut = e[5],
 					}
 					item.income = Config.PetIncome(item)
 					table.insert(d.inventory, item)

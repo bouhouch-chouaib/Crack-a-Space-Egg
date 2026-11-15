@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
+local Mutation = require(ReplicatedStorage.Shared:WaitForChild("Mutation"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
@@ -218,11 +219,16 @@ local function creatures(action: string, arg: any?): any
 	return if ok and type(res) == "table" then res else nil
 end
 
-local function petModel(ring: number, rarity: number): Model?
+local function petModel(ring: number, rarity: number, mut: string?): Model?
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local folder = assets and assets:FindFirstChild("Creatures")
 	local template = folder and folder:FindFirstChild(("R%d_T%d"):format(ring, rarity))
-	return if template and template:IsA("Model") then template:Clone() else nil
+	if template and template:IsA("Model") then
+		local m = template:Clone()
+		Mutation.Apply(m, mut) -- créature mutée : sa matière et sa couleur (shared/Mutation)
+		return m
+	end
+	return nil
 end
 
 local function showCreatures(data: any)
@@ -247,7 +253,7 @@ local function showCreatures(data: any)
 	for i = 1, math.min(#all, MAX_ROWS) do
 		local p = all[i]
 		local r = Config.Rarities[p.rarity] or Config.Rarities[1]
-		local row = makeRow(i, p.rarity, petModel(p.ring, p.rarity), p.name, ("%s · %s/s"):format(r.Name, money(p.income or 0)))
+		local row = makeRow(i, p.rarity, petModel(p.ring, p.rarity, p.mut), p.name, ("%s · %s/s"):format(r.Name, money(p.income or 0)))
 		local inBase = p.where == "base"
 		local equip = button(row, if inBase then "UNEQUIP" else "EQUIP", if inBase then "Blue" else "Green", 98, 58, 130)
 		equip.MouseButton1Click:Connect(function()

@@ -12,6 +12,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
+local Mutation = require(ReplicatedStorage.Shared:WaitForChild("Mutation"))
 local Icons = require(ReplicatedStorage.Shared:WaitForChild("Icons"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 
@@ -95,7 +96,7 @@ end
 
 local turning: { { vp: ViewportFrame, model: Model, phase: number } } = {}
 
-local function portrait(parent: GuiObject, p: { ring: number, rarity: number }, size: UDim2, pos: UDim2, z: number): ViewportFrame
+local function portrait(parent: GuiObject, p: { ring: number, rarity: number, mut: string? }, size: UDim2, pos: UDim2, z: number): ViewportFrame
 	local vp = new("ViewportFrame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = pos,
@@ -112,6 +113,7 @@ local function portrait(parent: GuiObject, p: { ring: number, rarity: number }, 
 	local template = folder and folder:FindFirstChild(("R%d_T%d"):format(p.ring, p.rarity)) :: Model?
 	if template then
 		local m = template:Clone()
+		Mutation.Apply(m, p.mut) -- créature mutée : sa matière et sa couleur (shared/Mutation)
 		m:PivotTo(CFrame.new())
 		m.Parent = vp
 		local _, s = m:GetBoundingBox()

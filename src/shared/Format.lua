@@ -21,6 +21,13 @@ function Format.Short(n: number): string
 	return string.format("%.1f%s", math.floor(v * 10) / 10, SUFFIXES[i])
 end
 
+-- Entier avec des virgules de milliers (« 41,667 »)
+function Format.Commas(n: number): string
+	local s = string.format("%d", math.floor(n + 0.5))
+	local out = string.reverse((string.gsub(string.reverse(s), "(%d%d%d)", "%1,")))
+	return (string.gsub(out, "^,", ""))
+end
+
 -- "1 in 400" pour une probabilité
 function Format.OneIn(p: number): string
 	if p <= 0 then

@@ -10,7 +10,6 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local BeltService = require(script.Parent.BeltService)
 local WorldBuilder = require(script.Parent.WorldBuilder)
-local BoostService = require(script.Parent.BoostService)
 local Tracking = require(script.Parent.Tracking)
 
 local Remotes = ReplicatedStorage.Remotes
@@ -117,19 +116,11 @@ local function pick(weights: { number }): number
 	return fallback
 end
 
--- Rareté d'un œuf, tirée au forage (ses veines brillent de cette couleur pendant le retour)
-local function rollRarity(d, ringIndex: number): number
-	local probs = Config.Probabilities(ringIndex, Config.Luck(d.levels.Scanner) * BoostService.LuckMult(d))
-	local rarity = pick(probs)
-	-- Compteur de veine
-	d.pity += 1
-	if rarity < 5 and d.pity >= Config.PityLegendary then
-		rarity = 5
-	end
-	if rarity >= 5 then
-		d.pity = 0
-	end
-	return rarity
+-- Rareté d'un œuf, tirée au forage (ses veines brillent de cette couleur pendant le retour) : elle
+-- dépend du type d'astéroïde (Config.RockTypes). La chance du joueur n'y change rien : elle joue sur les
+-- mutations, à l'éclosion (HatchService).
+local function rollRarity(ringIndex: number, rockType: number?): number
+	return pick(Config.RockChances(ringIndex, rockType))
 end
 
 -- Rareté que le tutoriel impose au prochain forage (ou nil) : le tout premier œuf du joueur est
@@ -207,13 +198,14 @@ local function onDrill(player: Player, target: any, at: any)
 	if eggs > 0 then
 		local forced = tutorialDrop(d, a.ring)
 		for _ = 1, eggs do
-			local rarity = rollRarity(d, a.ring)
+			local rarity = rollRarity(a.ring, a.type)
 			if guarded then
 				-- astéroïde gardé : la rareté est tirée deux fois, on garde la meilleure
-				rarity = math.max(rarity, rollRarity(d, a.ring))
+				rarity = math.max(rarity, rollRarity(a.ring, a.type))
 			end
 			rarity = forced or rarity
-			table.insert(d.cargo, { ring = a.ring, rarity = rarity })
+			-- rock : type de l'astéroïde d'origine, gardé jusqu'à l'éclosion (chance affichée, HatchService)
+			table.insert(d.cargo, { ring = a.ring, rarity = rarity, rock = a.type })
 			table.insert(rarities, rarity)
 		end
 		-- tous les anneaux sont ouverts (on y va à ses risques) : d.ring retient le plus lointain
@@ -232,13 +224,13 @@ local function onDrill(player: Player, target: any, at: any)
 	-- Coup visible par tous : nombres de dégâts, œufs qui jaillissent (avec leur rareté), casse.
 	-- Les effets ne passent pas par la position du modèle (il défile) : on envoie la roche visée.
 	-- eggLeft : vie restante de l'œuf en cours pour ce joueur (sa barre), eggHP : vie d'un œuf
-	local eggHP = Config.Rings[a.ring].EggHP
+	local eggHP = a.eggHP
 	Remotes.DrillHit:FireAllClients(a.part, player, damage, rarities, broken, eggHP - progress, eggHP)
 end
 
 -- egg : { ring, rarity } ; les anciennes sauvegardes n'ont que l'anneau (rareté tirée maintenant)
-GameService.RollRarity = function(d, ringIndex: number): number
-	return rollRarity(d, ringIndex)
+GameService.RollRarity = function(_d, ringIndex: number): number
+	return rollRarity(ringIndex, 1)
 end
 
 -- AMÉLIORATIONS ET ANNEAUX ---------------------------------------------------

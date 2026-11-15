@@ -3,9 +3,10 @@
 -- À lancer depuis la racine du dépôt, après chaque changement de prix ou de courbe :
 --     lune run tools/eco-sim
 --     lune run tools/eco-sim 0.6     (part du temps passée dans la soufflerie, 0.4 par défaut)
--- Le joueur simulé : il fore un œuf par voyage dans le meilleur anneau à sa portée, garde ses
--- meilleures créatures (il vend les autres), achète ce qu'il peut payer (soufflerie, foreuse, puis
--- scanner et machine) et passe TUNNEL_SHARE de son temps dans sa soufflerie. Pas de Robux, pas de
+-- Le joueur simulé : il fore un œuf par voyage dans l'anneau et le type d'astéroïde qui rapportent le
+-- plus par seconde de voyage (parmi ceux à sa portée), garde ses meilleures créatures (il vend les
+-- autres), achète ce qu'il peut payer (soufflerie, foreuse, puis scanner et machine) et passe
+-- TUNNEL_SHARE de son temps dans sa soufflerie. Pas de Robux, pas de
 -- potions, pas de fusion, pas de récompenses du jour : c'est le rythme d'un joueur gratuit régulier.
 -- Les monstres, le froid et les chutes ne sont pas simulés (un vrai joueur perd quelques voyages).
 
@@ -72,6 +73,32 @@ local function pick(weights: { number }): number
 	return last
 end
 
+-- Générateur à la manière de Random (Config.RollMutation attend r:NextNumber())
+local dice = {
+	NextNumber = function(_self): number
+		return math.random()
+	end,
+}
+
+-- Revenu moyen d'un œuf de cet anneau et de ce type (taille et mutation moyennes, sans chance)
+local sizeAvg = 0
+for _, t in ipairs(Config.PetSizes) do
+	sizeAvg += t.Chance * Config.SizeIncomeMult((t.Min + t.Max) / 2)
+end
+local mutAvg = 1
+for _, m in ipairs(Config.Mutations) do
+	mutAvg += m.Chance * (m.Mult - 1)
+end
+local function expected(ring: number, rock: number): number
+	local sum = 0
+	for rarity, p in ipairs(Config.RockChances(ring, rock)) do
+		if p > 0 then
+			sum += p * Config.CreatureIncome(ring, rarity, 1)
+		end
+	end
+	return sum * sizeAvg * mutAvg
+end
+
 local function petSize(): number
 	local x = math.random()
 	for _, t in ipairs(Config.PetSizes) do
@@ -102,7 +129,7 @@ local MARKS = { 600, 1800, 3600, 2 * 3600, 5 * 3600, 10 * 3600, 24 * 3600, 48 * 
 
 local function play(): Run
 	local t, credits, xp = 0, 0, 0
-	local drill, tunnel, scanner, mSpeed, mLuck = 1, 0, 0, 0, 0
+	local drill, tunnel, scanner, mSpeed, mLuck, mMut = 1, 0, 0, 0, 0, 0
 	local pets: { number } = {} -- revenus des créatures posées
 	local pending: { { at: number, income: number } } = {} -- œufs en incubation
 	local seen: { [string]: boolean } = {}
@@ -182,6 +209,11 @@ local function play(): Run
 				mLuck += 1
 				bought = true
 			end
+			if mMut < Config.Machine.Max and credits >= Config.MachineCost("Mutation", mMut) * RESERVE then
+				credits -= Config.MachineCost("Mutation", mMut)
+				mMut += 1
+				bought = true
+			end
 		end
 	end
 
@@ -197,15 +229,17 @@ local function play(): Run
 			shop()
 			continue
 		end
-		-- voyage : le meilleur anneau à portée, celui qui rapporte le plus par seconde de voyage
+		-- voyage : l'anneau et le type d'astéroïde à portée qui rapportent le plus par seconde de voyage
 		local air, ground = Config.AirSpeed(level), Config.GroundSpeed(level)
-		local best, bestScore, bestTime, bestFlight = 1, -1, 0, 0
+		local best, bestRock, bestScore, bestTime, bestFlight = 1, 1, -1, 0, 0
 		for k = 1, farthest(level) do
 			local flight = 2 * Config.RingDistance(k) / air
-			local time = flight + 2 * BASE_WALK / ground + Config.Rings[k].EggHP / Config.DrillPower(drill) + OVERHEAD
-			local score = H.RingIncome[k] / time
-			if score > bestScore then
-				best, bestScore, bestTime, bestFlight = k, score, time, flight
+			for rock, def in ipairs(Config.RockTypes) do
+				local time = flight + 2 * BASE_WALK / ground + Config.Rings[k].EggHP * def.HP / Config.DrillPower(drill) + OVERHEAD
+				local score = expected(k, rock) / time
+				if score > bestScore then
+					best, bestRock, bestScore, bestTime, bestFlight = k, rock, score, time, flight
+				end
 			end
 		end
 		pass(bestTime)
@@ -213,15 +247,17 @@ local function play(): Run
 		if not run.rings[best] then
 			run.rings[best] = t
 		end
-		local rarity = pick(Config.Probabilities(best, Config.Luck(scanner)))
+		local rarity = pick(Config.RockChances(best, bestRock))
+		local mutation = Config.RollMutation(dice :: any, Config.Luck(scanner) * Config.MachineMutation(mMut))
 		if first then
 			rarity = Config.Guide.FirstRarity
+			mutation = nil
 			first = false
 		end
 		if Config.Eggs[best][rarity + 1] and math.random() < Config.MachineLuck(mLuck) then
 			rarity += 1
 		end
-		local value = Config.CreatureIncome(best, rarity, petSize())
+		local value = Config.CreatureIncome(best, rarity, petSize(), mutation)
 		local key = best .. ":" .. rarity
 		if not seen[key] then
 			seen[key] = true

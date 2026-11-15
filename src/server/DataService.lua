@@ -31,8 +31,8 @@ local function default()
 		drill = 1, -- foreuse équipée (index dans Config.Drills ; on les achète dans l'ordre)
 		levels = { Thruster = 0, Scanner = 0 }, -- (l'ancien niveau Cargo des vieilles sauvegardes est ignoré)
 		ring = 1, -- plus haut anneau débloqué
-		cargo = {}, -- un œuf par entrée : { ring = anneau d'origine, rarity = rareté } (encore pris dans la roche)
-		ready = {}, -- œufs dérochés par la machine, prêts à couver : { ring, rarity }
+		cargo = {}, -- un œuf par entrée : { ring = anneau d'origine, rarity = rareté, rock = type d'astéroïde } (encore pris dans la roche)
+		ready = {}, -- œufs dérochés par la machine, prêts à couver : { ring, rarity, rock }
 		jetXP = 0, -- XP totale du jetpack (niveau : Config.JetpackLevel)
 		tunnel = 0, -- palier de la soufflerie personnelle (0 = pas encore achetée)
 		boosts = {}, -- potions actives : [clé] = os.time() de fin (BoostService)
@@ -50,12 +50,11 @@ local function default()
 		inGroup = false, -- membre du groupe du jeu (revérifié à chaque arrivée) : +10 % de chance
 		-- Base : œufs en incubation et créatures posées. Position (x, z) dans le repère du sol de la base.
 		--   œuf      : { kind = "egg", ring, rarity, x, z, hatchAt = os.time() de fin }
-		--   créature : { kind = "pet", ring, rarity, x, z, name, size, weight, income }
+		--   créature : { kind = "pet", ring, rarity, x, z, name, size, weight, income, mut = mutation ou nil, odds = « 1 sur N » à l'éclosion }
 		base = {},
 		index = {}, -- ["anneau:rareté"] = nombre trouvé
-		pity = 0,
 		derocking = nil, -- l'œuf dans la machine (rendu à la soute si le joueur part avant la fin)
-		machine = { Speed = 0, Luck = 0 }, -- niveaux de la machine à dérocher (MachineService)
+		machine = { Speed = 0, Luck = 0, Mutation = 0 }, -- niveaux de la machine à dérocher (MachineService)
 		guideRewarded = false, -- récompense de fin de tutoriel déjà donnée
 		tips = {}, -- ["clé"] = true : tutoriels au bon moment déjà montrés (Config.Guide.Tips)
 		feedback = { day = 0, count = 0 }, -- retours envoyés aujourd'hui (FeedbackService)

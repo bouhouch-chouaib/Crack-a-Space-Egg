@@ -31,22 +31,19 @@ Config.Rarities = {
 	{ Id = "Mythic", Name = "Mythic", Value = 5000, Color = Color3.fromRGB(255, 70, 160) },
 	{ Id = "Cosmic", Name = "Cosmic", Value = 150000, Color = Color3.fromRGB(120, 255, 240) },
 }
--- Index à partir duquel le scanner augmente la chance
-Config.LuckFrom = 3
--- Messages serveur (AnnounceService) : niveau d'une trouvaille selon sa rareté et sa taille (nil = pas de message)
--- 1 Rare : Mythic, ou Legendary Giant ; 2 Épique : Cosmic, ou Mythic Giant ; 3 Légendaire (tous les serveurs) : Cosmic Giant.
-function Config.AnnounceLevel(rarity: number, giant: boolean): number?
-	if rarity >= 7 then
+-- Messages serveur (AnnounceService) : niveau d'une trouvaille selon sa mutation et sa taille (nil = pas
+-- de message). Depuis le 15 nov., l'espèce dépend du type d'astéroïde foré : ce qui est rare, c'est la mutation.
+-- 1 Rare : Ruby, ou Emerald Giant ; 2 Épique : Rainbow, ou Ruby Giant ; 3 Légendaire (tous les serveurs) : Rainbow Giant.
+function Config.AnnounceLevel(mutation: string?, giant: boolean): number?
+	if mutation == "Rainbow" then
 		return if giant then 3 else 2
-	elseif rarity == 6 then
+	elseif mutation == "Ruby" then
 		return if giant then 2 else 1
-	elseif rarity == 5 and giant then
+	elseif mutation == "Emerald" and giant then
 		return 1
 	end
 	return nil
 end
--- Compteur de veine : Légendaire garanti après N géodes sans Légendaire ou mieux
-Config.PityLegendary = 1000
 
 -- CARTE V2 (docs/Mecaniques.md §2) ---------------------------------------------
 -- Le vaisseau (Workspace.Ship, construit dans Studio) a son centre en (0, 0, 0) et son quai en
@@ -180,7 +177,7 @@ Config.Belt = {
 	Spacing = 0.9, -- deux astéroïdes ne naissent pas plus près que 90 % de leurs rayons cumulés
 	-- Couche de marche : une partie des astéroïdes passe à la hauteur du pont, du côté intérieur de
 	-- l'anneau. On peut forer depuis le quai (ou un relais) et sauter de roche en roche.
-	WalkShare = 0.6, -- part des astéroïdes dans la couche de marche
+	WalkShare = 0.8, -- part des astéroïdes tendres (type 1, côté vaisseau) dans la couche de marche
 	WalkHeight = { -9, 0 }, -- hauteur de leur centre (le pont est à 0)
 	WalkDepth = 0.3, -- ils restent dans les 30 % intérieurs de l'épaisseur de l'anneau (près du quai / du relais)
 }
@@ -191,14 +188,28 @@ function Config.FieldHeight(i: number): number
 	return math.min(b.HeightBase + Config.RingWidth(i) * b.HeightPerWidth, b.HeightMax)
 end
 
--- Tailles d'astéroïdes : stock d'œufs, qui sortent un par un pendant le forage
--- Eggs = { min, max } : nombre d'œufs tiré au hasard, selon la taille. Vie = œufs × EggHP de l'anneau.
-Config.AsteroidSizes = {
-	{ Name = "Small", Min = 10, Max = 13, Eggs = { 2, 3 }, Chance = 0.46 },
-	{ Name = "Medium", Min = 15, Max = 19, Eggs = { 4, 5 }, Chance = 0.34 },
-	{ Name = "Large", Min = 22, Max = 28, Eggs = { 6, 8 }, Chance = 0.16 },
-	{ Name = "Colossal", Min = 34, Max = 42, Eggs = { 10, 12 }, Chance = 0.04 },
+-- TYPES D'ASTÉROÏDES (15 nov., sur le modèle des zones de Throw Food) ---------------------------------
+-- Chaque anneau a 3 types d'astéroïdes, rangés par profondeur : les plus tendres du côté du vaisseau, les
+-- plus durs au fond. Le type décide de ce qu'on trouve dedans : le joueur sait à peu près ce qu'il va
+-- avoir (seules la taille et la mutation restent du hasard).
+--   Share  : part des astéroïdes de l'anneau
+--   Depth  : bande de l'épaisseur de l'anneau où ils passent (0 = bord côté vaisseau, 1 = bord du fond)
+--   Min, Max : diamètre (studs) ; Eggs = { min, max } : stock d'œufs, qui sortent un par un
+--   HP     : × EggHP de l'anneau (vie de chaque œuf)
+--   Shape  : forme (ReplicatedStorage.Assets.Asteroids.Ring<n>.<Shape>)
+--   Color, Reflect : matière du type (shared/RockLook), pour le reconnaître de loin sans rien lire : la roche
+--            de l'anneau telle quelle, une roche d'argent, une roche d'or. Les mêmes dans tous les anneaux.
+--   Slots  : chances (sur 100) des 6 créatures de l'anneau, de la 1re à la 6e. Le type 1 donne surtout
+--            les deux premières, le type 2 les deux suivantes, le type 3 les deux dernières (pas à 100 %).
+Config.RockTypes = {
+	{ Key = "Soft", Name = "Soft Rock", Share = 0.5, Depth = { 0, 0.36 }, Min = 10, Max = 14, Eggs = { 2, 3 }, HP = 1, Shape = "V1", Slots = { 62, 30, 6, 2, 0, 0 } },
+	{ Key = "Hard", Name = "Silver Rock", Share = 0.32, Depth = { 0.36, 0.7 }, Min = 16, Max = 21, Eggs = { 3, 5 }, HP = 2, Shape = "V2", Color = Color3.fromRGB(235, 240, 250), Reflect = 0.3, Slots = { 10, 14, 46, 24, 5, 1 } },
+	{ Key = "Core", Name = "Gold Rock", Share = 0.18, Depth = { 0.7, 1 }, Min = 24, Max = 32, Eggs = { 5, 8 }, HP = 4, Shape = "V3", Color = Color3.fromRGB(250, 190, 45), Reflect = 0.22, Slots = { 0, 4, 12, 16, 44, 24 } },
 }
+-- Type d'un astéroïde (1 à 3) ; les œufs des anciennes parties, sans type, comptent comme le premier
+function Config.RockType(index: number?)
+	return Config.RockTypes[math.clamp(index or 1, 1, #Config.RockTypes)]
+end
 -- Fissures : de nouvelles fissures apparaissent quand la vie passe sous ces fractions
 Config.CrackStages = { 0.75, 0.5, 0.25 }
 
@@ -287,7 +298,8 @@ Config.UpgradeOrder = { "Scanner" }
 Config.Derock = {
 	-- Secondes pour dégager un œuf, de Common à Cosmic (avant les améliorations de la machine).
 	-- Pendant ce temps le joueur est libre : il peut repartir forer.
-	Times = { 4, 8, 15, 30, 60, 120, 240 },
+	-- (raccourcis le 15 nov. : les œufs des deux derniers rangs d'un anneau sont maintenant courants)
+	Times = { 4, 7, 12, 20, 30, 45, 60 },
 	Tutorial = 4, -- durée pendant le tutoriel, quelle que soit la rareté
 	Gap = 1.6,
 	-- Finir tout de suite contre des Robux : un produit de développeur par rareté (créés le 9 nov.)
@@ -312,8 +324,8 @@ local function drill(name, power, cost, robux, color)
 end
 -- Prix en $ réglés avec tools/eco-sim.luau (15 nov.) : deux foreuses par anneau, écarts irréguliers
 -- (tantôt ×8 à ×16, tantôt ×33 ou ×75), de plus en plus longues à payer d'un anneau à l'autre.
--- Joueur qui passe 40 % de son temps en soufflerie : foreuse 2 vers 5 min, 3 vers 18 min, 5 vers 1 h,
--- 7 vers 2 h 30, 9 vers 5 h, 11 vers 15 h.
+-- Joueur qui passe 40 % de son temps en soufflerie : foreuse 2 vers 4 min, 3 vers 16 min, 5 vers 1 h,
+-- 7 vers 2 h 30, 9 vers 6 h, 11 vers 15 h.
 Config.Drills = {
 	drill("Starter Drill", 5, 0, 0, Color3.fromRGB(170, 176, 190)),
 	drill("Rusty Drill", 14, 12000, 25, Color3.fromRGB(196, 120, 70)), -- fin du tutoriel
@@ -324,8 +336,8 @@ Config.Drills = {
 	drill("Golden Drill", 2600, 3e10, 299, Color3.fromRGB(255, 200, 50)),
 	drill("Crystal Drill", 7500, 2.5e11, 449, Color3.fromRGB(120, 240, 255)),
 	drill("Nova Drill", 21000, 4e12, 699, Color3.fromRGB(255, 120, 80)),
-	drill("Galaxy Drill", 60000, 6e13, 999, Color3.fromRGB(255, 110, 210)),
-	drill("Cosmic Drill", 170000, 3e16, 1499, Color3.fromRGB(130, 255, 240)),
+	drill("Galaxy Drill", 60000, 4e13, 999, Color3.fromRGB(255, 110, 210)),
+	drill("Cosmic Drill", 170000, 2e15, 1499, Color3.fromRGB(130, 255, 240)),
 }
 -- Produits Robux des foreuses (créés le 7 nov. sur Roblox, palier 2 à 11)
 for tier, id in pairs({
@@ -461,7 +473,7 @@ Config.Suits = {
 	suit("Arctic Suit", "SuitArctic", 8, 20, 0.35, 5e8, 99, col(226, 240, 255), col(70, 150, 240), col(110, 200, 255)),
 	suit("Titan Suit", "SuitTitan", 11, 27, 0.50, 4e10, 149, col(78, 86, 106), col(240, 130, 40), col(245, 150, 50)),
 	suit("Stellar Suit", "SuitStellar", 15, 35, 0.70, 6e12, 249, col(118, 66, 205), col(245, 195, 70), col(245, 200, 80)),
-	suit("Void Suit", "SuitVoid", 20, 45, 1.00, 5e15, 399, col(34, 32, 52), col(80, 240, 230), col(70, 235, 225)),
+	suit("Void Suit", "SuitVoid", 20, 45, 1.00, 1e15, 399, col(34, 32, 52), col(80, 240, 230), col(70, 235, 225)),
 }
 -- Produits Robux des combinaisons (créés le 9 nov. sur Roblox, palier 2 à 7)
 for tier, id in pairs({ [2] = 3729865909, [3] = 3729865920, [4] = 3729865929, [5] = 3729865939, [6] = 3729865950, [7] = 3729865968 }) do
@@ -535,19 +547,19 @@ Config.Jetpack = {
 	-- Le vide entre l'anneau k-1 et l'anneau k fait 55 × 1,22^(k-2) studs : le palier k le franchit
 	-- avec 15 % de marge (le palier 1 ne quitte pas l'anneau 1).
 	-- Level : réglé avec tools/eco-sim.luau. Joueur qui passe 40 % de son temps en soufflerie : anneau 2
-	-- vers 12 min, 3 vers 40 min, 4 vers 2 h, 5 vers 4 h 30, 6 vers 12 h, 7 vers 29 h (on franchit un vide
+	-- vers 12 min, 3 vers 40 min, 4 vers 2 h, 5 vers 5 h, 6 vers 12 h, 7 vers 30 h (on franchit un vide
 	-- un peu avant le niveau du palier, la portée montant entre deux paliers).
 	Tiers = {
 		{ Level = 1, Name = "Rusty Starter", Model = "Jet1", Reach = 44, Color = Color3.fromRGB(205, 130, 80) },
 		{ Level = 18, Name = "Scout Booster", Model = "Jet2", Reach = 63, Color = Color3.fromRGB(90, 190, 255) },
 		{ Level = 65, Name = "Comet Pack", Model = "Jet3", Reach = 77, Color = Color3.fromRGB(150, 235, 255) },
 		{ Level = 120, Name = "Blaze Thruster", Model = "Jet4", Reach = 94, Color = Color3.fromRGB(255, 120, 40) },
-		{ Level = 200, Name = "Nebula Wings", Model = "Jet5", Reach = 115, Color = Color3.fromRGB(190, 100, 255) },
-		{ Level = 280, Name = "Rift Striker", Model = "Jet6", Reach = 140, Color = Color3.fromRGB(60, 240, 230) },
-		{ Level = 375, Name = "Nova Titan", Model = "Jet7", Reach = 171, Color = Color3.fromRGB(255, 200, 60) },
-		{ Level = 470, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
+		{ Level = 195, Name = "Nebula Wings", Model = "Jet5", Reach = 115, Color = Color3.fromRGB(190, 100, 255) },
+		{ Level = 270, Name = "Rift Striker", Model = "Jet6", Reach = 140, Color = Color3.fromRGB(60, 240, 230) },
+		{ Level = 362, Name = "Nova Titan", Model = "Jet7", Reach = 171, Color = Color3.fromRGB(255, 200, 60) },
+		{ Level = 455, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
 	},
-	TopLevel = 500, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
+	TopLevel = 485, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
 	MaxReach = 215, -- portée au niveau TopLevel
 	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client) : toutes les Every
 	-- secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » apparaît Offer secondes ;
@@ -567,8 +579,8 @@ Config.Jetpack = {
 		{ Name = "Storm Tunnel", Cost = 2e7, XP = 30, Color = Color3.fromRGB(255, 140, 60) },
 		{ Name = "Cyclone Tunnel", Cost = 2e10, XP = 150, Color = Color3.fromRGB(190, 120, 255) },
 		{ Name = "Hurricane Tunnel", Cost = 1.5e12, XP = 800, Color = Color3.fromRGB(255, 80, 120) },
-		{ Name = "Tempest Tunnel", Cost = 5e15, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
-		{ Name = "Supernova Vortex", Cost = 1.5e18, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
+		{ Name = "Tempest Tunnel", Cost = 4e14, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
+		{ Name = "Supernova Vortex", Cost = 6e16, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
 	},
 }
 
@@ -1029,9 +1041,12 @@ Config.Creatures = {
 	},
 }
 
--- Rareté de la n-ième espèce d'un anneau (fenêtre glissante)
+-- Rareté de la n-ième espèce d'un anneau (fenêtre glissante), et l'inverse : rang (1 à 6) d'une rareté
 function Config.CreatureRarity(ring: number, slot: number): number
 	return if ring >= Config.CosmicMinRing then slot + 1 else slot
+end
+function Config.CreatureSlot(ring: number, rarity: number): number
+	return if ring >= Config.CosmicMinRing then rarity - 1 else rarity
 end
 
 -- Récompense quand on a trouvé les 6 espèces d'un anneau : chance permanente et $
@@ -1108,68 +1123,67 @@ end
 -- ŒUFS ------------------------------------------------------------------------
 -- Chaque anneau a 6 œufs, indexés par rareté (anneaux 1-4 : Common -> Mythic ; anneaux 5-7 :
 -- Uncommon -> Cosmic). Modèles : ReplicatedStorage.Assets.Eggs.R<anneau>_T<rareté>.
--- Chance = probabilité de tirer cet œuf à chaque œuf foré (total 1 par anneau).
--- Le hasard décide beaucoup : l'œuf le plus rare d'un anneau sort environ 1 fois sur 500 à 1 000.
--- Le scanner multiplie les chances à partir de Config.LuckFrom ; l'œuf le plus courant prend le reste.
-local function egg(name: string, chance: number)
-	return { Name = name, Chance = chance }
+-- Ce qui sort d'un astéroïde dépend de son type (Config.RockTypes, Config.RockChances) : il n'y a plus
+-- de chance par œuf (15 nov.).
+local function egg(name: string)
+	return { Name = name }
 end
 Config.Eggs = {
 	{ -- 1. Dust Belt
-		[1] = egg("Dusty", 0.60), --          1 sur 1,7
-		[2] = egg("Pebble", 0.26), --         1 sur 4
-		[3] = egg("Geode", 0.10), --          1 sur 10
-		[4] = egg("Sandstorm", 0.033), --     1 sur 30
-		[5] = egg("Desert King", 0.006), --   1 sur 167
-		[6] = egg("Stardust", 0.001), --      1 sur 1 000
+		[1] = egg("Dusty"),
+		[2] = egg("Pebble"),
+		[3] = egg("Geode"),
+		[4] = egg("Sandstorm"),
+		[5] = egg("Desert King"),
+		[6] = egg("Stardust"),
 	},
 	{ -- 2. Ice Ring
-		[1] = egg("Frost", 0.58),
-		[2] = egg("Snowball", 0.27),
-		[3] = egg("Glacier", 0.105),
-		[4] = egg("Blizzard", 0.036),
-		[5] = egg("Frost King", 0.0075), --   1 sur 133
-		[6] = egg("Aurora", 0.0015), --       1 sur 667
+		[1] = egg("Frost"),
+		[2] = egg("Snowball"),
+		[3] = egg("Glacier"),
+		[4] = egg("Blizzard"),
+		[5] = egg("Frost King"),
+		[6] = egg("Aurora"),
 	},
 	{ -- 3. Magma Field
-		[1] = egg("Ember", 0.56),
-		[2] = egg("Cinder", 0.28),
-		[3] = egg("Magma", 0.11),
-		[4] = egg("Inferno", 0.04),
-		[5] = egg("Phoenix", 0.0082), --      1 sur 122
-		[6] = egg("Dragonheart", 0.0018), --  1 sur 556
+		[1] = egg("Ember"),
+		[2] = egg("Cinder"),
+		[3] = egg("Magma"),
+		[4] = egg("Inferno"),
+		[5] = egg("Phoenix"),
+		[6] = egg("Dragonheart"),
 	},
 	{ -- 4. Nebula
-		[1] = egg("Haze", 0.55),
-		[2] = egg("Moon", 0.28),
-		[3] = egg("Ringed", 0.115),
-		[4] = egg("Nova", 0.044),
-		[5] = egg("Galaxy", 0.009), --        1 sur 111
-		[6] = egg("Supernova", 0.002), --     1 sur 500
+		[1] = egg("Haze"),
+		[2] = egg("Moon"),
+		[3] = egg("Ringed"),
+		[4] = egg("Nova"),
+		[5] = egg("Galaxy"),
+		[6] = egg("Supernova"),
 	},
 	{ -- 5. Devourer Belt
-		[2] = egg("Maw", 0.60),
-		[3] = egg("Tentacle", 0.26),
-		[4] = egg("Eye", 0.10),
-		[5] = egg("Void Fang", 0.033),
-		[6] = egg("Abyss", 0.0062), --        1 sur 161
-		[7] = egg("Devourer", 0.0008), --     1 sur 1 250
+		[2] = egg("Maw"),
+		[3] = egg("Tentacle"),
+		[4] = egg("Eye"),
+		[5] = egg("Void Fang"),
+		[6] = egg("Abyss"),
+		[7] = egg("Devourer"),
 	},
 	{ -- 6. The Rift
-		[2] = egg("Shard", 0.58),
-		[3] = egg("Portal", 0.27),
-		[4] = egg("Prism", 0.105),
-		[5] = egg("Rift Warden", 0.037),
-		[6] = egg("Paradox", 0.007), --       1 sur 143
-		[7] = egg("Singularity", 0.001), --   1 sur 1 000
+		[2] = egg("Shard"),
+		[3] = egg("Portal"),
+		[4] = egg("Prism"),
+		[5] = egg("Rift Warden"),
+		[6] = egg("Paradox"),
+		[7] = egg("Singularity"),
 	},
 	{ -- 7. The Nest
-		[2] = egg("Twig", 0.56),
-		[3] = egg("Feather", 0.28),
-		[4] = egg("Golden", 0.11),
-		[5] = egg("Mother", 0.04),
-		[6] = egg("Celestial", 0.0085), --    1 sur 118
-		[7] = egg("Cosmic", 0.0015), --       1 sur 667
+		[2] = egg("Twig"),
+		[3] = egg("Feather"),
+		[4] = egg("Golden"),
+		[5] = egg("Mother"),
+		[6] = egg("Celestial"),
+		[7] = egg("Cosmic"),
 	},
 }
 
@@ -1186,7 +1200,8 @@ end
 -- et rapporte des $ chaque seconde, d'autant plus qu'elle est rare et grande.
 Config.Hatch = {
 	-- Secondes d'incubation par rareté (Common -> Cosmic)
-	Time = { 20, 45, 90, 180, 420, 900, 1800 },
+	-- (raccourcis le 15 nov. : les œufs des deux derniers rangs d'un anneau sont maintenant courants)
+	Time = { 20, 40, 75, 120, 200, 300, 480 },
 	-- Œufs en incubation + créatures posées en même temps dans une base
 	Slots = 10,
 	-- Hauteur du corps de l'œuf posé (studs) selon la rareté : les rares sont plus gros
@@ -1202,12 +1217,14 @@ Config.Hatch = {
 	Margin = 2.0, -- marge le long des murs (en plus de la moitié de la place occupée)
 	-- Zone interdite autour du point d'apparition (rayon en studs) ; la machine est hors de la base
 	KeepOut = { Spawn = 4 },
-	-- Revenu d'une créature en $/s = RarityIncome[rareté] × RingIncome[anneau] × taille² (Config.PetSizes :
-	-- de ×0,4 pour une Tiny à ×5,8 pour la plus grosse Giant).
-	-- De ~5 $/s (Common de l'anneau 1) à ~1 Qa/s = 10^15 (Cosmic de l'anneau 7).
-	-- Exemples (taille 1) : anneau 1 = 5 / 15 / 60 / 300 / 2,5K / 30K ; anneau 4 Mythic ≈ 1,3B ;
-	-- anneau 7 = 30B (Uncommon), 120B, 600B, 5T, 60T (Mythic), 1Qa (Cosmic).
-	RarityIncome = { 1, 3, 12, 60, 500, 6000, 100000 },
+	-- Revenu d'une créature en $/s = SlotIncome[rang dans l'anneau] × RingIncome[anneau] × taille²
+	-- (Config.PetSizes : de ×0,4 pour une Tiny à ×5,8 pour la plus grosse Giant) × mutation (Config.Mutations)
+	-- × stade de fusion. Les 6 créatures d'un anneau se tiennent (×12 entre la 1re et la 6e) : la 6e d'un
+	-- anneau rapporte 3 fois moins que la 1re de l'anneau suivant. Avant le 15 nov., l'écart dans un
+	-- anneau était de ×6 000 et tout reposait sur un tirage.
+	-- Exemples (taille 1, sans mutation) : anneau 1 = 10 / 16 / 30 / 45 / 80 / 120 $/s ; anneau 2 = 356 à 4,3K ;
+	-- anneau 7 = 20 Md à 240 Md.
+	SlotIncome = { 2, 3.2, 6, 9, 16, 24 },
 	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10 },
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement, selon la rareté : l'œuf se charge (tremble,
 	-- brille, se fissure de rayons, s'élève...) de plus en plus longtemps et fort (HatchFx)
@@ -1377,26 +1394,29 @@ function Config.SizeIncomeMult(size: number?): number
 	return (size or 1) ^ Config.SizeIncomePower
 end
 
--- Nom affiché (« Giant Elder Pyrolynx ») et revenu d'une créature, taille et stade compris
+-- Nom affiché (« Gold Giant Elder Pyrolynx ») et revenu d'une créature, mutation, taille et stade compris
 function Config.PetName(item): string
 	local st = Config.PetRules.Stages[item.stage or 1]
 	local name = if st and st.Name ~= "" then st.Name .. " " .. (item.name or "?") else (item.name or "?")
 	local tier = Config.PetSize(item.size)
-	return if tier.Name ~= "" then tier.Name .. " " .. name else name
+	name = if tier.Name ~= "" then tier.Name .. " " .. name else name
+	local mut = Config.Mutation(item.mut)
+	return if mut then mut.Name .. " " .. name else name
 end
 function Config.PetIncome(item): number
 	local st = Config.PetRules.Stages[item.stage or 1] or Config.PetRules.Stages[1]
-	return Config.CreatureIncome(item.ring, item.rarity, (item.size or 1)) * st.Mult
+	return Config.CreatureIncome(item.ring, item.rarity, (item.size or 1), item.mut) * st.Mult
 end
 function Config.PetPrice(item): number
 	return math.floor((item.income or Config.PetIncome(item)) * Config.PetRules.SellSeconds)
 end
 
-function Config.CreatureIncome(ringIndex: number, rarity: number, size: number): number
+function Config.CreatureIncome(ringIndex: number, rarity: number, size: number, mutation: string?): number
 	local h = Config.Hatch
-	local r = h.RarityIncome[math.clamp(rarity, 1, #h.RarityIncome)]
+	local r = h.SlotIncome[math.clamp(Config.CreatureSlot(ringIndex, rarity), 1, #h.SlotIncome)]
 	local ring = h.RingIncome[math.clamp(ringIndex, 1, #h.RingIncome)]
-	local v = r * ring * Config.SizeIncomeMult(size)
+	local mut = Config.Mutation(mutation)
+	local v = r * ring * Config.SizeIncomeMult(size) * (if mut then mut.Mult else 1)
 	-- arrondi lisible : entier sous 1000, sinon 3 chiffres significatifs
 	if v < 1000 then
 		return math.max(1, math.floor(v + 0.5))
@@ -1405,30 +1425,85 @@ function Config.CreatureIncome(ringIndex: number, rarity: number, size: number):
 	return math.floor(v / p + 0.5) * p
 end
 
--- Probabilités de chaque rareté (index 1..7, 0 si l'anneau n'a pas cet œuf) selon la chance du joueur
-function Config.Probabilities(ringIndex: number, luck: number): { number }
-	local eggs = Config.Eggs[ringIndex]
-	local p = {}
-	local first: number? = nil
-	for i = 1, #Config.Rarities do
-		local e = eggs[i]
-		local c = 0
-		if e then
-			first = first or i
-			c = e.Chance
-			if i >= Config.LuckFrom then
-				c *= luck
+-- Chances de chaque rareté (index 1..7, 0 si l'anneau n'a pas cet œuf) pour un œuf sorti de ce type
+-- d'astéroïde. La chance du joueur n'y change rien : elle joue sur les mutations.
+function Config.RockChances(ringIndex: number, rockType: number?): { number }
+	local slots = Config.RockType(rockType).Slots
+	local total = 0
+	for _, w in ipairs(slots) do
+		total += w
+	end
+	local p = table.create(#Config.Rarities, 0)
+	for slot, w in ipairs(slots) do
+		p[Config.CreatureRarity(ringIndex, slot)] = w / total
+	end
+	return p
+end
+
+-- MUTATIONS (15 nov.) --------------------------------------------------------------------------------
+-- À l'éclosion, une créature peut sortir mutée : elle change de matière et de couleur (shared/Mutation)
+-- et rapporte Mult fois plus. Une seule mutation par créature ; elle se cumule avec la taille et le stade
+-- de fusion. Chance = probabilité de base ; la chance du joueur (scanner, potion, Index, groupe) et
+-- l'amélioration « Mutation Ray » de la machine les multiplient toutes, sans dépasser MutationMax au total.
+-- Metal = vrai : matière métal ; Reflect : reflet (0 à 1) ; Rainbow : couleurs qui défilent.
+Config.Mutations = {
+	{ Key = "Silver", Name = "Silver", Chance = 0.12, Mult = 1.5, Color = Color3.fromRGB(200, 210, 226), Metal = true, Reflect = 0.25 },
+	{ Key = "Gold", Name = "Gold", Chance = 0.04, Mult = 3, Color = Color3.fromRGB(255, 196, 40), Metal = true, Reflect = 0.3 },
+	{ Key = "Emerald", Name = "Emerald", Chance = 0.02, Mult = 5, Color = Color3.fromRGB(50, 215, 120), Reflect = 0.35 },
+	{ Key = "Ruby", Name = "Ruby", Chance = 0.01, Mult = 10, Color = Color3.fromRGB(235, 45, 80), Reflect = 0.35 },
+	{ Key = "Rainbow", Name = "Rainbow", Chance = 0.005, Mult = 20, Color = Color3.fromRGB(255, 120, 220), Reflect = 0.15, Rainbow = true },
+}
+Config.MutationMax = 0.75
+function Config.Mutation(key: string?)
+	if key then
+		for _, m in ipairs(Config.Mutations) do
+			if m.Key == key then
+				return m
 			end
 		end
-		p[i] = c
 	end
-	local base = first or 1
-	local others = 0
-	for i = base + 1, #p do
-		others += p[i]
+	return nil
+end
+-- Chance de chaque mutation (même ordre que Config.Mutations) avec cette chance du joueur
+function Config.MutationChances(luck: number): { number }
+	local total = 0
+	for _, m in ipairs(Config.Mutations) do
+		total += m.Chance * luck
 	end
-	p[base] = math.max(0, 1 - others)
+	local k = if total > Config.MutationMax then Config.MutationMax / total else 1
+	local p = {}
+	for i, m in ipairs(Config.Mutations) do
+		p[i] = m.Chance * luck * k
+	end
 	return p
+end
+-- Mutation tirée à l'éclosion (ou nil), les plus rares d'abord
+function Config.RollMutation(r: Random, luck: number): string?
+	local p = Config.MutationChances(luck)
+	local x = r:NextNumber()
+	for i = #p, 1, -1 do
+		x -= p[i]
+		if x < 0 then
+			return Config.Mutations[i].Key
+		end
+	end
+	return nil
+end
+-- Chance (0 à 1) d'obtenir exactement cette créature : cette espèce dans ce type d'astéroïde, ce palier
+-- de taille, cette mutation (ou aucune). C'est le « 1 in X » montré à l'éclosion (HatchFx).
+function Config.HatchOdds(ringIndex: number, rarity: number, rockType: number?, size: number?, mutation: string?, luck: number): number
+	local p = Config.RockChances(ringIndex, rockType)[rarity] or 0
+	p *= Config.PetSize(size).Chance
+	local chances = Config.MutationChances(luck)
+	local none = 1
+	local mine: number? = nil
+	for i, m in ipairs(Config.Mutations) do
+		none -= chances[i]
+		if m.Key == mutation then
+			mine = chances[i]
+		end
+	end
+	return p * (mine or none)
 end
 
 -- GUIDE DES PREMIÈRES MINUTES (Guide.client) ------------------------------------------
@@ -1445,7 +1520,7 @@ Config.Guide = {
 	Drill = 2,
 	JetLevel = 5, -- niveau du jetpack à atteindre dans sa soufflerie (étape 5)
 	TunnelTime = 5, -- secondes à passer dans le courant d'air pour valider l'étape 5, même si le niveau est déjà là
-	FirstRarity = 3, -- rareté du tout premier œuf (Rare) : un vrai « wow », et de quoi payer la soufflerie
+	FirstRarity = 4, -- rareté du tout premier œuf (Épique, la plus haute qu'un astéroïde tendre peut donner) : un vrai « wow », et de quoi payer la soufflerie
 	Reward = { Money = 1000, Luck = 15, MoneyBoost = 15 }, -- fin du tutoriel : $ (× revenu de base de l'anneau 1) et potions x2 de 15 min
 	Arrow = "rbxassetid://111578532993258", -- chevrons blancs à contour sombre (poutre au sol)
 	-- (Tips : « machine » = panneau de première fois des améliorations)
@@ -1537,15 +1612,16 @@ Config.Codes = {
 }
 
 -- AMÉLIORATIONS DE LA MACHINE À DÉROCHER (MachineService, MachineUI.client) -------------------------
--- Deux améliorations à 20 niveaux, payées en $. Coût du niveau n = Base × Growth^n.
+-- Trois améliorations à 20 niveaux, payées en $. Coût du niveau n = Base × Growth^n.
 -- Le total des niveaux donne à la machine une couleur de plus en plus rare (Tiers).
 Config.Machine = {
 	Max = 20,
 	MinTime = 1.8, -- secondes : en dessous, l'animation de la machine n'a plus le temps de se jouer
-	Order = { "Speed", "Luck" },
+	Order = { "Speed", "Luck", "Mutation" },
 	Tracks = {
 		Speed = { Name = "Turbo Motor", Text = "Less waiting at the machine", Art = "MachineSpeed", Base = 7500, Growth = 3.3, Shift = 2, PerLevel = 0.93, Color = Color3.fromRGB(255, 165, 50) },
 		Luck = { Name = "Lucky Core", Text = "Chance of +1 rarity", Art = "MachineLuck", Base = 20000, Growth = 3.7, Shift = 4, PerLevel = 0.01, Color = Color3.fromRGB(110, 230, 80) },
+		Mutation = { Name = "Mutation Ray", Text = "More mutated pets", Art = "MachinePolish", Base = 30000, Growth = 3.4, Shift = 1, PerLevel = 0.05, Color = Color3.fromRGB(255, 120, 220) },
 	},
 	Tiers = {
 		{ Min = 0, Name = "Standard", Accent = Color3.fromRGB(255, 208, 110), Glow = Color3.fromRGB(255, 176, 60) },
@@ -1569,15 +1645,20 @@ function Config.MachineTime(rarity: number, speedLevel: number): number
 	return math.max(Config.Machine.MinTime, time)
 end
 
--- Chance (0 à 1) de monter d'une rareté
+-- Chance (0 à 1) de monter d'une rareté, et multiplicateur de la chance de mutation
 function Config.MachineLuck(level: number): number
 	return Config.Machine.Tracks.Luck.PerLevel * level
+end
+function Config.MachineMutation(level: number): number
+	return 1 + Config.Machine.Tracks.Mutation.PerLevel * level
 end
 
 -- Texte court de l'effet à ce niveau (fenêtre)
 function Config.MachineEffect(key: string, level: number): string
 	if key == "Speed" then
 		return ("-%d%%"):format(math.floor((1 - Config.Machine.Tracks.Speed.PerLevel ^ level) * 100 + 0.5))
+	elseif key == "Mutation" then
+		return ("x%.2f"):format(Config.MachineMutation(level))
 	end
 	return ("%d%%"):format(math.floor(Config.MachineLuck(level) * 100 + 0.5))
 end

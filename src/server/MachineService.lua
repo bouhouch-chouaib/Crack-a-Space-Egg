@@ -73,7 +73,7 @@ local function buy(player: Player, key: any)
 	if not track then
 		return { ok = false, error = "Unknown upgrade" }
 	end
-	d.machine = d.machine or { Speed = 0, Luck = 0 }
+	d.machine = d.machine or { Speed = 0, Luck = 0, Mutation = 0 }
 	local level = d.machine[key] or 0
 	if level >= Config.Machine.Max then
 		return { ok = false, error = "Already maxed!" }
@@ -161,7 +161,7 @@ local function run(player: Player, base: Model, machine: Model)
 			break
 		end
 		d.derocking = nil
-		table.insert(d.ready, { ring = ring, rarity = rarity })
+		table.insert(d.ready, { ring = ring, rarity = rarity, rock = if type(egg) == "table" then egg.rock else nil })
 		GameService.Sync(player)
 		Remotes.EggRevealed:FireClient(player, ring, rarity)
 		if duration >= 10 then
@@ -273,7 +273,7 @@ function MachineService.Start()
 				table.insert(d.cargo, { ring = key, rarity = level })
 				GameService.Sync(player)
 			end
-			return ("Speed %d Luck %d, $%s"):format(d.machine.Speed, d.machine.Luck, Format.Short(d.credits))
+			return ("Speed %d Luck %d Mutation %d, $%s"):format(d.machine.Speed or 0, d.machine.Luck or 0, d.machine.Mutation or 0, Format.Short(d.credits))
 		end
 		bf.Parent = game:GetService("ServerStorage")
 	end

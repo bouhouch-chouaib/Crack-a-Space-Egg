@@ -38,12 +38,13 @@ function AnnounceService.Send(player: Player?, level: number, text: string, colo
 	end
 end
 
--- Créature qui vient d'éclore : le niveau dépend de sa rareté et de sa taille
+-- Créature qui vient d'éclore : le niveau dépend de sa mutation et de sa taille
 function AnnounceService.Creature(player: Player, item)
-	local level = Config.AnnounceLevel(item.rarity, Config.PetSize(item.size).Name == "Giant")
-	if level then
-		local r = Config.Rarities[item.rarity]
-		AnnounceService.Send(player, level, ("%s hatched a %s %s!"):format(player.DisplayName, r.Name:upper(), Config.PetName(item)), r.Color, "Creatures")
+	local level = Config.AnnounceLevel(item.mut, Config.PetSize(item.size).Name == "Giant")
+	local mut = Config.Mutation(item.mut)
+	if level and mut then
+		local odds = if item.odds then (" (1 in %d)"):format(item.odds) else ""
+		AnnounceService.Send(player, level, ("%s hatched a %s!%s"):format(player.DisplayName, Config.PetName(item), odds), mut.Color, "Creatures")
 	end
 end
 

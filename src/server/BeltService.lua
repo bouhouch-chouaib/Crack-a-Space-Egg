@@ -2,11 +2,15 @@
 -- les fait défiler le long de son orbite, puis les supprime après le couloir.
 -- Le serveur ne déplace pas les pièces : il garde la formule du mouvement (attributs répliqués)
 -- et chaque client anime sa copie (Belt.client). Le serveur reste maître des PV et des stocks d'œufs.
+-- Chaque anneau a 3 types d'astéroïdes (Config.RockTypes), rangés par profondeur : tendres du côté du
+-- vaisseau, durs au fond. Le type fixe la taille, le stock, la vie de chaque œuf, l'apparence
+-- (shared/RockLook) et ce qu'on y trouve (GameService).
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local RockLook = require(game:GetService("ReplicatedStorage").Shared.RockLook)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 
 local BeltService = {}
@@ -15,6 +19,8 @@ type Asteroid = {
 	part: BasePart, -- la roche « Asteroid » (PrimaryPart) : c'est elle qu'on vise et qu'on fore
 	model: Model,
 	ring: number,
+	type: number, -- type d'astéroïde (index dans Config.RockTypes)
+	eggHP: number, -- dégâts pour détacher un œuf (EggHP de l'anneau × HP du type)
 	radius: number,
 	angle0: number,
 	height: number,
@@ -41,16 +47,16 @@ local function travelTime(ringIndex: number): number
 	return 2 * Config.Belt.SpawnArc / Config.Rings[ringIndex].Speed
 end
 
-local function pickSize()
+local function pickType(): number
 	local x = rng:NextNumber()
 	local acc = 0
-	for _, s in ipairs(Config.AsteroidSizes) do
-		acc += s.Chance
+	for i, t in ipairs(Config.RockTypes) do
+		acc += t.Share
 		if x < acc then
-			return s
+			return i
 		end
 	end
-	return Config.AsteroidSizes[1]
+	return 1
 end
 
 -- Position d'un astéroïde à l'instant t (même formule que Belt.client)
@@ -104,12 +110,14 @@ local function remove(a: Asteroid)
 	a.model:Destroy()
 end
 
--- Le modèle de l'anneau (ReplicatedStorage.Assets.Asteroids.RingN) à la bonne taille,
--- ou une boule grise s'il n'existe pas encore
-local function build(ringIndex: number, diameter: number): Model
-	local model = WorldBuilder.Asset("Asteroids", "Ring" .. ringIndex)
+-- Le modèle de ce type dans cet anneau (ReplicatedStorage.Assets.Asteroids.RingN.<forme>) à la bonne
+-- taille, avec les picots à la couleur du type ; ou une boule grise s'il n'existe pas encore
+local function build(ringIndex: number, diameter: number, rockType: number): Model
+	local template = RockLook.Template(ringIndex, rockType)
+	local model = template and template:Clone()
 	if model then
 		model:ScaleTo(diameter / WorldBuilder.Width(model))
+		RockLook.Apply(model, rockType)
 		-- ScaleTo agrandit aussi les picots : on les ramène à la taille de ceux du vaisseau
 		for _, d in ipairs(model:GetDescendants()) do
 			if d:IsA("Texture") and d.Name == "Studs" then
@@ -138,11 +146,18 @@ end
 -- age : secondes déjà écoulées depuis la naissance (pour remplir le tapis au démarrage)
 local function spawn(ringIndex: number, age: number)
 	local ring = Config.Rings[ringIndex]
-	local size = pickSize()
+	local rockType = pickType()
+	local size = Config.RockTypes[rockType]
 	local diameter = rng:NextNumber(size.Min, size.Max)
 	local width = Config.RingWidth(ringIndex)
-	local margin = math.max(0, width / 2 - diameter / 2)
 	local field = Config.FieldHeight(ringIndex)
+	-- bande de profondeur du type (du bord côté vaisseau vers le fond), sans dépasser de l'anneau
+	local inner = Config.RingRadius(ringIndex) - width / 2
+	local lo = math.max(inner + width * size.Depth[1], inner + math.min(diameter, width) / 2)
+	local hi = math.min(inner + width * size.Depth[2], inner + width - math.min(diameter, width) / 2)
+	if lo > hi then
+		lo, hi = (lo + hi) / 2, (lo + hi) / 2
+	end
 	local t0 = now() - age
 	local eggs = math.ceil(rng:NextInteger(size.Eggs[1], size.Eggs[2]))
 	-- Anneaux à gardien (Config.Monsters) : certains astéroïdes sont gardés, plus riches
@@ -156,12 +171,11 @@ local function spawn(ringIndex: number, age: number)
 	local radius, height
 	for attempt = 1, 6 do
 		local B = Config.Belt
-		if rng:NextNumber() < B.WalkShare then
-			-- Couche de marche : à hauteur du pont, côté intérieur de l'anneau (atteignable)
-			radius = Config.RingRadius(ringIndex) - margin + rng:NextNumber(0, 2 * margin * B.WalkDepth)
+		radius = rng:NextNumber(lo, hi)
+		if rockType == 1 and rng:NextNumber() < B.WalkShare then
+			-- Couche de marche : les astéroïdes tendres, côté vaisseau, passent surtout à hauteur du pont
 			height = rng:NextNumber(B.WalkHeight[1], B.WalkHeight[2])
 		else
-			radius = Config.RingRadius(ringIndex) + rng:NextNumber(-margin, margin)
 			height = rng:NextNumber(-field, field)
 		end
 		local angle = -Config.Belt.SpawnArc / radius + ring.Speed / radius * age
@@ -186,6 +200,8 @@ local function spawn(ringIndex: number, age: number)
 		part = nil :: any,
 		model = nil :: any,
 		ring = ringIndex,
+		type = rockType,
+		eggHP = ring.EggHP * size.HP,
 		radius = radius,
 		angle0 = -Config.Belt.SpawnArc / radius,
 		height = height,
@@ -194,11 +210,11 @@ local function spawn(ringIndex: number, age: number)
 		tEnd = t0 + travelTime(ringIndex),
 		stock = eggs,
 		maxStock = eggs,
-		hp = eggs * ring.EggHP,
+		hp = eggs * ring.EggHP * size.HP,
 		progress = {},
 	}
 
-	local model = build(ringIndex, diameter)
+	local model = build(ringIndex, diameter, rockType)
 	local yaw = rng:NextNumber(0, math.pi * 2)
 	model.Name = "Ring" .. ringIndex
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- le modèle arrive entier chez le client
@@ -219,7 +235,9 @@ local function spawn(ringIndex: number, age: number)
 	p:SetAttribute("HP", a.hp)
 	p:SetAttribute("Eggs", a.stock)
 	p:SetAttribute("MaxEggs", a.maxStock)
-	p:SetAttribute("Size", size.Name)
+	p:SetAttribute("Size", if rockType == 1 then "" else (string.split(size.Name, " ")[1])) -- « SILVER ROCK », « GOLD ROCK » (barre de vie)
+	p:SetAttribute("Rock", rockType)
+	p:SetAttribute("EggHP", a.eggHP)
 	if guarded then
 		p:SetAttribute("Guarded", true) -- lu par MonsterService (réveil) et MonsterFx.client (œil, lueur)
 	end
@@ -251,17 +269,17 @@ end
 -- vient de se briser, et l'avancée du joueur sur l'œuf en cours (0..EggHP). On fore œuf par œuf :
 -- chaque barre de vie correspond à un seul œuf. room = place libre dans la soute.
 function BeltService.Hit(a: Asteroid, player: Player, damage: number, room: number): (number, boolean, number)
-	local ring = Config.Rings[a.ring]
+	local eggHP = a.eggHP
 	a.progress[player] = (a.progress[player] or 0) + damage
 	a.hp = math.max(0, a.hp - damage)
 	local eggs = 0
-	while a.progress[player] >= ring.EggHP and a.stock > 0 and eggs < room do
-		a.progress[player] -= ring.EggHP
+	while a.progress[player] >= eggHP and a.stock > 0 and eggs < room do
+		a.progress[player] -= eggHP
 		a.stock -= 1
 		eggs += 1
 	end
 	-- La barre de vie suit le stock restant (à plusieurs, les progrès partiels la font baisser un peu plus vite)
-	a.hp = math.clamp(a.hp, if a.stock > 0 then ring.EggHP * 0.05 else 0, a.stock * ring.EggHP)
+	a.hp = math.clamp(a.hp, if a.stock > 0 then eggHP * 0.05 else 0, a.stock * eggHP)
 	a.part:SetAttribute("HP", a.hp)
 	a.part:SetAttribute("Eggs", a.stock)
 	if a.stock <= 0 then

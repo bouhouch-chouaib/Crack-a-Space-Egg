@@ -11,16 +11,23 @@ Légende : ✅ décidé · 💡 détail proposé, à ajuster en jeu · ❓ reste
 Ce bloc l'emporte sur les sections plus bas quand elles le contredisent.
 
 - **Sauvegarde `Player_v3`** : tout le monde repart de zéro, classements neufs.
-- **Plus de géodes ni de minerais** (la section 6 bis ne vaut plus) : un astéroïde ne donne que des œufs. Le stand SELL ouvre la vente des créatures. La machine n'a plus que deux améliorations (Turbo Motor, Lucky Core).
+- **Plus de géodes ni de minerais** (la section 6 bis ne vaut plus) : un astéroïde ne donne que des œufs. Le stand SELL ouvre la vente des créatures. La machine a trois améliorations (Turbo Motor, Lucky Core, Mutation Ray).
 - **Plus de Supernova** (la renaissance de la section 15 ne vaut plus). Les skins de base gratuits se débloquent par l'anneau atteint.
-- **Niveaux du jetpack sans plafond**. XP d'un niveau : 20, puis +5 par niveau, et ce pas est multiplié par 1,4 tous les 10 niveaux. Paliers de jetpack aux niveaux 1, 18, 65, 120, 200, 280, 375, 470. Les vitesses suivent les paliers, pas le niveau brut.
+- **Niveaux du jetpack sans plafond**. XP d'un niveau : 20, puis +5 par niveau, et ce pas est multiplié par 1,4 tous les 10 niveaux. Paliers de jetpack aux niveaux 1, 18, 65, 120, 195, 270, 362, 455. Les vitesses suivent les paliers, pas le niveau brut.
 - **Bonus x2 dans la soufflerie** : toutes les 25 à 45 s, un bouton « x2 » apparaît 7 s ; cliqué à temps, l'XP est doublée 12 s.
 - **Revenu hors ligne** : 40 % du revenu des créatures, 6 h au plus, affiché au retour (« WELCOME BACK! »).
 - **Reliques** : on ne les vend plus. Chacune donne +5 % d'argent ou +5 % d'XP de jetpack pour toujours. Chance : 1 sur 300 (anneau 1) à 1 sur 3 000 (anneau 7).
-- **Prix en $** : environ ×5 au début, bien plus ensuite, avec des écarts irréguliers. Réglés avec `tools/eco-sim.luau` (`lune run tools/eco-sim`) pour un joueur qui passe 40 % de son temps en soufflerie : anneau 2 vers 12 min, 3 vers 40 min, 4 vers 2 h, 5 vers 4 h 30, 6 vers 12 h, 7 vers 29 h. Paquets d'argent ×5, récompenses en $ ×3.
+- **Prix en $** : environ ×5 au début, bien plus ensuite, avec des écarts irréguliers. Réglés avec `tools/eco-sim.luau` (`lune run tools/eco-sim`) pour un joueur qui passe 40 % de son temps en soufflerie : anneau 2 vers 12 min, 3 vers 40 min, 4 vers 2 h, 5 vers 5 h, 6 vers 12 h, 7 vers 30 h. Paquets d'argent ×5, récompenses en $ ×3.
 - **Tutoriel en 7 étapes** : premier œuf (toujours Rare), machine, pose, éclosion, soufflerie, jetpack niveau 5 dans la soufflerie, nouvelle foreuse. Le bouton REWARDS n'apparaît qu'à la fin.
 - **Retouches** : plus de contour vert ou rouge sur les astéroïdes ; mur de givre à picots sur les bords du couloir ; offres d'achat en petit bandeau en haut de l'écran ; batte qui reste en main (on alterne avec la foreuse dans la barre d'objets) ; bouton pour lâcher la roche portée (à tenir, touche G) ; son court pour les réclamations ; flash et léger tremblement à chaque niveau gagné dans la soufflerie.
-- **Pas encore fait** (lots suivants) : 3 types d'astéroïdes par anneau et tirage prévisible, mutations, compteur « 1 in X » à l'éclosion, Index en défilement vertical, boutique plus propre, essai sans picots dans l'interface, nouveaux anneaux.
+- **Trois types d'astéroïdes par anneau** (lot 3) : roche de l'anneau (tendre, côté vaisseau), roche d'argent (2 fois plus dure, au milieu), roche d'or (4 fois plus dure, au fond). Le type décide de ce qu'on trouve : le premier donne surtout les créatures 1 et 2 de l'anneau, le deuxième les 3 et 4, le troisième les 5 et 6 (`Config.RockTypes`). La chance du joueur ne joue plus sur l'espèce.
+- **Revenus resserrés** : dans un anneau, la 6e créature rapporte 12 fois la 1re (avant : 6 000 fois), et 3 fois moins que la 1re de l'anneau suivant. Exemple, anneau 1 : 10, 16, 30, 45, 80, 120 $/s.
+- **Mutations** à l'éclosion, cumulées avec la taille : Silver ×1,5 (12 %), Gold ×3 (4 %), Emerald ×5 (2 %), Ruby ×10 (1 %), Rainbow ×20 (0,5 %). La créature prend la matière et la couleur de sa mutation. Le scanner, la potion de chance, l'Index et la nouvelle amélioration « Mutation Ray » de la machine augmentent ces chances (75 % au plus en tout). Une fusion garde la meilleure mutation des trois.
+- **Compteur « 1 in N »** au-dessus de l'œuf pendant l'éclosion : il grimpe et s'arrête sur la vraie chance d'obtenir cette créature (espèce dans ce type d'astéroïde × taille × mutation). Il reste affiché sur la bannière.
+- **Index** en défilement vertical : un bloc par anneau, avec l'aperçu de ses 3 astéroïdes, ses 6 créatures rangées sous l'astéroïde qui les donne, et la récompense au bout de la barre.
+- **Annonces serveur** : elles suivent maintenant la mutation (Ruby, Rainbow, et les géantes), plus la rareté.
+- **Temps d'attente raccourcis** : machine 4 à 60 s, éclosion 20 s à 8 min (les œufs des derniers rangs sont devenus courants).
+- **Pas encore fait** (lots suivants) : boutique plus propre, essai sans picots dans l'interface, nouveaux anneaux, vraies apparences dessinées pour les 3 types d'astéroïdes (aujourd'hui : forme + matière argent ou or).
 
 ## 1. Univers et ton
 

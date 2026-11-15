@@ -12,6 +12,10 @@
 --   Cosmic     + couleurs arc-en-ciel, tout se fige un instant avant l'éclatement
 -- L'œuf grossit pendant la charge jusqu'à la taille de la créature à naître (grow = hauteur finale / hauteur
 -- de l'œuf) : plus elle est immense, plus il gonfle.
+-- Compteur de chance (odds = N) : au-dessus de l'œuf, « 1 in 2 », « 1 in 9 », « 1 in 60 »... le nombre
+-- grimpe pendant toute la charge et s'arrête, juste avant l'éclatement, sur la vraie chance d'obtenir
+-- la créature qui va sortir (Config.HatchOdds, calculée par le serveur). Plus il monte, plus il grossit
+-- et change de couleur.
 -- Aucune dépendance au joueur : le module marche aussi en mode édition (aperçu depuis Studio).
 
 local Lighting = game:GetService("Lighting")
@@ -20,6 +24,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
+local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 
 -- mêmes images que UIKit.Art (FxGlow, FxSparkle, FxShell, FxRays, FxShard)
 local ART = {
@@ -35,6 +41,19 @@ local GOLD = Color3.fromRGB(255, 215, 60)
 local kp = NumberSequenceKeypoint.new
 
 local HatchFx = {}
+
+-- Couleur du compteur de chance selon sa valeur (1 sur 10, 100, 1 000, 10 000, 100 000)
+local ODDS_COLORS = {
+	Color3.fromRGB(255, 255, 255),
+	Color3.fromRGB(120, 245, 110),
+	Color3.fromRGB(90, 190, 255),
+	Color3.fromRGB(200, 120, 255),
+	Color3.fromRGB(255, 205, 60),
+	Color3.fromRGB(255, 90, 150),
+}
+function HatchFx.OddsColor(n: number): Color3
+	return ODDS_COLORS[math.clamp(math.floor(math.log10(math.max(1, n))) + 1, 1, #ODDS_COLORS)]
+end
 
 local function smooth(x: number): number
 	x = math.clamp(x, 0, 1)
@@ -136,6 +155,7 @@ type Opts = {
 	duration: number?,
 	owner: boolean?,
 	speed: number?,
+	odds: number?, -- « 1 in N » final, montré par le compteur (rien si absent)
 	onCrack: ((number) -> ())?,
 }
 
@@ -232,6 +252,44 @@ function HatchFx.Charge(egg: Model, o: Opts)
 		cc = c
 	end
 
+	-- compteur de chance : une étiquette qui suit l'œuf
+	local oddsPart: Part? = nil
+	local oddsText: TextLabel? = nil
+	local oddsScale: UIScale? = nil
+	local oddsShown = 0
+	local odds = if o.odds and o.odds >= 2 then o.odds else nil
+	if odds then
+		local p = Instance.new("Part")
+		p.Name = "Odds"
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.Transparency = 1
+		p.Size = Vector3.one * 0.2
+		p.Parent = folder
+		local b = Instance.new("BillboardGui")
+		b.Size = UDim2.fromOffset(280, 64)
+		b.AlwaysOnTop = false -- les BillboardGui « toujours devant » ne s'affichent pas dans ce jeu
+		b.LightInfluence = 0
+		b.MaxDistance = 160
+		b.Parent = p
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.Size = UDim2.fromScale(1, 1)
+		label.FontFace = Theme.FontHeavy
+		label.TextScaled = true
+		label.Text = ""
+		label.Parent = b
+		local stroke = Instance.new("UIStroke")
+		stroke.Thickness = 3.5
+		stroke.Color = Color3.fromRGB(22, 22, 32)
+		stroke.Parent = label
+		local s = Instance.new("UIScale")
+		s.Parent = label
+		oddsPart, oddsText, oddsScale = p, label, s
+	end
+
 	local t0 = os.clock()
 	local last = t0
 	local spin = 0
@@ -284,6 +342,20 @@ function HatchFx.Charge(egg: Model, o: Opts)
 		)
 		handle.center = center
 		handle.size = h * gs
+		-- compteur de chance : il grimpe (en puissances) et se fige sur la vraie valeur à 90 % de la charge
+		if odds and oddsPart and oddsText and oddsScale then
+			oddsPart.Position = center + Vector3.new(0, h * gs * 0.5 + 1.6, 0)
+			local shown = if k >= 0.9 then odds else math.max(2, math.floor(odds ^ smooth(k / 0.9) + 0.5))
+			if shown ~= oddsShown then
+				oddsShown = shown
+				oddsText.Text = "1 in " .. Format.Commas(shown)
+				oddsText.TextColor3 = HatchFx.OddsColor(shown)
+			end
+			-- il grossit avec la valeur, et donne un coup quand il se fige
+			local size = 0.7 + 0.12 * math.log10(shown)
+			local punch = if k >= 0.9 then 0.35 * math.max(0, 1 - (k - 0.9) / 0.06) else 0.06 * math.abs(math.sin(now * 24))
+			oddsScale.Scale = size * (1 + punch)
+		end
 		-- lueur de l'œuf
 		hl.FillColor = col:Lerp(WHITE, 0.45)
 		hl.FillTransparency = 1 - 0.5 * k * k
