@@ -28,7 +28,7 @@ Ce bloc l'emporte sur les sections plus bas quand elles le contredisent.
 - **Annonces serveur** : elles suivent maintenant la mutation (Ruby, Rainbow, et les géantes), plus la rareté.
 - **Temps d'attente raccourcis** : machine 4 à 60 s, éclosion 20 s à 8 min (les œufs des derniers rangs sont devenus courants).
 - **Boutique plus propre** (lot 4) : titres de section alignés à gauche avec leur icône et un trait, paquets d'argent nommés (Small à Mega Pack), montant dans une pastille sombre, rubans GOOD VALUE, GREAT VALUE et BEST VALUE! sur les trois plus gros. Toujours aucun œuf ni créature en vente.
-- **Picots de l'interface au choix** : `Config.UI.Studs` vaut `"All"` (partout, réglage actuel), `"Titles"` (bandeaux de titre et boutons seulement : panneaux, cartes et barre d'objets lisses) ou `"None"`. Pour comparer en jeu : `game.Players.LocalPlayer:SetAttribute("StudsMode", "Titles")` côté client. Captures côte à côte dans `references/interface-picots/` (dossier non versionné). Le choix reste à faire.
+- **Picots de l'interface** : seulement sur les bandeaux de titre et les boutons ; panneaux, cartes et barre d'objets sont lisses (choix de Chouaib du 15 nov., après comparaison). Réglage : `Config.UI.Studs` (`"All"`, `"Titles"`, `"None"`). Pour comparer en jeu : `game.Players.LocalPlayer:SetAttribute("StudsMode", "All")` côté client. Les picots du monde en 3D restent partout.
 - **Pas encore fait** (lots suivants) : nouveaux anneaux, vraies apparences dessinées pour les 3 types d'astéroïdes (aujourd'hui : forme + matière argent ou or).
 
 ## 1. Univers et ton

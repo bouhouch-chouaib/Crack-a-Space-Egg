@@ -1557,14 +1557,15 @@ Config.Feedback = {
 
 -- INTERFACE (UIKit) ---------------------------------------------------------------------------------
 -- Studs : où l'interface porte des picots (« l'effet lego »).
---   "All"    : partout, comme depuis le début (panneaux, cartes, barre d'objets, bandeaux, boutons)
+--   "All"    : partout, comme jusqu'au 15 nov. (panneaux, cartes, barre d'objets, bandeaux, boutons)
 --   "Titles" : seulement sur les bandeaux de titre et les boutons ; panneaux, cartes et barre d'objets sont lisses
+--              (choisi par Chouaib le 15 nov. après comparaison des deux)
 --   "None"   : nulle part
 -- Pour comparer en jeu sans republier : dans la barre de commande de Studio, côté client,
 --   game.Players.LocalPlayer:SetAttribute("StudsMode", "Titles")
 -- Les picots du monde en 3D ne sont pas concernés.
 Config.UI = {
-	Studs = "All",
+	Studs = "Titles",
 }
 
 -- Téléphones et tablettes (Mobile.client) : part des particules gardée en mode allégé

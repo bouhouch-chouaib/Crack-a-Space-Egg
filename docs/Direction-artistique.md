@@ -186,7 +186,9 @@ La planète est **peinte dans le ciel** (`Lighting.PlanetSky`). Le brouillard du
 
 ## Motifs de surface dans l'interface (7 nov.)
 
-Les trois motifs de Roblox (tirés de `studs.dds` de Studio, en calques transparents dans `UIKit.Art`) sont utilisés partout via `UIKit.studs(parent, transparence, motif, tuile)` :
+**Depuis le 15 nov.** : les motifs ne restent que sur les bandeaux de titre et les boutons. Le fond des fenêtres, les cartes et la barre d'objets sont lisses (`Config.UI.Studs = "Titles"`, choix de Chouaib après comparaison ; `"All"` remet tout comme avant). Chaque appel dit son rôle en 5e argument : `"header"`, `"button"`, ou rien pour un panneau.
+
+Les trois motifs de Roblox (tirés de `studs.dds` de Studio, en calques transparents dans `UIKit.Art`) sont posés via `UIKit.studs(parent, transparence, motif, tuile, rôle)` :
 
 | Motif | Où |
 | --- | --- |
