@@ -143,7 +143,7 @@ Config.Cold = {
 -- Un peu plus de temps pour les anneaux lointains, mais bien moins que la distance en plus : plus on va
 -- loin, plus il faut un bon jetpack pour revenir à temps.
 Config.Oxygen = {
-	Time = { 45, 50, 55, 60, 65, 70, 75, 80, 85 },
+	Time = { 45, 50, 55, 60, 65, 70, 75, 80, 85, 90 },
 	Low = 0.3, -- part restante sous laquelle l'alerte rouge commence
 	-- studs ajoutés à la boîte du vaisseau pour « de retour à bord » : négatif = un peu à l'intérieur du bord,
 	-- car les roches de l'anneau 1 frôlent le vaisseau (sinon le compte à rebours ne partirait pas)
@@ -168,7 +168,7 @@ Config.Movement = {
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 270, -- environ 200 en temps normal avec 8 anneaux
+	MaxActive = 310, -- environ 230 en temps normal avec 10 anneaux
 	SpawnArc = 180, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
 	-- Hauteur : les astéroïdes s'étalent sur plusieurs étages, plus haut dans les grands anneaux
 	HeightBase = 10, -- ± studs au minimum
@@ -244,6 +244,8 @@ Config.Rings = {
 	newRing("Star Reef", 1.5, 34, 945000, 16384, 7.0, 0, Color3.fromRGB(40, 170, 170)),
 	-- 9e anneau (15 nov.) : un anneau d'orages violets traversé d'éclairs. Pas de monstre.
 	newRing("Storm Halo", 1.35, 36, 4.25e6, 65536, 8.5, 0, Color3.fromRGB(110, 90, 200)),
+	-- 10e anneau (16 nov.) : une ceinture de rouages en laiton, d'horloges et de vapeur. Pas de monstre.
+	newRing("Clockwork Belt", 1.2, 38, 1.9e7, 262144, 10.0, 0, Color3.fromRGB(200, 140, 70)),
 }
 Config.CosmicMinRing = 5
 
@@ -410,6 +412,7 @@ Config.Relics = {
 	relic("Flag", "The First Flag", 7, 3000, "Money", col(255, 205, 80), "Planted by the first explorer to reach the Nest. Nobody knows their name."),
 	relic("Bell", "Diver's Bell", 8, 4000, "XP", col(90, 230, 200), "It still rings when something huge swims past the reef."),
 	relic("Rod", "Bent Lightning Rod", 9, 5000, "Money", col(255, 225, 90), "Struck a thousand times. It still hums before every storm."),
+	relic("Watch", "Backwards Pocket Watch", 10, 6000, "XP", col(240, 180, 90), "It ticks backwards when nobody is looking."),
 }
 -- Texte court du bonus d'une relique (« +5% money »)
 function Config.RelicBonusText(r): string
@@ -565,9 +568,10 @@ Config.Jetpack = {
 		{ Level = 362, Name = "Nova Titan", Model = "Jet7", Reach = 171, Color = Color3.fromRGB(255, 200, 60) },
 		{ Level = 412, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
 		{ Level = 470, Name = "Storm Breaker", Model = "Jet9", Reach = 255, Color = Color3.fromRGB(255, 225, 90) },
+		{ Level = 540, Name = "Gear Titan", Model = "Jet10", Reach = 310, Color = Color3.fromRGB(240, 170, 80) },
 	},
-	TopLevel = 500, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
-	MaxReach = 270, -- portée au niveau TopLevel
+	TopLevel = 570, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
+	MaxReach = 330, -- portée au niveau TopLevel
 	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client) : toutes les Every
 	-- secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » apparaît Offer secondes ;
 	-- cliqué à temps, l'XP de la soufflerie est multipliée par Mult pendant Duration secondes.
@@ -588,7 +592,8 @@ Config.Jetpack = {
 		{ Name = "Hurricane Tunnel", Cost = 1.5e12, XP = 800, Color = Color3.fromRGB(255, 80, 120) },
 		{ Name = "Tempest Tunnel", Cost = 4e14, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
 		{ Name = "Supernova Vortex", Cost = 6e16, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
-		{ Name = "Thunder Vortex", Cost = 1e20, XP = 200000, Color = Color3.fromRGB(190, 140, 255) }, -- fin de partie (anneau 9)
+		{ Name = "Thunder Vortex", Cost = 1e20, XP = 200000, Color = Color3.fromRGB(190, 140, 255) }, -- anneau 9
+		{ Name = "Clockwork Vortex", Cost = 6e21, XP = 1500000, Color = Color3.fromRGB(240, 170, 80) }, -- fin de partie (anneau 10)
 	},
 }
 
@@ -1008,6 +1013,20 @@ Config.Biomes = {
 			layer("Glow", rgb(150, 110, 255), rgb(255, 220, 100), { 8, 12 }, 5, { 5, 8 }, { 0.1, 0.4 }, Vector3.zero, { 0.86, 1 }, 0.9),
 		},
 	},
+	{ -- 10. Clockwork Belt : étincelles de laiton et bouffées de vapeur turquoise
+		Title = "CLOCKWORK BELT",
+		Icon = "Gear",
+		Fog = rgb(20, 40, 44), -- couleur du brouillard lointain
+		Clouds = { rgb(90, 220, 200), rgb(240, 170, 80) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(245, 235, 215),
+		Saturation = 0.2,
+		Outdoor = rgb(170, 160, 140),
+		Particles = {
+			layer("Shard", rgb(255, 200, 100), rgb(255, 245, 210), { 0.35, 0.15 }, 22, { 0.4, 0.9 }, { 1, 3 }, Vector3.new(0, -1.5, 0), { 0, 1 }, 1, 200),
+			layer("Glow", rgb(200, 255, 245), rgb(110, 230, 210), { 1.2, 2.4 }, 14, { 3, 5 }, { 0.3, 0.8 }, Vector3.new(0, 0.6, 0), { 0.55, 1 }, 0.5),
+			layer("Glow", rgb(90, 220, 200), rgb(240, 170, 80), { 8, 12 }, 5, { 5, 8 }, { 0.1, 0.4 }, Vector3.zero, { 0.86, 1 }, 0.8),
+		},
+	},
 }
 
 -- CRÉATURES (docs/Mecaniques.md §9) ----------------------------------------------
@@ -1017,6 +1036,8 @@ Config.Biomes = {
 -- Art = portrait de l'index ("" tant qu'il n'est pas dessiné : l'index montre un œuf mystère).
 -- Portraits de l'anneau 8 (rendus Blender, à remplir quand ils sont envoyés sur Roblox)
 -- Portraits de l'anneau 9 (même chose)
+-- Portraits de l'anneau 10 (même chose)
+local ART_R10 = { "rbxassetid://84790821701420", "rbxassetid://130309759486439", "rbxassetid://130770536551612", "rbxassetid://125348312363442", "rbxassetid://117725953165161", "rbxassetid://90256677842445" }
 local ART_R9 = { "rbxassetid://72182875240147", "rbxassetid://111568020541594", "rbxassetid://72532651453041", "rbxassetid://102020727143175", "rbxassetid://136462327382734", "rbxassetid://132837422445999" }
 local ART_R8 = { "rbxassetid://92057898992099", "rbxassetid://75232846627348", "rbxassetid://109346830247682", "rbxassetid://113502786478445", "rbxassetid://105924569565355", "rbxassetid://130244536757928" }
 local function creature(name, look, size, weight, art)
@@ -1094,6 +1115,14 @@ Config.Creatures = {
 		creature("Storm Ram", "a mighty ram with thundercloud wool and lightning horns", { 1, 1.6 }, { 60, 150 }, ART_R9[4]),
 		creature("Plasma Tiger", "a powerful tiger with glowing plasma stripes and electric claws", { 1, 1.7 }, { 120, 300 }, ART_R9[5]),
 		creature("Tempest Dragon", "a colossal storm dragon with lightning wings and a crown of thunderclouds", { 1.1, 1.9 }, { 300, 700 }, ART_R9[6]),
+	},
+	{ -- 10. Clockwork Belt
+		creature("Cog Mouse", "a tiny brass mouse with gear ears and a wind-up key on its back", { 0.8, 1.3 }, { 1, 3 }, ART_R10[1]),
+		creature("Wind-Up Penguin", "a round tin penguin with a big wind-up key and copper rivets", { 0.8, 1.4 }, { 2, 6 }, ART_R10[2]),
+		creature("Clockwork Fox", "a sleek copper fox with a clock face on its chest and gear tail", { 0.9, 1.5 }, { 3, 8 }, ART_R10[3]),
+		creature("Steam Rhino", "a mighty iron rhino with a piston horn and steam chimneys", { 1, 1.6 }, { 150, 400 }, ART_R10[4]),
+		creature("Mecha Raptor", "a fierce chrome raptor with glowing turquoise joints and gear claws", { 1, 1.7 }, { 80, 200 }, ART_R10[5]),
+		creature("Brass Sky Whale", "a colossal clockwork whale with gear fins, a brass shell and steam chimneys", { 1.1, 1.9 }, { 400, 900 }, ART_R10[6]),
 	},
 }
 
@@ -1258,6 +1287,14 @@ Config.Eggs = {
 		[6] = egg("Plasma"),
 		[7] = egg("Tempest"),
 	},
+	{ -- 10. Clockwork Belt
+		[2] = egg("Cog"),
+		[3] = egg("Spring"),
+		[4] = egg("Bolt"),
+		[5] = egg("Piston"),
+		[6] = egg("Steam"),
+		[7] = egg("Titan"),
+	},
 }
 
 -- Nom affiché d'un œuf (« Desert King Egg »)
@@ -1298,7 +1335,7 @@ Config.Hatch = {
 	-- Exemples (taille 1, sans mutation) : anneau 1 = 10 / 16 / 30 / 45 / 80 / 120 $/s ; anneau 2 = 356 à 4,3K ;
 	-- anneau 7 = 20 Md à 240 Md.
 	SlotIncome = { 2, 3.2, 6, 9, 16, 24 },
-	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13 },
+	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13, 4.47e14 },
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement, selon la rareté : l'œuf se charge (tremble,
 	-- brille, se fissure de rayons, s'élève...) de plus en plus longtemps et fort (HatchFx)
 	Burst = { 1.6, 2.1, 2.7, 3.4, 4.3, 5.4, 6.8 },
@@ -1410,6 +1447,13 @@ Config.CreatureMotion = {
 	["Storm Ram"] = motion("stomp", "charge", 0.9),
 	["Plasma Tiger"] = motion("trot", "pounce", 1.3),
 	["Tempest Dragon"] = motion("fly", "roar", 0.8, { Hover = 0.4 }),
+	-- 10. Clockwork Belt
+	["Cog Mouse"] = motion("scuttle", "spin", 1.5),
+	["Wind-Up Penguin"] = motion("waddle", "spin", 1.0),
+	["Clockwork Fox"] = motion("trot", "pounce", 1.4),
+	["Steam Rhino"] = motion("stomp", "charge", 0.9),
+	["Mecha Raptor"] = motion("trot", "pounce", 1.4),
+	["Brass Sky Whale"] = motion("swim", "roar", 0.6, { Hover = 0.4 }),
 }
 
 -- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté
