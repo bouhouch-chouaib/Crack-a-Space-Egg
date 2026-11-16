@@ -143,7 +143,7 @@ Config.Cold = {
 -- Un peu plus de temps pour les anneaux lointains, mais bien moins que la distance en plus : plus on va
 -- loin, plus il faut un bon jetpack pour revenir à temps.
 Config.Oxygen = {
-	Time = { 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95 },
+	Time = { 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100 },
 	Low = 0.3, -- part restante sous laquelle l'alerte rouge commence
 	-- studs ajoutés à la boîte du vaisseau pour « de retour à bord » : négatif = un peu à l'intérieur du bord,
 	-- car les roches de l'anneau 1 frôlent le vaisseau (sinon le compte à rebours ne partirait pas)
@@ -168,7 +168,7 @@ Config.Movement = {
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 350, -- environ 260 en temps normal avec 11 anneaux
+	MaxActive = 390, -- environ 290 en temps normal avec 12 anneaux
 	SpawnArc = 180, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
 	-- Hauteur : les astéroïdes s'étalent sur plusieurs étages, plus haut dans les grands anneaux
 	HeightBase = 10, -- ± studs au minimum
@@ -248,6 +248,8 @@ Config.Rings = {
 	newRing("Clockwork Belt", 1.2, 38, 1.9e7, 262144, 10.0, 0, Color3.fromRGB(200, 140, 70)),
 	-- 11e anneau (16 nov.) : une comète de bonbons, de guimauve et de sucre glace. Pas de monstre.
 	newRing("Candy Comet", 1.05, 40, 8.55e7, 1048576, 11.5, 0, Color3.fromRGB(230, 120, 170)),
+	-- 12e anneau (16 nov.) : une lune couverte de champignons lumineux, de mousse et de spores. Pas de monstre.
+	newRing("Mushroom Moon", 0.95, 42, 3.85e8, 4194304, 13.0, 0, Color3.fromRGB(120, 90, 170)),
 }
 Config.CosmicMinRing = 5
 
@@ -416,6 +418,7 @@ Config.Relics = {
 	relic("Rod", "Bent Lightning Rod", 9, 5000, "Money", col(255, 225, 90), "Struck a thousand times. It still hums before every storm."),
 	relic("Watch", "Backwards Pocket Watch", 10, 6000, "XP", col(240, 180, 90), "It ticks backwards when nobody is looking."),
 	relic("Spoon", "Golden Sugar Spoon", 11, 7000, "Money", col(255, 150, 200), "Someone stirred a whole comet with it."),
+	relic("Jar", "Whispering Spore Jar", 12, 8000, "XP", col(140, 255, 210), "The spores inside are still whispering to each other."),
 }
 -- Texte court du bonus d'une relique (« +5% money »)
 function Config.RelicBonusText(r): string
@@ -573,9 +576,10 @@ Config.Jetpack = {
 		{ Level = 470, Name = "Storm Breaker", Model = "Jet9", Reach = 255, Color = Color3.fromRGB(255, 225, 90) },
 		{ Level = 540, Name = "Gear Titan", Model = "Jet10", Reach = 310, Color = Color3.fromRGB(240, 170, 80) },
 		{ Level = 610, Name = "Sugar Rush", Model = "Jet11", Reach = 380, Color = Color3.fromRGB(255, 130, 200) },
+		{ Level = 690, Name = "Spore Drifter", Model = "Jet12", Reach = 460, Color = Color3.fromRGB(120, 240, 210) },
 	},
-	TopLevel = 640, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
-	MaxReach = 400, -- portée au niveau TopLevel
+	TopLevel = 720, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
+	MaxReach = 480, -- portée au niveau TopLevel
 	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client) : toutes les Every
 	-- secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » apparaît Offer secondes ;
 	-- cliqué à temps, l'XP de la soufflerie est multipliée par Mult pendant Duration secondes.
@@ -598,7 +602,8 @@ Config.Jetpack = {
 		{ Name = "Supernova Vortex", Cost = 6e16, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
 		{ Name = "Thunder Vortex", Cost = 1e20, XP = 200000, Color = Color3.fromRGB(190, 140, 255) }, -- anneau 9
 		{ Name = "Clockwork Vortex", Cost = 6e21, XP = 1500000, Color = Color3.fromRGB(240, 170, 80) }, -- anneau 10
-		{ Name = "Candy Vortex", Cost = 1.5e23, XP = 10000000, Color = Color3.fromRGB(255, 130, 200) }, -- fin de partie (anneau 11)
+		{ Name = "Candy Vortex", Cost = 1.5e23, XP = 10000000, Color = Color3.fromRGB(255, 130, 200) }, -- anneau 11
+		{ Name = "Spore Vortex", Cost = 3e24, XP = 70000000, Color = Color3.fromRGB(120, 240, 210) }, -- fin de partie (anneau 12)
 	},
 }
 
@@ -1046,6 +1051,20 @@ Config.Biomes = {
 			layer("Glow", rgb(255, 140, 200), rgb(140, 235, 220), { 8, 12 }, 5, { 5, 8 }, { 0.1, 0.4 }, Vector3.zero, { 0.86, 1 }, 0.8),
 		},
 	},
+	{ -- 12. Mushroom Moon : spores lumineuses qui montent doucement, lueurs turquoise et orangées
+		Title = "MUSHROOM MOON",
+		Icon = "Sparkles",
+		Fog = rgb(24, 20, 44), -- couleur du brouillard lointain
+		Clouds = { rgb(110, 240, 210), rgb(190, 120, 255) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(235, 240, 255),
+		Saturation = 0.25,
+		Outdoor = rgb(150, 150, 180),
+		Particles = {
+			layer("Glow", rgb(140, 255, 220), rgb(255, 200, 120), { 0.5, 0.2 }, 22, { 3, 6 }, { 0.3, 0.8 }, Vector3.new(0, 0.8, 0), { 0.2, 1 }, 1, 200),
+			layer("Glow", rgb(200, 150, 255), rgb(120, 240, 210), { 1.2, 2.4 }, 14, { 3, 5 }, { 0.3, 0.8 }, Vector3.new(0, 0.6, 0), { 0.55, 1 }, 0.5),
+			layer("Glow", rgb(110, 240, 210), rgb(190, 120, 255), { 8, 12 }, 5, { 5, 8 }, { 0.1, 0.4 }, Vector3.zero, { 0.86, 1 }, 0.8),
+		},
+	},
 }
 
 -- CRÉATURES (docs/Mecaniques.md §9) ----------------------------------------------
@@ -1057,6 +1076,8 @@ Config.Biomes = {
 -- Portraits de l'anneau 9 (même chose)
 -- Portraits de l'anneau 10 (même chose)
 -- Portraits de l'anneau 11 (même chose)
+-- Portraits de l'anneau 12 (même chose)
+local ART_R12 = { "rbxassetid://75101977686374", "rbxassetid://107715632682468", "rbxassetid://121739539800181", "rbxassetid://125011502377456", "rbxassetid://87095633395322", "rbxassetid://101907040751364" }
 local ART_R11 = { "rbxassetid://98744207573098", "rbxassetid://80681366208457", "rbxassetid://136343022081611", "rbxassetid://113757907420787", "rbxassetid://87566965179068", "rbxassetid://89869124643776" }
 local ART_R10 = { "rbxassetid://84790821701420", "rbxassetid://130309759486439", "rbxassetid://130770536551612", "rbxassetid://125348312363442", "rbxassetid://117725953165161", "rbxassetid://90256677842445" }
 local ART_R9 = { "rbxassetid://72182875240147", "rbxassetid://111568020541594", "rbxassetid://72532651453041", "rbxassetid://102020727143175", "rbxassetid://136462327382734", "rbxassetid://132837422445999" }
@@ -1152,6 +1173,14 @@ Config.Creatures = {
 		creature("Donut Turtle", "a sturdy turtle whose shell is a frosted donut covered in sprinkles", { 1, 1.6 }, { 150, 400 }, ART_R11[4]),
 		creature("Licorice Panther", "a sleek black licorice panther with candy-cane claws and mint eyes", { 1, 1.7 }, { 80, 200 }, ART_R11[5]),
 		creature("Cotton Candy Unicorn", "a colossal winged unicorn with a cotton-candy mane and a candy-cane horn", { 1.1, 1.9 }, { 400, 900 }, ART_R11[6]),
+	},
+	{ -- 12. Mushroom Moon
+		creature("Mushroom Hedgehog", "a tiny round hedgehog whose spikes are little glowing mushrooms", { 0.8, 1.3 }, { 1, 3 }, ART_R12[1]),
+		creature("Toadstool Frog", "a chubby green frog wearing a big red spotted toadstool cap", { 0.8, 1.4 }, { 2, 6 }, ART_R12[2]),
+		creature("Glowcap Moth", "a fluffy moth with glowing mushroom-patterned wings and feathery antennae", { 0.9, 1.5 }, { 3, 8 }, ART_R12[3]),
+		creature("Moss Bear", "a huge gentle bear covered in moss with mushrooms growing on its back", { 1, 1.6 }, { 150, 400 }, ART_R12[4]),
+		creature("Fungal Stag", "a majestic stag whose great antlers are made of glowing mushrooms", { 1, 1.7 }, { 80, 200 }, ART_R12[5]),
+		creature("Mushroom Mammoth", "a colossal mammoth carrying a glowing mushroom forest on its back", { 1.1, 1.9 }, { 400, 900 }, ART_R12[6]),
 	},
 }
 
@@ -1332,6 +1361,14 @@ Config.Eggs = {
 		[6] = egg("Cocoa"),
 		[7] = egg("Sugarplum"),
 	},
+	{ -- 12. Mushroom Moon
+		[2] = egg("Spore"),
+		[3] = egg("Moss"),
+		[4] = egg("Toadstool"),
+		[5] = egg("Glowcap"),
+		[6] = egg("Mycelium"),
+		[7] = egg("Moonshroom"),
+	},
 }
 
 -- Nom affiché d'un œuf (« Desert King Egg »)
@@ -1372,7 +1409,7 @@ Config.Hatch = {
 	-- Exemples (taille 1, sans mutation) : anneau 1 = 10 / 16 / 30 / 45 / 80 / 120 $/s ; anneau 2 = 356 à 4,3K ;
 	-- anneau 7 = 20 Md à 240 Md.
 	SlotIncome = { 2, 3.2, 6, 9, 16, 24 },
-	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13, 4.47e14, 1.58e16 },
+	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13, 4.47e14, 1.58e16, 5.6e17 },
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement, selon la rareté : l'œuf se charge (tremble,
 	-- brille, se fissure de rayons, s'élève...) de plus en plus longtemps et fort (HatchFx)
 	Burst = { 1.6, 2.1, 2.7, 3.4, 4.3, 5.4, 6.8 },
@@ -1498,6 +1535,13 @@ Config.CreatureMotion = {
 	["Donut Turtle"] = motion("stomp", "sit", 0.8),
 	["Licorice Panther"] = motion("trot", "pounce", 1.4),
 	["Cotton Candy Unicorn"] = motion("fly", "flip", 0.7, { Hover = 0.4 }),
+	-- 12. Mushroom Moon
+	["Mushroom Hedgehog"] = motion("scuttle", "spin", 1.4),
+	["Toadstool Frog"] = motion("hop", "flip", 1.3),
+	["Glowcap Moth"] = motion("fly", "spin", 1.1, { Hover = 0.4 }),
+	["Moss Bear"] = motion("stomp", "roar", 0.9),
+	["Fungal Stag"] = motion("trot", "roar", 1.2),
+	["Mushroom Mammoth"] = motion("stomp", "charge", 0.7),
 }
 
 -- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté
