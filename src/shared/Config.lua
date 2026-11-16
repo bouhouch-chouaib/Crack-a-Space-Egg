@@ -143,7 +143,7 @@ Config.Cold = {
 -- Un peu plus de temps pour les anneaux lointains, mais bien moins que la distance en plus : plus on va
 -- loin, plus il faut un bon jetpack pour revenir à temps.
 Config.Oxygen = {
-	Time = { 45, 50, 55, 60, 65, 70, 75, 80, 85, 90 },
+	Time = { 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95 },
 	Low = 0.3, -- part restante sous laquelle l'alerte rouge commence
 	-- studs ajoutés à la boîte du vaisseau pour « de retour à bord » : négatif = un peu à l'intérieur du bord,
 	-- car les roches de l'anneau 1 frôlent le vaisseau (sinon le compte à rebours ne partirait pas)
@@ -168,7 +168,7 @@ Config.Movement = {
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 310, -- environ 230 en temps normal avec 10 anneaux
+	MaxActive = 350, -- environ 260 en temps normal avec 11 anneaux
 	SpawnArc = 180, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
 	-- Hauteur : les astéroïdes s'étalent sur plusieurs étages, plus haut dans les grands anneaux
 	HeightBase = 10, -- ± studs au minimum
@@ -246,6 +246,8 @@ Config.Rings = {
 	newRing("Storm Halo", 1.35, 36, 4.25e6, 65536, 8.5, 0, Color3.fromRGB(110, 90, 200)),
 	-- 10e anneau (16 nov.) : une ceinture de rouages en laiton, d'horloges et de vapeur. Pas de monstre.
 	newRing("Clockwork Belt", 1.2, 38, 1.9e7, 262144, 10.0, 0, Color3.fromRGB(200, 140, 70)),
+	-- 11e anneau (16 nov.) : une comète de bonbons, de guimauve et de sucre glace. Pas de monstre.
+	newRing("Candy Comet", 1.05, 40, 8.55e7, 1048576, 11.5, 0, Color3.fromRGB(230, 120, 170)),
 }
 Config.CosmicMinRing = 5
 
@@ -413,6 +415,7 @@ Config.Relics = {
 	relic("Bell", "Diver's Bell", 8, 4000, "XP", col(90, 230, 200), "It still rings when something huge swims past the reef."),
 	relic("Rod", "Bent Lightning Rod", 9, 5000, "Money", col(255, 225, 90), "Struck a thousand times. It still hums before every storm."),
 	relic("Watch", "Backwards Pocket Watch", 10, 6000, "XP", col(240, 180, 90), "It ticks backwards when nobody is looking."),
+	relic("Spoon", "Golden Sugar Spoon", 11, 7000, "Money", col(255, 150, 200), "Someone stirred a whole comet with it."),
 }
 -- Texte court du bonus d'une relique (« +5% money »)
 function Config.RelicBonusText(r): string
@@ -569,9 +572,10 @@ Config.Jetpack = {
 		{ Level = 412, Name = "Supernova X", Model = "Jet8", Reach = 200, Color = Color3.fromRGB(255, 120, 220) },
 		{ Level = 470, Name = "Storm Breaker", Model = "Jet9", Reach = 255, Color = Color3.fromRGB(255, 225, 90) },
 		{ Level = 540, Name = "Gear Titan", Model = "Jet10", Reach = 310, Color = Color3.fromRGB(240, 170, 80) },
+		{ Level = 610, Name = "Sugar Rush", Model = "Jet11", Reach = 380, Color = Color3.fromRGB(255, 130, 200) },
 	},
-	TopLevel = 570, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
-	MaxReach = 330, -- portée au niveau TopLevel
+	TopLevel = 640, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
+	MaxReach = 400, -- portée au niveau TopLevel
 	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client) : toutes les Every
 	-- secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » apparaît Offer secondes ;
 	-- cliqué à temps, l'XP de la soufflerie est multipliée par Mult pendant Duration secondes.
@@ -593,7 +597,8 @@ Config.Jetpack = {
 		{ Name = "Tempest Tunnel", Cost = 4e14, XP = 5000, Color = Color3.fromRGB(60, 255, 220) },
 		{ Name = "Supernova Vortex", Cost = 6e16, XP = 30000, Color = Color3.fromRGB(255, 220, 80) },
 		{ Name = "Thunder Vortex", Cost = 1e20, XP = 200000, Color = Color3.fromRGB(190, 140, 255) }, -- anneau 9
-		{ Name = "Clockwork Vortex", Cost = 6e21, XP = 1500000, Color = Color3.fromRGB(240, 170, 80) }, -- fin de partie (anneau 10)
+		{ Name = "Clockwork Vortex", Cost = 6e21, XP = 1500000, Color = Color3.fromRGB(240, 170, 80) }, -- anneau 10
+		{ Name = "Candy Vortex", Cost = 1.5e23, XP = 10000000, Color = Color3.fromRGB(255, 130, 200) }, -- fin de partie (anneau 11)
 	},
 }
 
@@ -1027,6 +1032,20 @@ Config.Biomes = {
 			layer("Glow", rgb(90, 220, 200), rgb(240, 170, 80), { 8, 12 }, 5, { 5, 8 }, { 0.1, 0.4 }, Vector3.zero, { 0.86, 1 }, 0.8),
 		},
 	},
+	{ -- 11. Candy Comet : pluie de vermicelles colorés et poudre de sucre rose et menthe
+		Title = "CANDY COMET",
+		Icon = "Comet",
+		Fog = rgb(52, 26, 50), -- couleur du brouillard lointain
+		Clouds = { rgb(255, 140, 200), rgb(140, 235, 220) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(255, 238, 246),
+		Saturation = 0.25,
+		Outdoor = rgb(190, 160, 175),
+		Particles = {
+			layer("Shard", rgb(255, 120, 190), rgb(130, 230, 255), { 0.35, 0.15 }, 22, { 0.4, 0.9 }, { 1, 3 }, Vector3.new(0, -1.5, 0), { 0, 1 }, 1, 200),
+			layer("Glow", rgb(255, 245, 250), rgb(255, 170, 215), { 1.2, 2.4 }, 14, { 3, 5 }, { 0.3, 0.8 }, Vector3.new(0, 0.6, 0), { 0.55, 1 }, 0.5),
+			layer("Glow", rgb(255, 140, 200), rgb(140, 235, 220), { 8, 12 }, 5, { 5, 8 }, { 0.1, 0.4 }, Vector3.zero, { 0.86, 1 }, 0.8),
+		},
+	},
 }
 
 -- CRÉATURES (docs/Mecaniques.md §9) ----------------------------------------------
@@ -1037,6 +1056,8 @@ Config.Biomes = {
 -- Portraits de l'anneau 8 (rendus Blender, à remplir quand ils sont envoyés sur Roblox)
 -- Portraits de l'anneau 9 (même chose)
 -- Portraits de l'anneau 10 (même chose)
+-- Portraits de l'anneau 11 (même chose)
+local ART_R11 = { "rbxassetid://98744207573098", "rbxassetid://80681366208457", "rbxassetid://136343022081611", "rbxassetid://113757907420787", "rbxassetid://87566965179068", "rbxassetid://89869124643776" }
 local ART_R10 = { "rbxassetid://84790821701420", "rbxassetid://130309759486439", "rbxassetid://130770536551612", "rbxassetid://125348312363442", "rbxassetid://117725953165161", "rbxassetid://90256677842445" }
 local ART_R9 = { "rbxassetid://72182875240147", "rbxassetid://111568020541594", "rbxassetid://72532651453041", "rbxassetid://102020727143175", "rbxassetid://136462327382734", "rbxassetid://132837422445999" }
 local ART_R8 = { "rbxassetid://92057898992099", "rbxassetid://75232846627348", "rbxassetid://109346830247682", "rbxassetid://113502786478445", "rbxassetid://105924569565355", "rbxassetid://130244536757928" }
@@ -1123,6 +1144,14 @@ Config.Creatures = {
 		creature("Steam Rhino", "a mighty iron rhino with a piston horn and steam chimneys", { 1, 1.6 }, { 150, 400 }, ART_R10[4]),
 		creature("Mecha Raptor", "a fierce chrome raptor with glowing turquoise joints and gear claws", { 1, 1.7 }, { 80, 200 }, ART_R10[5]),
 		creature("Brass Sky Whale", "a colossal clockwork whale with gear fins, a brass shell and steam chimneys", { 1.1, 1.9 }, { 400, 900 }, ART_R10[6]),
+	},
+	{ -- 11. Candy Comet
+		creature("Gummy Cub", "a tiny bouncy red gummy bear cub with a sugar-crystal tummy", { 0.8, 1.3 }, { 1, 3 }, ART_R11[1]),
+		creature("Marshmallow Bunny", "a fluffy marshmallow bunny with pink candy ears and a gumdrop nose", { 0.8, 1.4 }, { 2, 6 }, ART_R11[2]),
+		creature("Lollipop Snail", "a happy snail carrying a giant swirl lollipop as its shell", { 0.9, 1.5 }, { 3, 8 }, ART_R11[3]),
+		creature("Donut Turtle", "a sturdy turtle whose shell is a frosted donut covered in sprinkles", { 1, 1.6 }, { 150, 400 }, ART_R11[4]),
+		creature("Licorice Panther", "a sleek black licorice panther with candy-cane claws and mint eyes", { 1, 1.7 }, { 80, 200 }, ART_R11[5]),
+		creature("Cotton Candy Unicorn", "a colossal winged unicorn with a cotton-candy mane and a candy-cane horn", { 1.1, 1.9 }, { 400, 900 }, ART_R11[6]),
 	},
 }
 
@@ -1295,6 +1324,14 @@ Config.Eggs = {
 		[6] = egg("Steam"),
 		[7] = egg("Titan"),
 	},
+	{ -- 11. Candy Comet
+		[2] = egg("Gummy"),
+		[3] = egg("Sprinkle"),
+		[4] = egg("Swirl"),
+		[5] = egg("Frosted"),
+		[6] = egg("Cocoa"),
+		[7] = egg("Sugarplum"),
+	},
 }
 
 -- Nom affiché d'un œuf (« Desert King Egg »)
@@ -1335,7 +1372,7 @@ Config.Hatch = {
 	-- Exemples (taille 1, sans mutation) : anneau 1 = 10 / 16 / 30 / 45 / 80 / 120 $/s ; anneau 2 = 356 à 4,3K ;
 	-- anneau 7 = 20 Md à 240 Md.
 	SlotIncome = { 2, 3.2, 6, 9, 16, 24 },
-	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13, 4.47e14 },
+	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13, 4.47e14, 1.58e16 },
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement, selon la rareté : l'œuf se charge (tremble,
 	-- brille, se fissure de rayons, s'élève...) de plus en plus longtemps et fort (HatchFx)
 	Burst = { 1.6, 2.1, 2.7, 3.4, 4.3, 5.4, 6.8 },
@@ -1454,6 +1491,13 @@ Config.CreatureMotion = {
 	["Steam Rhino"] = motion("stomp", "charge", 0.9),
 	["Mecha Raptor"] = motion("trot", "pounce", 1.4),
 	["Brass Sky Whale"] = motion("swim", "roar", 0.6, { Hover = 0.4 }),
+	-- 11. Candy Comet
+	["Gummy Cub"] = motion("hop", "spin", 1.3),
+	["Marshmallow Bunny"] = motion("hop", "flip", 1.4),
+	["Lollipop Snail"] = motion("slither", "pulse", 0.7),
+	["Donut Turtle"] = motion("stomp", "sit", 0.8),
+	["Licorice Panther"] = motion("trot", "pounce", 1.4),
+	["Cotton Candy Unicorn"] = motion("fly", "flip", 0.7, { Hover = 0.4 }),
 }
 
 -- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté
