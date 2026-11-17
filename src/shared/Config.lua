@@ -143,7 +143,7 @@ Config.Cold = {
 -- Un peu plus de temps pour les anneaux lointains, mais bien moins que la distance en plus : plus on va
 -- loin, plus il faut un bon jetpack pour revenir à temps.
 Config.Oxygen = {
-	Time = { 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105 },
+	Time = { 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110 },
 	Low = 0.3, -- part restante sous laquelle l'alerte rouge commence
 	-- studs ajoutés à la boîte du vaisseau pour « de retour à bord » : négatif = un peu à l'intérieur du bord,
 	-- car les roches de l'anneau 1 frôlent le vaisseau (sinon le compte à rebours ne partirait pas)
@@ -168,7 +168,7 @@ Config.Movement = {
 
 -- Tapis d'astéroïdes : ils naissent avant le couloir, le traversent et disparaissent après
 Config.Belt = {
-	MaxActive = 430, -- environ 320 en temps normal avec 13 anneaux
+	MaxActive = 470, -- environ 350 en temps normal avec 14 anneaux
 	SpawnArc = 180, -- studs d'arc entre le point de naissance et le centre du couloir (idem après)
 	-- Hauteur : les astéroïdes s'étalent sur plusieurs étages, plus haut dans les grands anneaux
 	HeightBase = 10, -- ± studs au minimum
@@ -252,6 +252,8 @@ Config.Rings = {
 	newRing("Mushroom Moon", 0.95, 42, 3.85e8, 4194304, 13.0, 0, Color3.fromRGB(120, 90, 170)),
 	-- 13e anneau (16 nov.) : les ruines d'un temple antique de jade et d'or qui flottent dans l'espace. Pas de monstre.
 	newRing("Jade Temple", 0.85, 44, 1.73e9, 16777216, 14.5, 0, Color3.fromRGB(80, 170, 120)),
+	-- 14e anneau (17 nov.) : une brume hantée mais mignonne, avec fantômes, citrouilles et lanternes bleues. Pas de monstre.
+	newRing("Phantom Mist", 0.75, 46, 7.8e9, 67108864, 16.0, 0, Color3.fromRGB(90, 200, 190)),
 }
 Config.CosmicMinRing = 5
 
@@ -422,6 +424,7 @@ Config.Relics = {
 	relic("Spoon", "Golden Sugar Spoon", 11, 7000, "Money", col(255, 150, 200), "Someone stirred a whole comet with it."),
 	relic("Jar", "Whispering Spore Jar", 12, 8000, "XP", col(140, 255, 210), "The spores inside are still whispering to each other."),
 	relic("Mask", "Cracked Golden Mask", 13, 9000, "Money", col(255, 205, 80), "Its jade eyes follow whoever holds it."),
+	relic("Lantern", "Flickering Ghost Lantern", 14, 10000, "XP", col(140, 255, 220), "Its flame burns blue and never goes out."),
 }
 -- Texte court du bonus d'une relique (« +5% money »)
 function Config.RelicBonusText(r): string
@@ -581,9 +584,10 @@ Config.Jetpack = {
 		{ Level = 610, Name = "Sugar Rush", Model = "Jet11", Reach = 380, Color = Color3.fromRGB(255, 130, 200) },
 		{ Level = 690, Name = "Spore Drifter", Model = "Jet12", Reach = 460, Color = Color3.fromRGB(120, 240, 210) },
 		{ Level = 780, Name = "Sun Idol", Model = "Jet13", Reach = 560, Color = Color3.fromRGB(255, 200, 80) },
+		{ Level = 880, Name = "Wisp Rider", Model = "Jet14", Reach = 680, Color = Color3.fromRGB(120, 240, 220) },
 	},
-	TopLevel = 810, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
-	MaxReach = 590, -- portée au niveau TopLevel
+	TopLevel = 910, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
+	MaxReach = 720, -- portée au niveau TopLevel
 	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client) : toutes les Every
 	-- secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » apparaît Offer secondes ;
 	-- cliqué à temps, l'XP de la soufflerie est multipliée par Mult pendant Duration secondes.
@@ -608,7 +612,8 @@ Config.Jetpack = {
 		{ Name = "Clockwork Vortex", Cost = 6e21, XP = 1500000, Color = Color3.fromRGB(240, 170, 80) }, -- anneau 10
 		{ Name = "Candy Vortex", Cost = 1.5e23, XP = 10000000, Color = Color3.fromRGB(255, 130, 200) }, -- anneau 11
 		{ Name = "Spore Vortex", Cost = 3e24, XP = 70000000, Color = Color3.fromRGB(120, 240, 210) }, -- anneau 12
-		{ Name = "Temple Vortex", Cost = 3e25, XP = 800000000, Color = Color3.fromRGB(255, 200, 80) }, -- fin de partie (anneau 13)
+		{ Name = "Temple Vortex", Cost = 3e25, XP = 800000000, Color = Color3.fromRGB(255, 200, 80) }, -- anneau 13
+		{ Name = "Phantom Vortex", Cost = 2.5e26, XP = 12000000000, Color = Color3.fromRGB(120, 240, 220) }, -- fin de partie (anneau 14)
 	},
 }
 
@@ -1084,6 +1089,20 @@ Config.Biomes = {
 			layer("Glow", rgb(90, 220, 150), rgb(255, 200, 90), { 8, 12 }, 5, { 5, 8 }, { 0.1, 0.4 }, Vector3.zero, { 0.86, 1 }, 0.8),
 		},
 	},
+	{ -- 14. Phantom Mist : feux follets turquoise qui montent, brume pâle et lueurs orangées de citrouille
+		Title = "PHANTOM MIST",
+		Icon = "Star",
+		Fog = rgb(18, 30, 36), -- couleur du brouillard lointain
+		Clouds = { rgb(110, 240, 220), rgb(255, 150, 60) }, -- nuages du champ (WorldBuilder)
+		Tint = rgb(225, 245, 245),
+		Saturation = 0.15,
+		Outdoor = rgb(140, 160, 170),
+		Particles = {
+			layer("Glow", rgb(140, 255, 230), rgb(200, 255, 245), { 0.5, 0.2 }, 22, { 3, 6 }, { 0.3, 0.8 }, Vector3.new(0, 0.8, 0), { 0.2, 1 }, 1, 200),
+			layer("Glow", rgb(220, 240, 255), rgb(150, 220, 230), { 1.6, 3 }, 14, { 3, 5 }, { 0.2, 0.6 }, Vector3.new(0, 0.3, 0), { 0.6, 1 }, 0.5),
+			layer("Glow", rgb(110, 240, 220), rgb(255, 150, 60), { 8, 12 }, 5, { 5, 8 }, { 0.1, 0.4 }, Vector3.zero, { 0.86, 1 }, 0.8),
+		},
+	},
 }
 
 -- CRÉATURES (docs/Mecaniques.md §9) ----------------------------------------------
@@ -1097,6 +1116,8 @@ Config.Biomes = {
 -- Portraits de l'anneau 11 (même chose)
 -- Portraits de l'anneau 12 (même chose)
 -- Portraits de l'anneau 13 (même chose)
+-- Portraits de l'anneau 14 (même chose)
+local ART_R14 = { "rbxassetid://132047384144913", "rbxassetid://90219882408102", "rbxassetid://92902962109031", "rbxassetid://120495110930838", "rbxassetid://85303059683915", "rbxassetid://128885510147851" }
 local ART_R13 = { "rbxassetid://95943150463525", "rbxassetid://116359762015268", "rbxassetid://134577077562821", "rbxassetid://108681301498276", "rbxassetid://76004535046896", "rbxassetid://90753684144093" }
 local ART_R12 = { "rbxassetid://75101977686374", "rbxassetid://107715632682468", "rbxassetid://121739539800181", "rbxassetid://125011502377456", "rbxassetid://87095633395322", "rbxassetid://101907040751364" }
 local ART_R11 = { "rbxassetid://98744207573098", "rbxassetid://80681366208457", "rbxassetid://136343022081611", "rbxassetid://113757907420787", "rbxassetid://87566965179068", "rbxassetid://89869124643776" }
@@ -1210,6 +1231,14 @@ Config.Creatures = {
 		creature("Temple Lion", "a mighty stone guardian lion with a golden mane and jade eyes", { 1, 1.6 }, { 150, 400 }, ART_R13[4]),
 		creature("Feathered Serpent", "a long jade serpent with a crown of colorful feathers and golden wings", { 1, 1.7 }, { 80, 200 }, ART_R13[5]),
 		creature("Sun Condor", "a colossal golden condor with a blazing sun crown and jade-tipped wings", { 1.1, 1.9 }, { 400, 900 }, ART_R13[6]),
+	},
+	{ -- 14. Phantom Mist
+		creature("Boo Pup", "a tiny floaty ghost puppy with a wispy tail and a happy tongue", { 0.8, 1.3 }, { 1, 3 }, ART_R14[1]),
+		creature("Pumpkin Kitty", "a little black cat curled up inside a smiling carved pumpkin", { 0.8, 1.4 }, { 2, 6 }, ART_R14[2]),
+		creature("Lantern Squid", "a friendly ghostly squid carrying little glowing lanterns on its tentacles", { 0.9, 1.5 }, { 3, 8 }, ART_R14[3]),
+		creature("Phantom Stallion", "a proud ghost horse with a flowing turquoise spirit-flame mane", { 1, 1.6 }, { 150, 400 }, ART_R14[4]),
+		creature("Spirit Wolf", "a great glowing spirit wolf made of mist with lantern-light eyes", { 1, 1.7 }, { 80, 200 }, ART_R14[5]),
+		creature("Lantern Wyvern", "a colossal ghostly wyvern with tattered misty wings and lanterns hanging from its horns", { 1.1, 1.9 }, { 400, 900 }, ART_R14[6]),
 	},
 }
 
@@ -1406,6 +1435,14 @@ Config.Eggs = {
 		[6] = egg("Serpent"),
 		[7] = egg("Temple"),
 	},
+	{ -- 14. Phantom Mist
+		[2] = egg("Boo"),
+		[3] = egg("Candle"),
+		[4] = egg("Lantern"),
+		[5] = egg("Pumpkin"),
+		[6] = egg("Wisp"),
+		[7] = egg("Phantom"),
+	},
 }
 
 -- Nom affiché d'un œuf (« Desert King Egg »)
@@ -1446,7 +1483,7 @@ Config.Hatch = {
 	-- Exemples (taille 1, sans mutation) : anneau 1 = 10 / 16 / 30 / 45 / 80 / 120 $/s ; anneau 2 = 356 à 4,3K ;
 	-- anneau 7 = 20 Md à 240 Md.
 	SlotIncome = { 2, 3.2, 6, 9, 16, 24 },
-	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13, 4.47e14, 1.58e16, 5.6e17, 1.98e19 },
+	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13, 4.47e14, 1.58e16, 5.6e17, 1.98e19, 7e20 },
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement, selon la rareté : l'œuf se charge (tremble,
 	-- brille, se fissure de rayons, s'élève...) de plus en plus longtemps et fort (HatchFx)
 	Burst = { 1.6, 2.1, 2.7, 3.4, 4.3, 5.4, 6.8 },
@@ -1586,6 +1623,13 @@ Config.CreatureMotion = {
 	["Temple Lion"] = motion("stomp", "roar", 0.9),
 	["Feathered Serpent"] = motion("slither", "strike", 1.0),
 	["Sun Condor"] = motion("fly", "dive", 0.6, { Hover = 0.4 }),
+	-- 14. Phantom Mist
+	["Boo Pup"] = motion("float", "spin", 1.2, { Hover = 0.35 }),
+	["Pumpkin Kitty"] = motion("hop", "spin", 1.3),
+	["Lantern Squid"] = motion("swim", "spin", 0.9, { Hover = 0.5 }),
+	["Phantom Stallion"] = motion("trot", "roar", 1.1),
+	["Spirit Wolf"] = motion("trot", "roar", 1.3),
+	["Lantern Wyvern"] = motion("fly", "roar", 0.6, { Hover = 0.4 }),
 }
 
 -- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté
