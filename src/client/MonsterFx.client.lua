@@ -1,4 +1,7 @@
--- Monstres des anneaux 5 à 7, côté joueur (MonsterService décide, ce script montre) :
+-- Monstres des anneaux 3 à 14, côté joueur (MonsterService décide, ce script montre) :
+-- - pendant la poursuite : la Speed qu'il faut pour le semer (verte si on l'a, rouge sinon) ;
+-- - roche tombée sur un astéroïde après une prise (World.LostRocks) : collée à l'astéroïde qui
+--   défile, rayon lumineux jusqu'à elle, contour et compte à rebours pour son propriétaire ;
 -- - chaque monstre (dossier dans Workspace.World.Monsters) devient un modèle animé chez ce client,
 --   qui glisse vers la position publiée par le serveur, grandit en sortant, plonge en repartant ;
 --   au réveil son astéroïde vole en éclats (onde de choc) ; traînée, braises et yeux qui brillent ;
@@ -20,6 +23,7 @@ local Debris = game:GetService("Debris")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
+local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 
 local M = Config.Monsters
 local player = Players.LocalPlayer
@@ -73,6 +77,16 @@ local barBack = new("Frame", { Size = UDim2.new(1, -40, 0, 14), Position = UDim2
 -- jauge : le chemin déjà fait vers sa base
 local barFill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(110, 240, 120), Parent = barBack }, { UIKit.corner() })
 UIKit.studs(banner, 0.85).ZIndex = 0
+-- au-dessus du bandeau : la Speed qu'il faut pour semer ce monstre
+local needText = UIKit.text({
+	Text = "",
+	AnchorPoint = Vector2.new(0.5, 1),
+	Size = UDim2.new(1, 40, 0, 30),
+	Position = UDim2.new(0.5, 0, 0, -6),
+	TextColor3 = Color3.fromRGB(255, 120, 120),
+	Stroke = 3,
+	Parent = banner,
+})
 
 -- éclair de la couleur du monstre à son réveil
 local flash = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8, Parent = gui })
@@ -415,9 +429,10 @@ local function addView(f: Instance)
 			embers.LightEmission = 1
 			embers.LightInfluence = 0
 			embers.Parent = body
-			-- deux yeux qui brillent, placés devant lui à chaque image
+			-- deux yeux qui brillent, placés devant lui à chaque image (sauf les monstres faits au kit,
+			-- qui ont leurs propres yeux lumineux : pièce « Glow »)
 			local eyes = {}
-			for _ = 1, 2 do
+			for _ = 1, if m:FindFirstChild("Glow", true) then 0 else 2 do
 				local e = Instance.new("Attachment")
 				e.Parent = workspace.Terrain
 				local bb = Instance.new("BillboardGui")
@@ -585,6 +600,117 @@ task.spawn(function()
 	end
 end)
 
+-- ROCHES TOMBÉES (après une prise) ---------------------------------------------------------
+
+type LostView = { model: Model, mine: boolean, phase: number, label: TextLabel?, from: Attachment?, to: Attachment?, beam: Beam?, sinkAt: number? }
+local lostViews: { [Instance]: LostView } = {}
+local lostFolder = world:WaitForChild("LostRocks", 30)
+
+local function addLost(m: Instance)
+	if not m:IsA("Model") or lostViews[m] then
+		return
+	end
+	local mine = m:GetAttribute("Owner") == player.UserId
+	local lv: LostView = { model = m, mine = mine, phase = math.random() * 6 }
+	if mine then
+		-- contour visible à travers les roches, compte à rebours au-dessus et rayon jusqu'à elle
+		local hl = Instance.new("Highlight")
+		hl.FillTransparency = 0.6
+		hl.FillColor = Color3.fromRGB(255, 230, 120)
+		hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+		hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		hl.Parent = m
+		local body = m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart", true)
+		if body then
+			local bb = new("BillboardGui", { Size = UDim2.fromOffset(150, 54), StudsOffsetWorldSpace = Vector3.new(0, ((m:GetAttribute("BodyHeight") or 3) :: number) * 0.8 + 2, 0), LightInfluence = 0, MaxDistance = 2000, Parent = body })
+			lv.label = UIKit.text({ Text = "", Size = UDim2.fromScale(1, 1), TextColor3 = Color3.fromRGB(255, 235, 140), Stroke = 3, Parent = bb })
+			local to = Instance.new("Attachment")
+			to.Parent = body
+			local from = Instance.new("Attachment")
+			from.Name = "LostRockFrom"
+			lv.to, lv.from = to, from
+			lv.beam = new("Beam", {
+				Attachment0 = from,
+				Attachment1 = to,
+				Texture = Config.Guide.Arrow,
+				TextureMode = Enum.TextureMode.Static,
+				TextureLength = 3,
+				TextureSpeed = 2.4,
+				Width0 = 2.4,
+				Width1 = 2.4,
+				FaceCamera = true,
+				LightEmission = 0.4,
+				LightInfluence = 0,
+				Color = ColorSequence.new(Color3.fromRGB(255, 225, 110)),
+				Parent = workspace.Terrain,
+			})
+		end
+		Sfx.Play("Warning")
+	end
+	lostViews[m] = lv
+end
+
+local function removeLost(m: Instance)
+	local lv = lostViews[m]
+	if not lv then
+		return
+	end
+	lostViews[m] = nil
+	if lv.beam then
+		lv.beam:Destroy()
+	end
+	if lv.from then
+		lv.from:Destroy()
+	end
+end
+
+if lostFolder then
+	for _, m in ipairs(lostFolder:GetChildren()) do
+		addLost(m)
+	end
+	lostFolder.ChildAdded:Connect(function(m)
+		task.wait() -- on laisse arriver les attributs et la référence à l'astéroïde
+		addLost(m)
+	end)
+	lostFolder.ChildRemoved:Connect(removeLost)
+end
+
+local function stepLost()
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local t = workspace:GetServerTimeNow()
+	for m, lv in pairs(lostViews) do
+		local ref = m:FindFirstChild("Asteroid") :: ObjectValue?
+		local rock = ref and ref.Value :: BasePart?
+		local offset = (m:GetAttribute("Offset") or Vector3.zero) :: Vector3
+		if rock and rock:IsDescendantOf(workspace) then
+			-- elle tourne doucement sur le dessus de l'astéroïde ; elle s'y enfonce à la fin du temps
+			local sink = 0
+			if m:GetAttribute("Sinking") then
+				lv.sinkAt = lv.sinkAt or os.clock()
+				sink = math.clamp((os.clock() - (lv.sinkAt :: number)) / 1.1, 0, 1)
+			end
+			local bob = math.sin(os.clock() * 3 + lv.phase) * 0.4 * (1 - sink)
+			local h = (m:GetAttribute("BodyHeight") or 3) :: number
+			local pos = rock.Position + offset + Vector3.new(0, bob - sink * h * 1.2, 0)
+			m:PivotTo(CFrame.new(pos) * CFrame.Angles(0, os.clock() * 1.4 + lv.phase, 0.15))
+		end
+		if lv.mine then
+			local left = math.max(0, ((m:GetAttribute("ExpiresAt") or t) :: number) - t)
+			if lv.label then
+				lv.label.Text = ("GRAB IT! %d"):format(math.ceil(left))
+				lv.label.TextColor3 = if left < 8 then Color3.fromRGB(255, 110, 110) else Color3.fromRGB(255, 235, 140)
+			end
+			if lv.from and root and lv.from.Parent ~= root then
+				lv.from.Parent = root
+			end
+			if lv.beam then
+				lv.beam.Enabled = root ~= nil and not m:GetAttribute("Sinking")
+			end
+		end
+	end
+end
+
 -- BRUIT --------------------------------------------------------------------------------------
 
 local warned = false
@@ -611,6 +737,7 @@ local nearShown = 0 -- proximité du monstre, lissée (lignes de vitesse, champ 
 local hitRocks: { [BasePart]: number } = setmetatable({}, { __mode = "k" }) :: any
 
 RunService.RenderStepped:Connect(function(dt)
+	stepLost()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local camPos = camera.CFrame.Position
@@ -662,7 +789,7 @@ RunService.RenderStepped:Connect(function(dt)
 			local pivot = CFrame.lookAt(at, at + dir) * wobble
 			m:PivotTo(pivot)
 			-- les yeux, devant lui
-			if v.eyes then
+			if v.eyes and #v.eyes == 2 then
 				local s2 = v.size * grow
 				v.eyes[1].WorldPosition = (pivot * CFrame.new(-s2 * 0.12, s2 * 0.14, -s2 * 0.42)).Position
 				v.eyes[2].WorldPosition = (pivot * CFrame.new(s2 * 0.12, s2 * 0.14, -s2 * 0.42)).Position
@@ -701,6 +828,15 @@ RunService.RenderStepped:Connect(function(dt)
 			chased = true
 			local name = M.Kinds[v.ring] and string.upper(M.Kinds[v.ring].Name) or "MONSTER"
 			UIKit.setIconText(title, ("{Warning} %s! RUN HOME"):format(name))
+			local need = (M.Kinds[v.ring] and M.Kinds[v.ring].Need or 0) :: number
+			local mySpeed = (player:GetAttribute("JetSpeed") or 0) :: number
+			if mySpeed >= need then
+				needText.Text = ("You are fast enough! (%s Speed)"):format(Format.Short(need))
+				needText.TextColor3 = Color3.fromRGB(130, 255, 140)
+			else
+				needText.Text = ("Too slow! Need %s Speed"):format(Format.Short(need))
+				needText.TextColor3 = Color3.fromRGB(255, 120, 120)
+			end
 			-- jauge et flèche lumineuse : le chemin jusqu'à sa base
 			local floor = baseFloor(player.UserId)
 			if floor then

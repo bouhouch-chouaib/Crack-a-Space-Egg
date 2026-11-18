@@ -37,7 +37,7 @@ local JET_COLOR = Color3.fromRGB(110, 235, 255)
 local speedText = UIKit.text({
 	Size = UDim2.fromOffset(300, 36),
 	Position = UDim2.fromOffset(100, 2),
-	Text = "Jetpack Lv 1",
+	Text = "0 Speed",
 	TextColor3 = JET_COLOR,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	Stroke = 3.5,
@@ -85,19 +85,25 @@ local incomeText = UIKit.text({
 	Parent = moneyGroup,
 })
 
--- Niveau du jetpack et barre d'XP (la vitesse au sol et en vol monte avec le niveau)
+-- Vitesse du jetpack (18 nov. : un chiffre « Speed » à la place du niveau, c'est l'XP totale du
+-- jetpack ; les monstres en demandent un minimum) et barre du niveau en cours, qui se remplit souvent
+-- (chaque niveau rend un peu plus rapide). Sous la barre : la Speed du prochain modèle de jetpack.
 local shownLevel = 0
 local function refreshSpeed()
 	local level = player:GetAttribute("JetLevel") or 1
 	local xp = player:GetAttribute("JetXP") or 0
 	local need = player:GetAttribute("JetXPNeed") or 0
-	speedText.Text = ("Jetpack Lv %d"):format(level)
+	local speed = (player:GetAttribute("JetSpeed") or 0) :: number
+	speedText.Text = ("%s Speed"):format(Format.Short(speed))
 	local ratio = if need > 0 then math.clamp(xp / need, 0, 1) else 1
-	xpText.Text = if need > 0 then ("%s / %s XP"):format(Format.Short(xp), Format.Short(need)) else "MAX"
+	local tiers = Config.Jetpack.Tiers
+	local i = Config.JetpackTier(level)
+	local nextTier = tiers[i + 1]
+	xpText.Text = if nextTier then ("New jetpack at %s"):format(Format.Short(Config.JetpackXPTotal(nextTier.Level))) else "Top jetpack!"
 	TweenService:Create(xpFill, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(ratio, 1) }):Play()
 	if shownLevel > 0 and level > shownLevel then
 		xpFill.Size = UDim2.fromScale(0, 1)
-		UIKit.flyText(moneyGroup, "LEVEL UP! FASTER!", UDim2.fromOffset(110, -10), JET_COLOR)
+		UIKit.flyText(moneyGroup, "FASTER!", UDim2.fromOffset(110, -10), JET_COLOR)
 		UIKit.bump(speedIcon, 0.3)
 		UIKit.burst(moneyGroup, UDim2.fromOffset(52, 36), JET_COLOR)
 	end
@@ -424,7 +430,7 @@ layout()
 player.AttributeChanged:Connect(function(name)
 	if name == "Credits" or name == "Income" then
 		refreshMoney()
-	elseif name == "JetLevel" or name == "JetXP" or name == "JetXPNeed" then
+	elseif name == "JetLevel" or name == "JetXP" or name == "JetXPNeed" or name == "JetSpeed" then
 		refreshSpeed()
 	elseif name == "StarterBought" or name == "StarterEnds" or name == "RewardsReady" or name == "GuideStep" then
 		refreshBadges()

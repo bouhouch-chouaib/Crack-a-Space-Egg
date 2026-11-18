@@ -604,7 +604,8 @@ local function decideStep(step: number): Hint?
 		end
 		return goRock(nil, ("Save $%s for a wind tunnel  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
 	elseif step == 5 then
-		local level = ("Jetpack Lv %d / %d"):format(math.min(attr("JetLevel"), G.JetLevel), G.JetLevel)
+		local goal = Config.JetpackXPTotal(G.JetLevel)
+		local level = ("Speed %s / %s"):format(Format.Short(math.min(attr("JetSpeed"), goal)), Format.Short(goal))
 		if player:GetAttribute("InTunnel") then
 			return { icon = "WindTunnel", text = "Your jetpack is training!", sub = level }
 		end

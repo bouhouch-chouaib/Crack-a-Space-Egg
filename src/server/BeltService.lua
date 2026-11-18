@@ -84,6 +84,26 @@ function BeltService.NearestPosition(pos: Vector3, ringIndex: number, maxDist: n
 	return best
 end
 
+-- Astéroïde (tous anneaux) le plus proche d'un point dans maxDist, et sa position à cet instant
+-- (MonsterService : la roche du joueur attrapé y retombe)
+function BeltService.NearestAsteroid(pos: Vector3, maxDist: number): (Asteroid?, Vector3?)
+	local best, bestPos, bestDist = nil, nil, maxDist
+	local t = now()
+	for _, a in pairs(active) do
+		local p = BeltService.Position(a, t)
+		local d = (p - pos).Magnitude
+		if d < bestDist then
+			best, bestPos, bestDist = a, p, d
+		end
+	end
+	return best, bestPos
+end
+
+-- L'astéroïde est-il encore là (pas cassé ni sorti du couloir) ?
+function BeltService.Alive(a: Asteroid): boolean
+	return active[a.part] == a
+end
+
 -- Joueurs qui se tenaient sur une roche qui vient de casser ou de disparaître : délai de grâce
 -- (lu par GameService.watchFalls : une chute pendant ce délai ne fait pas perdre la soute)
 BeltService.Grace = {} :: { [Player]: number }

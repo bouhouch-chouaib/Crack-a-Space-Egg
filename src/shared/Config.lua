@@ -84,20 +84,44 @@ Config.Map = {
 -- Hors du couloir (entre les bouées) et hors du vaisseau, il n'y a plus d'oxygène et le froid gagne :
 -- après quelques secondes de répit, le gel monte ; trop loin, il monte tout de suite et 2× plus vite.
 -- À 100 %, le joueur est pris dans un bloc de glace puis renvoyé à sa base (il perd ses œufs).
--- MONSTRES (anneaux 5 à 7, docs/Mecaniques.md §13) ---------------------------------------
--- Un monstre par anneau, chacun repère le joueur à sa façon :
+-- MONSTRES (anneaux 3 à 14, docs/Mecaniques.md §13 et §0) -----------------------------------
+-- Un monstre par anneau à partir du 3e, de plus en plus grand et impressionnant, chacun repère le
+-- joueur à sa façon :
 --   Noise : la jauge de bruit (forer, pousser au jetpack) ; à 1, il se réveille
 --   Guard : forer un astéroïde gardé (lueur et œil au-dessus) le réveille aussitôt
 --   Both  : les deux
 -- Il poursuit le joueur jusqu'à sa base, sur le vaisseau compris ; arrivé chez lui, le monstre
--- s'écrase contre le dôme de la base et rentre à son astéroïde. S'il l'attrape : l'œuf est perdu
--- et le joueur revient à sa base.
+-- s'écrase contre le dôme de la base et rentre à son astéroïde.
+-- Need = vitesse du jetpack (Speed, l'XP totale du jetpack) qu'il faut pour le semer (18 nov.) :
+-- avec assez de Speed, il va un peu moins vite que le joueur (Speed du monstre) ; en dessous, il
+-- va d'autant plus vite que le joueur en manque (jusqu'à MaxFactor fois la vitesse du joueur).
+-- S'il l'attrape : le joueur est projeté au loin et sa roche retombe sur l'astéroïde le plus proche ;
+-- il a DropTime secondes pour aller la reprendre, sinon elle s'enfonce dans l'astéroïde (œuf perdu).
 Config.Monsters = {
 	Kinds = {
-		[5] = { Name = "Devourer", Model = "Devourer", Sense = "Noise", Speed = 0.85, Size = 30, Color = Color3.fromRGB(150, 255, 90) },
-		[6] = { Name = "Rift Watcher", Model = "Watcher", Sense = "Guard", Speed = 0.9, Size = 20, Color = Color3.fromRGB(90, 230, 255) },
-		[7] = { Name = "Nest Queen", Model = "Queen", Sense = "Both", Speed = 0.95, Size = 34, Color = Color3.fromRGB(255, 170, 60) },
+		[3] = { Name = "Cinder Maw", Model = "CinderMaw", Sense = "Noise", Speed = 0.85, Size = 16, Need = 50e3, Color = Color3.fromRGB(255, 120, 40) },
+		[4] = { Name = "Nebula Stalker", Model = "NebulaStalker", Sense = "Guard", Speed = 0.85, Size = 20, Need = 500e3, Color = Color3.fromRGB(190, 110, 255) },
+		[5] = { Name = "Devourer", Model = "Devourer", Sense = "Noise", Speed = 0.85, Size = 26, Need = 7e6, Color = Color3.fromRGB(150, 255, 90) },
+		[6] = { Name = "Rift Watcher", Model = "Watcher", Sense = "Guard", Speed = 0.9, Size = 30, Need = 100e6, Color = Color3.fromRGB(90, 230, 255) },
+		[7] = { Name = "Nest Queen", Model = "Queen", Sense = "Both", Speed = 0.9, Size = 34, Need = 1.5e9, Color = Color3.fromRGB(255, 170, 60) },
+		[8] = { Name = "Abyss Angler", Model = "AbyssAngler", Sense = "Guard", Speed = 0.9, Size = 38, Need = 8e9, Color = Color3.fromRGB(60, 230, 210) },
+		[9] = { Name = "Storm Hydra", Model = "StormHydra", Sense = "Noise", Speed = 0.9, Size = 42, Need = 70e9, Color = Color3.fromRGB(255, 230, 90) },
+		[10] = { Name = "Gear Spider", Model = "GearSpider", Sense = "Both", Speed = 0.92, Size = 46, Need = 700e9, Color = Color3.fromRGB(240, 170, 80) },
+		[11] = { Name = "Sour Worm", Model = "SourWorm", Sense = "Noise", Speed = 0.92, Size = 50, Need = 9e12, Color = Color3.fromRGB(255, 110, 190) },
+		[12] = { Name = "Spore Behemoth", Model = "SporeBehemoth", Sense = "Guard", Speed = 0.92, Size = 54, Need = 150e12, Color = Color3.fromRGB(110, 240, 210) },
+		[13] = { Name = "Temple Colossus", Model = "TempleColossus", Sense = "Both", Speed = 0.95, Size = 58, Need = 3.5e15, Color = Color3.fromRGB(255, 200, 80) },
+		[14] = { Name = "Phantom King", Model = "PhantomKing", Sense = "Both", Speed = 0.95, Size = 64, Need = 40e15, Color = Color3.fromRGB(120, 240, 220) },
 	},
+	-- Vitesse du monstre quand le joueur manque de Speed : Speed du monstre + (MaxFactor - Speed) × part,
+	-- part = log10(Need / Speed du joueur) / Decades (1 dès qu'il lui manque Decades puissances de 10)
+	MaxFactor = 1.6,
+	Decades = 2,
+	-- Prise : le joueur est projeté (studs/s) et sa roche retombe sur l'astéroïde le plus proche
+	Knock = 70,
+	KnockUp = 35,
+	DropTime = 30, -- secondes pour reprendre sa roche
+	DropSearch = 500, -- studs : astéroïde le plus proche cherché dans ce rayon (sinon la roche est perdue)
+	PickRadius = 9, -- studs : on reprend sa roche en la touchant (en plus de sa taille)
 	-- Bruit (par seconde) : forer, pousser au jetpack ; il retombe quand on reste discret
 	Noise = { Drill = 0.09, Jet = 0.06, Decay = 0.18, QuietDelay = 1, Warn = 0.7 },
 	-- Astéroïdes gardés (anneaux Guard et Both) : part, œufs en plus, rareté tirée deux fois (la meilleure)

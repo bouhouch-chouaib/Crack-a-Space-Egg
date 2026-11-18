@@ -371,8 +371,9 @@ Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, _by: Player, _d
 	end
 end)
 
--- Coup de batte reçu (GearService) : on est repoussé, le réservoir plein pour pouvoir se rattraper
-Remotes:WaitForChild("Gear").OnClientEvent:Connect(function(kind: string, push: Vector3, who: string?)
+-- Coup de batte reçu (GearService) ou coup d'un monstre (MonsterService, source « monster ») :
+-- on est repoussé, le réservoir plein pour pouvoir se rattraper
+Remotes:WaitForChild("Gear").OnClientEvent:Connect(function(kind: string, push: Vector3, who: string?, source: string?)
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local hum = character and character:FindFirstChildOfClass("Humanoid")
@@ -383,6 +384,9 @@ Remotes:WaitForChild("Gear").OnClientEvent:Connect(function(kind: string, push: 
 	pushedUntil = os.clock() + 0.5
 	hum:ChangeState(Enum.HumanoidStateType.Freefall)
 	hrp.AssemblyLinearVelocity = push
+	if source == "monster" then
+		return -- MonsterFx montre déjà le coup, et la roche tombée montre où aller
+	end
 	UIKit.toast(("%s bonked you away!"):format(who or "Someone"), "warn")
 end)
 

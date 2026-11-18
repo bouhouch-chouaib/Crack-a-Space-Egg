@@ -1,7 +1,10 @@
--- Monstres des anneaux 5 à 7 (Config.Monsters, docs/Mecaniques.md §13).
+-- Monstres des anneaux 3 à 14 (Config.Monsters, docs/Mecaniques.md §13 et §0).
 -- Le serveur décide : bruit de chaque joueur, réveil, poursuite, prise, abandon. Il ne déplace pas
 -- de modèle : chaque monstre est un dossier dans Workspace.World.Monsters dont les attributs sont
 -- lus par MonsterFx.client, qui anime le modèle chez chaque joueur.
+-- Vitesse (18 nov.) : chaque monstre demande une Speed de jetpack (Kinds[].Need) ; en dessous, il va
+-- d'autant plus vite que le joueur en manque. S'il l'attrape, le joueur est projeté et sa roche
+-- retombe sur l'astéroïde le plus proche (Workspace.World.LostRocks), à reprendre en DropTime s.
 --   Kind (anneau), Target (UserId), Pos, Look, State (Emerge / Chase / Return / Leave / Caught),
 --   StartedAt, EndsAt (temps serveur), Size
 -- Publié sur le joueur : Noise (0..1, seulement dans un anneau à bruit), Chased (EndsAt, pendant une poursuite).
@@ -15,7 +18,10 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local BeltService = require(script.Parent.BeltService)
+local CarryService = require(script.Parent.CarryService)
 local Bases = require(script.Parent.Bases)
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local M = Config.Monsters
 local MonsterService = {}
@@ -43,6 +49,11 @@ local lastLoud: { [Player]: number } = {}
 local lastDrill: { [Player]: number } = {}
 local cooldown: { [Player]: number } = {}
 local folder: Folder
+local lostFolder: Folder
+
+-- Roches tombées sur un astéroïde après une prise, à reprendre avant expiresAt
+type Lost = { owner: Player, items: { any }, asteroid: any, offset: Vector3, expiresAt: number, model: Model }
+local lost: { Lost } = {}
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -97,6 +108,18 @@ local function inBase(player: Player, pos: Vector3): boolean
 		end
 	end
 	return false
+end
+
+-- Multiplicateur de vitesse du monstre face à ce joueur : sa propre Speed s'il a assez de Speed,
+-- sinon d'autant plus que le joueur en manque (jusqu'à MaxFactor)
+function MonsterService.Factor(ring: number, jetSpeed: number): number
+	local kind = M.Kinds[ring]
+	local need = kind.Need or 0
+	if jetSpeed >= need then
+		return kind.Speed
+	end
+	local missing = math.log10(need / math.max(1, jetSpeed)) / M.Decades
+	return kind.Speed + (M.MaxFactor - kind.Speed) * math.clamp(missing, 0.12, 1)
 end
 
 local function senses(ring: number, what: string): boolean
@@ -185,6 +208,39 @@ function MonsterService.Stun(pos: Vector3, range: number, seconds: number): stri
 	return name
 end
 
+-- La roche du joueur attrapé retombe sur l'astéroïde le plus proche : elle y reste DropTime s
+local function dropRock(player: Player, items: { any }, from: Vector3): boolean
+	local a, at = BeltService.NearestAsteroid(from, M.DropSearch)
+	local first = items[1]
+	local ring = if type(first) == "table" then first.ring or 1 else 1
+	local model = if a then CarryService.LooseRock(ring, 1.3) else nil
+	if not a or not at or not model then
+		if model then
+			model:Destroy()
+		end
+		GameService.Notice(player, "{Warning} Your rock fell into space!", "bad")
+		return false
+	end
+	-- posée sur le dessus de l'astéroïde (le client la garde collée à la roche qui défile)
+	local s = a.part.Size
+	local offset = Vector3.new(0, s.Y / 2 + (model:GetAttribute("BodyHeight") or 3) * 0.35, 0)
+	local t = now()
+	model:SetAttribute("Owner", player.UserId)
+	model:SetAttribute("ExpiresAt", t + M.DropTime)
+	model:SetAttribute("Offset", offset)
+	model:SetAttribute("From", from)
+	model:SetAttribute("Ring", ring)
+	local ref = Instance.new("ObjectValue")
+	ref.Name = "Asteroid"
+	ref.Value = a.part
+	ref.Parent = model
+	model:PivotTo(CFrame.new(at + offset))
+	model.Parent = lostFolder
+	table.insert(lost, { owner = player, items = items, asteroid = a, offset = offset, expiresAt = t + M.DropTime, model = model })
+	return true
+end
+
+-- Le monstre attrape le joueur : il le projette, et sa roche retombe sur l'astéroïde le plus proche
 local function caught(c: Chase)
 	local player = c.player
 	local d = DataService.Get(player)
@@ -201,24 +257,60 @@ local function caught(c: Chase)
 	end
 	c.state = "Caught"
 	publish(c)
-	local lost = if d then #d.cargo else 0
-	if d then
+	local hrp = root(player)
+	local where = if hrp then hrp.Position else c.pos
+	if d and #d.cargo > 0 then
+		local items = d.cargo
 		d.cargo = {}
+		CarryService.Drop(player) -- la roche quitte ses mains
 		GameService.Sync(player)
-	end
-	local character = player.Character
-	task.delay(0.6, function()
-		if character and character.Parent then
-			character:SetPrimaryPartCFrame(Bases.SpawnCFrame(player) or CFrame.new(0, 4, -40))
+		if dropRock(player, items, where) then
+			GameService.Notice(player, ("{Warning} The %s knocked your rock away! Grab it back!"):format(kind.Name), "bad")
 		end
-	end)
-	GameService.Notice(player, if lost > 0
-		then ("{Warning} The %s caught you and swallowed your egg!"):format(kind.Name)
-		else ("{Warning} The %s caught you!"):format(kind.Name), "bad")
+	end
+	-- projeté loin du monstre (le client applique la poussée, comme un coup de batte)
+	local away = where - c.pos
+	away = if away.Magnitude > 0.01 then Vector3.new(away.X, 0, away.Z).Unit else Vector3.xAxis
+	Remotes.Gear:FireClient(player, "pushed", away * M.Knock + Vector3.new(0, M.KnockUp, 0), kind.Name, "monster")
 	finish(c)
 end
 
+-- Roches tombées : on la reprend en la touchant ; à la fin du temps (ou si l'astéroïde disparaît),
+-- elle s'enfonce dans l'astéroïde et l'œuf est perdu
+local function stepLost()
+	local t = now()
+	for i = #lost, 1, -1 do
+		local l = lost[i]
+		local owner = l.owner
+		local alive = owner.Parent ~= nil and BeltService.Alive(l.asteroid)
+		local pos = if alive then BeltService.Position(l.asteroid, t) + l.offset else nil
+		local hrp = if alive then root(owner) else nil
+		local d = if alive then DataService.Get(owner) else nil
+		local reach = M.PickRadius + (l.model:GetAttribute("BodyHeight") or 3) / 2
+		if hrp and d and pos and (hrp.Position - pos).Magnitude <= reach and #d.cargo + #l.items <= Config.CargoSlots() then
+			for _, egg in ipairs(l.items) do
+				table.insert(d.cargo, egg)
+			end
+			GameService.Sync(owner)
+			GameService.Notice(owner, "{Star} You got your rock back!", "good")
+			l.model:Destroy()
+			table.remove(lost, i)
+		elseif not alive or t >= l.expiresAt then
+			if owner.Parent then
+				GameService.Notice(owner, "{Warning} Your rock sank into the asteroid!", "bad")
+			end
+			l.model:SetAttribute("Sinking", true)
+			local m = l.model
+			task.delay(1.2, function()
+				m:Destroy()
+			end)
+			table.remove(lost, i)
+		end
+	end
+end
+
 local function step(dt: number)
+	stepLost()
 	local t = now()
 	-- BRUIT --------------------------------------------------------------------------------
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -286,13 +378,14 @@ local function step(dt: number)
 				end
 			elseif t >= (c.stunUntil or 0) then -- assommé par une batte : il ne bouge plus
 				local speed
+				local factor = MonsterService.Factor(c.ring, (player:GetAttribute("JetSpeed") or 0) :: number)
 				if inShip(target) then
 					-- sur le vaisseau on court : il se cale sur la vitesse à pied
 					local ground = (player:GetAttribute("GroundSpeed") or Config.Movement.Walk) :: number
-					speed = ground * M.Kinds[c.ring].Speed
+					speed = ground * factor
 				else
 					local air = (player:GetAttribute("AirSpeed") or Config.Movement.Air) :: number
-					speed = math.max(M.MinSpeed, air * M.Kinds[c.ring].Speed)
+					speed = math.max(M.MinSpeed, air * factor)
 				end
 				local delta = target - c.pos
 				local dist = delta.Magnitude
@@ -352,6 +445,12 @@ function MonsterService.Start()
 		folder.Name = "Monsters"
 		folder.Parent = world
 	end
+	lostFolder = world:FindFirstChild("LostRocks") :: Folder
+	if not lostFolder then
+		lostFolder = Instance.new("Folder")
+		lostFolder.Name = "LostRocks"
+		lostFolder.Parent = world
+	end
 	GameService.DrillHook = MonsterService.OnDrill
 	RunService.Heartbeat:Connect(step)
 	Players.PlayerRemoving:Connect(function(player)
@@ -360,6 +459,12 @@ function MonsterService.Start()
 			finish(c)
 		end
 		noise[player], lastLoud[player], lastDrill[player], cooldown[player] = nil, nil, nil, nil
+		for i = #lost, 1, -1 do
+			if lost[i].owner == player then
+				lost[i].model:Destroy()
+				table.remove(lost, i)
+			end
+		end
 	end)
 	-- Studio seulement : réveiller un monstre sur commande (test)
 	if RunService:IsStudio() then

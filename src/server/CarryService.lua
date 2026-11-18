@@ -105,6 +105,37 @@ function CarryService.Update(player: Player)
 	end
 end
 
+-- Roche posée seule (MonsterService : la roche du joueur attrapé retombe sur un astéroïde) :
+-- même roche que celle qu'on porte, ancrée, sans collision, un peu plus grande pour bien la voir
+function CarryService.LooseRock(ring: number, scale: number): Model?
+	local template = rockTemplate(ring)
+	if not template then
+		return nil
+	end
+	local h = Config.CarriedRock.Size * scale
+	local m = template:Clone()
+	local size = m:GetExtentsSize()
+	m:ScaleTo(m:GetScale() * h / math.max(size.X, size.Y, size.Z))
+	for _, d in ipairs(m:GetDescendants()) do
+		for _, tag in ipairs(CollectionService:GetTags(d)) do
+			CollectionService:RemoveTag(d, tag)
+		end
+		if d:IsA("LuaSourceContainer") or d:IsA("ParticleEmitter") or d:IsA("BillboardGui") then
+			d:Destroy()
+		elseif d:IsA("BasePart") then
+			d.Name = "Rock" -- le nom « Asteroid » est celui des roches à forer
+			d.Anchored = true
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+		end
+	end
+	m.PrimaryPart = m:FindFirstChildWhichIsA("BasePart", true)
+	m.Name = "LostRock"
+	m:SetAttribute("BodyHeight", h)
+	return m
+end
+
 -- Le joueur lâche sa roche (GearService) : elle quitte ses mains et tombe, visible par tous
 function CarryService.Drop(player: Player)
 	local cur = carried[player]
