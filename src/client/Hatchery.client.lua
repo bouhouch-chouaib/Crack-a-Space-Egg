@@ -501,10 +501,22 @@ local function startCharge(m: Model)
 		grow = (m:GetAttribute("HatchGrow") or 1) :: number,
 		duration = math.max(0.3, dur - (workspace:GetServerTimeNow() - started)),
 		owner = mine,
-		odds = m:GetAttribute("HatchOdds") :: number?,
+		odds = Config.LuckShown((m:GetAttribute("Ring") or 1) :: number, rarity, m:GetAttribute("HatchOdds") :: number?),
 		onCrack = function(i: number)
 			Sfx.Play("Crack", { at = core.Position, volume = if mine then 0.5 else 0.25, pitch = 0.8 + 0.08 * i })
 		end,
+		-- compteur de chance : cliquetis qui montent, « ding » à chaque palier ×10, arrivée (propriétaire)
+		onLuck = if mine
+			then function(kind: string, v: number)
+				if kind == "tick" then
+					Sfx.Play("Click", { volume = 0.35, pitch = 0.9 + 0.9 * v })
+				elseif kind == "step" then
+					Sfx.Play("Coin", { volume = 0.7, pitch = 0.9 + 0.1 * v })
+				else
+					Sfx.Play("Reward", { volume = 0.9, pitch = 1.2 })
+				end
+			end
+			else nil,
 	})
 	charging[m] = fx
 	if rarity >= 3 then
@@ -720,17 +732,19 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 		Stroke = 3,
 		Parent = frame,
 	})
-	-- la chance de cette créature, comme sur le compteur de l'œuf
-	if odds and odds >= 2 then
-		UIKit.text({
-			Size = UDim2.new(1, 0, 0, 30),
-			Position = UDim2.new(0, 0, 1, -4),
-			Text = "1 in " .. Format.Commas(odds),
-			TextColor3 = HatchFx.OddsColor(odds),
-			ZIndex = 33,
-			Stroke = 3,
-			Parent = frame,
-		})
+	-- la chance de cette créature, comme sur le compteur de l'œuf (trèfle vert + « x N »)
+	do
+		local row, label, icon = HatchFx.LuckRow(frame, 32)
+		row.Position = UDim2.new(0, 0, 1, -4)
+		row.ZIndex = 33
+		label.ZIndex = 33
+		label.Text = "x" .. HatchFx.LuckText(Config.LuckShown(ring, rarity, odds))
+		icon.ZIndex = 33
+		for _, d in ipairs(icon:GetDescendants()) do
+			if d:IsA("GuiObject") then
+				d.ZIndex = 34
+			end
+		end
 	end
 	UIKit.popIn(frame)
 	task.delay(if wow then 4.6 else 3.2, function()

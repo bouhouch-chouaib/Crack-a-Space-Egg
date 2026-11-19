@@ -1837,6 +1837,17 @@ function Config.HatchOdds(ringIndex: number, rarity: number, rockType: number?, 
 	return p * (mine or none)
 end
 
+-- Chance AFFICHÉE à l'éclosion (compteur au trèfle et bannière, 19 nov.) : un nombre de spectacle, pas
+-- la vraie probabilité (qui reste dans l'Index). Il part de la vraie chance (odds = 1 sur N, sinon
+-- 2^rareté), donc une créature plus rare, plus grande ou mutée affiche toujours plus ; il est gonflé
+-- par Base et par PerRing à chaque anneau pour qu'on ait toujours l'impression de sortir quelque chose
+-- d'énorme. Exemples : Commun de l'anneau 1 ≈ x500 ; Cosmique de l'anneau 9 ≈ x1.4Qa.
+Config.LuckShow = { Base = 250, PerRing = 12 }
+function Config.LuckShown(ring: number, rarity: number, odds: number?): number
+	local o = math.max(2, odds or 2 ^ rarity)
+	return math.floor(o * Config.LuckShow.Base * Config.LuckShow.PerRing ^ (math.max(1, ring) - 1))
+end
+
 -- GUIDE DES PREMIÈRES MINUTES (Guide.client) ------------------------------------------
 -- Fait pour qu'un enfant suive sans lire : bulles de 3 à 5 mots, grosses icônes, flèche au sol,
 -- main qui montre le geste, petite fête à chaque réussite. Il accompagne le joueur pendant toute la

@@ -12,13 +12,17 @@
 --   Cosmic     + couleurs arc-en-ciel, tout se fige un instant avant l'éclatement
 -- L'œuf grossit pendant la charge jusqu'à la taille de la créature à naître (grow = hauteur finale / hauteur
 -- de l'œuf) : plus elle est immense, plus il gonfle.
--- Compteur de chance (odds = N) : au-dessus de l'œuf, « 1 in 2 », « 1 in 9 », « 1 in 60 »... le nombre
--- grimpe pendant toute la charge et s'arrête, juste avant l'éclatement, sur la vraie chance d'obtenir
--- la créature qui va sortir (Config.HatchOdds, calculée par le serveur). Plus il monte, plus il grossit
--- et change de couleur.
+-- Compteur de chance (odds = N, 19 nov.) : au-dessus de l'œuf, un trèfle vert et « x1,233,433 » (au-delà
+-- d'un milliard : « x1.43Qa ») sur une pastille sombre, à l'écran (devant les rayons et les halos de
+-- l'œuf, qui le cachaient). Le nombre défile très vite dès le début, comme un vrai compteur, et
+-- s'arrête juste avant l'éclatement sur la chance affichée (Config.LuckShown : un nombre de spectacle
+-- tiré de la vraie chance, de la rareté et de l'anneau). Huit fois pendant la charge : il gonfle, le
+-- trèfle tourne, des étincelles vertes jaillissent ; quand il se fige : gros coup, halo vert. Les sons
+-- (cliquetis qui montent, paliers, arrivée) passent par o.onLuck, que Hatchery.client branche sur Sfx.
 -- Aucune dépendance au joueur : le module marche aussi en mode édition (aperçu depuis Studio).
 
 local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -41,6 +45,90 @@ local GOLD = Color3.fromRGB(255, 215, 60)
 local kp = NumberSequenceKeypoint.new
 
 local HatchFx = {}
+
+-- Trèfle de la chance (silhouette blanche dessinée pour le jeu, teintée ici) et ses verts
+HatchFx.Clover = "rbxassetid://108740423324078"
+local LUCK = Color3.fromRGB(90, 255, 110)
+local LUCK_LIGHT = Color3.fromRGB(205, 255, 140)
+local LUCK_DARK = Color3.fromRGB(10, 70, 25)
+
+-- « 1,233,433 » jusqu'à un milliard, puis « 1.43Qa »
+function HatchFx.LuckText(n: number): string
+	n = math.max(1, math.floor(n + 0.5))
+	if n < 1e9 then
+		return Format.Commas(n)
+	end
+	local s = Format.Short(n)
+	local v = n
+	local i = 0
+	while v >= 1000 do
+		v /= 1000
+		i += 1
+	end
+	if v < 100 then
+		local suffix = string.match(s, "%a+$") or ""
+		return string.format("%.2f%s", math.floor(v * 100) / 100, suffix)
+	end
+	return s
+end
+
+-- Une ligne « trèfle + x1,233 » (gras, vert, contour sombre) dans parent, haute de height pixels
+function HatchFx.LuckRow(parent: Instance, height: number): (Frame, TextLabel, ImageLabel)
+	local row = Instance.new("Frame")
+	row.Name = "Luck"
+	row.BackgroundTransparency = 1
+	row.Size = UDim2.new(1, 0, 0, height)
+	row.Parent = parent
+	local list = Instance.new("UIListLayout")
+	list.FillDirection = Enum.FillDirection.Horizontal
+	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	list.VerticalAlignment = Enum.VerticalAlignment.Center
+	list.Padding = UDim.new(0, math.floor(height * 0.08))
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = row
+	-- trèfle : un contour sombre un peu plus grand derrière, le trèfle vert devant, un reflet
+	local icon = Instance.new("ImageLabel")
+	icon.Name = "Clover"
+	icon.BackgroundTransparency = 1
+	icon.Size = UDim2.fromOffset(height, height)
+	icon.Image = HatchFx.Clover
+	icon.ImageColor3 = LUCK_DARK
+	icon.LayoutOrder = 1
+	icon.Parent = row
+	local fill = Instance.new("ImageLabel")
+	fill.Name = "Fill"
+	fill.BackgroundTransparency = 1
+	fill.AnchorPoint = Vector2.new(0.5, 0.5)
+	fill.Position = UDim2.fromScale(0.5, 0.5)
+	fill.Size = UDim2.fromScale(0.82, 0.82)
+	fill.Image = HatchFx.Clover
+	fill.ImageColor3 = LUCK
+	fill.Parent = icon
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new(LUCK_LIGHT, Color3.fromRGB(40, 200, 70))
+	g.Rotation = 90
+	g.Parent = fill
+	local label = Instance.new("TextLabel")
+	label.Name = "Value"
+	label.BackgroundTransparency = 1
+	label.AutomaticSize = Enum.AutomaticSize.X
+	label.Size = UDim2.fromOffset(0, height)
+	label.FontFace = Theme.FontHeavy
+	label.TextSize = height * 0.92
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Text = "x1"
+	label.LayoutOrder = 2
+	label.Parent = row
+	local tg = Instance.new("UIGradient")
+	tg.Color = ColorSequence.new(LUCK_LIGHT, LUCK)
+	tg.Rotation = 90
+	tg.Parent = label
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = math.max(2, height * 0.07)
+	stroke.Color = LUCK_DARK
+	stroke.Parent = label
+	return row, label, icon
+end
 
 -- Couleur du compteur de chance selon sa valeur (1 sur 10, 100, 1 000, 10 000, 100 000)
 local ODDS_COLORS = {
@@ -155,8 +243,10 @@ type Opts = {
 	duration: number?,
 	owner: boolean?,
 	speed: number?,
-	odds: number?, -- « 1 in N » final, montré par le compteur (rien si absent)
+	odds: number?, -- nombre final du compteur « x N » (Config.LuckShown ; rien si absent)
 	onCrack: ((number) -> ())?,
+	-- sons du compteur : « tick » (le nombre défile, k = avancée 0..1), « step » (palier ×10), « lock » (il se fige)
+	onLuck: ((string, number) -> ())?,
 }
 
 function HatchFx.Charge(egg: Model, o: Opts)
@@ -252,11 +342,21 @@ function HatchFx.Charge(egg: Model, o: Opts)
 		cc = c
 	end
 
-	-- compteur de chance : une étiquette qui suit l'œuf
+	-- compteur de chance : trèfle + « x N » sur une pastille sombre. À l'écran (ScreenGui) pour passer
+	-- devant les rayons, la colonne et les halos de l'œuf ; en mode édition (pas de joueur), dans une
+	-- étiquette qui suit l'œuf.
 	local oddsPart: Part? = nil
+	local oddsGui: ScreenGui? = nil
+	local oddsPill: Frame? = nil
 	local oddsText: TextLabel? = nil
 	local oddsScale: UIScale? = nil
-	local oddsShown = 0
+	local oddsIcon: ImageLabel? = nil
+	local oddsHalo: ImageLabel? = nil
+	local oddsSparks: ParticleEmitter? = nil
+	local oddsStep = 0 -- dernier huitième de la charge franchi
+	local oddsPunch = 0 -- coup de taille, retombe tout seul
+	local oddsLocked = false
+	local nextTick = 0
 	local odds = if o.odds and o.odds >= 2 then o.odds else nil
 	if odds then
 		local p = Instance.new("Part")
@@ -268,26 +368,93 @@ function HatchFx.Charge(egg: Model, o: Opts)
 		p.Transparency = 1
 		p.Size = Vector3.one * 0.2
 		p.Parent = folder
-		local b = Instance.new("BillboardGui")
-		b.Size = UDim2.fromOffset(280, 64)
-		b.AlwaysOnTop = false -- les BillboardGui « toujours devant » ne s'affichent pas dans ce jeu
-		b.LightInfluence = 0
-		b.MaxDistance = 160
-		b.Parent = p
-		local label = Instance.new("TextLabel")
-		label.BackgroundTransparency = 1
-		label.Size = UDim2.fromScale(1, 1)
-		label.FontFace = Theme.FontHeavy
-		label.TextScaled = true
-		label.Text = ""
-		label.Parent = b
-		local stroke = Instance.new("UIStroke")
-		stroke.Thickness = 3.5
-		stroke.Color = Color3.fromRGB(22, 22, 32)
-		stroke.Parent = label
+		local playerGui = Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+		local holder: Instance
+		if playerGui then
+			local sg = Instance.new("ScreenGui")
+			sg.Name = "HatchLuck"
+			sg.IgnoreGuiInset = true
+			sg.ResetOnSpawn = false
+			sg.DisplayOrder = 2
+			sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+			sg.Parent = playerGui
+			oddsGui = sg
+			holder = sg
+		else
+			local b = Instance.new("BillboardGui")
+			b.Size = UDim2.fromOffset(420, 80)
+			b.LightInfluence = 0
+			b.MaxDistance = 180
+			b.Parent = p
+			holder = b
+		end
+		-- un point d'ancrage (taille nulle) qui porte le halo et la pastille : la pastille prend la taille
+		-- de son contenu, le halo garde la sienne
+		local anchor = Instance.new("Frame")
+		anchor.Name = "Anchor"
+		anchor.BackgroundTransparency = 1
+		anchor.Size = UDim2.fromOffset(0, 0)
+		anchor.Position = UDim2.fromScale(0.5, 0.5)
+		anchor.Parent = holder
+		local pill = Instance.new("Frame")
+		pill.Name = "Pill"
+		pill.AnchorPoint = Vector2.new(0.5, 0.5)
+		pill.AutomaticSize = Enum.AutomaticSize.XY
+		pill.BackgroundColor3 = Color3.fromRGB(8, 26, 16)
+		pill.BackgroundTransparency = 0.18
+		pill.ZIndex = 2
+		pill.Parent = anchor
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = pill
+		local border = Instance.new("UIStroke")
+		border.Thickness = 3
+		border.Color = LUCK
+		border.Parent = pill
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 12)
+		pad.PaddingRight = UDim.new(0, 18)
+		pad.PaddingTop = UDim.new(0, 5)
+		pad.PaddingBottom = UDim.new(0, 5)
+		pad.Parent = pill
 		local s = Instance.new("UIScale")
-		s.Parent = label
-		oddsPart, oddsText, oddsScale = p, label, s
+		s.Parent = anchor
+		-- halo vert derrière, qui s'allume aux paliers et à l'arrivée
+		local halo = Instance.new("ImageLabel")
+		halo.Name = "Halo"
+		halo.BackgroundTransparency = 1
+		halo.AnchorPoint = Vector2.new(0.5, 0.5)
+		halo.Size = UDim2.fromOffset(340, 150)
+		halo.Image = ART.Glow
+		halo.ImageColor3 = LUCK
+		halo.ImageTransparency = 1
+		halo.ZIndex = 1
+		halo.Parent = anchor
+		local row, label, icon = HatchFx.LuckRow(pill, 38)
+		row.Size = UDim2.fromOffset(0, 38)
+		row.AutomaticSize = Enum.AutomaticSize.X
+		-- étincelles vertes aux paliers
+		local at = Instance.new("Attachment")
+		at.Parent = p
+		local e = Instance.new("ParticleEmitter")
+		e.Texture = ART.Sparkle
+		e.Color = ColorSequence.new(LUCK_LIGHT, LUCK)
+		e.LightEmission = 1
+		e.LightInfluence = 0
+		e.Enabled = false
+		e.Lifetime = NumberRange.new(0.4, 0.7)
+		e.Speed = NumberRange.new(6, 12)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Drag = 4
+		e.Size = NumberSequence.new({ kp(0, 0.9), kp(1, 0) })
+		e.Rotation = NumberRange.new(0, 360)
+		e.Parent = at
+		for _, d in ipairs(row:GetDescendants()) do
+			if d:IsA("GuiObject") then
+				d.ZIndex = 3
+			end
+		end
+		oddsPart, oddsPill, oddsText, oddsScale, oddsIcon, oddsHalo, oddsSparks = p, anchor, label, s, icon, halo, e
 	end
 
 	local t0 = os.clock()
@@ -342,19 +509,64 @@ function HatchFx.Charge(egg: Model, o: Opts)
 		)
 		handle.center = center
 		handle.size = h * gs
-		-- compteur de chance : il grimpe (en puissances) et se fige sur la vraie valeur à 90 % de la charge
-		if odds and oddsPart and oddsText and oddsScale then
-			oddsPart.Position = center + Vector3.new(0, h * gs * 0.5 + 1.6, 0)
-			local shown = if k >= 0.9 then odds else math.max(2, math.floor(odds ^ smooth(k / 0.9) + 0.5))
-			if shown ~= oddsShown then
-				oddsShown = shown
-				oddsText.Text = "1 in " .. Format.Commas(shown)
-				oddsText.TextColor3 = HatchFx.OddsColor(shown)
+		-- compteur de chance : il défile très vite dès le début (comme un vrai compteur) et se fige sur sa
+		-- valeur à 90 % de la charge ; huit fois en route : un coup, des étincelles et un son plus aigu
+		if odds and oddsPart and oddsPill and oddsText and oddsScale then
+			local above = center + Vector3.new(0, h * gs * 0.5 + 2, 0)
+			oddsPart.Position = above
+			local near = 1
+			if oddsGui then
+				local sp, onScreen = cam:WorldToViewportPoint(above)
+				local dist = (above - cam.CFrame.Position).Magnitude
+				oddsPill.Visible = onScreen and sp.Z > 0 and dist < 220
+				oddsPill.Position = UDim2.fromOffset(sp.X, sp.Y)
+				near = math.clamp(45 / math.max(1, dist), 0.45, 1.15)
 			end
-			-- il grossit avec la valeur, et donne un coup quand il se fige
-			local size = 0.7 + 0.12 * math.log10(shown)
-			local punch = if k >= 0.9 then 0.35 * math.max(0, 1 - (k - 0.9) / 0.06) else 0.06 * math.abs(math.sin(now * 24))
-			oddsScale.Scale = size * (1 + punch)
+			local f = math.clamp(k / 0.9, 0, 1)
+			local shown = if k >= 0.9 then odds else math.max(1, odds * f ^ 2.2)
+			oddsText.Text = "x" .. HatchFx.LuckText(shown)
+			local step = math.floor(f * 8)
+			if step > oddsStep and step < 8 and not oddsLocked then
+				oddsStep = step
+				oddsPunch = 0.3
+				if oddsSparks then
+					oddsSparks:Emit(8 + 3 * step)
+				end
+				if oddsHalo then
+					oddsHalo.ImageTransparency = 0.4
+				end
+				if o.onLuck then
+					task.spawn(o.onLuck, "step", step)
+				end
+			end
+			if k >= 0.9 and not oddsLocked then
+				oddsLocked = true
+				oddsPunch = 0.6
+				if oddsSparks then
+					oddsSparks:Emit(40)
+				end
+				if o.onLuck then
+					task.spawn(o.onLuck, "lock", 8)
+				end
+			end
+			-- cliquetis pendant que le nombre défile, de plus en plus serrés
+			if not oddsLocked and now >= nextTick then
+				nextTick = now + 0.11 - 0.07 * f
+				if o.onLuck then
+					task.spawn(o.onLuck, "tick", f)
+				end
+			end
+			-- taille : coups aux paliers ; il vibre en défilant ; un peu plus gros une fois figé
+			oddsPunch = math.max(0, oddsPunch - dt * 1.6)
+			local buzz = if oddsLocked then 0.03 * math.sin(now * 6) else 0.03 * math.abs(math.sin(now * 30))
+			oddsScale.Scale = near * (if oddsLocked then 1.15 else 0.9 + 0.1 * f) * (1 + oddsPunch + buzz)
+			if oddsIcon then
+				oddsIcon.Rotation = if oddsLocked then math.sin(now * 3) * 8 else oddsPunch * 120 + math.sin(now * 14) * 6
+			end
+			if oddsHalo then
+				local goal = if oddsLocked then 0.5 + 0.15 * math.sin(now * 5) else 1
+				oddsHalo.ImageTransparency += (goal - oddsHalo.ImageTransparency) * math.min(1, dt * 5)
+			end
 		end
 		-- lueur de l'œuf
 		hl.FillColor = col:Lerp(WHITE, 0.45)
@@ -433,6 +645,9 @@ function HatchFx.Charge(egg: Model, o: Opts)
 		end
 		if folder.Parent then
 			folder:Destroy()
+		end
+		if oddsGui then
+			oddsGui:Destroy()
 		end
 		if light.Parent then
 			light:Destroy()

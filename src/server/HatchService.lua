@@ -833,7 +833,9 @@ function HatchService.Start()
 			end
 			if cmd == "give" then
 				for _, e in ipairs(arg) do
-					table.insert(d.ready, { ring = e[1], rarity = e[2] })
+					-- e[3] : type d'astéroïde d'origine (sinon celui qui donne surtout cette rareté), pour la chance affichée
+					local rock = e[3] or math.clamp(math.ceil((e[2] - 1) / 2), 1, 3)
+					table.insert(d.ready, { ring = e[1], rarity = e[2], rock = rock })
 				end
 			elseif cmd == "hatchall" then
 				for _, item in ipairs(d.base) do
