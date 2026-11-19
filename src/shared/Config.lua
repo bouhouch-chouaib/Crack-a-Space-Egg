@@ -863,8 +863,10 @@ Config.Sounds = {
 		EggFly = { Id = 80984744279155, Volume = 0.5 },
 		-- éclosion et récompenses
 		Hatch = { Id = 9043151109, Volume = 0.5 }, -- commune à rare
-		HatchRare = { Id = 9038916885, Volume = 0.6 }, -- épique et au-delà
-		LevelUp = { Id = 1839881844, Volume = 0.45 },
+		-- 19 nov. : sons courts et plus doux (mesurés à l'AudioAnalyzer). Avant : une fanfare de 6,5 s pour
+		-- chaque créature rare et chaque annonce, et un jingle de 2,9 s à chaque niveau de jetpack.
+		HatchRare = { Id = 2609981431, Volume = 0.8 }, -- épique et au-delà, annonces, relique : scintillement de 0,9 s
+		LevelUp = { Id = 82803453482376, Volume = 1.3 }, -- niveau de jetpack, bonus x2, mutation : petit « ding » de 0,4 s
 		-- cadeau, quête ou achat réclamé : un petit « réussi » de 0,7 s (15 nov. : avant, la même fanfare de
 		-- 8 s que l'éclosion rare, pénible à chaque réclamation). Volume réglé à l'oreille restant à faire.
 		Reward = { Id = 91735091370012, Volume = 0.5 },
@@ -879,7 +881,7 @@ Config.Sounds = {
 		MonsterRoar = { Id = 9113980319, Volume = 1.8 }, -- réveil
 		MonsterWarn = { Id = 9118805486, Volume = 1.5 }, -- trop de bruit : il remue
 		MonsterCatch = { Id = 9118612665, Volume = 1, Pitch = 0.7 }, -- il t'attrape
-		Escape = { Id = 1839881844, Volume = 0.45 }, -- il abandonne
+		Escape = { Id = 71587723216424, Volume = 0.6 }, -- il abandonne : petit « réussi » de 0,9 s
 	},
 	-- Boucles (volume au maximum de l'effet). Region = partie régulière d'un long enregistrement,
 	-- jouée en boucle (secondes).
