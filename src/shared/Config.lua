@@ -612,11 +612,13 @@ Config.Jetpack = {
 	},
 	TopLevel = 910, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
 	MaxReach = 720, -- portée au niveau TopLevel
-	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client) : toutes les Every
-	-- secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » apparaît Offer secondes ;
-	-- cliqué à temps, l'XP de la soufflerie est multipliée par Mult pendant Duration secondes.
-	-- Rester devant l'écran rapporte donc un peu plus que l'AFK pur (environ +25 %).
-	Boost = { Every = { 25, 45 }, Offer = 7, Duration = 12, Mult = 2 },
+	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client), revu le 19 nov. : toutes
+	-- les Every secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » traverse
+	-- l'écran pendant Offer secondes (il rebondit sur les bords, à Speed fois la hauteur d'écran par
+	-- seconde) ; touché à temps, le prochain gain d'XP de la soufflerie (un par seconde) est multiplié
+	-- par Mult, et le joueur brille en violet le temps de ce gain.
+	-- Rester devant l'écran rapporte donc un peu plus que l'AFK pur (environ +15 % en les attrapant tous).
+	Boost = { Every = { 4, 6 }, Offer = 3.5, Mult = 2, Speed = 0.35 },
 	-- Soufflerie personnelle : chaque joueur a la sienne devant sa base. On l'achète (Breeze Tunnel),
 	-- puis on l'améliore palier par palier ; XP gagnée par seconde dans le courant d'air, même AFK.
 	-- Prix réglés avec tools/eco-sim.luau : la soufflerie n se paie à l'arrivée dans l'anneau n (trop chère
@@ -866,7 +868,8 @@ Config.Sounds = {
 		-- 19 nov. : sons courts et plus doux (mesurés à l'AudioAnalyzer). Avant : une fanfare de 6,5 s pour
 		-- chaque créature rare et chaque annonce, et un jingle de 2,9 s à chaque niveau de jetpack.
 		HatchRare = { Id = 2609981431, Volume = 0.8 }, -- épique et au-delà, annonces, relique : scintillement de 0,9 s
-		LevelUp = { Id = 82803453482376, Volume = 1.3 }, -- niveau de jetpack, bonus x2, mutation : petit « ding » de 0,4 s
+		-- nouveau modèle de jetpack, mutation : petit air montant de 0,7 s (les niveaux ne sonnent plus)
+		LevelUp = { Id = 105193542038988, Volume = 0.3 },
 		-- cadeau, quête ou achat réclamé : un petit « réussi » de 0,7 s (15 nov. : avant, la même fanfare de
 		-- 8 s que l'éclosion rare, pénible à chaque réclamation). Volume réglé à l'oreille restant à faire.
 		Reward = { Id = 91735091370012, Volume = 0.5 },

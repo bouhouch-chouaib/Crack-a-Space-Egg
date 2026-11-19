@@ -216,7 +216,7 @@ end)
 local last = {
 	Cargo = player:GetAttribute("Cargo") or 0,
 	Credits = player:GetAttribute("Credits") or 0,
-	JetLevel = player:GetAttribute("JetLevel") or 1,
+	JetTier = player:GetAttribute("JetTier") or 1,
 	Grace = player:GetAttribute("ColdGrace"),
 }
 player.AttributeChanged:Connect(function(name: string)
@@ -237,11 +237,12 @@ player.AttributeChanged:Connect(function(name: string)
 			Sfx.Play("Coin") -- gain d'un coup (vente, récompense), pas le revenu de chaque seconde
 		end
 		last.Credits = v
-	elseif name == "JetLevel" and type(v) == "number" then
-		if v > last.JetLevel then
+	elseif name == "JetTier" and type(v) == "number" then
+		-- seulement quand un nouveau modèle de jetpack arrive (19 nov. : les niveaux ne sonnent plus)
+		if v > last.JetTier then
 			Sfx.Play("LevelUp")
 		end
-		last.JetLevel = v
+		last.JetTier = v
 	elseif name == "ColdGrace" then
 		if v ~= nil and last.Grace == nil then
 			Sfx.Play("Warning") -- on vient de sortir de la zone où l'on respire

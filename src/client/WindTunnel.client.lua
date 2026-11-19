@@ -203,20 +203,65 @@ local TweenService = game:GetService("TweenService")
 local OUTLINE = Color3.fromRGB(22, 22, 32)
 local XP_COLORS = { Color3.fromRGB(150, 235, 255), Color3.fromRGB(110, 210, 255), Color3.fromRGB(140, 255, 200), Color3.fromRGB(255, 200, 90), Color3.fromRGB(255, 140, 220), Color3.fromRGB(190, 150, 255), Color3.fromRGB(255, 225, 90) }
 
-local function boosted(): boolean
-	local ends = player:GetAttribute("TunnelBoostEnd")
-	return type(ends) == "number" and ends > workspace:GetServerTimeNow()
+local PURPLE = Color3.fromRGB(200, 120, 255)
+local PURPLE_LIGHT = Color3.fromRGB(235, 190, 255)
+
+-- Le joueur brille en violet le temps d'un gain doublé : contour et voile violets, lumière, étincelles
+local function shinePurple()
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not character or not hrp then
+		return
+	end
+	local hl = Instance.new("Highlight")
+	hl.Name = "BoostShine"
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
+	hl.FillColor = PURPLE
+	hl.FillTransparency = 0.25
+	hl.OutlineColor = PURPLE_LIGHT
+	hl.OutlineTransparency = 0
+	hl.Parent = character
+	local light = Instance.new("PointLight")
+	light.Color = PURPLE
+	light.Range = 18
+	light.Brightness = 4
+	light.Shadows = false
+	light.Parent = hrp
+	local at = Instance.new("Attachment")
+	at.Parent = hrp
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = UIKit.Art.FxSparkle
+	e.Color = ColorSequence.new(Color3.new(1, 1, 1), PURPLE)
+	e.LightEmission = 1
+	e.LightInfluence = 0
+	e.Enabled = false
+	e.Lifetime = NumberRange.new(0.5, 0.9)
+	e.Speed = NumberRange.new(8, 16)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Drag = 3
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.3), NumberSequenceKeypoint.new(1, 0) })
+	e.Rotation = NumberRange.new(0, 360)
+	e.Parent = at
+	e:Emit(36)
+	task.delay(0.35, function()
+		e:Emit(18)
+	end)
+	TweenService:Create(hl, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { FillTransparency = 1, OutlineTransparency = 1 }):Play()
+	TweenService:Create(light, TweenInfo.new(1.1), { Brightness = 0 }):Play()
+	Debris:AddItem(hl, 1.2)
+	Debris:AddItem(light, 1.2)
+	Debris:AddItem(at, 1.6)
 end
 
-local function popXP(amount: number, tier: number, i: number)
+local function popXP(amount: number, tier: number, i: number, boosted: boolean?)
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not hrp then
 		return
 	end
-	-- bonus x2 en cours : bulles dorées et plus grosses
-	local gold = boosted()
-	local color = if gold then GOLD else XP_COLORS[math.clamp(tier, 1, #XP_COLORS)]
+	-- gain doublé par le bonus x2 : bulles violettes et plus grosses
+	local gold = boosted == true
+	local color = if gold then PURPLE else XP_COLORS[math.clamp(tier, 1, #XP_COLORS)]
 	local big = (1 + (tier - 1) * 0.12) * (if gold then 1.35 else 1)
 	-- part du corps du joueur dans une direction au hasard, monte en s'écartant
 	local a = math.random() * math.pi * 2
@@ -264,11 +309,14 @@ local function popXP(amount: number, tier: number, i: number)
 	Sfx.Play("Pop", { volume = 0.18, pitch = 1 + i * 0.06 })
 end
 
-ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TunnelXP").OnClientEvent:Connect(function(gain: number, tier: number)
+ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TunnelXP").OnClientEvent:Connect(function(gain: number, tier: number, boosted: boolean?)
 	if type(gain) ~= "number" or gain <= 0 then
 		return
 	end
 	tier = if type(tier) == "number" then tier else 1
+	if boosted then
+		shinePurple()
+	end
 	-- plus la soufflerie est haut de gamme, plus il y a de bulles dans la seconde (2 à 9)
 	-- nombres entiers qui, additionnés, font l'XP gagnée
 	gain = math.max(1, math.floor(gain + 0.5))
@@ -276,43 +324,49 @@ ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TunnelXP").OnClientEvent
 	local base = gain // count
 	local extra = gain - base * count
 	for i = 0, count - 1 do
-		task.delay(i / count, popXP, base + (if i < extra then 1 else 0), tier, i)
+		task.delay(i / count, popXP, base + (if i < extra then 1 else 0), tier, i, boosted)
 	end
 end)
 
 -- BONUS x2 À ATTRAPER ----------------------------------------------------------------------------
--- Le serveur décide quand il apparaît et s'il est attrapé à temps (WindTunnelService) ; ici le bouton.
+-- Le serveur décide quand il apparaît et s'il est attrapé à temps (WindTunnelService) ; ici le bouton,
+-- qui traverse l'écran en rebondissant sur les bords : il faut le toucher (19 nov.). À la manette,
+-- qui n'a pas de pointeur, la touche X l'attrape.
 
 local ContextActionService = game:GetService("ContextActionService")
 local Device = require(script.Parent:WaitForChild("Device"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local new = UIKit.new
 local BOOST = J.Boost
-local BOOST_KEYS = { Enum.KeyCode.Q, Enum.KeyCode.ButtonX }
+local BOOST_KEYS = { Enum.KeyCode.ButtonX }
 
 local boostGui = new("ScreenGui", { Name = "TunnelBoost", ResetOnSpawn = false, DisplayOrder = 6, IgnoreGuiInset = true, Parent = player:WaitForChild("PlayerGui") })
 local flash = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, Active = false, Parent = boostGui })
-local holder = new("Frame", { Name = "Holder", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromOffset(150, 150), BackgroundTransparency = 1, Visible = false, Parent = boostGui })
+local holder = new("Frame", { Name = "Holder", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromOffset(120, 120), BackgroundTransparency = 1, Visible = false, Parent = boostGui })
 UIKit.autoScale(holder)
-UIKit.rays(holder, { color = GOLD, size = 300, speed = 50, transparency = 0.35, z = 1 })
-UIKit.glow(holder, { color = Color3.fromRGB(255, 210, 80), size = 260, transparency = 0.45, z = 1, pulse = 2.2 })
+UIKit.rays(holder, { color = PURPLE_LIGHT, size = 250, speed = 70, transparency = 0.3, z = 1 })
+UIKit.glow(holder, { color = PURPLE, size = 220, transparency = 0.35, z = 1, pulse = 2.2 })
 local bubble = new("TextButton", { Name = "Boost", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, Text = "", ZIndex = 2, Parent = holder }, {
 	UIKit.corner(),
 	UIKit.stroke(5),
-	UIKit.gradient(Color3.fromRGB(255, 232, 110), Color3.fromRGB(255, 150, 40)),
+	UIKit.gradient(Color3.fromRGB(235, 170, 255), Color3.fromRGB(150, 70, 240)),
 })
 UIKit.studs(bubble, 0.5, "Studs", 22, "button")
-UIKit.text({ Name = "Big", Size = UDim2.new(1, -16, 0, 84), Position = UDim2.fromOffset(8, 10), Text = "x" .. BOOST.Mult, ZIndex = 4, Stroke = 5, Parent = bubble })
-UIKit.text({ Name = "Small", Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(8, 92), Text = "XP!", TextColor3 = Color3.fromRGB(140, 245, 255), ZIndex = 4, Stroke = 3.5, Parent = bubble })
+UIKit.text({ Name = "Big", Size = UDim2.new(1, -12, 0, 68), Position = UDim2.fromOffset(6, 8), Text = "x" .. BOOST.Mult, ZIndex = 4, Stroke = 5, Parent = bubble })
+UIKit.text({ Name = "Small", Size = UDim2.new(1, -12, 0, 28), Position = UDim2.fromOffset(6, 74), Text = "XP!", TextColor3 = Color3.fromRGB(255, 240, 140), ZIndex = 4, Stroke = 3.5, Parent = bubble })
 -- temps restant pour l'attraper : une barre qui se vide sous le bouton
 local timeBack = new("Frame", { Name = "Time", Size = UDim2.new(1, 0, 0, 12), Position = UDim2.new(0, 0, 1, 12), BackgroundColor3 = Color3.fromRGB(25, 30, 48), ZIndex = 2, Parent = holder }, { UIKit.corner(), UIKit.stroke(3) })
-local timeFill = new("Frame", { Name = "Fill", Size = UDim2.fromScale(1, 1), BackgroundColor3 = GOLD, BorderSizePixel = 0, ZIndex = 3, Parent = timeBack })
+local timeFill = new("Frame", { Name = "Fill", Size = UDim2.fromScale(1, 1), BackgroundColor3 = PURPLE_LIGHT, BorderSizePixel = 0, ZIndex = 3, Parent = timeBack })
 -- touche de la manette ou du clavier
 local keyTag = UIKit.text({ Name = "Key", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(44, 36), Position = UDim2.fromScale(1, 0), Text = "Q", ZIndex = 6, Stroke = 3.5, Parent = holder })
 UIKit.juice(bubble)
 
 local offerEnds = 0
 local grabbing = false
+-- déplacement du bouton : position (part de l'écran) et vitesse (part de l'écran par seconde)
+local boostPos = Vector2.new(0.5, 0.4)
+local boostVel = Vector2.zero
+local BOOST_MIN, BOOST_MAX = Vector2.new(0.12, 0.2), Vector2.new(0.88, 0.72)
 
 local function hideOffer()
 	holder.Visible = false
@@ -332,20 +386,23 @@ local function grab()
 	grabbing = false
 	hideOffer()
 	if ok and type(res) == "table" and res.ok then
-		Sfx.Play("LevelUp", { pitch = 1.25 })
-		UIKit.burst(flash, at, GOLD)
-		UIKit.flyText(boostGui, ("x%d XP!"):format(BOOST.Mult), at, GOLD)
+		Sfx.Play("Coin", { pitch = 1.5 })
+		UIKit.burst(flash, at, PURPLE)
+		UIKit.flyText(boostGui, ("x%d XP!"):format(BOOST.Mult), at, PURPLE_LIGHT)
 	end
 end
 bubble.MouseButton1Click:Connect(grab)
 
 local function showOffer(ends: number)
 	offerEnds = ends
-	-- jamais au même endroit : il faut regarder l'écran pour l'attraper
-	holder.Position = UDim2.fromScale(0.3 + math.random() * 0.4, 0.28 + math.random() * 0.3)
+	-- il part d'un endroit au hasard, dans une direction au hasard, et rebondit sur les bords
+	boostPos = Vector2.new(0.25 + math.random() * 0.5, 0.28 + math.random() * 0.34)
+	local a = math.random() * math.pi * 2
+	boostVel = Vector2.new(math.cos(a), math.sin(a)) * BOOST.Speed
+	holder.Position = UDim2.fromScale(boostPos.X, boostPos.Y)
 	local kind = Device.Kind()
-	keyTag.Visible = kind ~= "Touch"
-	keyTag.Text = if kind == "Gamepad" then Device.PadName(Enum.KeyCode.ButtonX) else "Q"
+	keyTag.Visible = kind == "Gamepad"
+	keyTag.Text = Device.PadName(Enum.KeyCode.ButtonX)
 	holder.Visible = true
 	UIKit.popIn(holder)
 	Sfx.Play("Pop", { pitch = 1.4 })
@@ -368,7 +425,7 @@ end
 player:GetAttributeChangedSignal("TunnelBoostOffer"):Connect(onOffer)
 onOffer()
 
-RunService.Heartbeat:Connect(function()
+RunService.Heartbeat:Connect(function(dt)
 	if not holder.Visible then
 		return
 	end
@@ -378,31 +435,18 @@ RunService.Heartbeat:Connect(function()
 		return
 	end
 	timeFill.Size = UDim2.fromScale(math.clamp(left / BOOST.Offer, 0, 1), 1)
-end)
-
--- NIVEAU GAGNÉ DANS LA SOUFFLERIE : flash très léger et petit tremblement ---------------------------
-
-local shownLevel = (player:GetAttribute("JetLevel") or 1) :: number
-player:GetAttributeChangedSignal("JetLevel"):Connect(function()
-	local level = (player:GetAttribute("JetLevel") or 1) :: number
-	local up = level > shownLevel
-	shownLevel = level
-	if not up or not player:GetAttribute("InTunnel") then
-		return
+	-- il file en ligne droite et rebondit sur les bords (x ralenti par le rapport de l'écran)
+	local vp = workspace.CurrentCamera.ViewportSize
+	local ratio = if vp.X > 0 then vp.Y / vp.X else 0.56
+	local p = boostPos + Vector2.new(boostVel.X * ratio, boostVel.Y) * math.min(dt, 0.1)
+	if p.X < BOOST_MIN.X or p.X > BOOST_MAX.X then
+		boostVel = Vector2.new(-boostVel.X, boostVel.Y)
+		p = Vector2.new(math.clamp(p.X, BOOST_MIN.X, BOOST_MAX.X), p.Y)
 	end
-	flash.BackgroundTransparency = 0.82
-	TweenService:Create(flash, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
-	local character = player.Character
-	local hum = character and character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		task.spawn(function()
-			local base = hum.CameraOffset
-			for i = 1, 6 do
-				local k = 0.16 * (1 - i / 7)
-				hum.CameraOffset = base + Vector3.new((math.random() - 0.5) * 2 * k, (math.random() - 0.5) * 2 * k, 0)
-				task.wait(0.035)
-			end
-			hum.CameraOffset = base
-		end)
+	if p.Y < BOOST_MIN.Y or p.Y > BOOST_MAX.Y then
+		boostVel = Vector2.new(boostVel.X, -boostVel.Y)
+		p = Vector2.new(p.X, math.clamp(p.Y, BOOST_MIN.Y, BOOST_MAX.Y))
 	end
+	boostPos = p
+	holder.Position = UDim2.fromScale(p.X, p.Y)
 end)

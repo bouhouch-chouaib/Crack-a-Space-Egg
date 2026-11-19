@@ -43,7 +43,7 @@ local speedText = UIKit.text({
 	Stroke = 3.5,
 	Parent = moneyGroup,
 })
--- Barre d'XP du jetpack (se remplit dans les souffleries et en vol)
+-- Barre du jetpack : le chemin jusqu'au prochain modèle (se remplit dans les souffleries et en vol)
 local xpBar = UIKit.new("Frame", {
 	Name = "JetXPBar",
 	Size = UDim2.fromOffset(270, 22),
@@ -85,29 +85,41 @@ local incomeText = UIKit.text({
 	Parent = moneyGroup,
 })
 
--- Vitesse du jetpack (18 nov. : un chiffre « Speed » à la place du niveau, c'est l'XP totale du
--- jetpack ; les monstres en demandent un minimum) et barre du niveau en cours, qui se remplit souvent
--- (chaque niveau rend un peu plus rapide). Sous la barre : la Speed du prochain modèle de jetpack.
-local shownLevel = 0
+-- Vitesse du jetpack : un chiffre « Speed » (l'XP totale du jetpack ; les monstres en demandent un
+-- minimum) qui marche comme l'argent (19 nov.) : il grimpe sans arrêt, avec un « +X » à chaque gain.
+-- Plus de niveaux fêtés ni de barre qui recommence à chaque niveau : la barre montre le chemin
+-- jusqu'au prochain modèle de jetpack, et la fête est gardée pour ce moment-là.
+local shownSpeed = -1
+local shownJetTier = 0
+local function speedLabel(n: number): string
+	return Format.Short(n) .. " Speed"
+end
 local function refreshSpeed()
 	local level = player:GetAttribute("JetLevel") or 1
-	local xp = player:GetAttribute("JetXP") or 0
-	local need = player:GetAttribute("JetXPNeed") or 0
 	local speed = (player:GetAttribute("JetSpeed") or 0) :: number
-	speedText.Text = ("%s Speed"):format(Format.Short(speed))
-	local ratio = if need > 0 then math.clamp(xp / need, 0, 1) else 1
+	if speed ~= shownSpeed then
+		if shownSpeed >= 0 and speed > shownSpeed then
+			UIKit.flyText(moneyGroup, "+" .. Format.Short(speed - shownSpeed), UDim2.fromOffset(110, -10), JET_COLOR)
+			UIKit.bump(speedIcon, 0.15)
+		end
+		UIKit.countTo(speedText, math.max(0, shownSpeed), speed, speedLabel, 0.6)
+		shownSpeed = speed
+	end
 	local tiers = Config.Jetpack.Tiers
-	local i = Config.JetpackTier(level)
+	local i, tier = Config.JetpackTier(level)
 	local nextTier = tiers[i + 1]
-	xpText.Text = if nextTier then ("New jetpack at %s"):format(Format.Short(Config.JetpackXPTotal(nextTier.Level))) else "Top jetpack!"
+	local from = Config.JetpackXPTotal(tier.Level)
+	local to = if nextTier then Config.JetpackXPTotal(nextTier.Level) else from
+	local ratio = if to > from then math.clamp((speed - from) / (to - from), 0, 1) else 1
+	xpText.Text = if nextTier then ("Next jetpack: %s"):format(Format.Short(to)) else "Top jetpack!"
 	TweenService:Create(xpFill, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(ratio, 1) }):Play()
-	if shownLevel > 0 and level > shownLevel then
+	if shownJetTier > 0 and i > shownJetTier then
 		xpFill.Size = UDim2.fromScale(0, 1)
-		UIKit.flyText(moneyGroup, "FASTER!", UDim2.fromOffset(110, -10), JET_COLOR)
-		UIKit.bump(speedIcon, 0.3)
+		UIKit.flyText(moneyGroup, "NEW JETPACK!", UDim2.fromOffset(110, -34), JET_COLOR)
+		UIKit.bump(speedIcon, 0.35)
 		UIKit.burst(moneyGroup, UDim2.fromOffset(52, 36), JET_COLOR)
 	end
-	shownLevel = level
+	shownJetTier = i
 end
 
 local shownMoney = 0
