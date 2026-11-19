@@ -51,6 +51,7 @@ HatchFx.Clover = "rbxassetid://108740423324078"
 local LUCK = Color3.fromRGB(90, 255, 110)
 local LUCK_LIGHT = Color3.fromRGB(205, 255, 140)
 local LUCK_DARK = Color3.fromRGB(10, 70, 25)
+local LUCK_SIZE = 0.78 -- taille d'ensemble du compteur de l'éclosion (rétréci le 19 nov.)
 
 -- « 1,233,433 » jusqu'à un milliard, puis « 1.43Qa »
 function HatchFx.LuckText(n: number): string
@@ -559,7 +560,7 @@ function HatchFx.Charge(egg: Model, o: Opts)
 			-- taille : coups aux paliers ; il vibre en défilant ; un peu plus gros une fois figé
 			oddsPunch = math.max(0, oddsPunch - dt * 1.6)
 			local buzz = if oddsLocked then 0.03 * math.sin(now * 6) else 0.03 * math.abs(math.sin(now * 30))
-			oddsScale.Scale = near * (if oddsLocked then 1.15 else 0.9 + 0.1 * f) * (1 + oddsPunch + buzz)
+			oddsScale.Scale = LUCK_SIZE * near * (if oddsLocked then 1.15 else 0.9 + 0.1 * f) * (1 + oddsPunch + buzz)
 			if oddsIcon then
 				oddsIcon.Rotation = if oddsLocked then math.sin(now * 3) * 8 else oddsPunch * 120 + math.sin(now * 14) * 6
 			end
