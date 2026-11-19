@@ -5,8 +5,8 @@
 -- Dans le courant d'air de SA soufflerie, il flotte (WindTunnel.client) et gagne de l'XP de jetpack
 -- chaque seconde, même AFK. Hors soufflerie, chaque seconde de vol réel rapporte un peu d'XP.
 -- Le serveur décide de l'XP et des achats ; le client ne fait que l'affichage.
--- Bonus à attraper (Config.Jetpack.Boost) : pendant l'entraînement, un bouton « x2 » est proposé toutes
--- les 5 s environ (attribut TunnelBoostOffer = heure serveur de fin de l'offre). Remotes.TunnelUp("boost")
+-- Bonus à attraper (Config.Jetpack.Boost) : pendant l'entraînement, un bouton « x2 » apparaît 3 s toutes
+-- les 5 s (attribut TunnelBoostOffer = heure serveur de fin de l'offre). Remotes.TunnelUp("boost")
 -- dans les temps : le prochain gain d'XP de la soufflerie est multiplié par Mult (TunnelXP le signale).
 
 local Players = game:GetService("Players")
@@ -33,26 +33,26 @@ local EMPTY_COLOR = Color3.fromRGB(120, 130, 150)
 local WindTunnelService = {}
 
 local B = J.Boost
-local rng = Random.new()
 local nextOffer: { [Player]: number } = {} -- os.clock() de la prochaine offre (nil = pas en train de s'entraîner)
 local offerUntil: { [Player]: number } = {}
 local boostNext: { [Player]: boolean } = {} -- bonus attrapé : le prochain gain est multiplié
 
--- Le bonus x2 n'est proposé qu'à un joueur qui s'entraîne, tutoriel fini, hors bonus en cours
+-- Le bonus x2 n'est proposé qu'à un joueur qui s'entraîne, tutoriel fini : il apparaît toutes les
+-- Every secondes (d'une apparition à la suivante) et reste Offer secondes
 local function stepBoost(player: Player, d, training: boolean)
 	local now = os.clock()
 	if offerUntil[player] and now >= offerUntil[player] then
 		offerUntil[player] = nil
 		player:SetAttribute("TunnelBoostOffer", nil)
 	end
-	if not training or (d.guide or 0) < Config.Guide.Steps or boostNext[player] or offerUntil[player] then
+	if not training or (d.guide or 0) < Config.Guide.Steps then
 		nextOffer[player] = nil
 		return
 	end
 	if not nextOffer[player] then
-		nextOffer[player] = now + rng:NextNumber(B.Every[1], B.Every[2])
-	elseif now >= nextOffer[player] then
-		nextOffer[player] = nil
+		nextOffer[player] = now + B.Every
+	elseif now >= nextOffer[player] - 0.05 then
+		nextOffer[player] = now + B.Every
 		offerUntil[player] = now + B.Offer
 		player:SetAttribute("TunnelBoostOffer", workspace:GetServerTimeNow() + B.Offer)
 	end

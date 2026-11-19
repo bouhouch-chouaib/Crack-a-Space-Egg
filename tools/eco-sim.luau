@@ -222,9 +222,8 @@ local function play(): Run
 		local level = Config.JetpackLevel(xp)
 		-- soufflerie : par tranches d'une minute, jusqu'à sa part du temps
 		if tunnel >= 1 and tunnelTime < TUNNEL_SHARE * t then
-			-- un gain (une seconde) doublé par bonus attrapé ; un bonus toutes les Every secondes, plus le
-			-- temps de le toucher (la moitié de l'offre en moyenne)
-			local boost = 1 + BOOST_GRAB * (J.Boost.Mult - 1) / ((J.Boost.Every[1] + J.Boost.Every[2]) / 2 + J.Boost.Offer / 2)
+			-- un gain (une seconde) doublé par bonus attrapé ; un bonus toutes les Every secondes
+			local boost = 1 + BOOST_GRAB * (J.Boost.Mult - 1) / J.Boost.Every
 			xp += J.Tunnels[tunnel].XP * 60 * boost
 			tunnelTime += 60
 			pass(60)

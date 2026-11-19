@@ -613,12 +613,12 @@ Config.Jetpack = {
 	TopLevel = 910, -- niveau où la portée et les vitesses cessent de monter (les niveaux, eux, continuent)
 	MaxReach = 720, -- portée au niveau TopLevel
 	-- Bonus à attraper dans la soufflerie (WindTunnelService, WindTunnel.client), revu le 19 nov. : toutes
-	-- les Every secondes d'entraînement (au hasard entre les deux bornes), un bouton « x2 » traverse
-	-- l'écran pendant Offer secondes (il rebondit sur les bords, à Speed fois la hauteur d'écran par
+	-- les Every secondes d'entraînement, un gros bouton rond (un doigt et « x2 XP ») apparaît pendant
+	-- Offer secondes et traverse l'écran (il rebondit sur les bords, à Speed fois la hauteur d'écran par
 	-- seconde) ; touché à temps, le prochain gain d'XP de la soufflerie (un par seconde) est multiplié
 	-- par Mult, et le joueur brille en violet le temps de ce gain.
-	-- Rester devant l'écran rapporte donc un peu plus que l'AFK pur (environ +15 % en les attrapant tous).
-	Boost = { Every = { 4, 6 }, Offer = 3.5, Mult = 2, Speed = 0.35 },
+	-- Rester devant l'écran rapporte donc un peu plus que l'AFK pur (+20 % en les attrapant tous).
+	Boost = { Every = 5, Offer = 3, Mult = 2, Speed = 0.28 },
 	-- Soufflerie personnelle : chaque joueur a la sienne devant sa base. On l'achète (Breeze Tunnel),
 	-- puis on l'améliore palier par palier ; XP gagnée par seconde dans le courant d'air, même AFK.
 	-- Prix réglés avec tools/eco-sim.luau : la soufflerie n se paie à l'arrivée dans l'anneau n (trop chère
