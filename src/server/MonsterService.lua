@@ -251,9 +251,8 @@ local function caught(m: Monster)
 		d.cargo = {}
 		CarryService.Drop(player) -- la roche quitte ses mains
 		GameService.Sync(player)
-		if dropRock(player, items, where) then
-			GameService.Notice(player, ("{Warning} The %s knocked your rock away! Grab it back!"):format(kind.Name), "bad")
-		end
+		-- pas de message (20 nov.) : la roche tombée s'affiche avec « GRAB IT! » et un rayon jusqu'à elle
+		dropRock(player, items, where)
 	end
 	-- projeté loin du monstre (le client applique la poussée, comme un coup de batte)
 	local away = where - m.pos
