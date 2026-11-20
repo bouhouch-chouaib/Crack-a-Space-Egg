@@ -5,11 +5,12 @@
 --   par le serveur), puis retourne se promener (Return). Trop loin de la caméra, il n'est pas affiché ;
 -- - traînée, braises et yeux qui brillent ; il heurte les astéroïdes sur son passage ; arrivé à la
 --   base du joueur, un dôme s'allume, il s'y écrase puis repart ;
--- - pour le joueur poursuivi : bandeau « RUN HOME » et jauge vers sa base, la Speed qu'il faut pour le
---   semer (verte si on l'a, rouge sinon), flèche lumineuse jusqu'à sa base, bord rouge et battements
+-- - pour le joueur poursuivi : pas de texte (20 nov. : le bandeau au nom du monstre est retiré), flèche
+--   lumineuse jusqu'à sa base, bord rouge et battements
 --   de cœur qui montent quand il approche, lignes de vitesse et champ de vision élargi, bonds en
 --   claquant des mâchoires quand il est tout près, icône de danger au bord de l'écran de son côté,
---   secousses, sons ; mâchoires qui se ferment s'il attrape ;
+--   secousses, sons ; mâchoires qui se ferment s'il attrape, puis, s'il manquait de Speed, un petit
+--   encadré « [jetpack] Need 50K Speed » pendant quelques secondes ;
 -- - roche tombée sur un astéroïde après une prise (World.LostRocks) : collée à l'astéroïde qui
 --   défile, rayon lumineux jusqu'à elle, contour et compte à rebours pour son propriétaire.
 
@@ -63,29 +64,52 @@ local vignette = new("ImageLabel", {
 	ImageTransparency = 1,
 	Parent = gui,
 })
-local banner = new("Frame", {
-	Name = "Banner",
+-- Petit encadré montré seulement après une prise, si le joueur manquait de Speed : l'icône du
+-- jetpack et « Need 50K Speed »
+local needPill = new("Frame", {
+	Name = "Need",
 	AnchorPoint = Vector2.new(0.5, 1),
-	Position = UDim2.new(0.5, 0, 1, -64), -- en bas, au-dessus de la ligne d'aide (en haut : soute et notifications)
-	Size = UDim2.fromOffset(420, 66),
-	BackgroundColor3 = Color3.fromRGB(40, 16, 24),
+	Position = UDim2.fromScale(0.5, 0.7), -- au-dessus de la barre d'objets et de la bulle du guide
+	AutomaticSize = Enum.AutomaticSize.X,
+	Size = UDim2.fromOffset(0, 46),
+	BackgroundColor3 = Color3.fromRGB(28, 22, 40),
+	BackgroundTransparency = 0.1,
+	Visible = false,
+	ZIndex = 21,
 	Parent = gui,
-}, { UIKit.corner(), UIKit.stroke(4) })
-local title = UIKit.text({ Text = "{Warning} RUN HOME!", Size = UDim2.new(1, -24, 0, 34), Position = UDim2.fromOffset(12, 5), TextColor3 = Color3.fromRGB(255, 90, 90), Parent = banner })
-local barBack = new("Frame", { Size = UDim2.new(1, -40, 0, 14), Position = UDim2.fromOffset(20, 44), BackgroundColor3 = Color3.fromRGB(20, 10, 14), Parent = banner }, { UIKit.corner(), UIKit.stroke(2) })
--- jauge : le chemin déjà fait vers sa base
-local barFill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(110, 240, 120), Parent = barBack }, { UIKit.corner() })
-UIKit.studs(banner, 0.85).ZIndex = 0
--- au-dessus du bandeau : la Speed qu'il faut pour semer ce monstre
+}, {
+	UIKit.corner(),
+	UIKit.stroke(3),
+	new("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 16) }),
+	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+})
+UIKit.autoScale(needPill)
+UIKit.icon("Jetpack", { Size = UDim2.fromOffset(36, 36), LayoutOrder = 1, ZIndex = 22, Parent = needPill })
 local needText = UIKit.text({
 	Text = "",
-	AnchorPoint = Vector2.new(0.5, 1),
-	Size = UDim2.new(1, 40, 0, 30),
-	Position = UDim2.new(0.5, 0, 0, -6),
-	TextColor3 = Color3.fromRGB(255, 120, 120),
+	AutomaticSize = Enum.AutomaticSize.X,
+	Size = UDim2.fromOffset(0, 30),
+	TextSize = 26,
+	TextScaled = false,
+	TextColor3 = Color3.fromRGB(150, 235, 255),
 	Stroke = 3,
-	Parent = banner,
+	LayoutOrder = 2,
+	ZIndex = 22,
+	Parent = needPill,
 })
+local needToken = 0
+local function showNeed(need: number)
+	needToken += 1
+	local token = needToken
+	needText.Text = ("Need %s Speed"):format(Format.Short(need))
+	needPill.Visible = true
+	UIKit.popIn(needPill)
+	task.delay(4.5, function()
+		if needToken == token then
+			needPill.Visible = false
+		end
+	end)
+end
 
 -- éclair de la couleur du monstre à son réveil
 local flash = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8, Parent = gui })
@@ -446,7 +470,6 @@ local function addView(f: Instance)
 	-- on arrive en pleine poursuite de ce joueur (réapparition, arrivée tardive) : l'interface suit
 	if v.mine and v.state == "Chase" then
 		gui.Enabled = true
-		banner.Visible = true
 	end
 end
 
@@ -501,7 +524,7 @@ function onState(f: Instance)
 			Sfx.Play("Warning")
 			shake(0.9, 0.8)
 			gui.Enabled = true
-			banner.Visible = true
+			needPill.Visible = false
 			if kind then
 				flash.BackgroundColor3 = kind.Color
 				flash.BackgroundTransparency = 0.6
@@ -542,12 +565,17 @@ function onState(f: Instance)
 			shake(1.2, 0.7)
 			-- les mâchoires se referment sur l'écran
 			gui.Enabled = true
-			banner.Visible = false
 			arrow.Visible = false
 			homeBeam.Enabled = false
 			vignette.ImageTransparency = 1
 			bite()
-			task.delay(1.6, function()
+			-- il manquait de Speed pour le semer : on le lui dit, une fois les mâchoires passées
+			local need = (kind and kind.Need or 0) :: number
+			local slow = ((player:GetAttribute("JetSpeed") or 0) :: number) < need
+			if slow then
+				task.delay(0.9, showNeed, need)
+			end
+			task.delay(if slow then 5.6 else 1.6, function()
 				for _, other in pairs(views) do
 					if other.mine and other.state == "Chase" then
 						return
@@ -801,24 +829,10 @@ RunService.RenderStepped:Connect(function(dt)
 		-- interface du joueur poursuivi
 		if v.mine and root and v.state == "Chase" then
 			chased = true
-			local name = M.Kinds[v.ring] and string.upper(M.Kinds[v.ring].Name) or "MONSTER"
-			UIKit.setIconText(title, ("{Warning} %s! RUN HOME"):format(name))
-			local need = (M.Kinds[v.ring] and M.Kinds[v.ring].Need or 0) :: number
-			local mySpeed = (player:GetAttribute("JetSpeed") or 0) :: number
-			if mySpeed >= need then
-				needText.Text = ("You are fast enough! (%s Speed)"):format(Format.Short(need))
-				needText.TextColor3 = Color3.fromRGB(130, 255, 140)
-			else
-				needText.Text = ("Too slow! Need %s Speed"):format(Format.Short(need))
-				needText.TextColor3 = Color3.fromRGB(255, 120, 120)
-			end
-			-- jauge et flèche lumineuse : le chemin jusqu'à sa base
+			-- flèche lumineuse : le chemin jusqu'à sa base
 			local floor = baseFloor(player.UserId)
 			if floor then
 				local goal = floor.Position + Vector3.new(0, floor.Size.Y / 2 + 3, 0)
-				local toHome = (goal - root.Position).Magnitude
-				v.startDist = math.max(v.startDist or 0, toHome)
-				barFill.Size = UDim2.fromScale(math.clamp(1 - toHome / math.max(1, v.startDist :: number), 0.02, 1), 1)
 				homeTo.WorldPosition = goal
 				if homeFrom.Parent ~= root then
 					homeFrom.Parent = root
