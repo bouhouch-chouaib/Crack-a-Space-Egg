@@ -41,7 +41,7 @@ CarryService.Start() -- la roche dans les mains du joueur tant qu'il la rapporte
 WindTunnelService.Start() -- souffleries : on y farme le niveau du jetpack
 ColdService.Start() -- gel et manque d'oxygène hors du couloir
 CreatureService.Start() -- sac, vente au Trading Post, fusion
-MonsterService.Start() -- monstres des anneaux 5 à 7 (bruit, gardiens, poursuites)
+MonsterService.Start() -- un monstre par anneau (3 à 14) : promenade dans le couloir, poursuite au vol d'œuf
 SkinService.Start() -- skins de foreuse (atelier des foreuses)
 BaseSkinService.Start() -- skins de base (anneau atteint ou passes Robux)
 SuitService.Start() -- combinaisons : plus de temps hors du couloir, plus d'oxygène

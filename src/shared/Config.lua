@@ -85,13 +85,11 @@ Config.Map = {
 -- après quelques secondes de répit, le gel monte ; trop loin, il monte tout de suite et 2× plus vite.
 -- À 100 %, le joueur est pris dans un bloc de glace puis renvoyé à sa base (il perd ses œufs).
 -- MONSTRES (anneaux 3 à 14, docs/Mecaniques.md §13 et §0) -----------------------------------
--- Un monstre par anneau à partir du 3e, de plus en plus grand et impressionnant, chacun repère le
--- joueur à sa façon :
---   Noise : la jauge de bruit (forer, pousser au jetpack) ; à 1, il se réveille
---   Guard : forer un astéroïde gardé (lueur et œil au-dessus) le réveille aussitôt
---   Both  : les deux
--- Il poursuit le joueur jusqu'à sa base, sur le vaisseau compris ; arrivé chez lui, le monstre
--- s'écrase contre le dôme de la base et rentre à son astéroïde.
+-- Un seul monstre par anneau à partir du 3e, de plus en plus grand et impressionnant. Il est toujours
+-- là (20 nov.) : il se promène dans le couloir de son anneau (Patrol, Config.MonsterPatrol). Dès qu'un
+-- joueur sort un œuf d'un astéroïde de son anneau, il fonce droit sur lui (plus de jauge de bruit ni
+-- d'astéroïdes gardés) et le poursuit jusqu'à sa base, sur le vaisseau compris ; arrivé chez lui, le
+-- monstre s'écrase contre le dôme de la base et retourne se promener dans son anneau.
 -- Need = vitesse du jetpack (Speed, l'XP totale du jetpack) qu'il faut pour le semer (18 nov.) :
 -- avec assez de Speed, il va un peu moins vite que le joueur (Speed du monstre) ; en dessous, il
 -- va d'autant plus vite que le joueur en manque (jusqu'à MaxFactor fois la vitesse du joueur).
@@ -99,18 +97,18 @@ Config.Map = {
 -- il a DropTime secondes pour aller la reprendre, sinon elle s'enfonce dans l'astéroïde (œuf perdu).
 Config.Monsters = {
 	Kinds = {
-		[3] = { Name = "Cinder Maw", Model = "CinderMaw", Sense = "Noise", Speed = 0.85, Size = 16, Need = 50e3, Color = Color3.fromRGB(255, 120, 40) },
-		[4] = { Name = "Nebula Stalker", Model = "NebulaStalker", Sense = "Guard", Speed = 0.85, Size = 20, Need = 500e3, Color = Color3.fromRGB(190, 110, 255) },
-		[5] = { Name = "Devourer", Model = "Devourer", Sense = "Noise", Speed = 0.85, Size = 26, Need = 7e6, Color = Color3.fromRGB(150, 255, 90) },
-		[6] = { Name = "Rift Watcher", Model = "Watcher", Sense = "Guard", Speed = 0.9, Size = 30, Need = 100e6, Color = Color3.fromRGB(90, 230, 255) },
-		[7] = { Name = "Nest Queen", Model = "Queen", Sense = "Both", Speed = 0.9, Size = 34, Need = 1.5e9, Color = Color3.fromRGB(255, 170, 60) },
-		[8] = { Name = "Abyss Angler", Model = "AbyssAngler", Sense = "Guard", Speed = 0.9, Size = 38, Need = 8e9, Color = Color3.fromRGB(60, 230, 210) },
-		[9] = { Name = "Storm Hydra", Model = "StormHydra", Sense = "Noise", Speed = 0.9, Size = 42, Need = 70e9, Color = Color3.fromRGB(255, 230, 90) },
-		[10] = { Name = "Gear Spider", Model = "GearSpider", Sense = "Both", Speed = 0.92, Size = 46, Need = 700e9, Color = Color3.fromRGB(240, 170, 80) },
-		[11] = { Name = "Sour Worm", Model = "SourWorm", Sense = "Noise", Speed = 0.92, Size = 50, Need = 9e12, Color = Color3.fromRGB(255, 110, 190) },
-		[12] = { Name = "Spore Behemoth", Model = "SporeBehemoth", Sense = "Guard", Speed = 0.92, Size = 54, Need = 150e12, Color = Color3.fromRGB(110, 240, 210) },
-		[13] = { Name = "Temple Colossus", Model = "TempleColossus", Sense = "Both", Speed = 0.95, Size = 58, Need = 3.5e15, Color = Color3.fromRGB(255, 200, 80) },
-		[14] = { Name = "Phantom King", Model = "PhantomKing", Sense = "Both", Speed = 0.95, Size = 64, Need = 40e15, Color = Color3.fromRGB(120, 240, 220) },
+		[3] = { Name = "Cinder Maw", Model = "CinderMaw", Speed = 0.85, Size = 16, Need = 50e3, Color = Color3.fromRGB(255, 120, 40) },
+		[4] = { Name = "Nebula Stalker", Model = "NebulaStalker", Speed = 0.85, Size = 20, Need = 500e3, Color = Color3.fromRGB(190, 110, 255) },
+		[5] = { Name = "Devourer", Model = "Devourer", Speed = 0.85, Size = 26, Need = 7e6, Color = Color3.fromRGB(150, 255, 90) },
+		[6] = { Name = "Rift Watcher", Model = "Watcher", Speed = 0.9, Size = 30, Need = 100e6, Color = Color3.fromRGB(90, 230, 255) },
+		[7] = { Name = "Nest Queen", Model = "Queen", Speed = 0.9, Size = 34, Need = 1.5e9, Color = Color3.fromRGB(255, 170, 60) },
+		[8] = { Name = "Abyss Angler", Model = "AbyssAngler", Speed = 0.9, Size = 38, Need = 8e9, Color = Color3.fromRGB(60, 230, 210) },
+		[9] = { Name = "Storm Hydra", Model = "StormHydra", Speed = 0.9, Size = 42, Need = 70e9, Color = Color3.fromRGB(255, 230, 90) },
+		[10] = { Name = "Gear Spider", Model = "GearSpider", Speed = 0.92, Size = 46, Need = 700e9, Color = Color3.fromRGB(240, 170, 80) },
+		[11] = { Name = "Sour Worm", Model = "SourWorm", Speed = 0.92, Size = 50, Need = 9e12, Color = Color3.fromRGB(255, 110, 190) },
+		[12] = { Name = "Spore Behemoth", Model = "SporeBehemoth", Speed = 0.92, Size = 54, Need = 150e12, Color = Color3.fromRGB(110, 240, 210) },
+		[13] = { Name = "Temple Colossus", Model = "TempleColossus", Speed = 0.95, Size = 58, Need = 3.5e15, Color = Color3.fromRGB(255, 200, 80) },
+		[14] = { Name = "Phantom King", Model = "PhantomKing", Speed = 0.95, Size = 64, Need = 40e15, Color = Color3.fromRGB(120, 240, 220) },
 	},
 	-- Vitesse du monstre quand le joueur manque de Speed : Speed du monstre + (MaxFactor - Speed) × part,
 	-- part = log10(Need / Speed du joueur) / Decades (1 dès qu'il lui manque Decades puissances de 10)
@@ -122,20 +120,18 @@ Config.Monsters = {
 	DropTime = 30, -- secondes pour reprendre sa roche
 	DropSearch = 500, -- studs : astéroïde le plus proche cherché dans ce rayon (sinon la roche est perdue)
 	PickRadius = 9, -- studs : on reprend sa roche en la touchant (en plus de sa taille)
-	-- Bruit (par seconde) : forer, pousser au jetpack ; il retombe quand on reste discret
-	Noise = { Drill = 0.09, Jet = 0.06, Decay = 0.18, QuietDelay = 1, Warn = 0.7 },
-	-- Astéroïdes gardés (anneaux Guard et Both) : part, œufs en plus, rareté tirée deux fois (la meilleure)
-	GuardShare = 0.22,
-	GuardEggs = 1.5,
+	-- Promenade dans le couloir : vitesse (studs/s au plus), part de la largeur du couloir et de
+	-- l'épaisseur de l'anneau parcourues de chaque côté du centre, hauteur moyenne au-dessus du pont
+	Patrol = { Speed = 14, Side = 0.38, Depth = 0.3, Height = 12 },
 	MaxChase = 180, -- secondes : sécurité si le joueur reste coincé quelque part (il rentre alors chez lui)
 	BaseMargin = 3, -- studs autour du sol de la base (et de son annexe) où l'on est à l'abri
 	BaseHeight = 30, -- studs au-dessus du sol de la base encore à l'abri
 	Recoil = 10, -- studs : il rebondit sur le dôme de la base
 	ReturnPause = 0.8, -- secondes de rage avant de rentrer
-	ReturnSpeed = 90, -- studs/s pour rentrer à son astéroïde
-	ReturnTime = 12, -- secondes au plus pour rentrer, puis il plonge où il est
+	ReturnSpeed = 90, -- studs/s pour retourner dans son anneau
+	ReturnTime = 20, -- secondes au plus pour y retourner, puis il reprend sa promenade où elle en est
 	LungeDistance = 22, -- studs (en plus de son rayon) : il bondit en claquant des mâchoires (effet seul)
-	Emerge = 1.4, -- secondes où il sort (on a le temps de fuir)
+	Emerge = 1.4, -- secondes où il se tourne vers le voleur et rugit avant de foncer (on a le temps de fuir)
 	CatchRadius = 6, -- en plus de son rayon
 	MinSpeed = 18, -- studs/s au minimum dans l'espace (sinon vitesse en vol du joueur × Speed) ;
 	-- sur le vaisseau : vitesse à pied du joueur × Speed
@@ -309,6 +305,23 @@ end
 function Config.OrbitPosition(radius: number, angle: number, height: number): Vector3
 	local m = Config.Map
 	return Vector3.new(radius * math.sin(angle), height, radius * math.cos(angle) - m.AxisDistance + m.FrontZ)
+end
+
+-- Promenade du monstre de cet anneau à l'instant t (heure serveur) : position et direction. Le même
+-- calcul tourne sur le serveur et chez les clients, donc rien à envoyer tant qu'il se promène. Il va
+-- et vient en travers du couloir, s'enfonce et revient dans l'épaisseur de l'anneau, monte et descend.
+function Config.MonsterPatrol(ring: number, t: number): (Vector3, Vector3)
+	local P = Config.Monsters.Patrol
+	local function at(time: number): Vector3
+		local half = Config.Map.CorridorWidth * P.Side
+		local x = half * math.sin(time * P.Speed / half + ring * 1.7)
+		local r = Config.RingRadius(ring) + Config.RingWidth(ring) * P.Depth * math.sin(time * 0.11 + ring)
+		local y = P.Height + Config.FieldHeight(ring) * 0.4 * math.sin(time * 0.17 + ring * 2.3)
+		return Config.OrbitPosition(r, x / r, y)
+	end
+	local p = at(t)
+	local d = at(t + 0.5) - p
+	return p, if d.Magnitude > 0.01 then d.Unit else Vector3.zAxis
 end
 
 -- Améliorations : coût du niveau n = Base × Growth^n × Config.PriceWobble (voir Config.StepCost)

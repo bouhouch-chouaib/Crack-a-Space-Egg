@@ -714,8 +714,8 @@ local function decideTip(): Hint?
 		end
 	end
 	-- premier passage dans un anneau à monstres
-	if not tipSeen("monsters") and player:GetAttribute("Noise") ~= nil then
-		return timedTip("monsters", G.TipShort, { icon = "Warning", text = "Monsters live here!", sub = "Drilling makes noise: watch the eye gauge" })
+	if not tipSeen("monsters") and player:GetAttribute("MonsterSeen") then
+		return timedTip("monsters", G.TipShort, { icon = "Warning", text = "A monster lives here!", sub = "Steal an egg and it chases you: run home!" })
 	end
 	-- la suite attend la fin du guide : on ne change pas de sujet pendant la boucle de base
 	if step < G.Steps then

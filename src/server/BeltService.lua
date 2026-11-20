@@ -180,12 +180,6 @@ local function spawn(ringIndex: number, age: number)
 	end
 	local t0 = now() - age
 	local eggs = math.ceil(rng:NextInteger(size.Eggs[1], size.Eggs[2]))
-	-- Anneaux à gardien (Config.Monsters) : certains astéroïdes sont gardés, plus riches
-	local kind = Config.Monsters.Kinds[ringIndex]
-	local guarded = kind ~= nil and (kind.Sense == "Guard" or kind.Sense == "Both") and rng:NextNumber() < Config.Monsters.GuardShare
-	if guarded then
-		eggs = math.ceil(eggs * Config.Monsters.GuardEggs)
-	end
 	-- Place sur toute l'épaisseur et la hauteur du champ, sans chevaucher un voisin du même anneau
 	-- (même vitesse linéaire : deux voisins gardent à peu près leur écart en défilant)
 	local radius, height
@@ -258,9 +252,6 @@ local function spawn(ringIndex: number, age: number)
 	p:SetAttribute("Size", if rockType == 1 then "" else (string.split(size.Name, " ")[1])) -- « SILVER ROCK », « GOLD ROCK » (barre de vie)
 	p:SetAttribute("Rock", rockType)
 	p:SetAttribute("EggHP", a.eggHP)
-	if guarded then
-		p:SetAttribute("Guarded", true) -- lu par MonsterService (réveil) et MonsterFx.client (œil, lueur)
-	end
 	a.part = p
 	a.model = model
 	active[p] = a

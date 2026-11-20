@@ -1,13 +1,18 @@
 -- Monstres des anneaux 3 à 14 (Config.Monsters, docs/Mecaniques.md §13 et §0).
--- Le serveur décide : bruit de chaque joueur, réveil, poursuite, prise, abandon. Il ne déplace pas
--- de modèle : chaque monstre est un dossier dans Workspace.World.Monsters dont les attributs sont
--- lus par MonsterFx.client, qui anime le modèle chez chaque joueur.
--- Vitesse (18 nov.) : chaque monstre demande une Speed de jetpack (Kinds[].Need) ; en dessous, il va
--- d'autant plus vite que le joueur en manque. S'il l'attrape, le joueur est projeté et sa roche
--- retombe sur l'astéroïde le plus proche (Workspace.World.LostRocks), à reprendre en DropTime s.
---   Kind (anneau), Target (UserId), Pos, Look, State (Emerge / Chase / Return / Leave / Caught),
---   StartedAt, EndsAt (temps serveur), Size
--- Publié sur le joueur : Noise (0..1, seulement dans un anneau à bruit), Chased (EndsAt, pendant une poursuite).
+-- Un seul monstre par anneau, toujours là (20 nov.) : il se promène dans le couloir de son anneau
+-- (Config.MonsterPatrol, le même calcul chez les clients). Dès qu'un joueur sort un œuf d'un astéroïde
+-- de son anneau, il fonce droit sur lui et le poursuit jusqu'à sa base, sur le vaisseau compris.
+-- Le serveur décide : cible, poursuite, prise, retour. Il ne déplace pas de modèle : chaque monstre est
+-- un dossier dans Workspace.World.Monsters dont les attributs sont lus par MonsterFx.client, qui anime
+-- le modèle chez chaque joueur.
+--   Kind (anneau), Size, State (Patrol / Chase / Return), Target (UserId, 0 = personne),
+--   Pos, Look (publiés pendant Chase et Return ; en Patrol le client calcule la position),
+--   ChaseAt (heure serveur du début de la poursuite), Reason (fin de poursuite : home / caught / lost),
+--   Stunned (heure serveur de fin)
+-- Publié sur le joueur : Chased (heure de fin, pendant qu'il est poursuivi).
+-- Vitesse : chaque monstre demande une Speed de jetpack (Kinds[].Need) ; en dessous, il va d'autant
+-- plus vite que le joueur en manque. S'il l'attrape, le joueur est projeté et sa roche retombe sur
+-- l'astéroïde le plus proche (Workspace.World.LostRocks), à reprendre en DropTime s.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,27 +31,24 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local M = Config.Monsters
 local MonsterService = {}
 
-type Chase = {
-	player: Player,
+type Monster = {
 	ring: number,
 	folder: Folder,
 	pos: Vector3,
 	look: Vector3,
-	state: string,
-	t0: number,
+	state: string, -- Patrol, Chase, Return
+	target: Player?,
+	t0: number, -- début de la poursuite (heure serveur)
 	endsAt: number,
-	leaveAt: number,
+	leaveAt: number, -- début du retour
+	pause: number, -- secondes immobiles avant de repartir (rage contre le dôme)
 	size: number,
 	lastSent: number,
 	stunUntil: number?,
 	stunReady: number?,
-	home: Vector3, -- son astéroïde : il y rentre quand le joueur atteint sa base
 }
 
-local chases: { [Player]: Chase } = {}
-local noise: { [Player]: number } = {}
-local lastLoud: { [Player]: number } = {}
-local lastDrill: { [Player]: number } = {}
+local monsters: { [number]: Monster } = {} -- par anneau
 local cooldown: { [Player]: number } = {}
 local folder: Folder
 local lostFolder: Folder
@@ -122,72 +124,62 @@ function MonsterService.Factor(ring: number, jetSpeed: number): number
 	return kind.Speed + (M.MaxFactor - kind.Speed) * math.clamp(missing, 0.12, 1)
 end
 
-local function senses(ring: number, what: string): boolean
-	local kind = M.Kinds[ring]
-	return kind ~= nil and (kind.Sense == what or kind.Sense == "Both")
+local function publish(m: Monster)
+	m.folder:SetAttribute("Pos", m.pos)
+	m.folder:SetAttribute("Look", m.look)
 end
 
-local function publish(c: Chase)
-	c.folder:SetAttribute("Pos", c.pos)
-	c.folder:SetAttribute("Look", c.look)
-	c.folder:SetAttribute("State", c.state)
+local function setState(m: Monster, state: string)
+	m.state = state
+	publish(m)
+	m.folder:SetAttribute("State", state)
 end
 
-local function finish(c: Chase)
-	chases[c.player] = nil
-	cooldown[c.player] = os.clock() + M.Cooldown
-	noise[c.player] = 0
-	if c.player.Parent then
-		c.player:SetAttribute("Chased", nil)
-		c.player:SetAttribute("Noise", if c.player:GetAttribute("Noise") ~= nil then 0 else nil)
+-- Fin de poursuite : le joueur est libéré, le monstre retourne se promener
+-- reason : home (le joueur est rentré, il s'écrase sur le dôme), caught, lost (temps écoulé, joueur parti)
+local function release(m: Monster, reason: string)
+	local player = m.target
+	m.target = nil
+	m.leaveAt = now()
+	m.pause = if reason == "home" then M.ReturnPause elseif reason == "caught" then 0.6 else 0
+	m.folder:SetAttribute("Reason", reason)
+	m.folder:SetAttribute("Target", 0)
+	setState(m, "Return")
+	if player then
+		cooldown[player] = os.clock() + M.Cooldown
+		if player.Parent then
+			player:SetAttribute("Chased", nil)
+		end
 	end
-	task.delay(3, function()
-		c.folder:Destroy()
-	end)
 end
 
--- Réveil : le monstre de l'anneau sort près du joueur (ou de l'astéroïde gardé) et le poursuit
-function MonsterService.Wake(player: Player, ring: number, from: Vector3?): boolean
-	local kind = M.Kinds[ring]
+-- Un joueur vient de sortir un œuf d'un astéroïde de cet anneau : le monstre de l'anneau fonce sur lui
+-- (s'il ne poursuit pas déjà quelqu'un). Renvoie vrai si la poursuite commence.
+function MonsterService.Alert(player: Player, ring: number): boolean
+	local m = monsters[ring]
 	local hrp = root(player)
-	local d = DataService.Get(player)
-	if not kind or not hrp or not d or chases[player] or (cooldown[player] or 0) > os.clock() then
+	if not m or not hrp or m.state == "Chase" or (cooldown[player] or 0) > os.clock() then
 		return false
 	end
-	local duration = M.MaxChase
-	-- point de sortie : l'astéroïde voisin le plus proche, sinon sous le joueur, un peu à l'écart
-	local spawnAt = from or BeltService.NearestPosition(hrp.Position, ring, 90)
-	if not spawnAt then
-		local a = math.random() * math.pi * 2
-		spawnAt = hrp.Position + Vector3.new(math.cos(a) * 45, -25, math.sin(a) * 45)
+	-- déjà poursuivi par le monstre d'un autre anneau : un seul à la fois
+	for _, other in pairs(monsters) do
+		if other.target == player then
+			return false
+		end
+	end
+	if m.state == "Patrol" then
+		m.pos, m.look = Config.MonsterPatrol(ring, now())
 	end
 	local t = now()
-	local f = Instance.new("Folder")
-	f.Name = kind.Model .. "_" .. player.UserId
-	f:SetAttribute("Kind", ring)
-	f:SetAttribute("Target", player.UserId)
-	f:SetAttribute("StartedAt", t)
-	f:SetAttribute("EndsAt", t + M.Emerge + duration)
-	f:SetAttribute("Size", kind.Size)
-	local c: Chase = {
-		player = player,
-		ring = ring,
-		folder = f,
-		pos = spawnAt,
-		look = (hrp.Position - spawnAt).Unit,
-		state = "Emerge",
-		t0 = t,
-		endsAt = t + M.Emerge + duration,
-		leaveAt = 0,
-		size = kind.Size,
-		lastSent = 0,
-		home = spawnAt,
-	}
-	publish(c)
-	f.Parent = folder
-	chases[player] = c
-	player:SetAttribute("Chased", c.endsAt)
-	player:SetAttribute("Noise", if player:GetAttribute("Noise") ~= nil then 1 else nil)
+	m.target = player
+	m.t0 = t
+	m.endsAt = t + M.Emerge + M.MaxChase
+	m.stunUntil, m.stunReady = nil, nil
+	m.folder:SetAttribute("Stunned", nil)
+	m.folder:SetAttribute("Target", player.UserId)
+	m.folder:SetAttribute("ChaseAt", t)
+	setState(m, "Chase")
+	player:SetAttribute("Chased", m.endsAt)
 	-- pas de message : le bandeau RUN HOME et le rugissement suffisent (MonsterFx.client)
 	return true
 end
@@ -196,13 +188,12 @@ end
 function MonsterService.Stun(pos: Vector3, range: number, seconds: number): string?
 	local t = now()
 	local name = nil
-	for _, c in pairs(chases) do
-		local awake = c.state == "Chase" or c.state == "Emerge"
-		if awake and t >= (c.stunReady or 0) and (c.pos - pos).Magnitude <= c.size / 2 + M.CatchRadius + range then
-			c.stunUntil = t + seconds
-			c.stunReady = t + seconds + M.StunGap
-			c.folder:SetAttribute("Stunned", c.stunUntil)
-			name = M.Kinds[c.ring].Name
+	for _, m in pairs(monsters) do
+		if m.state == "Chase" and t >= (m.stunReady or 0) and (m.pos - pos).Magnitude <= m.size / 2 + M.CatchRadius + range then
+			m.stunUntil = t + seconds
+			m.stunReady = t + seconds + M.StunGap
+			m.folder:SetAttribute("Stunned", m.stunUntil)
+			name = M.Kinds[m.ring].Name
 		end
 	end
 	return name
@@ -241,24 +232,20 @@ local function dropRock(player: Player, items: { any }, from: Vector3): boolean
 end
 
 -- Le monstre attrape le joueur : il le projette, et sa roche retombe sur l'astéroïde le plus proche
-local function caught(c: Chase)
-	local player = c.player
+local function caught(m: Monster)
+	local player = m.target :: Player
 	local d = DataService.Get(player)
-	local kind = M.Kinds[c.ring]
+	local kind = M.Kinds[m.ring]
 	-- bouclier : le monstre repart, le joueur garde tout
 	if d and (d.shields or 0) > 0 then
 		d.shields -= 1
 		GameService.Sync(player)
-		c.state = "Leave"
-		c.leaveAt = now()
-		player:SetAttribute("Chased", nil)
+		release(m, "lost")
 		GameService.Notice(player, ("{Star} Your shield stopped the %s! %d left"):format(kind.Name, d.shields), "good")
 		return
 	end
-	c.state = "Caught"
-	publish(c)
 	local hrp = root(player)
-	local where = if hrp then hrp.Position else c.pos
+	local where = if hrp then hrp.Position else m.pos
 	if d and #d.cargo > 0 then
 		local items = d.cargo
 		d.cargo = {}
@@ -269,10 +256,10 @@ local function caught(c: Chase)
 		end
 	end
 	-- projeté loin du monstre (le client applique la poussée, comme un coup de batte)
-	local away = where - c.pos
+	local away = where - m.pos
 	away = if away.Magnitude > 0.01 then Vector3.new(away.X, 0, away.Z).Unit else Vector3.xAxis
 	Remotes.Gear:FireClient(player, "pushed", away * M.Knock + Vector3.new(0, M.KnockUp, 0), kind.Name, "monster")
-	finish(c)
+	release(m, "caught")
 end
 
 -- Roches tombées : on la reprend en la touchant ; à la fin du temps (ou si l'astéroïde disparaît),
@@ -300,9 +287,9 @@ local function stepLost()
 				GameService.Notice(owner, "{Warning} Your rock sank into the asteroid!", "bad")
 			end
 			l.model:SetAttribute("Sinking", true)
-			local m = l.model
+			local model = l.model
 			task.delay(1.2, function()
-				m:Destroy()
+				model:Destroy()
 			end)
 			table.remove(lost, i)
 		end
@@ -312,73 +299,37 @@ end
 local function step(dt: number)
 	stepLost()
 	local t = now()
-	-- BRUIT --------------------------------------------------------------------------------
-	for _, player in ipairs(Players:GetPlayers()) do
-		local hrp = root(player)
-		local ring = hrp and MonsterService.RingAt(hrp.Position)
-		if hrp and ring and senses(ring, "Noise") and not chases[player] and not inShip(hrp.Position) then
-			local n = noise[player] or 0
-			local character = player.Character
-			local drilling = os.clock() - (lastDrill[player] or 0) < 0.45
-			local thrust = character ~= nil and character:GetAttribute("Jet") == 1
-			-- pendant le répit qui suit une poursuite, le bruit ne fait que retomber
-			local resting = (cooldown[player] or 0) > os.clock()
-			if not resting and (drilling or thrust) then
-				n += ((if drilling then M.Noise.Drill else 0) + (if thrust then M.Noise.Jet else 0)) * dt
-				lastLoud[player] = os.clock()
-			elseif resting or os.clock() - (lastLoud[player] or 0) > M.Noise.QuietDelay then
-				n = math.max(0, n - M.Noise.Decay * dt)
+	for ring, m in pairs(monsters) do
+		if m.state == "Chase" then
+			local player = m.target
+			local hrp = player and root(player)
+			if not player or not player.Parent or not hrp then
+				release(m, "lost")
+				continue
 			end
-			n = math.clamp(n, 0, 1)
-			noise[player] = n
-			local shown = math.floor(n * 100 + 0.5) / 100
-			if player:GetAttribute("Noise") ~= shown then
-				player:SetAttribute("Noise", shown)
-			end
-			if n >= 1 then
-				MonsterService.Wake(player, ring)
-			end
-		elseif not chases[player] then
-			noise[player] = 0
-			if player:GetAttribute("Noise") ~= nil then
-				player:SetAttribute("Noise", nil)
-			end
-		end
-	end
-
-	-- POURSUITES ---------------------------------------------------------------------------
-	for player, c in pairs(chases) do
-		local hrp = root(player)
-		if not player.Parent or not hrp then
-			finish(c)
-			continue
-		end
-		local target = hrp.Position
-		if c.state == "Emerge" then
-			-- il sort de sa cachette en montant doucement, tourné vers le joueur
-			c.pos += Vector3.new(0, 6 * dt, 0)
-			c.look = (target - c.pos).Unit
-			if t >= c.t0 + M.Emerge then
-				c.state = "Chase"
-			end
-		elseif c.state == "Chase" then
+			local target = hrp.Position
 			local home = inBase(player, target)
-			if home or t >= c.endsAt then
-				-- arrivé chez lui : le monstre s'écrase contre le dôme de la base, puis rentre à son astéroïde
-				c.state = "Return"
-				c.leaveAt = t
-				local away = c.pos - target
-				if away.Magnitude > 0.01 then
-					c.pos += away.Unit * M.Recoil
+			if home or t >= m.endsAt then
+				-- arrivé chez lui : le monstre s'écrase contre le dôme de la base, puis retourne à son anneau
+				local away = m.pos - target
+				if home and away.Magnitude > 0.01 then
+					m.pos += away.Unit * M.Recoil
 				end
-				c.home = BeltService.NearestPosition(c.home, c.ring, 80) or c.home
-				player:SetAttribute("Chased", nil)
+				release(m, if home then "home" else "lost")
 				if not home then
-					GameService.Notice(player, ("{Star} You escaped the %s!"):format(M.Kinds[c.ring].Name), "good")
+					GameService.Notice(player, ("{Star} You escaped the %s!"):format(M.Kinds[ring].Name), "good")
 				end
-			elseif t >= (c.stunUntil or 0) then -- assommé par une batte : il ne bouge plus
+				continue
+			end
+			if t < m.t0 + M.Emerge then
+				-- il t'a vu : il se tourne vers toi et rugit, on a le temps de fuir
+				local delta = target - m.pos
+				if delta.Magnitude > 0.01 then
+					m.look = m.look:Lerp(delta.Unit, math.min(1, dt * 6)).Unit
+				end
+			elseif t >= (m.stunUntil or 0) then -- assommé par une batte : il ne bouge plus
 				local speed
-				local factor = MonsterService.Factor(c.ring, (player:GetAttribute("JetSpeed") or 0) :: number)
+				local factor = MonsterService.Factor(ring, (player:GetAttribute("JetSpeed") or 0) :: number)
 				if inShip(target) then
 					-- sur le vaisseau on court : il se cale sur la vitesse à pied
 					local ground = (player:GetAttribute("GroundSpeed") or Config.Movement.Walk) :: number
@@ -387,54 +338,49 @@ local function step(dt: number)
 					local air = (player:GetAttribute("AirSpeed") or Config.Movement.Air) :: number
 					speed = math.max(M.MinSpeed, air * factor)
 				end
-				local delta = target - c.pos
+				local delta = target - m.pos
 				local dist = delta.Magnitude
 				if dist > 0.01 then
-					c.look = c.look:Lerp(delta.Unit, math.min(1, dt * 4)).Unit
-					c.pos += delta.Unit * math.min(dist, speed * dt)
+					m.look = m.look:Lerp(delta.Unit, math.min(1, dt * 4)).Unit
+					m.pos += delta.Unit * math.min(dist, speed * dt)
 				end
-				if (target - c.pos).Magnitude <= c.size / 2 + M.CatchRadius then
-					caught(c)
+				if (target - m.pos).Magnitude <= m.size / 2 + M.CatchRadius then
+					caught(m)
 					continue
 				end
 			end
-		elseif c.state == "Return" then
-			-- un moment de rage contre le dôme, puis il rentre à son astéroïde
-			if t >= c.leaveAt + M.ReturnPause then
-				local delta = c.home - c.pos
+			if t - m.lastSent >= 1 / 15 then
+				m.lastSent = t
+				publish(m)
+			end
+		elseif m.state == "Return" then
+			-- un moment sur place (rage contre le dôme, ou après un coup), puis il rentre se promener
+			if t >= m.leaveAt + m.pause then
+				local goal = Config.MonsterPatrol(ring, t)
+				local delta = goal - m.pos
 				local dist = delta.Magnitude
 				if dist > 0.01 then
-					c.look = c.look:Lerp(delta.Unit, math.min(1, dt * 3)).Unit
-					c.pos += delta.Unit * math.min(dist, M.ReturnSpeed * dt)
+					m.look = m.look:Lerp(delta.Unit, math.min(1, dt * 3)).Unit
+					m.pos += delta.Unit * math.min(dist, M.ReturnSpeed * dt)
 				end
-				if dist <= c.size * 0.5 or t >= c.leaveAt + M.ReturnTime then
-					c.state = "Leave"
-					c.leaveAt = t
+				if dist <= 4 or t >= m.leaveAt + m.pause + M.ReturnTime then
+					m.folder:SetAttribute("Reason", nil)
+					setState(m, "Patrol")
+					continue
 				end
 			end
-		elseif c.state == "Leave" then
-			-- il plonge dans son astéroïde, puis disparaît
-			c.pos += (-c.look + Vector3.new(0, -0.6, 0)).Unit * 40 * dt
-			if t >= c.leaveAt + 2.5 then
-				publish(c)
-				finish(c)
-				continue
+			if t - m.lastSent >= 1 / 15 then
+				m.lastSent = t
+				publish(m)
 			end
 		end
-		if t - c.lastSent >= 1 / 15 then
-			c.lastSent = t
-			publish(c)
-		end
+		-- Patrol : rien à faire, la position se calcule (Config.MonsterPatrol)
 	end
 end
 
--- Coup de foreuse (appelé par GameService) : bruit, et réveil du gardien d'un astéroïde gardé
-function MonsterService.OnDrill(player: Player, part: BasePart, ring: number)
-	lastDrill[player] = os.clock()
-	if part:GetAttribute("Guarded") and senses(ring, "Guard") then
-		part:SetAttribute("Guarded", nil) -- l'œil quitte son poste pour poursuivre
-		MonsterService.Wake(player, ring, part.Position + Vector3.new(0, part.Size.Y / 2 + 6, 0))
-	end
+-- Œuf sorti d'un astéroïde (appelé par GameService) : le monstre de l'anneau fonce sur le voleur
+function MonsterService.OnEgg(player: Player, _part: BasePart, ring: number)
+	MonsterService.Alert(player, ring)
 end
 
 function MonsterService.Start()
@@ -451,14 +397,29 @@ function MonsterService.Start()
 		lostFolder.Name = "LostRocks"
 		lostFolder.Parent = world
 	end
-	GameService.DrillHook = MonsterService.OnDrill
+	-- un monstre par anneau, là dès le début de la partie
+	for ring, kind in pairs(M.Kinds) do
+		local pos, look = Config.MonsterPatrol(ring, now())
+		local f = Instance.new("Folder")
+		f.Name = kind.Model
+		f:SetAttribute("Kind", ring)
+		f:SetAttribute("Size", kind.Size)
+		f:SetAttribute("Target", 0)
+		f:SetAttribute("Pos", pos)
+		f:SetAttribute("Look", look)
+		f:SetAttribute("State", "Patrol")
+		f.Parent = folder
+		monsters[ring] = { ring = ring, folder = f, pos = pos, look = look, state = "Patrol", target = nil, t0 = 0, endsAt = 0, leaveAt = 0, pause = 0, size = kind.Size, lastSent = 0 }
+	end
+	GameService.EggHook = MonsterService.OnEgg
 	RunService.Heartbeat:Connect(step)
 	Players.PlayerRemoving:Connect(function(player)
-		local c = chases[player]
-		if c then
-			finish(c)
+		for _, m in pairs(monsters) do
+			if m.target == player then
+				release(m, "lost")
+			end
 		end
-		noise[player], lastLoud[player], lastDrill[player], cooldown[player] = nil, nil, nil, nil
+		cooldown[player] = nil
 		for i = #lost, 1, -1 do
 			if lost[i].owner == player then
 				lost[i].model:Destroy()
@@ -466,37 +427,19 @@ function MonsterService.Start()
 			end
 		end
 	end)
-	-- Studio seulement : réveiller un monstre sur commande (test)
+	-- Studio seulement : lancer le monstre d'un anneau sur le joueur (test)
 	if RunService:IsStudio() then
 		local bf = Instance.new("BindableFunction")
 		bf.Name = "MonsterDebug"
-		bf.OnInvoke = function(player: Player, ring: number, rarity: number?, guard: boolean?)
+		bf.OnInvoke = function(player: Player, ring: number, rarity: number?)
 			cooldown[player] = nil
-			if guard then
-				-- comme un coup de foreuse sur l'astéroïde gardé le plus proche de cet anneau
-				local hrp = root(player)
-				local best, bd = nil, math.huge
-				for _, d in ipairs(workspace.World.Belt:GetDescendants()) do
-					if d:IsA("BasePart") and d:GetAttribute("Guarded") and d:GetAttribute("Ring") == ring and hrp then
-						local dist = (d.Position - hrp.Position).Magnitude
-						if dist < bd then
-							best, bd = d, dist
-						end
-					end
-				end
-				if best then
-					MonsterService.OnDrill(player, best, ring)
-					return chases[player] ~= nil
-				end
-				return false
-			end
 			local d = DataService.Get(player)
 			if d and rarity then
-				-- un œuf de cette rareté dans la soute, pour tester la durée de la poursuite
+				-- un œuf de cette rareté dans la soute, comme s'il venait d'être sorti de la roche
 				d.cargo = { { ring = ring, rarity = rarity } }
 				GameService.Sync(player)
 			end
-			return MonsterService.Wake(player, ring)
+			return MonsterService.Alert(player, ring)
 		end
 		bf.Parent = ServerStorage
 	end

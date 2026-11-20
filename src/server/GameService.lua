@@ -96,7 +96,8 @@ GameService.Quest = function(_player: Player, _kind: string, _amount: number?) e
 -- Fin du tutoriel : RewardService remplace cette fonction
 GameService.GuideDone = function(_player: Player) end
 -- Appelé à chaque coup de foreuse (posé par MonsterService) : (player, roche, anneau)
-GameService.DrillHook = nil :: ((Player, BasePart, number) -> ())?
+-- Œuf sorti d'un astéroïde : (joueur, roche, anneau). MonsterService y lance le monstre de l'anneau.
+GameService.EggHook = nil :: ((Player, BasePart, number) -> ())?
 
 local function root(player: Player): BasePart?
 	local c = player.Character
@@ -185,14 +186,13 @@ local function onDrill(player: Player, target: any, at: any)
 	end
 
 	local damage = Config.DrillPower(d.drill) * Config.DrillTick
-	local guarded = a.part:GetAttribute("Guarded") == true
-	-- bruit et gardiens des anneaux à monstres (MonsterService)
-	if GameService.DrillHook then
-		GameService.DrillHook(player, a.part, a.ring)
-	end
 	local eggs, broken, progress = BeltService.Hit(a, player, damage, room)
 	if eggs > 0 then
 		GameService.Quest(player, "drill", eggs)
+		-- un œuf volé : le monstre de l'anneau fonce sur le joueur (MonsterService)
+		if GameService.EggHook then
+			GameService.EggHook(player, a.part, a.ring)
+		end
 	end
 	if broken then
 		GameService.Quest(player, "break", 1)
@@ -201,12 +201,7 @@ local function onDrill(player: Player, target: any, at: any)
 	if eggs > 0 then
 		local forced = tutorialDrop(d, a.ring)
 		for _ = 1, eggs do
-			local rarity = rollRarity(a.ring, a.type)
-			if guarded then
-				-- astéroïde gardé : la rareté est tirée deux fois, on garde la meilleure
-				rarity = math.max(rarity, rollRarity(a.ring, a.type))
-			end
-			rarity = forced or rarity
+			local rarity = forced or rollRarity(a.ring, a.type)
 			-- rock : type de l'astéroïde d'origine, gardé jusqu'à l'éclosion (chance affichée, HatchService)
 			table.insert(d.cargo, { ring = a.ring, rarity = rarity, rock = a.type })
 			table.insert(rarities, rarity)
