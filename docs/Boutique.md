@@ -102,3 +102,17 @@ refaits selon les règles ci-dessus, fenêtres plus aérées.
 - Break and Steal an Egg (Shop à gauche) : https://progameguides.com/roblox/how-to-claim-the-sabertooth-egg-in-break-and-steal-an-egg/
 - Dig It (stats des pelles) : https://beebom.com/dig-shovel-stats-explained
 - Blade Ball (skins) : https://www.gfinityesports.com/article/blade-ball-rainbow-explosion
+
+
+## Nouvelle présentation (25 nov. 2026)
+Refaite d'après les deux captures de l'utilisateur (`references/boutique/exemple-vedette.png`, `exemple-passes.png`), avec les
+images qu'il a fait dessiner (`references/boutique/`, découpées dans `tools/store-icons/v2`, ids dans `Config.Shop.Art`) :
+- titres centrés « ~ Featured ~ », « ~ Game Passes ~ », « ~ Cash ~ », « ~ Boosts ~ », en couleur avec un reflet ;
+- **bandeau vedette** (Starter Pack) : fond illustré de l'espace dans un cadre doré orné (un coin tourné 4 fois, des barres
+  découpées dans son bras), liseré arc-en-ciel, emblème (coffre, œuf, jetpack, lauriers) qui déborde en haut à gauche sur des
+  rayons dorés, pastille « NEW! », grand titre doré, compte à rebours, 3 tuiles (argent, x2 Luck, x2 Money), gros prix vert ;
+- **passes** : grandes cartes vives deux par ligne, médaillon rond à gauche sur un soleil de rayons, nom, effet, gros prix ;
+  Fast Hatch en arc-en-ciel, VIP au contour doré ;
+- à l'ouverture, tout apparaît en cascade avec un rebond, l'emblème arrive en tournoyant avec un éclat de lumière ;
+  rayons qui tournent, reflets qui balaient, étincelles (aussi sur les pierres du cadre), médaillons qui flottent.
+- Pas de bouton cadeau (le jeu ne sait pas encore offrir un achat).

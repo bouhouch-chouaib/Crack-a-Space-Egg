@@ -1329,6 +1329,20 @@ Config.IndexReward = {
 Config.Shop = {
 	-- Starter Pack : offre de bienvenue, visible pendant Duration secondes après la première partie,
 	-- achetable une seule fois (guide Roblox « Starter pack design »). Le prix est lu sur Roblox.
+	-- Images de la boutique (25 nov., tools/store-icons/v2 ; sources dans references/boutique) : fond et cadre
+	-- doré du bandeau vedette, emblème du Starter Pack, médaillon rond de chaque passe (clé = Key du passe)
+	Art = {
+		FeaturedBg = "rbxassetid://103058098460246",
+		FrameCorner = "rbxassetid://99626669275357",
+		FrameBar = "rbxassetid://106664825296818",
+		StarterEmblem = "rbxassetid://101777622688291",
+		JetXP2x = "rbxassetid://88022049620737",
+		TurboJetpack = "rbxassetid://113304576331884",
+		FastHatch = "rbxassetid://77144823768178",
+		Money2x = "rbxassetid://108125342318757",
+		BaseSlots = "rbxassetid://106620438572120",
+		VIP = "rbxassetid://87389795029281",
+	},
 	Featured = {
 		Name = "Starter Pack",
 		Text = "Big money pack + x2 Luck + x2 Money potions",

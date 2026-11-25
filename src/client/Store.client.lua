@@ -2,6 +2,11 @@
 -- Ouvert par le bouton STORE du HUD (UIKit.Open "Store"). Une seule liste pleine largeur qui défile :
 -- Starter Pack (vedette, offre de bienvenue de 3 jours), Passes, Cash, Boosts ; les catégories sont
 -- des icônes flottantes accrochées à droite de la fenêtre (docs/Analyse-menus-references.md).
+-- 25 nov. : refaite d'après les deux captures de l'utilisateur (references/boutique/exemple-*.png) :
+-- titres « ~ Featured ~ » centrés, bandeau vedette dans un cadre doré orné (coins et barres découpés dans
+-- references/boutique/coin-cadre.png) sur un fond illustré, emblème qui déborde en haut à gauche ;
+-- passes en grandes cartes vives à médaillon rond (tools/store-icons/v2). Apparition en cascade à
+-- l'ouverture, rayons, halos, reflets qui balaient, étincelles.
 -- Les prix sont lus sur Roblox (Prices) ; le serveur accorde les achats (ProcessReceipt).
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -18,7 +23,7 @@ local new = UIKit.new
 local Shop = Config.Shop
 
 local W_SIZE = Vector2.new(1060, 650)
-local win = UIKit.window({ name = "Store", title = "{Cash} STORE", color = "Green", size = W_SIZE })
+local win = UIKit.window({ name = "Store", title = "Store", color = "Green", size = W_SIZE })
 win.body.Visible = false -- on construit notre propre mise en page (liste + navigation flottante)
 
 local GAP = 14
@@ -50,6 +55,8 @@ local function nextOrder(): number
 end
 
 local sections: { [string]: GuiObject } = {}
+-- Ce qui apparaît en cascade à chaque ouverture (dans l'ordre de la liste)
+local reveal: { GuiObject } = {}
 local robuxCards: { [number]: GuiObject } = {} -- Id Robux -> carte, pour fêter l'achat
 
 -- Fête un achat : explosion de lumière, rebond, texte qui s'envole
@@ -97,10 +104,49 @@ local function robuxButton(parent: Instance, id: number, isPass: boolean, fallba
 	return b, text, grad
 end
 
--- Titre de section, avec son icône (sert aussi de point d'arrivée du menu)
-local function section(key: string, title: string, color: Color3, icon: string)
-	sections[key] = UIKit.sectionTitle(content, title, color, nextOrder(), icon)
+-- Remonte un élément et tout ce qu'il contient (les ZIndex sont globaux dans les écrans du jeu)
+local function lift(g: GuiObject, z: number)
+	local dz = z - g.ZIndex
+	g.ZIndex = z
+	for _, d in ipairs(g:GetDescendants()) do
+		if d:IsA("GuiObject") then
+			d.ZIndex += dz
+		end
+	end
 end
+
+-- Gros prix (comme les captures de référence) : texte et icône Robux agrandis
+local function bigPrice(b: TextButton, text: TextLabel, size: number)
+	text.TextSize = size
+	local robux = b:FindFirstChild("Robux", true) :: ImageLabel?
+	if robux then
+		robux.Size = UDim2.fromOffset(size, size)
+	end
+end
+
+-- Titre de section centré « ~ Featured ~ » : grosses lettres de couleur à contour épais, reflet qui
+-- balaie (sert aussi de point d'arrivée du menu)
+local function section(key: string, title: string, color: Color3)
+	local row = new("Frame", { Name = "Title_" .. key, Size = UDim2.new(1, 0, 0, 58), BackgroundTransparency = 1, LayoutOrder = nextOrder(), Parent = content })
+	local t = UIKit.text({
+		Name = "Text",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(600, 54),
+		Text = "~ " .. title .. " ~",
+		TextScaled = false,
+		TextSize = 46,
+		ZIndex = 3,
+		Stroke = 5,
+		Parent = row,
+	})
+	UIKit.shinyText(t, color)
+	sections[key] = row
+	table.insert(reveal, row)
+end
+
+-- Images de la boutique (tools/store-icons/v2, envoyées sur Roblox)
+local ART = Shop.Art
 
 local function grid(cell: Vector2): Frame
 	local g = UIKit.grid(content, cell, nextOrder())
@@ -121,61 +167,209 @@ local function art(card: Frame, image: string, size: number, y: number, x: numbe
 end
 
 -- 1. STARTER PACK (vedette) --------------------------------------------------------------
+-- Bandeau dans un cadre doré orné : fond illustré, emblème qui déborde en haut à gauche avec sa pastille
+-- « NEW! », grand titre doré, ce qu'on obtient en tuiles, prix en dessous.
 local F = Shop.Featured
-section("Starter", "Starter Pack", Color3.fromRGB(255, 214, 70), F.Art)
-local featured = UIKit.card({ parent = content, color = "Orange", order = nextOrder(), name = "Starter" })
-featured.Size = UDim2.fromOffset(CONTENT_W, 244)
-do
-	local layer = UIKit.fxLayer(featured)
-	UIKit.rays(layer, { color = Color3.fromRGB(255, 240, 160), size = 380, position = UDim2.fromOffset(120, 122), transparency = 0.25, z = layer.ZIndex })
-	UIKit.glow(layer, { color = Color3.fromRGB(255, 250, 210), size = 240, position = UDim2.fromOffset(120, 122), transparency = 0.2, z = layer.ZIndex })
-	local bag = UIKit.icon(F.Art, { Size = UDim2.fromOffset(210, 210), Position = UDim2.fromOffset(16, 16), ZIndex = 4, Parent = featured })
-	UIKit.float(bag, 4, 4, 2.2)
-	UIKit.shinyStroke(featured, UIKit.GoldShine, 5)
-	UIKit.sparkles(featured, { count = 5 })
-	UIKit.ribbon(featured, "ONE TIME!", "Red")
-end
-label(featured, "STARTER PACK", 236, 14, 360, 46, 40, nil, Enum.TextXAlignment.Left)
-label(featured, "Welcome offer, only once!", 236, 60, 360, 26, 20, Color3.fromRGB(255, 245, 190), Enum.TextXAlignment.Left)
--- Ce qu'on obtient, en trois pastilles
-local chips = new("Frame", { Size = UDim2.fromOffset(470, 64), Position = UDim2.fromOffset(236, 96), BackgroundTransparency = 1, ZIndex = 4, Parent = featured }, {
-	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+section("Starter", "Featured", Color3.fromRGB(255, 222, 60))
+local FEAT_H = 372
+local CORNER = 118 -- taille d'un coin du cadre
+-- place et épaisseur des barres : celles des bras du coin (6,7 % à 20 % de sa taille)
+local BAR_IN, BAR_T = math.floor(CORNER * 0.067), math.ceil(CORNER * 0.134)
+local featured = new("Frame", { Name = "Starter", Size = UDim2.fromOffset(CONTENT_W, FEAT_H), BackgroundTransparency = 1, LayoutOrder = nextOrder(), Parent = content })
+table.insert(reveal, featured)
+-- le fond illustré, sous le cadre
+local inset = BAR_IN + 4
+local bg = new("ImageLabel", {
+	Name = "Background",
+	Position = UDim2.fromOffset(inset, inset),
+	Size = UDim2.new(1, -inset * 2, 1, -inset * 2),
+	BackgroundColor3 = Color3.fromRGB(30, 26, 70),
+	Image = ART.FeaturedBg,
+	ScaleType = Enum.ScaleType.Crop,
+	ClipsDescendants = true,
+	ZIndex = 2,
+	Parent = featured,
 })
+-- voile sombre en bas (lisibilité des tuiles et du prix) et liseré arc-en-ciel le long du bas
+new("Frame", { Name = "Shade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, ZIndex = 2, Parent = bg }, {
+	new("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 0.85), NumberSequenceKeypoint.new(1, 0.35) }),
+	}),
+})
+local rainbowLine = new("Frame", { Name = "Rainbow", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 5), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 3, Parent = bg })
+local rainbowGrad = new("UIGradient", { Color = UIKit.Rainbow, Parent = rainbowLine })
+UIKit.every(rainbowGrad, function(t)
+	rainbowGrad.Offset = Vector2.new(math.sin(t * 0.7) * 0.3, 0)
+end)
+-- reflet qui balaie tout le bandeau de temps en temps, étincelles
+UIKit.shine(bg, 4)
+UIKit.sparkles(bg, { count = 6, size = 26, z = 4 })
+-- cadre doré : 4 barres étirées entre 4 coins ornés (un même coin tourné)
+local frameLayer = new("Frame", { Name = "Frame", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 6, Parent = featured })
+local mid = BAR_IN + BAR_T / 2
+local function bar(pos: UDim2, size: UDim2, rotation: number)
+	new("ImageLabel", {
+		Name = "Bar",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = pos,
+		Size = size,
+		Rotation = rotation,
+		BackgroundTransparency = 1,
+		Image = ART.FrameBar,
+		ScaleType = Enum.ScaleType.Stretch,
+		ZIndex = 6,
+		Parent = frameLayer,
+	})
+end
+local hLen = UDim2.new(1, -CORNER * 2 + 24, 0, BAR_T)
+local vLen = UDim2.fromOffset(FEAT_H - CORNER * 2 + 24, BAR_T) -- taille avant le quart de tour
+bar(UDim2.new(0.5, 0, 0, mid), hLen, 0)
+bar(UDim2.new(0.5, 0, 1, -mid), hLen, 180)
+bar(UDim2.new(0, mid, 0.5, 0), vLen, 90)
+bar(UDim2.new(1, -mid, 0.5, 0), vLen, 270)
+for i, spot in ipairs({ { 0, 0, 0 }, { 1, 0, 90 }, { 1, 1, 180 }, { 0, 1, 270 } }) do
+	local corner = new("ImageLabel", {
+		Name = "Corner" .. i,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(spot[1], if spot[1] == 0 then CORNER / 2 else -CORNER / 2, spot[2], if spot[2] == 0 then CORNER / 2 else -CORNER / 2),
+		Size = UDim2.fromOffset(CORNER, CORNER),
+		Rotation = spot[3],
+		BackgroundTransparency = 1,
+		Image = ART.FrameCorner,
+		ZIndex = 7,
+		Parent = frameLayer,
+	})
+	-- la pierre violette de chaque coin scintille
+	UIKit.sparkles(corner, { count = 1, size = 30, z = 8 })
+end
+-- emblème qui déborde du cadre en haut à gauche, sur des rayons dorés
+local EMB = 270
+local embHolder = new("Frame", { Name = "Emblem", Position = UDim2.fromOffset(-6, -26), Size = UDim2.fromOffset(EMB, EMB), BackgroundTransparency = 1, ZIndex = 8, Parent = featured })
+UIKit.rays(embHolder, { color = Color3.fromRGB(255, 225, 110), size = EMB * 1.35, transparency = 0.35, z = 8, speed = 14 })
+UIKit.glow(embHolder, { color = Color3.fromRGB(255, 240, 170), size = EMB * 1.05, transparency = 0.3, z = 8 })
+local emblem = UIKit.icon(ART.StarterEmblem, { Name = "Art", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), ZIndex = 9, Parent = embHolder })
+UIKit.float(emblem, 5, 4, 1.8)
+-- pastille rouge « NEW! » penchée, sur l'emblème
+local newTag = new("Frame", { Name = "New", Position = UDim2.fromOffset(28, 58), Size = UDim2.fromOffset(120, 40), Rotation = -10, BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 10, Parent = featured }, {
+	UIKit.corner(8),
+	UIKit.stroke(3.5, Color3.new(1, 1, 1)),
+	UIKit.gradient(UIKit.Colors.Red[1], UIKit.Colors.Red[2]),
+})
+UIKit.text({ Size = UDim2.new(1, -10, 1, -6), Position = UDim2.fromOffset(5, 3), Text = "NEW!", ZIndex = 11, Stroke = 3, Parent = newTag })
+UIKit.wiggle(newTag, 4, 3)
+-- grand titre doré, sous-titre, compte à rebours
+local TX = EMB + 6
+local title = UIKit.text({ Size = UDim2.fromOffset(560, 74), Position = UDim2.fromOffset(TX, 26), Text = "Starter Pack", TextXAlignment = Enum.TextXAlignment.Left, TextScaled = false, TextSize = 66, ZIndex = 8, Stroke = 6, Parent = featured })
+UIKit.shinyText(title, Color3.fromRGB(255, 200, 50))
+label(featured, "Only once, just for you!", TX + 4, 98, 420, 32, 28, nil, Enum.TextXAlignment.Left).ZIndex = 8
+local starterTimer = label(featured, "", CONTENT_W - 300, 36, 260, 36, 30, nil, Enum.TextXAlignment.Right)
+starterTimer.ZIndex = 8
+-- ce qu'on obtient : grandes tuiles sombres, image au centre, montant en bas à droite
 local starterCash: TextLabel
-for i, chip in ipairs({ { "Money3", "" }, { "PotionLuck", "x2 Luck 15m" }, { "PotionMoney", "x2 Money 15m" } }) do
-	local c = new("Frame", { Size = UDim2.fromOffset(150, 64), BackgroundColor3 = Color3.fromRGB(40, 30, 20), BackgroundTransparency = 0.45, LayoutOrder = i, ZIndex = 4, Parent = chips }, { UIKit.corner(12) })
-	UIKit.icon(chip[1], { Size = UDim2.fromOffset(52, 52), Position = UDim2.fromOffset(4, 6), ZIndex = 5, Parent = c })
-	local t = label(c, chip[2], 56, 8, 90, 48, 20, if i == 1 then UIKit.Money else nil)
-	t.ZIndex = 5
+local TILE = 120
+local tiles = {
+	{ "Money3", "", UIKit.Colors.Gold[2] },
+	{ "PotionLuck", "x2 Luck", Color3.fromRGB(120, 245, 80) },
+	{ "PotionMoney", "x2 Money", Color3.fromRGB(255, 200, 60) },
+}
+for i, tile in ipairs(tiles) do
+	local t = new("Frame", {
+		Name = "Tile" .. i,
+		Position = UDim2.fromOffset(TX + (i - 1) * (TILE + 16), 132),
+		Size = UDim2.fromOffset(TILE, TILE),
+		BackgroundColor3 = Color3.fromRGB(26, 24, 44),
+		BackgroundTransparency = 0.15,
+		ZIndex = 8,
+		Parent = featured,
+	}, { UIKit.corner(10), UIKit.stroke(4) })
 	if i == 1 then
-		starterCash = t
+		UIKit.shinyStroke(t, UIKit.GoldShine, 4)
+	else
+		(t:FindFirstChildOfClass("UIStroke") :: UIStroke).Color = tile[3]
+	end
+	UIKit.sunburst(t, UDim2.fromScale(0.5, 0.45), TILE * 1.6, tile[3])
+	local img = UIKit.icon(tile[1], { Size = UDim2.fromOffset(TILE - 34, TILE - 34), Position = UDim2.fromOffset(17, 8), ZIndex = 9, Parent = t })
+	UIKit.float(img, 3, 3, 2.2, i)
+	local amount = label(t, tile[2], 6, TILE - 36, TILE - 12, 30, 24, if i == 1 then UIKit.Money else nil, Enum.TextXAlignment.Right)
+	amount.ZIndex = 10
+	if i == 1 then
+		starterCash = amount
 	end
 end
-local starterTimer = label(featured, "", 236, 180, 300, 34, 26, Color3.fromRGB(255, 245, 150), Enum.TextXAlignment.Left)
-local starterBuy = robuxButton(featured, F.Id, false, F.Price, UDim2.fromOffset(220, 66), UDim2.new(1, -244, 1, -80))
+-- prix : un grand bouton vert, avec sa ligne en dessous
+local starterBuy, starterPrice = robuxButton(featured, F.Id, false, F.Price, UDim2.fromOffset(TILE * 3 + 32, 60), UDim2.fromOffset(TX, FEAT_H - 110))
+lift(starterBuy, 8)
+bigPrice(starterBuy, starterPrice, 40)
 UIKit.buttonGlow(starterBuy)
+label(featured, "Cash + 2 potions of 15 min", TX, FEAT_H - 46, TILE * 3 + 32, 24, 22, Color3.fromRGB(255, 245, 190)).ZIndex = 8
 if F.Id ~= 0 then
 	robuxCards[F.Id] = featured
 end
 
 -- 2. PASSES -------------------------------------------------------------------------------
-section("Passes", "Game Passes", Color3.fromRGB(120, 215, 255), "PassVIP")
--- Cartes larges, deux par ligne : grosse icône à gauche, nom, effet, prix (Break and Steal an Egg)
-local PASS_W = math.floor((CONTENT_W - 12) / 2)
-local passGrid = grid(Vector2.new(PASS_W, 196))
-local PASS_COLORS = { "Blue", "Orange", "Purple", "Green", "Teal", "Gold" }
+-- Grandes cartes vives, deux par ligne : médaillon rond à gauche sur des rayons, nom en haut à droite,
+-- effet en dessous, grand bouton de prix vert en bas à droite.
+section("Passes", "Game Passes", Color3.fromRGB(150, 245, 70))
+local PASS_W = math.floor((CONTENT_W - 14) / 2)
+local PASS_H = 236
+local passGrid = grid(Vector2.new(PASS_W, PASS_H))
+table.insert(reveal, passGrid)
+-- fond de chaque carte (clair au centre, saturé sur les bords) ; "Rainbow" : arc-en-ciel qui défile
+local PASS_LOOK: { [string]: any } = {
+	JetXP2x = { Color3.fromRGB(120, 235, 255), Color3.fromRGB(20, 150, 235) },
+	TurboJetpack = { Color3.fromRGB(255, 220, 90), Color3.fromRGB(245, 120, 20) },
+	FastHatch = "Rainbow",
+	Money2x = { Color3.fromRGB(255, 240, 120), Color3.fromRGB(245, 170, 20) },
+	BaseSlots = { Color3.fromRGB(170, 250, 90), Color3.fromRGB(50, 180, 40) },
+	VIP = { Color3.fromRGB(255, 130, 110), Color3.fromRGB(205, 25, 50) },
+}
 type PassCard = { button: TextButton, text: TextLabel, grad: UIGradient }
 local passCards: { [string]: PassCard } = {}
 for i, pass in ipairs(Shop.Passes) do
-	local c = UIKit.card({ parent = passGrid, color = PASS_COLORS[(i - 1) % #PASS_COLORS + 1], order = i, name = pass.Key })
-	art(c, pass.Art, 156, 20, 12)
-	local right = PASS_W - 186
-	label(c, string.upper(pass.Name), 176, 12, right, 38, 30)
-	label(c, pass.Text, 176, 54, right, 64, 22, Color3.fromRGB(255, 250, 225))
-	local b, t, g = robuxButton(c, pass.Id, true, pass.Price, UDim2.fromOffset(right, 54), UDim2.new(0, 176, 1, -66))
+	local c = new("Frame", { Name = pass.Key, BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = i, ZIndex = 2 }, { UIKit.corner(10), UIKit.stroke(5) })
+	local look = PASS_LOOK[pass.Key] or { UIKit.Colors.Blue[1], UIKit.Colors.Blue[2] }
+	if look == "Rainbow" then
+		local g = new("UIGradient", { Color = UIKit.Rainbow, Rotation = 35, Parent = c })
+		UIKit.every(g, function(t)
+			g.Offset = Vector2.new(math.sin(t * 0.6) * 0.3, 0)
+		end)
+	else
+		new("UIGradient", {
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, look[1]:Lerp(Color3.new(1, 1, 1), 0.35)),
+				ColorSequenceKeypoint.new(0.5, look[1]),
+				ColorSequenceKeypoint.new(1, look[2]),
+			}),
+			Rotation = 35,
+			Parent = c,
+		})
+	end
+	UIKit.studs(c, 0.55)
+	c.Parent = passGrid
+	-- médaillon rond sur un soleil de rayons blancs, qui flotte
+	local MED = 186
+	UIKit.sunburst(c, UDim2.fromOffset(24 + MED / 2, PASS_H / 2), MED * 2.1)
+	local medal = ART[pass.Key] or pass.Art
+	local med = UIKit.icon(medal, { Name = "Medal", Size = UDim2.fromOffset(MED, MED), Position = UDim2.fromOffset(24, (PASS_H - MED) / 2), ZIndex = 5, Parent = c })
+	UIKit.float(med, 4, 4, 2, i)
+	UIKit.hoverCard(c)
+	UIKit.shine(c, 5 + i % 3)
+	local right = PASS_W - MED - 48
+	label(c, pass.Name, MED + 34, 16, right, 46, 40).ZIndex = 6
+	local textLabel = label(c, pass.Text .. "!", MED + 34, 66, right, 82, 27)
+	textLabel.ZIndex = 6
+	textLabel.TextScaled = false
+	textLabel.TextSize = 25
+	textLabel.TextWrapped = true
+	local b, t, g = robuxButton(c, pass.Id, true, pass.Price, UDim2.fromOffset(right, 64), UDim2.new(0, MED + 34, 1, -82))
+	lift(b, 6)
+	bigPrice(b, t, 38)
 	passCards[pass.Key] = { button = b, text = t, grad = g }
 	if pass.Key == "VIP" then
-		UIKit.shinyStroke(c, UIKit.Rainbow, 5)
+		UIKit.shinyStroke(c, UIKit.GoldShine, 6)
+	elseif look == "Rainbow" then
+		UIKit.shinyStroke(c, UIKit.Rainbow, 6)
 	end
 	if pass.Id ~= 0 then
 		robuxCards[pass.Id] = c
@@ -205,12 +399,14 @@ local function refreshPasses()
 end
 
 -- 3. CASH -----------------------------------------------------------------------------------
-section("Cash", "Cash", Color3.fromRGB(150, 245, 80), "Cash")
+section("Cash", "Cash", Color3.fromRGB(150, 245, 80))
 -- Trois petits paquets, puis les deux plus gros en grand sur la ligne suivante
 local SMALL = math.floor((CONTENT_W - 24) / 3)
 local BIG = math.floor((CONTENT_W - 12) / 2)
 local cashSmall = grid(Vector2.new(SMALL, 262))
 local cashBig = grid(Vector2.new(BIG, 304))
+table.insert(reveal, cashSmall)
+table.insert(reveal, cashBig)
 -- de l'air au-dessus : les rubans (« GOOD VALUE », « BEST VALUE! ») dépassent du haut des cartes
 for _, g in ipairs({ cashSmall, cashBig }) do
 	(g:FindFirstChildOfClass("UIPadding") :: UIPadding).PaddingTop = UDim.new(0, 24)
@@ -244,8 +440,9 @@ for i, pack in ipairs(Shop.MoneyPacks) do
 end
 
 -- 4. BOOSTS -----------------------------------------------------------------------------------
-section("Boosts", "Boosts", Color3.fromRGB(255, 150, 210), "PotionLuck")
+section("Boosts", "Boosts", Color3.fromRGB(255, 150, 210))
 local boostGrid = grid(Vector2.new(SMALL, 272))
+table.insert(reveal, boostGrid)
 local BOOST_COLORS = { "Purple", "Green", "Teal" }
 local boostTimers: { [string]: TextLabel } = {}
 for i, potion in ipairs(Shop.Potions) do
@@ -366,11 +563,39 @@ MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, id, pu
 end)
 
 -- OUVERTURE ---------------------------------------------------------------------------------------
+-- Apparition en cascade : les titres et le bandeau surgissent en rebond, puis chaque carte d'une grille
+-- l'une après l'autre ; l'emblème arrive en tournoyant avec un éclat de lumière.
+local function playReveal()
+	local delay = 0.05
+	for _, g in ipairs(reveal) do
+		if g:FindFirstChildOfClass("UIGridLayout") then
+			for _, card in ipairs(g:GetChildren()) do
+				if card:IsA("GuiObject") then
+					UIKit.popIn(card, delay)
+					delay += 0.04
+				end
+			end
+		elseif g.Visible then
+			UIKit.popIn(g, delay)
+			delay += 0.06
+		end
+	end
+	if featured.Visible then
+		emblem.Rotation = -25
+		emblem.Size = UDim2.fromScale(0.2, 0.2)
+		task.delay(0.15, function()
+			UIKit.tween(emblem, 0.55, { Size = UDim2.fromScale(1, 1), Rotation = 0 }, Enum.EasingStyle.Back)
+			UIKit.burst(embHolder, UDim2.fromScale(0.5, 0.5), Color3.fromRGB(255, 225, 110))
+		end)
+	end
+end
+
 local function open(at: string?)
 	refresh()
 	win.open(function()
 		scrollTo(at or (if starterAvailable() then "Starter" else "Passes"), true)
 		highlight()
+		playReveal()
 	end)
 end
 
