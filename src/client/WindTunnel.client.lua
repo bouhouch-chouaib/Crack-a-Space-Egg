@@ -383,6 +383,30 @@ local boostPos = Vector2.new(0.5, 0.4)
 local boostVel = Vector2.zero
 local BOOST_MIN, BOOST_MAX = Vector2.new(0.16, 0.24), Vector2.new(0.84, 0.66)
 
+-- Petit impact de caméra quand on attrape le bonus : un coup de zoom avant qui revient en rebondissant,
+-- avec une légère secousse (le zoom de vitesse de Jetpack.client le ramène aussi en douceur)
+local function cameraImpact()
+	local cam = workspace.CurrentCamera
+	local fov = cam.FieldOfView
+	cam.FieldOfView = fov - 9
+	TweenService:Create(cam, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { FieldOfView = fov }):Play()
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		local start = os.clock()
+		local conn: RBXScriptConnection
+		conn = RunService.RenderStepped:Connect(function()
+			local k = (os.clock() - start) / 0.18
+			if k >= 1 or not hum.Parent then
+				hum.CameraOffset = Vector3.zero
+				conn:Disconnect()
+				return
+			end
+			local a = 0.3 * (1 - k)
+			hum.CameraOffset = Vector3.new((math.random() - 0.5) * a, (math.random() - 0.5) * a, 0)
+		end)
+	end
+end
+
 local function hideOffer()
 	holder.Visible = false
 	offerEnds = 0
@@ -402,6 +426,7 @@ local function grab()
 	hideOffer()
 	if ok and type(res) == "table" and res.ok then
 		Sfx.Play("Coin", { pitch = 1.5 })
+		cameraImpact()
 		UIKit.burst(flash, at, PURPLE)
 		UIKit.flyText(boostGui, ("x%d XP!"):format(BOOST.Mult), at, PURPLE_LIGHT)
 	end
