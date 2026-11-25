@@ -37,15 +37,16 @@ local nextOffer: { [Player]: number } = {} -- os.clock() de la prochaine offre (
 local offerUntil: { [Player]: number } = {}
 local boostNext: { [Player]: boolean } = {} -- bonus attrapé : le prochain gain est multiplié
 
--- Le bonus x2 n'est proposé qu'à un joueur qui s'entraîne, tutoriel fini : il apparaît toutes les
--- Every secondes (d'une apparition à la suivante) et reste Offer secondes
-local function stepBoost(player: Player, d, training: boolean)
+-- Le bonus x2 est proposé à un joueur qui s'entraîne dans sa soufflerie : il apparaît toutes les
+-- Every secondes (d'une apparition à la suivante) et reste Offer secondes. (25 nov. : aussi pendant le
+-- tutoriel ; avant, il attendait la fin du guide et ne se montrait donc jamais à un nouveau joueur.)
+local function stepBoost(player: Player, training: boolean)
 	local now = os.clock()
 	if offerUntil[player] and now >= offerUntil[player] then
 		offerUntil[player] = nil
 		player:SetAttribute("TunnelBoostOffer", nil)
 	end
-	if not training or (d.guide or 0) < Config.Guide.Steps then
+	if not training then
 		nextOffer[player] = nil
 		return
 	end
@@ -332,7 +333,7 @@ local function tick()
 			local t = tunnelAt(hrp.Position)
 			-- seulement dans sa propre soufflerie, une fois achetée
 			local training = t ~= nil and t.owner == player and t.tier >= 1
-			stepBoost(player, d, training)
+			stepBoost(player, training)
 			if t then
 				if training then
 					local boosted = boostNext[player] == true
