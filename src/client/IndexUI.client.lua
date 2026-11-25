@@ -743,9 +743,26 @@ local function buildBlock(r: number)
 		UIKit.stroke(4),
 		UIKit.gradient(color:Lerp(WHITE, 0.45), color:Lerp(BLACK, 0.4)),
 	})
-	UIKit.studs(world, 0.6)
-	UIKit.rays(UIKit.fxLayer(world), { color = color:Lerp(WHITE, 0.65), size = 250, speed = 8, transparency = 0.5, position = UDim2.fromOffset(WORLD_W / 2 - 4, 140) })
-	rockView(world, r, nil, UDim2.fromOffset(WORLD_W - 12, 196), UDim2.fromOffset(WORLD_W / 2, 144), 4, { block = r, top = WORLD_Y + 46, bottom = WORLD_Y + 242 })
+	local art = Config.WorldArt[r]
+	if art then
+		-- image du monde (Config.WorldArt) sur tout le panneau, assombrie en haut et en bas sous les textes
+		new("ImageLabel", { Name = "Art", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = art, ScaleType = Enum.ScaleType.Crop, ZIndex = 3, Parent = world })
+		new("Frame", { Name = "Shade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BorderSizePixel = 0, ZIndex = 4, Parent = world }, {
+			new("UIGradient", {
+				Rotation = 90,
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0.35),
+					NumberSequenceKeypoint.new(0.16, 1),
+					NumberSequenceKeypoint.new(0.68, 1),
+					NumberSequenceKeypoint.new(1, 0.25),
+				}),
+			}),
+		})
+	else
+		UIKit.studs(world, 0.6)
+		UIKit.rays(UIKit.fxLayer(world), { color = color:Lerp(WHITE, 0.65), size = 250, speed = 8, transparency = 0.5, position = UDim2.fromOffset(WORLD_W / 2 - 4, 140) })
+		rockView(world, r, nil, UDim2.fromOffset(WORLD_W - 12, 196), UDim2.fromOffset(WORLD_W / 2, 144), 4, { block = r, top = WORLD_Y + 46, bottom = WORLD_Y + 242 })
+	end
 	UIKit.text({ Name = "Title", Size = UDim2.new(1, -12, 0, 36), Position = UDim2.fromOffset(6, 8), Text = ringCfg.Name:upper(), ZIndex = 5, Stroke = 3, Parent = world })
 	local found = UIKit.text({ Name = "Percent", Size = UDim2.new(1, -12, 0, 50), Position = UDim2.fromOffset(6, 246), Text = percent(n / total), ZIndex = 5, Stroke = 4, Parent = world })
 	if done then

@@ -278,6 +278,13 @@ Config.Rings = {
 }
 Config.CosmicMinRing = 5
 
+-- Image du monde de chaque anneau dans l'Index (25 nov., comme Throw Food) : rendu Blender de la scène
+-- (ses astéroïdes, des créatures de l'anneau et un œuf), 384 x 1024, fichiers dans tools/ui-icons/world_r<n>.png.
+-- Sans image, l'Index montre les trois astéroïdes de l'anneau qui tournent.
+Config.WorldArt = {
+	[1] = "rbxassetid://118105006686666",
+}
+
 -- Épaisseur de l'anneau i
 function Config.RingWidth(i: number): number
 	return Config.Map.RingWidth * Config.Map.RingGrowth ^ (i - 1)
