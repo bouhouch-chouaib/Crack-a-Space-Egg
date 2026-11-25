@@ -283,6 +283,17 @@ Config.CosmicMinRing = 5
 -- Sans image, l'Index montre les trois astéroïdes de l'anneau qui tournent.
 Config.WorldArt = {
 	[1] = "rbxassetid://118105006686666",
+	[2] = "rbxassetid://119946400240335",
+	[3] = "rbxassetid://90860235777093",
+	[4] = "rbxassetid://105962939242313",
+	[5] = "rbxassetid://118060375962513",
+	[6] = "rbxassetid://130295940764120",
+	[7] = "rbxassetid://125127615570014",
+	[8] = "rbxassetid://119375145149130",
+	[9] = "rbxassetid://102181585976973",
+	[10] = "rbxassetid://136497902036928",
+	[11] = "rbxassetid://112991885674391",
+	[12] = "rbxassetid://122855081305918",
 }
 
 -- Épaisseur de l'anneau i

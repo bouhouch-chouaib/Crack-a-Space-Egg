@@ -234,6 +234,18 @@ def world_from_import(n):
     """Juste après ropilot_blender_import_model des 7 modèles de l'anneau n (voir l'en-tête) : renomme les
     astéroïdes importés (V1..V3 -> W<n>_V1..), compose la scène et la rend."""
     for k in ("V1", "V2", "V3"):
-        bpy.data.collections[k].name = f"W{n}_{k}"
+        col = bpy.data.collections[k]
+        col.name = f"W{n}_{k}"
+        # il arrive que l'import n'ait pas la texture d'une roche (roche blanche) : on reprend le matériau
+        # du modèle construit au kit (collection Rock_R<n>_V<k>), dont la mise à plat est la même
+        kit = bpy.data.collections.get(f"Rock_R{n}_{k}")
+        if kit:
+            kmat = next((s.material for o in kit.all_objects for s in o.material_slots
+                         if s.material and "glow" not in s.material.name.lower()), None)
+            for o in col.all_objects:
+                m = o.material_slots[0].material if o.material_slots else None
+                textured = m and m.use_nodes and any(nd.type == "TEX_IMAGE" and nd.image for nd in m.node_tree.nodes)
+                if kmat and "Glow" not in o.name and not textured:
+                    o.material_slots[0].material = kmat
     cols = {"V1": f"W{n}_V1", "V2": f"W{n}_V2", "V3": f"W{n}_V3", "T2": f"R{n}_T2", "T5": f"R{n}_T5", "T6": f"R{n}_T6", "EGG": f"R{n}_T6 2"}
     return make_world(n, *PALETTES[n], cols=cols)
