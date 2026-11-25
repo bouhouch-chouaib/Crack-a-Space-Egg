@@ -280,7 +280,7 @@ Config.CosmicMinRing = 5
 
 -- Image du monde de chaque anneau dans l'Index (25 nov., comme Throw Food) : rendu Blender de la scène
 -- (ses astéroïdes, des créatures de l'anneau et un œuf), 384 x 1024, fichiers dans tools/ui-icons/world_r<n>.png.
--- Sans image, l'Index montre les trois astéroïdes de l'anneau qui tournent.
+-- Sans image, l'Index montre les trois astéroïdes de l'anneau qui tournent. Script : tools/blender/index_world.py.
 Config.WorldArt = {
 	[1] = "rbxassetid://118105006686666",
 	[2] = "rbxassetid://119946400240335",
@@ -294,6 +294,8 @@ Config.WorldArt = {
 	[10] = "rbxassetid://136497902036928",
 	[11] = "rbxassetid://112991885674391",
 	[12] = "rbxassetid://122855081305918",
+	[13] = "rbxassetid://70547902406512",
+	[14] = "rbxassetid://104354183544956",
 }
 
 -- Épaisseur de l'anneau i
