@@ -154,18 +154,6 @@ local function grid(cell: Vector2): Frame
 	return g
 end
 
--- Illustration de carte sur un soleil de rayons lent (comme toutes les cartes des jeux d'œufs) ;
--- x absent = centrée. La carte s'éclaircit et grossit au survol.
-local function art(card: Frame, image: string, size: number, y: number, x: number?): ImageLabel
-	local pos = if x then UDim2.fromOffset(x, y) else UDim2.new(0.5, -size / 2, 0, y)
-	local holder = new("Frame", { Size = UDim2.fromOffset(size, size), Position = pos, BackgroundTransparency = 1, ZIndex = 3, Parent = card })
-	UIKit.sunburst(card, pos + UDim2.fromOffset(size / 2, size / 2), size * 2.3)
-	local icon = UIKit.icon(image, { Size = UDim2.fromScale(1, 1), ZIndex = 4, Parent = holder })
-	UIKit.float(icon, 3, 3, 2)
-	UIKit.hoverCard(card)
-	return icon
-end
-
 -- 1. STARTER PACK (vedette) --------------------------------------------------------------
 -- Bandeau dans un cadre doré orné : fond illustré, emblème qui déborde en haut à gauche avec sa pastille
 -- « NEW! », grand titre doré, ce qu'on obtient en tuiles, prix en dessous.
@@ -307,6 +295,44 @@ if F.Id ~= 0 then
 	robuxCards[F.Id] = featured
 end
 
+-- Carte vive (passes, argent, potions) : dégradé clair au centre et saturé sur les bords (look = { clair,
+-- foncé } ou "Rainbow" qui défile), contour noir épais, picots, reflet qui passe, grossit au survol
+local function vividCard(parent: Instance, look: any, slot: number, name: string): Frame
+	local c = new("Frame", { Name = name, BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = slot, ZIndex = 2 }, { UIKit.corner(10), UIKit.stroke(5) })
+	if look == "Rainbow" then
+		local g = new("UIGradient", { Color = UIKit.Rainbow, Rotation = 35, Parent = c })
+		UIKit.every(g, function(t)
+			g.Offset = Vector2.new(math.sin(t * 0.6) * 0.3, 0)
+		end)
+	else
+		new("UIGradient", {
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, look[1]:Lerp(Color3.new(1, 1, 1), 0.35)),
+				ColorSequenceKeypoint.new(0.5, look[1]),
+				ColorSequenceKeypoint.new(1, look[2]),
+			}),
+			Rotation = 35,
+			Parent = c,
+		})
+	end
+	UIKit.studs(c, 0.55)
+	c.Parent = parent
+	UIKit.hoverCard(c)
+	UIKit.shine(c, 5 + slot % 3)
+	if look == "Rainbow" then
+		UIKit.shinyStroke(c, UIKit.Rainbow, 6)
+	end
+	return c
+end
+
+-- Grosse image de carte sur un soleil de rayons blancs, qui flotte
+local function cardArt(c: Frame, image: string, size: number, pos: UDim2, phase: number): ImageLabel
+	UIKit.sunburst(c, pos + UDim2.fromOffset(size / 2, size / 2), size * 2.1)
+	local img = UIKit.icon(image, { Name = "Art", Size = UDim2.fromOffset(size, size), Position = pos, ZIndex = 5, Parent = c })
+	UIKit.float(img, 4, 4, 2, phase)
+	return img
+end
+
 -- 2. PASSES -------------------------------------------------------------------------------
 -- Grandes cartes vives, deux par ligne : médaillon rond à gauche sur des rayons, nom en haut à droite,
 -- effet en dessous, grand bouton de prix vert en bas à droite.
@@ -327,34 +353,11 @@ local PASS_LOOK: { [string]: any } = {
 type PassCard = { button: TextButton, text: TextLabel, grad: UIGradient }
 local passCards: { [string]: PassCard } = {}
 for i, pass in ipairs(Shop.Passes) do
-	local c = new("Frame", { Name = pass.Key, BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = i, ZIndex = 2 }, { UIKit.corner(10), UIKit.stroke(5) })
 	local look = PASS_LOOK[pass.Key] or { UIKit.Colors.Blue[1], UIKit.Colors.Blue[2] }
-	if look == "Rainbow" then
-		local g = new("UIGradient", { Color = UIKit.Rainbow, Rotation = 35, Parent = c })
-		UIKit.every(g, function(t)
-			g.Offset = Vector2.new(math.sin(t * 0.6) * 0.3, 0)
-		end)
-	else
-		new("UIGradient", {
-			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, look[1]:Lerp(Color3.new(1, 1, 1), 0.35)),
-				ColorSequenceKeypoint.new(0.5, look[1]),
-				ColorSequenceKeypoint.new(1, look[2]),
-			}),
-			Rotation = 35,
-			Parent = c,
-		})
-	end
-	UIKit.studs(c, 0.55)
-	c.Parent = passGrid
+	local c = vividCard(passGrid, look, i, pass.Key)
 	-- médaillon rond sur un soleil de rayons blancs, qui flotte
 	local MED = 186
-	UIKit.sunburst(c, UDim2.fromOffset(24 + MED / 2, PASS_H / 2), MED * 2.1)
-	local medal = ART[pass.Key] or pass.Art
-	local med = UIKit.icon(medal, { Name = "Medal", Size = UDim2.fromOffset(MED, MED), Position = UDim2.fromOffset(24, (PASS_H - MED) / 2), ZIndex = 5, Parent = c })
-	UIKit.float(med, 4, 4, 2, i)
-	UIKit.hoverCard(c)
-	UIKit.shine(c, 5 + i % 3)
+	cardArt(c, ART[pass.Key] or pass.Art, MED, UDim2.fromOffset(24, (PASS_H - MED) / 2), i).Name = "Medal"
 	local right = PASS_W - MED - 48
 	label(c, pass.Name, MED + 34, 16, right, 46, 40).ZIndex = 6
 	local textLabel = label(c, pass.Text .. "!", MED + 34, 66, right, 82, 27)
@@ -368,8 +371,6 @@ for i, pass in ipairs(Shop.Passes) do
 	passCards[pass.Key] = { button = b, text = t, grad = g }
 	if pass.Key == "VIP" then
 		UIKit.shinyStroke(c, UIKit.GoldShine, 6)
-	elseif look == "Rainbow" then
-		UIKit.shinyStroke(c, UIKit.Rainbow, 6)
 	end
 	if pass.Id ~= 0 then
 		robuxCards[pass.Id] = c
@@ -399,40 +400,54 @@ local function refreshPasses()
 end
 
 -- 3. CASH -----------------------------------------------------------------------------------
+-- Même style que les passes : cartes vives (clair au centre, saturé sur les bords), grosse image sur un
+-- soleil de rayons qui flotte, nom en haut, montant dans une pastille sombre, gros prix vert.
+-- Trois petits paquets, puis les deux plus gros en grand sur la ligne suivante.
 section("Cash", "Cash", Color3.fromRGB(150, 245, 80))
--- Trois petits paquets, puis les deux plus gros en grand sur la ligne suivante
 local SMALL = math.floor((CONTENT_W - 24) / 3)
 local BIG = math.floor((CONTENT_W - 12) / 2)
-local cashSmall = grid(Vector2.new(SMALL, 262))
-local cashBig = grid(Vector2.new(BIG, 304))
+local cashSmall = grid(Vector2.new(SMALL, 300))
+local cashBig = grid(Vector2.new(BIG, 330))
 table.insert(reveal, cashSmall)
 table.insert(reveal, cashBig)
 -- de l'air au-dessus : les rubans (« GOOD VALUE », « BEST VALUE! ») dépassent du haut des cartes
 for _, g in ipairs({ cashSmall, cashBig }) do
 	(g:FindFirstChildOfClass("UIPadding") :: UIPadding).PaddingTop = UDim.new(0, 24)
 end
+-- couleur de chaque paquet, du plus petit au plus gros (le dernier en arc-en-ciel)
+local CASH_LOOK: { any } = {
+	{ Color3.fromRGB(170, 250, 90), Color3.fromRGB(50, 180, 40) },
+	{ Color3.fromRGB(120, 245, 220), Color3.fromRGB(20, 165, 150) },
+	{ Color3.fromRGB(120, 235, 255), Color3.fromRGB(20, 150, 235) },
+	{ Color3.fromRGB(255, 220, 90), Color3.fromRGB(245, 120, 20) },
+	"Rainbow",
+}
 local cashAmounts: { TextLabel } = {}
 local nPacks = #Shop.MoneyPacks
 for i, pack in ipairs(Shop.MoneyPacks) do
 	local best = i == nPacks
 	local big = i > nPacks - 2
 	local w = if big then BIG else SMALL
-	local c = UIKit.card({ parent = if big then cashBig else cashSmall, color = if best then "Gold" else "Green", order = i, name = "Cash" .. i })
-	-- de haut en bas : le nom du paquet, son image, le montant dans une pastille sombre, le prix
-	local artSize = if big then 140 else 112
-	label(c, string.upper(pack.Name or "Cash Pack"), 8, 8, w - 16, 28, if big then 26 else 22)
-	art(c, pack.Art, artSize, 38)
-	local pill = new("Frame", { Name = "Amount", Size = UDim2.fromOffset(w - 40, 40), Position = UDim2.fromOffset(20, artSize + 44), BackgroundColor3 = Color3.fromRGB(14, 40, 16), BackgroundTransparency = 0.35, ZIndex = 4, Parent = c }, { UIKit.corner(12) })
-	cashAmounts[i] = label(pill, "", 6, 2, w - 52, 36, 32, UIKit.Money)
-	cashAmounts[i].ZIndex = 5
-	local _, _, grad = robuxButton(c, pack.Id, false, pack.Price, UDim2.new(1, -24, 0, 52), UDim2.new(0, 12, 1, -62))
+	local look = CASH_LOOK[i] or CASH_LOOK[1]
+	local c = vividCard(if big then cashBig else cashSmall, look, i, "Cash" .. i)
+	local artSize = if big then 156 else 128
+	label(c, pack.Name or "Cash Pack", 8, 10, w - 16, 38, if big then 36 else 32).ZIndex = 6
+	local art = cardArt(c, pack.Art, artSize, UDim2.new(0.5, -artSize / 2, 0, 46), i)
+	art.ZIndex = 5
+	local pill = new("Frame", { Name = "Amount", Size = UDim2.fromOffset(w - 40, 42), Position = UDim2.fromOffset(20, artSize + 46), BackgroundColor3 = Color3.fromRGB(14, 30, 16), BackgroundTransparency = 0.3, ZIndex = 6, Parent = c }, { UIKit.corner(12), UIKit.stroke(3) })
+	cashAmounts[i] = label(pill, "", 6, 2, w - 52, 38, 34, UIKit.Money)
+	cashAmounts[i].ZIndex = 7
+	local b, t, grad = robuxButton(c, pack.Id, false, pack.Price, UDim2.new(1, -28, 0, 58), UDim2.new(0, 14, 1, -68))
+	lift(b, 6)
+	bigPrice(b, t, 38)
 	if pack.Tag then
-		UIKit.ribbon(c, pack.Tag, pack.TagColor)
+		lift(UIKit.ribbon(c, pack.Tag, pack.TagColor), 9)
 	end
 	if best then
-		-- le plus gros paquet est vraiment le plus avantageux ($ par Robux) : prix arc-en-ciel
-		UIKit.shinyStroke(c, UIKit.GoldShine, 5)
+		-- le plus gros paquet est vraiment le plus avantageux ($ par Robux) : contour doré, prix arc-en-ciel
+		UIKit.shinyStroke(c, UIKit.GoldShine, 6)
 		UIKit.rainbowButton(grad)
+		UIKit.sparkles(c, { count = 4, size = 26 })
 	end
 	if pack.Id ~= 0 then
 		robuxCards[pack.Id] = c
@@ -441,16 +456,26 @@ end
 
 -- 4. BOOSTS -----------------------------------------------------------------------------------
 section("Boosts", "Boosts", Color3.fromRGB(255, 150, 210))
-local boostGrid = grid(Vector2.new(SMALL, 272))
+local boostGrid = grid(Vector2.new(SMALL, 312))
 table.insert(reveal, boostGrid)
-local BOOST_COLORS = { "Purple", "Green", "Teal" }
+-- chaque potion à sa couleur : chance en vert, argent en doré, XP de jetpack en bleu
+local BOOST_LOOK: { [string]: any } = {
+	Luck = { Color3.fromRGB(170, 250, 90), Color3.fromRGB(50, 180, 40) },
+	Money = { Color3.fromRGB(255, 235, 110), Color3.fromRGB(240, 160, 20) },
+	JetXP = { Color3.fromRGB(120, 235, 255), Color3.fromRGB(20, 150, 235) },
+}
 local boostTimers: { [string]: TextLabel } = {}
 for i, potion in ipairs(Shop.Potions) do
-	local c = UIKit.card({ parent = boostGrid, color = BOOST_COLORS[i] or "Blue", order = i, name = potion.Key })
-	label(c, string.upper(potion.Name), 8, 10, SMALL - 16, 34, 28)
-	art(c, potion.Art, 124, 46)
-	boostTimers[potion.Key] = label(c, "", 12, 172, SMALL - 24, 30, 20, Color3.fromRGB(255, 245, 150))
-	robuxButton(c, potion.Id, false, potion.Price, UDim2.new(1, -24, 0, 52), UDim2.new(0, 12, 1, -64))
+	local c = vividCard(boostGrid, BOOST_LOOK[potion.Key] or BOOST_LOOK.JetXP, i, potion.Key)
+	label(c, potion.Name, 8, 10, SMALL - 16, 40, 34).ZIndex = 6
+	local art = cardArt(c, potion.Art, 136, UDim2.new(0.5, -68, 0, 52), i)
+	art.ZIndex = 5
+	local timer = label(c, "", 12, 194, SMALL - 24, 32, 26, Color3.fromRGB(255, 250, 200))
+	timer.ZIndex = 6
+	boostTimers[potion.Key] = timer
+	local b, t = robuxButton(c, potion.Id, false, potion.Price, UDim2.new(1, -28, 0, 60), UDim2.new(0, 14, 1, -72))
+	lift(b, 6)
+	bigPrice(b, t, 38)
 	if potion.Id ~= 0 then
 		robuxCards[potion.Id] = c
 	end

@@ -115,4 +115,5 @@ images qu'il a fait dessiner (`references/boutique/`, découpées dans `tools/st
   Fast Hatch en arc-en-ciel, VIP au contour doré ;
 - à l'ouverture, tout apparaît en cascade avec un rebond, l'emblème arrive en tournoyant avec un éclat de lumière ;
   rayons qui tournent, reflets qui balaient, étincelles (aussi sur les pierres du cadre), médaillons qui flottent.
+- **Cash et Boosts** au même style que les passes (cartes vives, grosse image sur rayons qui flotte, gros prix) : paquets vert, turquoise, bleu, orange, Mega Pack en arc-en-ciel au contour doré ; potions Luck en vert, Money en doré, Jetpack XP en bleu.
 - Pas de bouton cadeau (le jeu ne sait pas encore offrir un achat).
