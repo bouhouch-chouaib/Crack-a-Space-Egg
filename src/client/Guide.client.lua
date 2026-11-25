@@ -700,7 +700,7 @@ local function decideTip(): Hint?
 		return nil
 	end
 	-- tips d'information : un à la fois, avec du calme entre eux. Un tip déjà affiché continue.
-	local running = tipStart.rewards and not tipSeen("rewards") or tipStart.monsters and not tipSeen("monsters") or tipStart.mailbox and not tipSeen("mailbox")
+	local running = tipStart.rewards and not tipSeen("rewards") or tipStart.monsters and not tipSeen("monsters")
 	if not running and os.clock() - lastTip < G.TipGap then
 		return nil
 	end
@@ -717,18 +717,7 @@ local function decideTip(): Hint?
 	if not tipSeen("monsters") and player:GetAttribute("MonsterSeen") then
 		return timedTip("monsters", G.TipShort, { icon = "Warning", text = "A monster lives here!", sub = "Steal an egg and it chases you: run home!" })
 	end
-	-- la suite attend la fin du guide : on ne change pas de sujet pendant la boucle de base
-	if step < G.Steps then
-		return nil
-	end
-	if not tipSeen("mailbox") then
-		if windowOpen("Feedback") then
-			finishTip("mailbox")
-		else
-			local box = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Mailbox")
-			return timedTip("mailbox", G.TipShort, { icon = "Star", text = "Tell us what you think!", sub = "Step on the mailbox mat any time", target = box and box:FindFirstChild("Mat") })
-		end
-	end
+	-- (25 nov. : plus de conseil vers la boîte aux lettres, le joueur y va de lui-même s'il en a envie)
 	return nil
 end
 

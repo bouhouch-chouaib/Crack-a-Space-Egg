@@ -1518,7 +1518,7 @@ Config.Hatch = {
 	-- Zone interdite autour du point d'apparition (rayon en studs) ; la machine est hors de la base
 	KeepOut = { Spawn = 4 },
 	-- Revenu d'une créature en $/s = SlotIncome[rang dans l'anneau] × RingIncome[anneau] × taille²
-	-- (Config.PetSizes : de ×0,4 pour une Tiny à ×5,8 pour la plus grosse Giant) × mutation (Config.Mutations)
+	-- (Config.PetSizes : de ×1 pour une taille normale à ×5,8 pour la plus grosse Giant) × mutation (Config.Mutations)
 	-- × stade de fusion. Les 6 créatures d'un anneau se tiennent (×12 entre la 1re et la 6e) : la 6e d'un
 	-- anneau rapporte 3 fois moins que la 1re de l'anneau suivant. Avant le 15 nov., l'écart dans un
 	-- anneau était de ×6 000 et tout reposait sur un tirage.
@@ -1703,8 +1703,9 @@ Config.PetRules = {
 -- (« Giant Pebblepup ») et une couleur affichés partout. Chance = probabilité à l'éclosion ;
 -- Min / Max = taille tirée dans ce palier.
 Config.PetSizes = {
-	{ Name = "Tiny", Chance = 0.20, Min = 0.65, Max = 0.8, Color = Color3.fromRGB(170, 205, 255) },
-	{ Name = "", Chance = 0.50, Min = 0.85, Max = 1.1, Color = Color3.fromRGB(255, 255, 255) },
+	-- (25 nov. : plus de taille Tiny ni de créature sous la taille normale : aucune taille ne fait gagner
+	-- moins que ×1)
+	{ Name = "", Chance = 0.70, Min = 1.0, Max = 1.12, Color = Color3.fromRGB(255, 255, 255) },
 	{ Name = "Big", Chance = 0.20, Min = 1.2, Max = 1.45, Color = Color3.fromRGB(120, 245, 80) },
 	{ Name = "Huge", Chance = 0.08, Min = 1.55, Max = 1.85, Color = Color3.fromRGB(255, 170, 40) },
 	{ Name = "Giant", Chance = 0.02, Min = 2.0, Max = 2.4, Color = Color3.fromRGB(255, 70, 90) },
@@ -1796,11 +1797,14 @@ end
 -- l'amélioration « Mutation Ray » de la machine les multiplient toutes, sans dépasser MutationMax au total.
 -- Metal = vrai : matière métal ; Reflect : reflet (0 à 1) ; Rainbow : couleurs qui défilent.
 Config.Mutations = {
-	{ Key = "Silver", Name = "Silver", Chance = 0.12, Mult = 1.5, Color = Color3.fromRGB(200, 210, 226), Metal = true, Reflect = 0.25 },
-	{ Key = "Gold", Name = "Gold", Chance = 0.04, Mult = 3, Color = Color3.fromRGB(255, 196, 40), Metal = true, Reflect = 0.3 },
-	{ Key = "Emerald", Name = "Emerald", Chance = 0.02, Mult = 5, Color = Color3.fromRGB(50, 215, 120), Reflect = 0.35 },
-	{ Key = "Ruby", Name = "Ruby", Chance = 0.01, Mult = 10, Color = Color3.fromRGB(235, 45, 80), Reflect = 0.35 },
-	{ Key = "Rainbow", Name = "Rainbow", Chance = 0.005, Mult = 20, Color = Color3.fromRGB(255, 120, 220), Reflect = 0.15, Rainbow = true },
+	-- Glow = lumière autour de la créature (luminosité), Sparkles = étincelles par seconde, Shine = éclats en
+	-- étoile qui passent sur elle (par seconde) ; la lumière pulse doucement (MutationFx.client).
+	-- Silver (25 nov.) : argent nacré et brillant (plus de métal gris terne), avec sa lumière blanc-bleu.
+	{ Key = "Silver", Name = "Silver", Chance = 0.12, Mult = 1.5, Color = Color3.fromRGB(228, 236, 250), Reflect = 0.42, Glow = 1.4, GlowColor = Color3.fromRGB(190, 225, 255), Sparkles = 9, Shine = 1.2 },
+	{ Key = "Gold", Name = "Gold", Chance = 0.04, Mult = 3, Color = Color3.fromRGB(255, 196, 40), Metal = true, Reflect = 0.3, Glow = 1.6, Sparkles = 10, Shine = 1.4 },
+	{ Key = "Emerald", Name = "Emerald", Chance = 0.02, Mult = 5, Color = Color3.fromRGB(50, 215, 120), Reflect = 0.35, Glow = 1.8, Sparkles = 12, Shine = 1.6 },
+	{ Key = "Ruby", Name = "Ruby", Chance = 0.01, Mult = 10, Color = Color3.fromRGB(235, 45, 80), Reflect = 0.35, Glow = 2.1, Sparkles = 14, Shine = 1.8 },
+	{ Key = "Rainbow", Name = "Rainbow", Chance = 0.005, Mult = 20, Color = Color3.fromRGB(255, 120, 220), Reflect = 0.15, Rainbow = true, Glow = 2.5, Sparkles = 18, Shine = 2.2 },
 }
 Config.MutationMax = 0.75
 function Config.Mutation(key: string?)

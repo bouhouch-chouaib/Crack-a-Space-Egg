@@ -211,25 +211,12 @@ local function buildPet(player: Player, floor: BasePart, item, fresh: boolean?):
 		local h = (H.PetHeight[item.rarity] or 3.5) * (item.size or 1) * stage.Scale
 		body:ScaleTo(body:GetScale() * h / ((body:GetAttribute("Height") or 1) :: number))
 		body:SetAttribute("Height", h)
-		-- créature mutée : tout son corps prend la matière et la couleur de la mutation, et elle scintille
+		-- créature mutée : tout son corps prend la matière et la couleur de la mutation, avec sa lumière,
+		-- ses étincelles et ses éclats en étoile (shared/Mutation)
 		local mut = Config.Mutation(item.mut)
 		if mut then
 			Mutation.Apply(body, mut.Key)
-			local core = body.PrimaryPart
-			if core then
-				local sp = Instance.new("ParticleEmitter")
-				sp.Name = "MutationSparkle"
-				sp.Texture = Config.DrillSkinArt.Sparkle
-				sp.Color = ColorSequence.new(mut.Color:Lerp(Color3.new(1, 1, 1), 0.4))
-				sp.LightEmission = 0.8
-				sp.LightInfluence = 0
-				sp.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, h * 0.14), NumberSequenceKeypoint.new(1, 0) })
-				sp.Lifetime = NumberRange.new(0.8, 1.4)
-				sp.Speed = NumberRange.new(h * 0.25, h * 0.5)
-				sp.SpreadAngle = Vector2.new(180, 180)
-				sp.Rate = 5
-				sp.Parent = core
-			end
+			Mutation.Effects(body, mut.Key, h)
 		end
 		if fresh then
 			-- elle jaillit de l'œuf (Creatures.client)
@@ -477,7 +464,7 @@ function HatchService.Hatch(player: Player, id: string)
 	end
 	-- La créature est décidée tout de suite (pas de double éclosion possible)
 	local c = Config.CreatureFor(item.ring, item.rarity)
-	-- tutoriel : la toute première est la créature rare imposée (moment « wow ») ; ensuite, Tiny à Giant
+	-- tutoriel : la toute première est la créature rare imposée (moment « wow ») ; ensuite, normale à Giant
 	local special = if next(d.index) ~= nil then nil
 		elseif (d.guide or 0) < Config.Guide.Steps and item.rarity == Config.Guide.FirstRarity then "wow"
 		else "first"
