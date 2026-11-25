@@ -24,10 +24,10 @@ local player = game:GetService("Players").LocalPlayer
 local new = UIKit.new
 
 -- Mise en page (unités de la fenêtre, avant l'échelle de l'écran)
-local ROOT_W, ROOT_H = 960, 548
-local TABS_W = 170 -- onglets des anneaux
-local SCROLL_X, SCROLL_W = 178, 524 -- colonne qui défile
-local DETAIL_X, DETAIL_W = 710, 250 -- créature (ou relique) choisie
+-- (25 nov. : plus de colonne d'onglets des anneaux à gauche ; le bouton RELICS est dans le bandeau de titre)
+local ROOT_W, ROOT_H = 782, 548
+local SCROLL_X, SCROLL_W = 0, 524 -- colonne qui défile
+local DETAIL_X, DETAIL_W = 532, 250 -- créature (ou relique) choisie
 local DETAIL_CX = DETAIL_W / 2
 -- Bloc d'un anneau
 local EDGE = 6 -- marge autour des blocs dans la colonne : la place de leur contour
@@ -45,7 +45,7 @@ local WHITE, BLACK = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
 local PICK = Color3.fromRGB(255, 235, 120) -- contour de ce qui est choisi (onglet, carte)
 local GOLD = Color3.fromRGB(255, 230, 110)
 
-local W = UIKit.window({ name = "IndexWindow", title = "{Star} INDEX", color = "Blue", size = Vector2.new(1000, 660) })
+local W = UIKit.window({ name = "IndexWindow", title = "{Star} INDEX", color = "Blue", size = Vector2.new(822, 660) })
 -- Le contenu tient juste dans la fenêtre : seule la colonne des anneaux défile, pas le corps de la fenêtre
 W.body.AutomaticCanvasSize = Enum.AutomaticSize.None
 W.body.CanvasSize = UDim2.new()
@@ -198,10 +198,6 @@ end
 
 -- MISE EN PAGE --------------------------------------------------------------------------------
 
--- Onglets des anneaux (gauche)
-local tabs = new("Frame", { Name = "Tabs", Size = UDim2.fromOffset(TABS_W, ROOT_H), BackgroundTransparency = 1, Parent = root }, {
-	new("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-})
 -- Colonne des anneaux (centre) : un bloc par anneau, l'un sous l'autre, à des places fixes
 local scroll = new("ScrollingFrame", {
 	Name = "Rings",
@@ -234,8 +230,19 @@ local barFill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = 
 local barGrad = UIKit.gradient(Color3.fromRGB(255, 235, 120), Color3.fromRGB(245, 160, 20))
 barGrad.Parent = barFill
 local barText = UIKit.text({ Size = UDim2.new(1, -8, 1, -4), Position = UDim2.fromOffset(4, 2), Text = "", ZIndex = 3, Stroke = 2.5, Parent = barBack })
--- Cartes des reliques : 4 en haut, 3 centrées en bas
-local relicCards = new("Frame", { Name = "Relics", Position = UDim2.fromOffset(0, 86), Size = UDim2.fromOffset(476, 460), BackgroundTransparency = 1, Parent = middle })
+-- Cartes des reliques : 4 par rangée, la dernière rangée centrée ; la grille défile (14 reliques)
+local relicCards = new("ScrollingFrame", {
+	Name = "Relics",
+	Position = UDim2.fromOffset(0, 86),
+	Size = UDim2.fromOffset(500, 460),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ScrollBarThickness = 8,
+	ScrollBarImageColor3 = Color3.fromRGB(200, 205, 220),
+	ScrollingDirection = Enum.ScrollingDirection.Y,
+	Selectable = false,
+	Parent = middle,
+})
 -- Détail (droite). Son contenu est vidé à chaque changement, sans toucher aux picots de la carte.
 local detailCard = UIKit.card({ parent = root, color = "Dark", name = "Detail" })
 detailCard.Position = UDim2.fromOffset(DETAIL_X, 0)
@@ -282,26 +289,6 @@ end
 
 -- DÉFILEMENT ----------------------------------------------------------------------------------
 
-local TAB_H = 60
-local tabButtons: { [number]: { frame: TextButton, stroke: UIStroke, count: TextLabel } } = {}
-
--- Surligne l'onglet d'un anneau (0 = aucun : page des reliques)
-local markedRing = -1
-local function markTabs(which: number)
-	if which == markedRing then
-		return
-	end
-	markedRing = which
-	for r, t in pairs(tabButtons) do
-		local on = r == which
-		t.stroke.Thickness = if on then 6 else 3.5
-		t.stroke.Color = if on then PICK else UIKit.Outline
-		if on then
-			UIKit.bump(t.frame, 0.08)
-		end
-	end
-end
-
 -- Position du défilement qui amène le bloc d'un anneau en haut de la colonne
 -- (calculée avec les positions à l'écran, comme les sections de la boutique)
 local function blockTarget(r: number): Vector2
@@ -314,86 +301,46 @@ local function blockTarget(r: number): Vector2
 	return Vector2.new(0, math.clamp(y, 0, maxY))
 end
 
-local scrollTween: Tween? = nil
 local holdRing: number? = nil
 local holdUntil = 0
 
 -- Saut direct à un bloc, tenu quelques instants : la fenêtre change d'échelle en s'ouvrant, et la
 -- colonne vient peut-être d'être réaffichée
 local function hold(r: number, seconds: number)
-	if scrollTween then
-		scrollTween:Cancel()
-		scrollTween = nil
-	end
 	holdRing = r
 	holdUntil = os.clock() + seconds
 end
 
--- Défile en douceur jusqu'au bloc d'un anneau, puis se cale dessus
-local function scrollTo(r: number)
-	holdRing = nil
-	local tw = UIKit.tween(scroll, 0.35, { CanvasPosition = blockTarget(r) }, Enum.EasingStyle.Quart)
-	scrollTween = tw
-	tw.Completed:Connect(function(state)
-		if state == Enum.PlaybackState.Completed and scrollTween == tw then
-			hold(r, 0.1)
-		end
-	end)
-end
-
-for r, ringCfg in ipairs(Config.Rings) do
-	local biome = Config.Biomes[r]
-	local color = biome and biome.Clouds[1] or ringCfg.Color
-	local tabStroke = UIKit.stroke(3.5)
-	local b = new("TextButton", {
-		Name = "Ring" .. r,
-		Size = UDim2.fromOffset(TABS_W, TAB_H),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		AutoButtonColor = false,
-		Text = "",
-		LayoutOrder = r,
-		Parent = tabs,
-	}, { UIKit.corner(12), tabStroke, UIKit.gradient(color:Lerp(Color3.new(1, 1, 1), 0.3), color:Lerp(Color3.new(0, 0, 0), 0.35)) })
-	UIKit.text({ Size = UDim2.new(1, -12, 0, 28), Position = UDim2.fromOffset(6, 4), Text = "{" .. (biome and biome.Icon or "Star") .. "} " .. (biome and biome.Title or ringCfg.Name), Stroke = 3, Parent = b })
-	local count = UIKit.text({ Name = "Count", Size = UDim2.new(1, -12, 0, 22), Position = UDim2.fromOffset(6, 33), Text = "", TextColor3 = Color3.fromRGB(255, 245, 190), Stroke = 2.5, Parent = b })
-	UIKit.juice(b)
-	b.MouseButton1Click:Connect(function()
-		if relicMode then
-			-- on revient de la page des reliques : la colonne réapparaît directement sur ce bloc
-			relicMode = false
-			refresh()
-			markTabs(r)
-			hold(r, 0.15)
-		else
-			scrollTo(r)
-		end
-	end)
-	tabButtons[r] = { frame = b, stroke = tabStroke, count = count }
-end
-
--- Onglet des reliques, sous les anneaux
+-- Bouton des reliques, dans le bandeau de titre : « RELICS 3/14 », ou « CREATURES » pour revenir
+local header = W.body.Parent:FindFirstChild("Header") :: Frame
 local relicTab = new("TextButton", {
 	Name = "Relics",
-	Size = UDim2.fromOffset(TABS_W, TAB_H),
+	AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.new(1, -64, 0.5, 0),
+	Size = UDim2.fromOffset(250, 54),
 	BackgroundColor3 = Color3.new(1, 1, 1),
 	AutoButtonColor = false,
 	Text = "",
-	LayoutOrder = #Config.Rings + 1,
-	Parent = tabs,
+	ZIndex = 5,
+	Parent = header,
 }, { UIKit.corner(12), UIKit.gradient(UIKit.Colors.Gold[1], UIKit.Colors.Gold[2]) })
 local relicTabStroke = UIKit.stroke(3.5)
 relicTabStroke.Parent = relicTab
-UIKit.text({ Size = UDim2.new(1, -12, 0, 28), Position = UDim2.fromOffset(6, 4), Text = "{Star} RELICS", Stroke = 3, Parent = relicTab })
-local relicTabCount = UIKit.text({ Size = UDim2.new(1, -12, 0, 22), Position = UDim2.fromOffset(6, 33), Text = "", TextColor3 = Color3.fromRGB(255, 245, 190), Stroke = 2.5, Parent = relicTab })
+local relicTabText = UIKit.text({ Size = UDim2.new(1, -12, 1, -10), Position = UDim2.fromOffset(6, 5), Text = "{Star} RELICS", ZIndex = 6, Stroke = 3, Parent = relicTab })
 UIKit.juice(relicTab)
 relicTab.MouseButton1Click:Connect(function()
-	relicMode = true
-	fetchRelics()
-	refresh()
+	relicMode = not relicMode
+	if relicMode then
+		fetchRelics()
+		refresh()
+	else
+		-- retour aux créatures : la colonne réapparaît sur le bloc de l'anneau choisi
+		refresh()
+		hold(selRing, 0.15)
+	end
 end)
 
--- À chaque image, fenêtre ouverte : l'onglet de l'anneau en haut de la colonne reste surligné, et seuls
--- les aperçus visibles tournent (ceux des blocs hors de la colonne restent figés)
+-- À chaque image, fenêtre ouverte : seuls les aperçus visibles tournent (ceux des blocs hors de la colonne restent figés)
 local viewFrom: { number } = table.create(#Config.Rings, 1) -- partie visible de chaque bloc, en unités du bloc
 local viewTo: { number } = table.create(#Config.Rings, 0)
 RunService.RenderStepped:Connect(function()
@@ -410,7 +357,6 @@ RunService.RenderStepped:Connect(function()
 	end
 	local top = scroll.AbsolutePosition.Y
 	local height = scroll.AbsoluteSize.Y
-	local current = 1
 	for r, b in ipairs(blocks) do
 		local y, h = b.frame.AbsolutePosition.Y, b.frame.AbsoluteSize.Y
 		if relicMode or h <= 0 or y >= top + height or y + h <= top then
@@ -418,18 +364,6 @@ RunService.RenderStepped:Connect(function()
 		else
 			viewFrom[r], viewTo[r] = (top - y) / h * BLOCK_H, (top + height - y) / h * BLOCK_H
 		end
-		-- l'anneau « en haut » : le dernier dont le bloc commence dans le premier tiers de la colonne
-		if y <= top + height * 0.3 then
-			current = r
-		end
-	end
-	if not relicMode and height > 0 then
-		-- tout en bas : le dernier bloc ne peut pas monter plus haut
-		local maxY = scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteWindowSize.Y
-		if maxY > 0 and scroll.CanvasPosition.Y >= maxY - 2 then
-			current = #blocks
-		end
-		markTabs(current)
 	end
 	for i = #turning, 1, -1 do
 		local e = turning[i]
@@ -535,14 +469,17 @@ local function relicPage()
 	ringTitle.Text = ("Lost Explorers' Relics   ·   %d/%d"):format(found, total)
 	barFill.Size = UDim2.fromScale(math.max(found / total, 0.02), 1)
 	barText.Text = ("%d/%d found"):format(found, total)
-	local CW, CH, GX = 112, 216, 9
+	local CW, CH, GX, GY, PER = 112, 216, 9, 12, 4
+	local rows = math.ceil(total / PER)
+	relicCards.CanvasSize = UDim2.fromOffset(0, 6 + rows * CH + (rows - 1) * GY + 6)
 	for i, r in ipairs(Config.Relics) do
 		local known = relicState.found[r.Key] == true
-		local row2 = i > 4
-		local x = if row2 then 61 + (i - 5) * (CW + GX) else (i - 1) * (CW + GX)
+		local row, col = (i - 1) // PER, (i - 1) % PER
+		local inRow = math.min(PER, total - row * PER)
+		local x = 6 + (PER - inRow) * (CW + GX) / 2 + col * (CW + GX)
 		local c = new("TextButton", {
 			Name = r.Key,
-			Position = UDim2.fromOffset(x, if row2 then CH + 12 else 0),
+			Position = UDim2.fromOffset(x, 6 + row * (CH + GY)),
 			Size = UDim2.fromOffset(CW, CH),
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			AutoButtonColor = false,
@@ -927,23 +864,18 @@ end
 -- RAFRAÎCHIR ----------------------------------------------------------------------------------
 
 refresh = function()
-	for r, t in pairs(tabButtons) do
-		local n, total = ringCount(r)
-		t.count.Text = ("%d/%d"):format(n, total) .. (if claimed[r] then "  CLAIMED" elseif n >= total then "  CLAIM!" else "")
-	end
 	local foundRelics = 0
 	for _, relic in ipairs(Config.Relics) do
 		if relicState.found[relic.Key] then
 			foundRelics += 1
 		end
 	end
-	relicTabCount.Text = ("%d/%d"):format(foundRelics, #Config.Relics)
+	UIKit.setIconText(relicTabText, if relicMode then "{Egg} CREATURES" else ("{Star} RELICS %d/%d"):format(foundRelics, #Config.Relics))
 	relicTabStroke.Thickness = if relicMode then 6 else 3.5
 	relicTabStroke.Color = if relicMode then PICK else UIKit.Outline
 	scroll.Visible = not relicMode
 	middle.Visible = relicMode
 	if relicMode then
-		markTabs(0)
 		relicPage()
 		return
 	end
@@ -961,7 +893,6 @@ UIKit.Open.Event:Connect(function(what: string)
 		fetchRelics()
 		refresh()
 		-- la colonne s'ouvre sur le bloc de l'anneau du joueur (tenu pendant l'animation d'ouverture)
-		markTabs(selRing)
 		hold(selRing, 0.4)
 		W.open()
 	elseif what == "Close" and W.isOpen() then
