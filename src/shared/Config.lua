@@ -218,7 +218,8 @@ end
 --   HP     : × EggHP de l'anneau (vie de chaque œuf)
 --   Shape  : forme (ReplicatedStorage.Assets.Asteroids.Ring<n>.<Shape>)
 --   Color, Reflect : matière du type (shared/RockLook), pour le reconnaître de loin sans rien lire : la roche
---            de l'anneau telle quelle, une roche d'argent, une roche d'or. Les mêmes dans tous les anneaux.
+--            de l'anneau telle quelle, une roche d'argent, une roche d'or. Seulement pour les anciens modèles :
+--            ceux peints pour leur zone (attribut Painted, anneau 1 depuis le 25 nov.) gardent leurs couleurs.
 --   Slots  : chances (sur 100) des 6 créatures de l'anneau, de la 1re à la 6e. Le type 1 donne surtout
 --            les deux premières, le type 2 les deux suivantes, le type 3 les deux dernières (pas à 100 %).
 Config.RockTypes = {

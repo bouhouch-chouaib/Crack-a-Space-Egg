@@ -11,7 +11,7 @@ local ROOTS = {
 	game.ReplicatedStorage:FindFirstChild("Assets") and game.ReplicatedStorage.Assets:FindFirstChild("Monsters"),
 }
 local SKIP_MATERIALS = { [Enum.Material.Glass] = true, [Enum.Material.Neon] = true, [Enum.Material.ForceField] = true }
-local SKIP_NAMES = { SignText = true, NameBoard = true, CreatureArea = true, DockEnd = true }
+local SKIP_NAMES = { SignText = true, NameBoard = true, CreatureArea = true, DockEnd = true, Ore = true, Glow = true } -- Ore, Glow : cristaux des astéroïdes
 
 local count = 0
 for _, root in ipairs(ROOTS) do

@@ -2,6 +2,10 @@
 -- (ReplicatedStorage.Assets.Asteroids.Ring<n>.<Shape>) et sa matière : la roche de l'anneau telle
 -- quelle, une roche d'argent, une roche d'or (les mêmes dans tous les anneaux, pour qu'on les reconnaisse
 -- de loin sans rien lire). Les picots restent par-dessus.
+-- Depuis le 25 nov., chaque anneau reçoit ses propres modèles peints, liés à sa zone (attribut Painted :
+-- roche de l'anneau, filons et cristaux d'argent, pépites et cristaux d'or) : on ne les repeint plus.
+-- Leurs pièces : « Asteroid » (la roche, PrimaryPart, celle qu'on vise), « Ore » (cristaux et pépites,
+-- hors des rayons de visée) et « Glow » (fentes lumineuses en néon).
 -- Sert au serveur (BeltService) et aux aperçus de l'interface (IndexUI.client).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -37,7 +41,7 @@ end
 -- couleur unie (argent, or). Le premier type garde la roche de l'anneau.
 function RockLook.Apply(model: Model, rockType: number)
 	local def = Config.RockType(rockType)
-	if not def.Color then
+	if not def.Color or model:GetAttribute("Painted") then
 		return
 	end
 	for _, d in ipairs(model:GetDescendants()) do
