@@ -475,6 +475,32 @@ def fx_thrust(t, i):
     return bands(d, rim=0.0, mid=0.3, core=0.74, glow_sigma=0.04)
 
 
+# Mutations rares ----------------------------------------------------------------------------------
+
+
+def fx_gleam(t, i):
+    """reflet de créature mutée (en boucle) : un trait de lumière en biais qui balaie la silhouette une fois
+    par boucle, et des étoiles qui s'allument et s'éteignent tour à tour sur elle"""
+    d = np.zeros_like(X)
+    # trait de lumière : il traverse pendant le premier tiers de la boucle, dans une ellipse (le corps)
+    body = (X / 0.72) ** 2 + ((Y + 0.05) / 0.85) ** 2 < 1
+    p = t / 0.45
+    if p < 1:
+        pos = -1.3 + 2.6 * p
+        diag = (X + Y) / math.sqrt(2)
+        band = np.clip(1 - np.abs(diag - pos) / 0.16, 0, 1)
+        thin = np.clip(1 - np.abs(diag - pos - 0.27) / 0.05, 0, 1) * 0.8  # second trait fin
+        d = np.maximum(d, np.maximum(band, thin) * body * math.sin(math.pi * p) ** 0.5)
+    # étoiles qui scintillent tour à tour (phases réparties sur la boucle)
+    spots = [(-0.32, 0.42), (0.36, 0.18), (-0.1, -0.3), (0.28, -0.45), (0.05, 0.62), (-0.45, -0.05)]
+    for k, (x, y) in enumerate(spots):
+        ph = (t - k / len(spots)) % 1
+        s = 0.34 * max(0.0, math.sin(math.pi * min(1.0, ph / 0.3))) if ph < 0.3 else 0.0
+        if s > 0.004:
+            d = np.maximum(d, star4(x, y, s, rot=0.4 * ph))
+    return bands(d, rim=0.05, mid=0.35, core=0.65, glow_sigma=0.035, glow_gain=1.2)
+
+
 # Achat dans la boutique -------------------------------------------------------------------------
 
 
@@ -773,6 +799,7 @@ EFFECTS = {
     "PowerUp": fx_powerup,
     "Roar": fx_roar,
     "Celebrate": fx_celebrate,
+    "Gleam": fx_gleam,
 }
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
@@ -798,6 +825,7 @@ PREVIEW = {
     "PowerUp": ((170, 70, 255), (235, 190, 255)),
     "Roar": ((255, 70, 40), (255, 190, 150)),
     "Celebrate": ((255, 170, 20), (255, 240, 140)),
+    "Gleam": ((255, 180, 30), (255, 245, 180)),
     "HatchRing": ((170, 90, 255), (225, 200, 255)),
     "Converge": ((255, 70, 160), (255, 200, 230)),
 }

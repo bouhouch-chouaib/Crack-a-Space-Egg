@@ -39,6 +39,8 @@ LayeredFx.Sheets = {
 	Roar = { Glow = "rbxassetid://96977963111925", Rim = "rbxassetid://87077125099005", Mid = "rbxassetid://81994057772119", Core = "rbxassetid://95879753420510" },
 	-- achat dans la boutique (Store.client) : soleil doré, anneau, étoiles qui scintillent
 	Celebrate = { Glow = "rbxassetid://127190928214483", Rim = "rbxassetid://106263494394533", Mid = "rbxassetid://89835018857798", Core = "rbxassetid://92773400059896" },
+	-- créature mutée (Creatures.client) : trait de lumière qui balaie la silhouette, étoiles qui scintillent
+	Gleam = { Glow = "rbxassetid://84055851302915", Rim = "rbxassetid://123273352762654", Mid = "rbxassetid://121282950937926", Core = "rbxassetid://117937151072568" },
 	Converge = { Glow = "rbxassetid://126224476094550", Rim = "rbxassetid://116332369242874", Mid = "rbxassetid://96225808912195", Core = "rbxassetid://134950337727915" },
 }
 
