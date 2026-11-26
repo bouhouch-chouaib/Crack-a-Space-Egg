@@ -40,9 +40,11 @@ local icon = UIKit.icon("Home", { Size = UDim2.fromOffset(136, 136), Position = 
 UIKit.float(icon, 3, 4, 2)
 
 local title = label(win.frame, "", 20, 238, W_SIZE.X - 40, 42, 36, GREEN)
-local pipsRow = new("Frame", { Size = UDim2.fromOffset(#LEVELS * 40, 16), Position = UDim2.new(0.5, -#LEVELS * 20, 0, 284), BackgroundTransparency = 1, ZIndex = 4, Parent = win.frame })
+-- une pastille par amélioration (10) : allumée quand elle est achetée
+local UPGRADES = #LEVELS - 1
+local pipsRow = new("Frame", { Size = UDim2.fromOffset(UPGRADES * 40, 16), Position = UDim2.new(0.5, -UPGRADES * 20, 0, 284), BackgroundTransparency = 1, ZIndex = 4, Parent = win.frame })
 local pips: { Frame } = {}
-for i = 1, #LEVELS do
+for i = 1, UPGRADES do
 	pips[i] = new("Frame", { Size = UDim2.fromOffset(34, 14), Position = UDim2.fromOffset((i - 1) * 40 + 3, 1), BackgroundColor3 = Color3.fromRGB(50, 54, 72), ZIndex = 4, Parent = pipsRow }, { UIKit.corner(4) })
 end
 
@@ -68,13 +70,15 @@ local function refresh()
 	local slots = (player:GetAttribute("BaseSlots") or (Config.Hatch.Slots + cur.Slots)) :: number
 	title.Text = ("Level %d"):format(lv)
 	for i, p in ipairs(pips) do
-		p.BackgroundColor3 = if i <= lv then GREEN else Color3.fromRGB(50, 54, 72)
+		p.BackgroundColor3 = if i < lv then GREEN else Color3.fromRGB(50, 54, 72)
 	end
 	now.Text = ("%d slots"):format(slots)
 	if nextDef then
+		-- le prix suit l'anneau le plus loin débloqué (Config.PenCost)
+		local cost = Config.PenCost(lv + 1, (player:GetAttribute("Ring") or 1) :: number)
 		nxt.Text = ("%d slots"):format(slots + nextDef.Slots - cur.Slots)
-		text.Text = "UPGRADE $" .. Format.Short(nextDef.Cost)
-		UIKit.recolor(grad, if ((player:GetAttribute("Credits") or 0) :: number) >= nextDef.Cost then "Green" else "Grey")
+		text.Text = "UPGRADE $" .. Format.Short(cost)
+		UIKit.recolor(grad, if ((player:GetAttribute("Credits") or 0) :: number) >= cost then "Green" else "Grey")
 	else
 		nxt.Text = "MAX"
 		text.Text = "MAXED"
@@ -103,7 +107,7 @@ button.MouseButton1Click:Connect(function()
 end)
 
 player.AttributeChanged:Connect(function(name)
-	if win.isOpen() and (name == "Credits" or name == "PenLevel" or name == "BaseSlots") then
+	if win.isOpen() and (name == "Credits" or name == "PenLevel" or name == "BaseSlots" or name == "Ring") then
 		refresh()
 	end
 end)

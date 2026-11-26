@@ -1,6 +1,7 @@
 -- Agrandissement de l'enclos (Config.Pen, shared/PenBuilder, PenUI.client).
--- Chaque niveau acheté en $ agrandit le sol de la base (vers le fond et le côté libre) et donne des
--- places en plus pour les œufs et les créatures (BoostService.BaseSlots). Niveau gardé dans d.pen.
+-- Chaque niveau acheté en $ agrandit le sol de la base (vers le fond et le côté libre) et donne une
+-- place en plus pour les œufs et les créatures (BoostService.BaseSlots). Niveau gardé dans d.pen.
+-- 10 améliorations ; le prix double à chaque fois et suit l'anneau du joueur (Config.PenCost).
 -- Remotes.PenUp (RemoteFunction) : ("buy") -> { ok }
 -- Les positions des objets posés sont dans le repère du sol, qui se déplace en grandissant : à l'achat
 -- on les décale pour que rien ne bouge dans le monde. La base libérée revient au niveau 1.
@@ -51,11 +52,12 @@ local function buy(player: Player): boolean
 	if not nextDef then
 		return false
 	end
-	if (d.credits or 0) < nextDef.Cost then
+	local cost = Config.PenCost(level + 1, d.ring)
+	if (d.credits or 0) < cost then
 		GameService.Notice(player, "Not enough $", "warn")
 		return false
 	end
-	d.credits -= nextDef.Cost
+	d.credits -= cost
 	-- le sol se déplace en grandissant : œufs et créatures gardent leur place dans le monde
 	local before, after = PenBuilder.Center(base, level), PenBuilder.Center(base, level + 1)
 	for _, item in ipairs(d.base or {}) do

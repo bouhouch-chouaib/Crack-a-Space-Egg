@@ -2047,24 +2047,41 @@ Config.Guide = {
 }
 
 -- ENCLOS (PenService, shared/PenBuilder, PenUI.client) ----------------------------------------------
--- La base du joueur s'agrandit par niveaux achetés en $ (bouton rouge dans l'enclos) :
--- Size = sol (largeur, profondeur) : il grandit vers le fond et vers le côté libre, dans la place réservée
--- par tools/build-yard.lua (24 studs derrière, 12 sur le côté) ; Slots = places en plus pour les œufs et les
--- créatures (en plus de Config.Hatch.Slots et du passe +5) ; Cost = prix en $.
--- Prix posés à la main (26 nov.) : niveau 2 vers l'anneau 2-3, niveau 3 vers l'anneau 4-5, niveau 4 vers
--- l'anneau 6-7 ; à régler avec tools/eco-sim.luau.
+-- La base du joueur s'agrandit par niveaux achetés en $ (bouton rouge dans l'enclos). Règles de Chouaib
+-- (26 nov.) : 10 améliorations avant le maximum, +1 place à chaque amélioration, et un prix qui double à
+-- chaque fois.
+-- Prix d'une amélioration = CostBase × 2^(n - 1) × RingIncome de l'anneau le plus loin débloqué (comme les
+-- paquets d'argent, Config.MoneyPackAmount). Un prix fixe ne pouvait pas marcher : il ne fait que ×512 entre
+-- la première et la dernière amélioration, alors que les revenus font ×35 à chaque anneau.
+-- CostBase = 3 000 : la 1re amélioration vaut 125 s du revenu de la créature la plus rare de son anneau
+-- (24 × RingIncome par seconde), soit une à deux minutes avec une base pleine ; la 10e en vaut 64 000 s
+-- (près de 18 heures de cette créature) : bien au-dessus de ce qu'elle rapporte, quelques heures de jeu.
+-- Levels[n] : Size = sol (largeur, profondeur), de 36 x 36 à 48 x 60 dans la place réservée par
+-- tools/build-yard.lua (il grandit vers le fond et vers le côté libre) ; Slots = places en plus pour les
+-- œufs et les créatures (en plus de Config.Hatch.Slots et du passe +5).
 Config.Pen = {
-	Levels = {
-		{ Size = Vector2.new(36, 36), Slots = 0, Cost = 0 },
-		{ Size = Vector2.new(36, 48), Slots = 3, Cost = 5e5 },
-		{ Size = Vector2.new(42, 54), Slots = 6, Cost = 1e9 },
-		{ Size = Vector2.new(48, 60), Slots = 10, Cost = 1e12 },
-	},
+	Upgrades = 10,
+	First = Vector2.new(36, 36),
+	Last = Vector2.new(48, 60),
+	CostBase = 3000,
+	CostGrowth = 2,
+	Levels = {},
 	-- bouton rouge dans l'enclos, repère de départ de la base : coin avant, côté atelier (x multiplié par -TunnelSide)
 	Button = Vector3.new(13, 0, 13),
 }
+for n = 0, Config.Pen.Upgrades do
+	local k = n / Config.Pen.Upgrades
+	local size = Config.Pen.First:Lerp(Config.Pen.Last, k)
+	Config.Pen.Levels[n + 1] = { Size = Vector2.new(math.floor(size.X + 0.5), math.floor(size.Y + 0.5)), Slots = n }
+end
 function Config.PenLevel(level: number?)
 	return Config.Pen.Levels[math.clamp(math.floor(level or 1), 1, #Config.Pen.Levels)]
+end
+-- Prix pour passer au niveau « level » (2 = première amélioration) quand on a débloqué l'anneau « ring »
+function Config.PenCost(level: number, ring: number?): number
+	local incomes = Config.Hatch.RingIncome
+	local income = incomes[math.clamp(math.floor(ring or 1), 1, #incomes)]
+	return math.floor(Config.Pen.CostBase * Config.Pen.CostGrowth ^ (level - 2) * income + 0.5)
 end
 
 -- INTERFACE (UIKit) ---------------------------------------------------------------------------------
