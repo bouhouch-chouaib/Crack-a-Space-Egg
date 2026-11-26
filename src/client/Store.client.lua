@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
 local Prices = require(script.Parent:WaitForChild("Prices"))
 
 local player = Players.LocalPlayer
@@ -59,8 +60,22 @@ local sections: { [string]: GuiObject } = {}
 local reveal: { GuiObject } = {}
 local robuxCards: { [number]: GuiObject } = {} -- Id Robux -> carte, pour fêter l'achat
 
--- Fête un achat : explosion de lumière, rebond, texte qui s'envole
+-- Fête un achat : soleil doré en 4 calques (LayeredFx « Celebrate ») centré sur la carte, par-dessus la
+-- fenêtre (posé dans le ScreenGui pour ne pas être coupé par la liste qui défile), explosion de lumière,
+-- rebond, texte qui s'envole
 local function celebrate(card: GuiObject, text: string)
+	local screen = card:FindFirstAncestorWhichIsA("ScreenGui")
+	if screen then
+		local c = card.AbsolutePosition - screen.AbsolutePosition + card.AbsoluteSize / 2
+		LayeredFx.Screen(screen, {
+			kind = "Celebrate",
+			colors = { Color3.fromRGB(255, 170, 20), Color3.fromRGB(255, 240, 140) },
+			duration = 1.1,
+			size = UDim2.fromScale(0.75, 0.75),
+			position = UDim2.fromOffset(c.X, c.Y),
+			zIndex = 60,
+		})
+	end
 	UIKit.burst(card, UDim2.fromScale(0.5, 0.35), Color3.fromRGB(255, 236, 110))
 	UIKit.bump(card, 0.15)
 	UIKit.flyText(card, text, UDim2.fromOffset(8, 100), Color3.fromRGB(255, 236, 110))

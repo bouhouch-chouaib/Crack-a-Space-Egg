@@ -37,6 +37,8 @@ LayeredFx.Sheets = {
 	PowerUp = { Glow = "rbxassetid://77232808283172", Rim = "rbxassetid://128129415044728", Mid = "rbxassetid://106879213808346", Core = "rbxassetid://125153285030214" },
 	-- rugissement du monstre (MonsterFx.client) : ondes en dents de scie, lignes de vitesse
 	Roar = { Glow = "rbxassetid://96977963111925", Rim = "rbxassetid://87077125099005", Mid = "rbxassetid://81994057772119", Core = "rbxassetid://95879753420510" },
+	-- achat dans la boutique (Store.client) : soleil doré, anneau, étoiles qui scintillent
+	Celebrate = { Glow = "rbxassetid://127190928214483", Rim = "rbxassetid://106263494394533", Mid = "rbxassetid://89835018857798", Core = "rbxassetid://92773400059896" },
 	Converge = { Glow = "rbxassetid://126224476094550", Rim = "rbxassetid://116332369242874", Mid = "rbxassetid://96225808912195", Core = "rbxassetid://134950337727915" },
 }
 

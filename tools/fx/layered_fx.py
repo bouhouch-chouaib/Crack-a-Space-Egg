@@ -475,6 +475,41 @@ def fx_thrust(t, i):
     return bands(d, rim=0.0, mid=0.3, core=0.74, glow_sigma=0.04)
 
 
+# Achat dans la boutique -------------------------------------------------------------------------
+
+
+def fx_celebrate(t, i):
+    """achat : éclair, soleil de rayons (longs et courts) qui grandit en tournant, anneau qui s'élargit,
+    étoiles qui jaillissent en scintillant (une seule fois)"""
+    d = np.zeros_like(X)
+    e = 1 - (1 - t) ** 2.2
+    fade = 1 - ss(0.65, 1.0, t)
+    rot = 0.6 * t
+    for k in range(12):
+        a = TAU * k / 12 + rot
+        L = (0.97 if k % 2 == 0 else 0.68) * (0.35 + 0.65 * e)
+        da = np.angle(np.exp(1j * (ANG - a)))
+        w = 0.3 * np.clip(1 - RAD / L, 0, 1) ** 0.7 * (1 - 0.5 * t)  # larges pointes de soleil
+        ray = np.where((RAD < L) & (RAD > 0.12 * e), 1 - np.abs(da) / np.maximum(w, 1e-4), 0)
+        d = np.maximum(d, np.clip(ray, 0, 1) * np.clip(1 - RAD / L, 0, 1) ** 0.3 * fade)
+    # anneau
+    rr = 0.2 + 0.72 * e
+    d = np.maximum(d, np.clip(1 - np.abs(RAD - rr) / (0.035 * (1 - t) + 0.006), 0, 1) * (1 - ss(0.5, 0.9, t)))
+    # étoiles qui jaillissent et scintillent
+    rng = np.random.default_rng(12)
+    for k in range(9):
+        a = TAU * k / 9 + rng.uniform(-0.2, 0.2) + 0.15
+        r = 0.18 + rng.uniform(0.45, 0.7) * e
+        tw = 0.75 + 0.25 * math.sin(TAU * (t * 3 + k * 0.37))
+        s = rng.uniform(0.15, 0.23) * tw * min(1, t / 0.1) * (1 - ss(0.75, 1, t))
+        if s > 0.004:
+            d = np.maximum(d, star4(math.cos(a) * r, math.sin(a) * r, s, rot=0.3 * k))
+    # éclair au centre
+    if t < 0.35:
+        d = np.maximum(d, np.clip(1 - RAD / (0.4 * math.sin(math.pi * t / 0.35) + 1e-4), 0, 1) ** 0.5)
+    return bands(d, rim=0.05, mid=0.35, core=0.68, glow_sigma=0.04, glow_gain=1.2)
+
+
 # Rugissement du monstre -------------------------------------------------------------------------
 
 
@@ -737,6 +772,7 @@ EFFECTS = {
     "Bite": fx_bite,
     "PowerUp": fx_powerup,
     "Roar": fx_roar,
+    "Celebrate": fx_celebrate,
 }
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
@@ -761,6 +797,7 @@ PREVIEW = {
     "Bite": ((200, 40, 255), (255, 170, 240)),
     "PowerUp": ((170, 70, 255), (235, 190, 255)),
     "Roar": ((255, 70, 40), (255, 190, 150)),
+    "Celebrate": ((255, 170, 20), (255, 240, 140)),
     "HatchRing": ((170, 90, 255), (225, 200, 255)),
     "Converge": ((255, 70, 160), (255, 200, 230)),
 }
