@@ -62,17 +62,8 @@ Config.Map = {
 	RelaySize = 30, -- relais de pression, au milieu des vides assez larges entre deux anneaux
 	RelayMinGap = math.huge, -- relais retirés (7 nov.) : c'est le carburant du jetpack qui décide quels vides on traverse
 	BuoySpacing = 60,
-	-- Mur de givre à picots entre deux bouées, sur les deux bords du couloir (WorldBuilder) : il montre où
-	-- le gel commence. Presque transparent (on voit le décor à travers), il ne bloque rien.
-	Edge = {
-		Height = 46,
-		Thickness = 0.4,
-		Color = Color3.fromRGB(150, 225, 255),
-		Transparency = 0.9, -- la paroi
-		StudColor = Color3.fromRGB(190, 240, 255),
-		StudTransparency = 0.66, -- les picots dessinés dessus
-		StudTile = 4, -- studs par tuile de picots
-	},
+	-- (27 nov. : les murs du couloir, leurs piliers et leurs décors sont réglés par biome dans
+	-- shared/CorridorThemes et construits par server/CorridorDecor ; BuoySpacing = pas entre deux piliers)
 	-- Champ de décor : roches du biome de chaque côté du tapis, sur toute l'épaisseur et la hauteur
 	DecorArc = 750, -- studs d'arc couverts de chaque côté du couloir (au-delà, la brume cache tout)
 	DecorDensity = 1 / 2600, -- roches par stud² de champ

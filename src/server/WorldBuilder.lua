@@ -7,11 +7,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local CorridorDecor = require(script.Parent.CorridorDecor)
 
 local WorldBuilder = {}
 
 local M = Config.Map
-local STUDS = "rbxassetid://99589690361139" -- picots carrés (comme tools/apply-studs.lua)
 local rng = Random.new(20261211) -- graine fixe : la même carte à chaque serveur
 
 local function part(props): Part
@@ -204,69 +204,9 @@ local function buildCorridor(world: Folder)
 		end
 	end
 
-	-- Bouées lumineuses sur les deux bords : la combinaison est protégée entre elles
-	local buoys = Instance.new("Folder")
-	buoys.Name = "Buoys"
-	buoys.Parent = corridor
-	local z = 0
-	while z <= last do
-		for _, side in ipairs({ -1, 1 }) do
-			local cf = CFrame.new(side * M.CorridorWidth / 2, 0, M.FrontZ + z)
-			local model = asset("Corridor", "Buoy")
-			if model then
-				model:PivotTo(cf)
-				ghost(model)
-				model.Name = "Buoy"
-				model.Parent = buoys
-			else
-				decor({
-					Name = "Buoy",
-					Shape = Enum.PartType.Ball,
-					Size = Vector3.new(2.5, 2.5, 2.5),
-					CFrame = cf,
-					Material = Enum.Material.Neon,
-					Color = Color3.fromRGB(90, 220, 255),
-					Parent = buoys,
-				})
-			end
-		end
-		z += M.BuoySpacing
-	end
-
-	-- Murs de givre à picots entre les bouées (15 nov.) : on voit où finit le couloir et où le gel commence.
-	-- Ils ne bloquent rien (on peut tout tenter à ses risques) : ni collision, ni requête.
-	local edges = Instance.new("Folder")
-	edges.Name = "Edges"
-	edges.Parent = corridor
-	local E = M.Edge
-	z = 0
-	while z < last do
-		local length = math.min(M.BuoySpacing, last - z)
-		for _, side in ipairs({ -1, 1 }) do
-			local wall = decor({
-				Name = "Edge",
-				Size = Vector3.new(E.Thickness, E.Height, length),
-				CFrame = CFrame.new(side * M.CorridorWidth / 2, 0, M.FrontZ + z + length / 2),
-				Material = Enum.Material.SmoothPlastic,
-				Color = E.Color,
-				Transparency = E.Transparency,
-				CastShadow = false,
-			})
-			for _, face in ipairs({ Enum.NormalId.Left, Enum.NormalId.Right }) do
-				local studs = Instance.new("Texture")
-				studs.Name = "Studs"
-				studs.Texture = STUDS
-				studs.Face = face
-				studs.StudsPerTileU = E.StudTile
-				studs.StudsPerTileV = E.StudTile
-				studs.Color3 = E.StudColor
-				studs.Transparency = E.StudTransparency
-				studs.Parent = wall
-			end
-			wall.Parent = edges
-		end
-		z += M.BuoySpacing
-	end
+	-- Murs du couloir, biome par biome (27 nov.) : paroi teintée, rails, piliers à lanterne (ils remplacent
+	-- les anciennes bouées), portail à l'entrée de chaque biome et décors à thème. Rien ne bloque.
+	CorridorDecor.Build(corridor)
 
 	corridor:SetAttribute("Length", last)
 	corridor.Parent = world
