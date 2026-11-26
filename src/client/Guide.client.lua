@@ -600,6 +600,10 @@ local function decideStep(step: number): Hint?
 			if windowOpen("TunnelUp") then
 				return { icon = "WindTunnel", text = "Press BUY!", sub = "It makes your jetpack stronger" }
 			end
+			-- debout sur le bouton : il reste à appuyer (ShipShops.client publie l'attribut OnButton)
+			if player:GetAttribute("OnButton") == "TunnelUp" then
+				return { icon = "WindTunnel", text = if Device.IsTouch() then "Tap UPGRADE!" else ("Press %s!"):format(Device.Key("machine")), sub = "Buy your wind tunnel" }
+			end
 			return { icon = "WindTunnel", text = "Step on the red button!", sub = "Buy your wind tunnel", target = base and base:FindFirstChild("TunnelButton") }
 		end
 		return goRock(nil, ("Save $%s for a wind tunnel  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))

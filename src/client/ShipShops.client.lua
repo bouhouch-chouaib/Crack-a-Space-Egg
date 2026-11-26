@@ -5,14 +5,17 @@
 -- - Marcher sur le tapis (« Mat ») devant un stand ouvre directement son menu, sans touche à appuyer :
 --   STORE = boutique Robux, ITEMS = atelier des foreuses, SELL = fenêtre des créatures en mode vente.
 --   Il faut quitter le tapis pour qu'il puisse se rouvrir (on peut donc fermer la fenêtre en restant
---   dessus). Les boutons rouges de sa base (machine, tube) marchent pareil, et s'enfoncent sous le pied.
+--   dessus). Les boutons rouges de sa base (machine, tube, enclos) s'enfoncent sous le pied ; la fenêtre ne s'ouvre
+--   que si on appuie (E, X à la manette, ou le bouton UPGRADE à l'écran) : marcher dessus ne suffit plus (26 nov.).
 --   En quittant le tapis, ses fenêtres se ferment toutes seules (ITEMS : aussi BASE SKINS).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
+local ContextActionService = game:GetService("ContextActionService")
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local Device = require(script.Parent:WaitForChild("Device"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
@@ -69,7 +72,8 @@ local MODE = { Creatures = "sell" }
 -- fenêtres fermées en quittant le tapis (noms des UIKit.window)
 local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop", "BaseSkins" }, Creatures = { "CreaturesWindow" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" }, PenUp = { "PenUp" } }
 local MAT_MARGIN = 1 -- studs autour du tapis qui comptent encore
-type Mat = { part: BasePart, window: string, on: boolean, radius: number?, home: CFrame? }
+-- press : bouton rouge de sa base (il faut appuyer pour ouvrir, marcher dessus ne suffit pas)
+type Mat = { part: BasePart, window: string, on: boolean, radius: number?, home: CFrame?, press: boolean? }
 local mats: { Mat } = {}
 task.spawn(function()
 	local shops = workspace:WaitForChild("Ship"):WaitForChild("Shops", 30)
@@ -96,10 +100,71 @@ task.spawn(function()
 		local button = base:WaitForChild(name, 30)
 		local top = button and button:FindFirstChild("RedTop")
 		if button and top and top:IsA("BasePart") then
-			table.insert(mats, { part = top, window = button:GetAttribute("Window"), on = false, radius = 3.2, home = top.CFrame })
+			table.insert(mats, { part = top, window = button:GetAttribute("Window"), on = false, radius = 3.2, home = top.CFrame, press = true })
 		end
 	end
 end)
+
+-- BOUTONS ROUGES : debout dessus, un bouton « UPGRADE » apparaît à l'écran ; E (X à la manette) ou un
+-- toucher ouvre la fenêtre. Tant qu'on est sur un bouton, la touche E n'active pas la machine à côté.
+local hintGui = UIKit.new("ScreenGui", { Name = "ButtonHint", ResetOnSpawn = false, DisplayOrder = 4, Parent = player:WaitForChild("PlayerGui") })
+local hint, hintText = UIKit.priceButton({ parent = hintGui, text = "", size = UDim2.fromOffset(230, 56), position = UDim2.new(0.5, -115, 0.58, 0) })
+hint.Name = "Upgrade"
+hint.Visible = false
+hintText.TextSize = 27
+UIKit.autoScale(hint)
+local pressMat: Mat? = nil
+local mutedPrompt: ProximityPrompt? = nil
+
+local function hintLabel(): string
+	local kind = Device.Kind()
+	return if kind == "Touch" then "UPGRADE" elseif kind == "Gamepad" then Device.PadName(Enum.KeyCode.ButtonX) .. "  UPGRADE" else "[E]  UPGRADE"
+end
+
+local function press()
+	local m = pressMat
+	if m then
+		Sfx.Play("Open")
+		UIKit.Open:Fire(m.window)
+	end
+end
+hint.MouseButton1Click:Connect(press)
+Device.Changed:Connect(function()
+	hintText.Text = hintLabel()
+end)
+
+local function setPress(m: Mat?)
+	pressMat = m
+	player:SetAttribute("OnButton", if m then m.window else nil) -- lu par le guide (Guide.client)
+	if mutedPrompt then
+		if mutedPrompt.Parent then
+			mutedPrompt.Enabled = true
+		end
+		mutedPrompt = nil
+	end
+	if m then
+		hintText.Text = hintLabel()
+		hint.Visible = true
+		UIKit.popIn(hint)
+		ContextActionService:BindActionAtPriority("BaseButton", function(_, state)
+			if state == Enum.UserInputState.Begin then
+				press()
+			end
+			return Enum.ContextActionResult.Sink
+		end, false, 3000, Enum.KeyCode.E, Enum.KeyCode.ButtonX)
+		-- la machine à dérocher utilise la même touche : son invite se tait le temps qu'on est sur le bouton
+		local base = m.part:FindFirstAncestorWhichIsA("Model")
+		base = base and base.Parent
+		local prompt = base and base:FindFirstChild("DerockPrompt", true)
+		if prompt and prompt:IsA("ProximityPrompt") and prompt.Enabled then
+			prompt.Enabled = false
+			mutedPrompt = prompt
+		end
+	else
+		hint.Visible = false
+		ContextActionService:UnbindAction("BaseButton")
+	end
+end
 
 local function onMat(m: Mat, pos: Vector3): boolean
 	local mat = m.part
@@ -154,10 +219,17 @@ RunService.RenderStepped:Connect(function()
 			m.part.CFrame = if on then m.home - Vector3.new(0, 0.28, 0) else m.home -- le bouton s'enfonce
 		end
 		if on and not m.on then
-			Sfx.Play("Open")
-			UIKit.Open:Fire(m.window, MODE[m.window] or player:GetAttribute("ShopTab"))
-			player:SetAttribute("ShopTab", nil)
+			if m.press then
+				setPress(m) -- bouton rouge : on attend l'appui
+			else
+				Sfx.Play("Open")
+				UIKit.Open:Fire(m.window, MODE[m.window] or player:GetAttribute("ShopTab"))
+				player:SetAttribute("ShopTab", nil)
+			end
 		elseif m.on and not on then
+			if pressMat == m then
+				setPress(nil)
+			end
 			for _, name in ipairs(CLOSE[m.window] or {}) do
 				local w = UIKit.Windows[name]
 				if w and w.isOpen() then
@@ -166,6 +238,11 @@ RunService.RenderStepped:Connect(function()
 			end
 		end
 		m.on = on
+	end
+	-- le bouton UPGRADE se cache tant que sa fenêtre est ouverte
+	if pressMat then
+		local w = UIKit.Windows[pressMat.window]
+		hint.Visible = not (w and w.isOpen())
 	end
 	for _, v in pairs(vendors) do
 		local near = (v.root.Position - hrp.Position).Magnitude < WAVE_RANGE

@@ -129,8 +129,9 @@ local function loadPenBuilder()
 	return m
 end
 
--- Bouton rouge au sol (comme tools/build-upgrade-buttons.lua) : marcher dessus ouvre la fenêtre « window »
-local function redButton(base: Instance, name: string, window: string, iconId: string, at: CFrame)
+-- Bouton rouge au sol : on monte dessus puis on appuie (E) pour ouvrir la fenêtre « window » (ShipShops.client).
+-- lift : hauteur du sol sous le bouton (0 sur l'herbe, 0.2 sur le sol de l'enclos)
+local function redButton(base: Instance, name: string, window: string, iconId: string, at: CFrame, lift: number)
 	local old = base:FindFirstChild(name)
 	if old then
 		old:Destroy()
@@ -141,8 +142,8 @@ local function redButton(base: Instance, name: string, window: string, iconId: s
 	local function disc(n: string, y: number, height: number, size: number, color: Color3): Part
 		return part({ Name = n, Shape = Enum.PartType.Cylinder, Color = color, Size = Vector3.new(height, size, size), CFrame = (at + Vector3.new(0, y, 0)) * CFrame.Angles(0, 0, math.pi / 2), CanCollide = false, CanQuery = false, CanTouch = false, Parent = m })
 	end
-	disc("Ring", 0.35, 0.3, 5.4, Color3.fromRGB(34, 40, 72))
-	local top = disc("RedTop", 0.7, 0.5, 4.2, Color3.fromRGB(232, 48, 48))
+	disc("Ring", lift + 0.15, 0.3, 5.4, Color3.fromRGB(34, 40, 72))
+	local top = disc("RedTop", lift + 0.5, 0.5, 4.2, Color3.fromRGB(232, 48, 48))
 	local icon = Instance.new("Decal")
 	icon.Name = "Icon"
 	icon.Face = Enum.NormalId.Right -- le dessus du cylindre couché
@@ -258,8 +259,21 @@ function Build.Build(): string
 			PenBuilder.Build(base, 1)
 			-- bouton d'agrandissement : dans l'enclos, coin avant côté atelier (ce coin ne bouge jamais)
 			local side = (base:GetAttribute("TunnelSide") or 1) :: number
-			local bp = F:PointToWorldSpace(Vector3.new(-side * PEN.Button.X, 0, PEN.Button.Z))
-			redButton(base, "PenButton", "PenUp", "rbxassetid://112808991360692", CFrame.new(bp.X, 0, bp.Z))
+			local function spot(x: number, z: number): CFrame
+				local p = F:PointToWorldSpace(Vector3.new(x, 0, z))
+				return CFrame.new(p.X, 0, p.Z)
+			end
+			redButton(base, "PenButton", "PenUp", "rbxassetid://112808991360692", spot(-side * PEN.Button.X, PEN.Button.Z), 0.2)
+			-- machine : devant le sol, côté atelier ; soufflerie : devant le tube (du côté TunnelSide)
+			redButton(base, "MachineButton", "MachineUp", "rbxassetid://124846923096618", spot(-side * 14.5, 21.5), 0)
+			redButton(base, "TunnelButton", "TunnelUp", "rbxassetid://124670815550762", spot(side * 12, 34.5), 0)
+			-- les panneaux de bois essayés le 26 nov. sont retirés (trop grands, ils cachaient les machines)
+			for _, n in ipairs({ "MachineSign", "TunnelSign", "PenSign" }) do
+				local old = base:FindFirstChild(n)
+				if old then
+					old:Destroy()
+				end
+			end
 			local af = annex and annex:FindFirstChild("AnnexFloor")
 			if annex and af and af:IsA("BasePart") then
 				for _, c in ipairs(annex:GetChildren()) do

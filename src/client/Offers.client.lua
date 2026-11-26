@@ -163,7 +163,7 @@ local function toStand(standName: string, tab: string?)
 	end
 end
 
--- Debout sur un bouton rouge de sa base : le menu s'ouvre tout seul (ShipShops.client)
+-- Debout sur un bouton rouge de sa base, sa fenêtre ouverte (sans avoir à appuyer : c'est l'offre qui l'ouvre)
 local function toButton(name: string)
 	local bases = ship() and (ship() :: Instance):FindFirstChild("Bases")
 	local mine = bases and bases:FindFirstChild("Base" .. tostring(player:GetAttribute("Base")))
@@ -172,6 +172,7 @@ local function toButton(name: string)
 	if button and character then
 		local p = button:GetPivot().Position
 		character:PivotTo(CFrame.new(p.X, 3.4, p.Z))
+		UIKit.Open:Fire(button:GetAttribute("Window"))
 	end
 end
 
