@@ -7,6 +7,8 @@
 -- dorés que la soufflerie est haut de gamme (Remotes.TunnelXP : XP gagnée, boosts compris, et palier).
 -- Bonus à attraper (Config.Jetpack.Boost) : de temps en temps un gros bouton « x2 » apparaît quelques
 -- secondes (attribut TunnelBoostOffer) ; cliqué à temps, l'XP est doublée un court moment (TunnelBoostEnd).
+-- Effets en 4 calques (LayeredFx) : tourbillon violet là où on tape, puis aura de flammes violettes et
+-- tourbillon autour du joueur quand le gain doublé tombe.
 -- Chaque niveau gagné dans la soufflerie : un flash très léger et un petit tremblement de la caméra.
 
 local Players = game:GetService("Players")
@@ -19,6 +21,7 @@ local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
+local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
 
 local player = Players.LocalPlayer
 local J = Config.Jetpack
@@ -206,7 +209,8 @@ local XP_COLORS = { Color3.fromRGB(150, 235, 255), Color3.fromRGB(110, 210, 255)
 local PURPLE = Color3.fromRGB(200, 120, 255)
 local PURPLE_LIGHT = Color3.fromRGB(235, 190, 255)
 
--- Le joueur brille en violet le temps d'un gain doublé : contour et voile violets, lumière, étincelles
+-- Le joueur brille en violet le temps d'un gain doublé : contour et voile violets, lumière, étincelles,
+-- aura de puissance (flammes violettes en 4 calques derrière lui) et tourbillon qui s'ouvre
 local function shinePurple()
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -246,6 +250,26 @@ local function shinePurple()
 	task.delay(0.35, function()
 		e:Emit(18)
 	end)
+	local aura = LayeredFx.new(at, {
+		kind = "Flame",
+		size = 6.2,
+		colors = { Color3.fromRGB(150, 60, 255), PURPLE_LIGHT },
+		lifetime = 1.3,
+		loop = 0.6,
+		fade = 0.3,
+		locked = true,
+		zOffset = -1.5,
+	})
+	aura:Emit()
+	local swirl = LayeredFx.new(at, {
+		kind = "PowerUp",
+		size = 7.5,
+		colors = { Color3.fromRGB(150, 60, 255), PURPLE_LIGHT },
+		lifetime = 0.7,
+		locked = true,
+		zOffset = -2,
+	})
+	swirl:Emit(math.random(0, 359))
 	TweenService:Create(hl, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { FillTransparency = 1, OutlineTransparency = 1 }):Play()
 	TweenService:Create(light, TweenInfo.new(1.1), { Brightness = 0 }):Play()
 	Debris:AddItem(hl, 1.2)
@@ -428,6 +452,15 @@ local function grab()
 		Sfx.Play("Coin", { pitch = 1.5 })
 		cameraImpact()
 		UIKit.burst(flash, at, PURPLE)
+		-- tourbillon en 4 calques là où on a tapé
+		LayeredFx.Screen(boostGui, {
+			kind = "PowerUp",
+			colors = { Color3.fromRGB(150, 60, 255), PURPLE_LIGHT },
+			duration = 0.7,
+			size = UDim2.fromScale(0.65, 0.65),
+			position = at,
+			zIndex = 8,
+		})
 		UIKit.flyText(boostGui, ("x%d XP!"):format(BOOST.Mult), at, PURPLE_LIGHT)
 	end
 end

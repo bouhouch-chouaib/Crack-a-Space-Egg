@@ -475,6 +475,49 @@ def fx_thrust(t, i):
     return bands(d, rim=0.0, mid=0.3, core=0.74, glow_sigma=0.04)
 
 
+# Bonus x2 XP ------------------------------------------------------------------------------------
+
+
+def fx_powerup(t, i):
+    """bonus attrapé : tourbillon à 3 bras qui s'ouvre en tournant, lignes de vitesse et étoiles qui
+    jaillissent, éclair au centre (une seule fois)"""
+    d = np.zeros_like(X)
+    e = 1 - (1 - t) ** 2.5
+    # tourbillon : bras en spirale dans une couronne qui s'élargit et se creuse
+    r_out = 0.25 + 0.58 * e  # reste dans l'étape
+    r_in = 0.75 * ss(0.2, 1.0, t) * r_out
+    rot = TAU * 0.45 * e
+    arm = np.cos(3 * (ANG + RAD * 4.2 - rot))
+    ring = ss(r_in - 0.02, r_in + 0.06, RAD) * (1 - ss(r_out - 0.08, r_out, RAD))
+    d = np.maximum(d, np.clip((arm - 0.35) / 0.4, 0, 1) * ring * (1 - ss(0.7, 1, t)))
+    # lignes de vitesse
+    if t > 0.1:
+        k = ss(0.1, 0.25, t) * (1 - ss(0.6, 0.95, t))
+        a0 = 0.62 + 0.25 * e
+        rng = np.random.default_rng(31)
+        for n in range(14):
+            a = TAU * n / 14 + rng.uniform(-0.1, 0.1)
+            L0 = a0 * rng.uniform(0.85, 1.0)
+            L1 = min(0.97, L0 + 0.22 * (1 - t))
+            ca, sa = math.cos(a), math.sin(a)
+            along = X * ca + Y * sa
+            across = np.abs(-X * sa + Y * ca)
+            s = (along - L0) / max(L1 - L0, 1e-3)
+            w = 0.022 * np.clip(1 - s, 0, 1)
+            d = np.maximum(d, np.clip(1 - across / np.maximum(w, 1e-4), 0, 1) * (s >= 0) * (s <= 1) * k)
+    # étoiles qui jaillissent
+    for n in range(6):
+        a = TAU * n / 6 + 0.3
+        r = 0.15 + 0.62 * e
+        s = 0.26 * (1 - ss(0.55, 1, t)) * min(1, t / 0.12)
+        if s > 0.005:
+            d = np.maximum(d, star4(math.cos(a) * r, math.sin(a) * r, s, rot=t * 3))
+    # éclair au centre
+    if t < 0.3:
+        d = np.maximum(d, np.clip(1 - RAD / (0.35 * math.sin(math.pi * t / 0.3) + 1e-4), 0, 1) ** 0.5)
+    return bands(d, rim=0.05, mid=0.35, core=0.66, glow_sigma=0.04, glow_gain=1.2)
+
+
 # Morsure du monstre -----------------------------------------------------------------------------
 
 
@@ -654,6 +697,7 @@ EFFECTS = {
     "Dust": fx_dust,
     "Thrust": fx_thrust,
     "Bite": fx_bite,
+    "PowerUp": fx_powerup,
 }
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
@@ -676,6 +720,7 @@ PREVIEW = {
     "Dust": ((120, 105, 100), (190, 175, 165)),
     "Thrust": ((255, 90, 20), (255, 200, 70)),
     "Bite": ((200, 40, 255), (255, 170, 240)),
+    "PowerUp": ((170, 70, 255), (235, 190, 255)),
     "HatchRing": ((170, 90, 255), (225, 200, 255)),
     "Converge": ((255, 70, 160), (255, 200, 230)),
 }

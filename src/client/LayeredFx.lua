@@ -33,6 +33,8 @@ LayeredFx.Sheets = {
 	Thrust = { Glow = "rbxassetid://85617258806965", Rim = "rbxassetid://121451156008585", Mid = "rbxassetid://103169018205636", Core = "rbxassetid://139605118001905" },
 	-- morsure du monstre (MonsterFx.client) : crocs qui claquent, éclair, trois entailles d'énergie
 	Bite = { Glow = "rbxassetid://106171591917279", Rim = "rbxassetid://87980479626516", Mid = "rbxassetid://99658630256742", Core = "rbxassetid://81610182572383" },
+	-- bonus x2 XP de la soufflerie (WindTunnel.client) : tourbillon violet qui s'ouvre
+	PowerUp = { Glow = "rbxassetid://77232808283172", Rim = "rbxassetid://128129415044728", Mid = "rbxassetid://106879213808346", Core = "rbxassetid://125153285030214" },
 	Converge = { Glow = "rbxassetid://126224476094550", Rim = "rbxassetid://116332369242874", Mid = "rbxassetid://96225808912195", Core = "rbxassetid://134950337727915" },
 }
 
