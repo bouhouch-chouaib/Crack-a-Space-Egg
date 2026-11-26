@@ -164,6 +164,7 @@ La casse instantanée à la machine est remplacée par un parcours en deux temps
 - ✅ **Index** (bouton INDEX, dans l'esprit des jeux d'œufs) : un onglet par anneau, avec ses 6 créatures. Celles qu'on n'a **jamais eues dans sa base** sont des silhouettes noires « ??? ». À droite, la créature choisie : nom, rareté, chance de l'obtenir et revenu. On voit la progression x/6 et la collection x/42. Un anneau complet se réclame (Claim!) : +10 % de chance pour toujours et 2 500 × le revenu de base de l'anneau en $ (`d.seen`, `d.indexClaimed`).
 - Il n'y a pas de bouton PETS : le sac s'ouvre aux stands (Trading Post, Fusion Machine).
 - Pas encore fait : équiper 3 créatures qui suivent le joueur, et leurs pouvoirs.
+- ✅ **Aura propre à chaque espèce** (26 nov.) : chaque créature est entourée d'un effet à son image, aux couleurs de l'espèce (`Config.CreatureAura`). Il y a 9 formes : flammes, fumée, éclairs, bulles, spores, cœurs, poussière d'étoiles, pixels et éclats de cristal. Certaines ont en plus un cercle au sol (ondes, runes, engrenage pour tout l'anneau 10). Plus la créature est rare, plus l'aura est grande et franche ; celle des communes reste discrète.
 
 ## 10. Objets spéciaux et reliques
 
@@ -361,6 +362,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 - ✅ Le serveur est autoritaire. La sauvegarde est versionnée, avec migration et sans jamais écraser une partie.
 - ✅ Rojo et `src/` sont la source de vérité. 8 joueurs par serveur.
 - 💡 Un mode téléphone allégé (moins de particules).
+- ✅ **Effets en 4 calques** (26 nov., méthode « anime ») : chaque effet est dessiné en code (`tools/fx/layered_fx.py`) en 4 planches blanches de 16 étapes : **Glow** (halo), **Rim** (silhouette), **Mid** (milieu) et **Core** (cœur). En jeu, `LayeredFx` les empile (une ParticleEmitter par calque, émises au même instant) et colore chaque calque : bords saturés, cœur presque blanc. Une même planche sert donc pour toutes les couleurs. L'étoile d'impact du forage et les auras des créatures sont faites ainsi ; les prochains effets suivront la même méthode.
 
 ## 22. Lancement
 

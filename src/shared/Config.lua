@@ -1709,6 +1709,114 @@ Config.CreatureMotion = {
 	["Lantern Wyvern"] = motion("fly", "roar", 0.6, { Hover = 0.4 }),
 }
 
+-- Aura de chaque espèce (Creatures.client, effets en 4 calques de LayeredFx) : Kind = forme qui tourne
+-- autour d'elle (Flame, Wisp, Electric, Bubbles, Spores, Hearts, Stardust, Glitch, Shards), Rim et Mid =
+-- couleurs de la silhouette et du milieu (le cœur est presque blanc), Ground = cercle à plat sous elle
+-- (Pulse, Rune, Gear). Plus la rareté est haute, plus l'aura est grande et franche.
+local function aura(kind: string, rim: Color3, mid: Color3, ground: string?)
+	return { Kind = kind, Rim = rim, Mid = mid, Ground = ground }
+end
+Config.CreatureAura = {
+	-- 1. Dust Belt
+	["Pebblepup"] = aura("Spores", rgb(150, 135, 120), rgb(235, 225, 205)),
+	["Dust Bunny"] = aura("Stardust", rgb(225, 180, 110), rgb(255, 240, 200)),
+	["Craterhog"] = aura("Shards", rgb(150, 70, 230), rgb(220, 175, 255)),
+	["Orbitoad"] = aura("Stardust", rgb(60, 120, 255), rgb(175, 215, 255)),
+	["Meteor Fox"] = aura("Flame", rgb(255, 90, 20), rgb(255, 195, 60)),
+	["Stardust Dragon"] = aura("Stardust", rgb(255, 80, 170), rgb(255, 222, 120), "Pulse"),
+	-- 2. Ice Ring
+	["Frostling"] = aura("Shards", rgb(70, 160, 255), rgb(195, 235, 255)),
+	["Snow Moth"] = aura("Spores", rgb(140, 195, 255), rgb(235, 245, 255)),
+	["Glacier Otter"] = aura("Bubbles", rgb(60, 180, 230), rgb(195, 240, 255)),
+	["Comet Seal"] = aura("Stardust", rgb(60, 200, 255), rgb(210, 250, 255)),
+	["Aurora Owl"] = aura("Wisp", rgb(140, 80, 255), rgb(110, 255, 185)),
+	["Crystal Yeti"] = aura("Shards", rgb(40, 120, 255), rgb(165, 230, 255), "Pulse"),
+	-- 3. Magma Field
+	["Cinder Slug"] = aura("Spores", rgb(255, 80, 20), rgb(255, 200, 80)),
+	["Lava Crab"] = aura("Bubbles", rgb(255, 70, 10), rgb(255, 175, 40)),
+	["Blaze Newt"] = aura("Flame", rgb(255, 110, 20), rgb(255, 222, 80)),
+	["Obsidian Rhino"] = aura("Flame", rgb(200, 30, 20), rgb(255, 135, 40), "Pulse"),
+	["Solar Phoenix"] = aura("Flame", rgb(255, 150, 0), rgb(255, 240, 125), "Pulse"),
+	["Magma Wyrm"] = aura("Flame", rgb(230, 40, 10), rgb(255, 155, 30), "Pulse"),
+	-- 4. Nebula
+	["Nebula Jelly"] = aura("Bubbles", rgb(230, 80, 220), rgb(255, 195, 250)),
+	["Haze Kitten"] = aura("Wisp", rgb(170, 130, 255), rgb(232, 212, 255)),
+	["Dreamfin"] = aura("Bubbles", rgb(70, 150, 255), rgb(195, 228, 255)),
+	["Prism Ray"] = aura("Shards", rgb(255, 90, 200), rgb(125, 240, 255)),
+	["Nova Lion"] = aura("Flame", rgb(255, 170, 40), rgb(255, 250, 195), "Pulse"),
+	["Galaxy Unicorn"] = aura("Stardust", rgb(160, 70, 255), rgb(255, 155, 240), "Rune"),
+	-- 5. Devourer Belt
+	["Fang Beetle"] = aura("Spores", rgb(60, 170, 60), rgb(195, 255, 135)),
+	["Gloom Bat"] = aura("Wisp", rgb(110, 40, 170), rgb(205, 145, 255)),
+	["Void Shark"] = aura("Wisp", rgb(50, 35, 110), rgb(125, 95, 225), "Pulse"),
+	["Hunger Hound"] = aura("Wisp", rgb(20, 140, 140), rgb(95, 255, 230), "Pulse"),
+	["Abyss Serpent"] = aura("Wisp", rgb(90, 30, 160), rgb(205, 115, 255), "Rune"),
+	["Eclipse Devourer"] = aura("Flame", rgb(90, 20, 140), rgb(255, 115, 60), "Rune"),
+	-- 6. The Rift
+	["Chrono Snail"] = aura("Stardust", rgb(220, 160, 40), rgb(255, 235, 155)),
+	["Glitch Cat"] = aura("Glitch", rgb(255, 40, 220), rgb(65, 255, 255)),
+	["Paradox Panda"] = aura("Wisp", rgb(60, 60, 85), rgb(240, 240, 255), "Rune"),
+	["Hourglass Tortoise"] = aura("Spores", rgb(220, 160, 50), rgb(255, 232, 155), "Rune"),
+	["Rift Griffin"] = aura("Electric", rgb(150, 60, 255), rgb(95, 230, 255), "Pulse"),
+	["Quasar Kraken"] = aura("Electric", rgb(60, 90, 255), rgb(205, 240, 255), "Rune"),
+	-- 7. The Nest
+	["Hatchling"] = aura("Spores", rgb(255, 190, 60), rgb(255, 245, 195)),
+	["Yolk Slime"] = aura("Bubbles", rgb(255, 170, 30), rgb(255, 235, 145)),
+	["Brood Raptor"] = aura("Flame", rgb(230, 120, 20), rgb(255, 212, 115)),
+	["Nest Drake"] = aura("Stardust", rgb(110, 210, 255), rgb(232, 250, 255), "Pulse"),
+	["Hive Queen"] = aura("Shards", rgb(255, 180, 20), rgb(255, 240, 155), "Rune"),
+	["Cosmic Mother"] = aura("Stardust", rgb(200, 60, 255), rgb(255, 195, 125), "Rune"),
+	-- 8. Star Reef
+	["Bubble Guppy"] = aura("Bubbles", rgb(30, 190, 200), rgb(175, 250, 250)),
+	["Coral Crab"] = aura("Bubbles", rgb(255, 90, 130), rgb(255, 205, 215)),
+	["Lantern Jelly"] = aura("Spores", rgb(60, 220, 200), rgb(222, 255, 205)),
+	["Tide Seahorse"] = aura("Bubbles", rgb(230, 170, 40), rgb(255, 240, 175), "Pulse"),
+	["Abyss Shark"] = aura("Shards", rgb(40, 120, 220), rgb(155, 240, 255), "Pulse"),
+	["Star Leviathan"] = aura("Stardust", rgb(40, 160, 230), rgb(255, 232, 155), "Rune"),
+	-- 9. Storm Halo
+	["Zap Pup"] = aura("Electric", rgb(255, 190, 0), rgb(255, 250, 175)),
+	["Volt Beetle"] = aura("Electric", rgb(130, 220, 30), rgb(240, 255, 165)),
+	["Thunder Owl"] = aura("Electric", rgb(120, 90, 255), rgb(255, 240, 125)),
+	["Storm Ram"] = aura("Electric", rgb(60, 110, 255), rgb(205, 232, 255), "Pulse"),
+	["Plasma Tiger"] = aura("Electric", rgb(220, 50, 255), rgb(155, 240, 255), "Pulse"),
+	["Tempest Dragon"] = aura("Electric", rgb(80, 60, 255), rgb(255, 250, 185), "Rune"),
+	-- 10. Clockwork Belt (engrenage au sol pour toutes)
+	["Cog Mouse"] = aura("Spores", rgb(200, 140, 50), rgb(255, 222, 145), "Gear"),
+	["Wind-Up Penguin"] = aura("Spores", rgb(190, 110, 60), rgb(255, 210, 160), "Gear"),
+	["Clockwork Fox"] = aura("Spores", rgb(220, 120, 40), rgb(255, 215, 140), "Gear"),
+	["Steam Rhino"] = aura("Wisp", rgb(160, 170, 185), rgb(245, 250, 255), "Gear"),
+	["Mecha Raptor"] = aura("Electric", rgb(20, 180, 180), rgb(165, 255, 240), "Gear"),
+	["Brass Sky Whale"] = aura("Wisp", rgb(200, 150, 70), rgb(250, 245, 230), "Gear"),
+	-- 11. Candy Comet
+	["Gummy Cub"] = aura("Hearts", rgb(230, 40, 60), rgb(255, 165, 175)),
+	["Marshmallow Bunny"] = aura("Hearts", rgb(255, 110, 180), rgb(255, 222, 240)),
+	["Lollipop Snail"] = aura("Stardust", rgb(255, 60, 160), rgb(125, 230, 255)),
+	["Donut Turtle"] = aura("Spores", rgb(255, 100, 180), rgb(255, 240, 165), "Pulse"),
+	["Licorice Panther"] = aura("Wisp", rgb(35, 35, 50), rgb(115, 255, 205), "Pulse"),
+	["Cotton Candy Unicorn"] = aura("Hearts", rgb(255, 120, 220), rgb(155, 222, 255), "Rune"),
+	-- 12. Mushroom Moon
+	["Mushroom Hedgehog"] = aura("Spores", rgb(40, 200, 220), rgb(205, 255, 240)),
+	["Toadstool Frog"] = aura("Spores", rgb(230, 50, 40), rgb(255, 222, 205)),
+	["Glowcap Moth"] = aura("Spores", rgb(120, 220, 60), rgb(240, 255, 175)),
+	["Moss Bear"] = aura("Spores", rgb(60, 160, 60), rgb(205, 255, 155), "Pulse"),
+	["Fungal Stag"] = aura("Spores", rgb(50, 120, 255), rgb(185, 240, 255), "Rune"),
+	["Mushroom Mammoth"] = aura("Spores", rgb(150, 60, 255), rgb(222, 205, 255), "Rune"),
+	-- 13. Jade Temple
+	["Jade Monkey"] = aura("Spores", rgb(30, 170, 100), rgb(185, 255, 205)),
+	["Golden Scarab"] = aura("Shards", rgb(230, 160, 20), rgb(255, 240, 155)),
+	["Sphinx Cat"] = aura("Stardust", rgb(30, 170, 180), rgb(255, 222, 105), "Rune"),
+	["Temple Lion"] = aura("Flame", rgb(220, 150, 20), rgb(255, 240, 155), "Rune"),
+	["Feathered Serpent"] = aura("Wisp", rgb(20, 160, 110), rgb(255, 212, 95), "Rune"),
+	["Sun Condor"] = aura("Flame", rgb(255, 130, 0), rgb(255, 245, 175), "Rune"),
+	-- 14. Phantom Mist
+	["Boo Pup"] = aura("Wisp", rgb(120, 200, 255), rgb(235, 250, 255)),
+	["Pumpkin Kitty"] = aura("Flame", rgb(255, 110, 10), rgb(255, 212, 95)),
+	["Lantern Squid"] = aura("Spores", rgb(255, 170, 40), rgb(255, 240, 185)),
+	["Phantom Stallion"] = aura("Flame", rgb(20, 190, 190), rgb(185, 255, 245), "Pulse"),
+	["Spirit Wolf"] = aura("Wisp", rgb(60, 170, 230), rgb(222, 245, 255), "Pulse"),
+	["Lantern Wyvern"] = aura("Wisp", rgb(90, 220, 190), rgb(255, 222, 125), "Rune"),
+}
+
 -- Créature qui sort d'un œuf (anneau, rareté) : celle de l'anneau qui a cette rareté
 function Config.CreatureFor(ringIndex: number, rarity: number): any
 	local list = Config.Creatures[ringIndex]

@@ -1,0 +1,434 @@
+# Effets « anime » en 4 calques blancs (méthode du 25 nov., voir docs/Mecaniques.md) :
+#   Glow (halo doux), Rim (silhouette extérieure), Mid (milieu), Core (cœur très clair).
+# Chaque calque est une planche d'animation 4x4 (16 étapes, 1024 px, 256 px par étape), en blanc sur
+# transparent : le jeu empile les 4 planches (une ParticleEmitter par calque, mêmes réglages) et colore
+# chacune (Rim saturé, Mid plus clair, Core presque blanc, Glow saturé et transparent).
+# Les effets en boucle bouclent parfaitement (étape 16 -> étape 1).
+#
+# Usage : python tools/fx/layered_fx.py <dossier de sortie> [nom ...]
+#   -> <dossier>/<Nom>_<Calque>.png  +  <dossier>/_apercu_<Nom>.png (calques colorés empilés)
+import math
+import sys
+
+import numpy as np
+from PIL import Image
+
+FRAME = 256  # pixels par étape dans la planche
+SS = 2  # suréchantillonnage (bords nets mais lissés)
+R = FRAME * SS
+TAU = math.pi * 2
+LAYERS = ("Glow", "Rim", "Mid", "Core")
+
+# grille de coordonnées : x vers la droite, y vers le haut, de -1 à 1
+_ax = (np.arange(R) + 0.5) / R * 2 - 1
+X, Y = np.meshgrid(_ax, -_ax)
+RAD = np.hypot(X, Y)
+ANG = np.arctan2(Y, X)
+
+
+# OUTILS -------------------------------------------------------------------------------------------
+
+
+def ss(a, b, v):
+    """smoothstep de a à b"""
+    t = np.clip((v - a) / (b - a), 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def blur(img, sigma):
+    """flou gaussien par FFT (bords non bouclés : on rembourre)"""
+    pad = int(sigma * 3)
+    p = np.pad(img, pad)
+    n0, n1 = p.shape
+    f0 = np.fft.fftfreq(n0)[:, None]
+    f1 = np.fft.fftfreq(n1)[None, :]
+    k = np.exp(-2 * (math.pi * sigma) ** 2 * (f0**2 + f1**2))
+    out = np.real(np.fft.ifft2(np.fft.fft2(p) * k))
+    return out[pad:-pad, pad:-pad] if pad else out
+
+
+def tile_noise(n, freq, seed, octaves=3):
+    """bruit fractal qui se répète (périodique) sur n x n, valeurs 0..1"""
+    rng = np.random.default_rng(seed)
+    f0 = np.fft.fftfreq(n)[:, None] * n
+    f1 = np.fft.fftfreq(n)[None, :] * n
+    fr = np.hypot(f0, f1)
+    total = np.zeros((n, n))
+    amp = 1.0
+    for o in range(octaves):
+        c = freq * (2**o)
+        spec = (rng.normal(size=(n, n)) + 1j * rng.normal(size=(n, n))) * np.exp(-((fr / c) ** 2))
+        spec[0, 0] = 0
+        layer = np.real(np.fft.ifft2(spec))
+        layer /= np.abs(layer).max() + 1e-9
+        total += layer * amp
+        amp *= 0.5
+    total -= total.min()
+    return total / (total.max() + 1e-9)
+
+
+def sample(tex, u, v):
+    """lecture bilinéaire d'une texture périodique, u et v en tuiles (1 = une tuile)"""
+    n = tex.shape[0]
+    fu = (u % 1) * n
+    fv = (v % 1) * n
+    i0 = np.floor(fu).astype(int) % n
+    j0 = np.floor(fv).astype(int) % n
+    i1 = (i0 + 1) % n
+    j1 = (j0 + 1) % n
+    a = fu - np.floor(fu)
+    b = fv - np.floor(fv)
+    return (tex[j0, i0] * (1 - a) * (1 - b) + tex[j0, i1] * a * (1 - b) + tex[j1, i0] * (1 - a) * b + tex[j1, i1] * a * b)
+
+
+def bands(d, rim=0.0, mid=0.3, core=0.62, soft=0.025, glow_sigma=0.05, glow_gain=1.0):
+    """calques cel-shading à partir d'un champ de densité (plus c'est grand, plus c'est au cœur)"""
+    r = ss(max(rim - soft, 1e-3), rim + soft, d)  # rien hors de la forme (d = 0)
+    m = ss(mid - soft, mid + soft, d)
+    c = ss(core - soft, core + soft, d)
+    g = np.clip(blur(r, glow_sigma * R) * 1.6 * glow_gain, 0, 1)
+    return {"Glow": g, "Rim": r, "Mid": m, "Core": c}
+
+
+def seg_dist(px, py, ax, ay, bx, by):
+    """distance de chaque pixel au segment AB"""
+    dx, dy = bx - ax, by - ay
+    L = dx * dx + dy * dy + 1e-12
+    t = np.clip(((px - ax) * dx + (py - ay) * dy) / L, 0, 1)
+    return np.hypot(px - (ax + t * dx), py - (ay + t * dy))
+
+
+def star4(cx, cy, size, rot=0.0):
+    """étoile à 4 branches (champ 0..1, 1 au centre)"""
+    c, s = math.cos(rot), math.sin(rot)
+    dx = (X - cx) * c + (Y - cy) * s
+    dy = -(X - cx) * s + (Y - cy) * c
+    v = np.sqrt(np.abs(dx) / size + 1e-9) + np.sqrt(np.abs(dy) / size + 1e-9)
+    return np.clip(1 - v / 1.0, 0, 1)
+
+
+def heart(cx, cy, size):
+    x = (X - cx) / size
+    y = (Y - cy) / size * 1.1 + 0.25
+    v = (x * x + y * y - 1) ** 3 - x * x * y**3
+    return np.clip(-v * 3, 0, 1) ** 0.5
+
+
+# EFFETS -------------------------------------------------------------------------------------------
+# chaque effet : fonction(t, i) -> dict de 4 calques (t de 0 à 1 sur la boucle, i = numéro d'étape)
+
+NZ = 256
+NOISE_A = tile_noise(NZ, 3, 11)
+NOISE_B = tile_noise(NZ, 6, 23)
+NOISE_C = tile_noise(NZ, 2, 37, octaves=2)
+
+
+def fx_impact(t, i):
+    """impact du forage : étoile de pointes + onde de choc + éclair central (une seule fois)"""
+    rng = np.random.default_rng(5)
+    n = 11
+    angles = np.sort(rng.uniform(0, TAU, n))
+    lengths = rng.uniform(0.55, 1.0, n)
+    grow = 1 - (1 - min(1, t / 0.28)) ** 3  # les pointes jaillissent vite
+    thin = max(0.0, 1 - max(0, t - 0.2) / 0.8)  # puis s'amincissent
+    d = np.zeros_like(X)
+    for a, L in zip(angles, lengths):
+        L = L * (0.35 + 0.6 * grow)
+        da = np.angle(np.exp(1j * (ANG - a)))
+        w = 0.27 * thin * (1 - RAD / L)  # largeur angulaire qui se réduit vers la pointe
+        sp = np.where(RAD < L, 1 - np.abs(da) / np.maximum(w, 1e-4), 0)
+        d = np.maximum(d, np.clip(sp, 0, 1) * np.clip(1 - RAD / L, 0, 1) ** 0.3)
+    # onde de choc : anneau qui s'élargit et s'amincit
+    rr = 0.15 + 0.78 * (1 - (1 - t) ** 2.2)
+    th = 0.09 * (1 - t) ** 1.3 + 0.005
+    ring = np.clip(1 - np.abs(RAD - rr) / th, 0, 1) * (1 - t) ** 0.6
+    d = np.maximum(d, ring * 0.85)
+    # éclair central qui gonfle puis se résorbe
+    br = 0.42 * math.sin(math.pi * min(1, t / 0.55)) if t < 0.55 else 0
+    blob = np.clip(1 - RAD / max(br, 1e-4), 0, 1) if br > 0 else 0 * RAD
+    d = np.maximum(d, blob ** 0.6)
+    fade = 1 if t < 0.7 else max(0, 1 - (t - 0.7) / 0.3)
+    return bands(d * (0.35 + 0.65 * fade), rim=0.05, mid=0.32, core=0.62, glow_sigma=0.045)
+
+
+def _flame_field(t, width=0.7, wild=1.25):
+    """champ de flamme qui monte (aura de combat) : enveloppe en goutte + bruit qui défile"""
+    yy = (Y + 1) / 2  # 0 en bas, 1 en haut
+    w = width * (1 - yy**1.4 * 0.8)  # large en bas, pointue en haut
+    xs = X + (sample(NOISE_C, X * 0.6, Y * 0.6 - t) - 0.5) * 0.45 * yy * wild
+    env = 1 - (np.abs(xs) / np.maximum(w, 0.04)) ** 2
+    env = env - np.clip(0.16 - yy, 0, 1) * 7  # bas arrondi, loin du bord de l'étape
+    n = sample(NOISE_C, X * 1.0, Y * 1.0 - t * 2) * 0.7 + sample(NOISE_A, X * 1.2, Y * 1.2 - t * 3) * 0.3
+    # les langues de feu se détachent vers le haut
+    return env * 0.9 + (n - 0.5) * (0.5 + yy * 1.7) * wild - yy * 0.32 - np.clip(yy - 0.85, 0, 1) * 5
+
+
+def fx_flame(t, i):
+    d = _flame_field(t)
+    return bands(d, rim=0.0, mid=0.32, core=0.72, glow_sigma=0.04)
+
+
+def fx_wisp(t, i):
+    """fumée / esprit : volutes lentes et courbes, trouées"""
+    yy = (Y + 1) / 2
+    xs = X + np.sin(TAU * (yy * 1.2 - t)) * 0.12 * yy
+    w = 0.55 * (1 - yy**1.3 * 0.55)
+    env = 1 - (np.abs(xs) / np.maximum(w, 0.05)) ** 2
+    env = env - np.clip(0.16 - yy, 0, 1) * 7 - np.clip(yy - 0.85, 0, 1) * 6
+    n = sample(NOISE_C, X * 0.9 + 0.3 * np.sin(TAU * t), Y * 0.9 - t) * 0.6 + sample(NOISE_A, X * 1.4, Y * 1.4 - t * 2) * 0.4
+    d = env + (n - 0.5) * 1.5 - yy * 0.7
+    return bands(d, rim=0.0, mid=0.4, core=0.82, soft=0.05, glow_sigma=0.05)
+
+
+def _bolt(rng, ax, ay, bx, by, depth=5, disp=0.18):
+    pts = [(ax, ay), (bx, by)]
+    for _ in range(depth):
+        nxt = [pts[0]]
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+            L = math.hypot(x1 - x0, y1 - y0)
+            nx, ny = -(y1 - y0) / (L + 1e-9), (x1 - x0) / (L + 1e-9)
+            o = rng.uniform(-1, 1) * disp * L
+            nxt += [(mx + nx * o, my + ny * o), (x1, y1)]
+        pts = nxt
+    return pts
+
+
+def fx_electric(t, i):
+    """arcs électriques autour de la créature (nouveaux toutes les 2 étapes)"""
+    rng = np.random.default_rng(100 + i // 2)
+    dist = np.full_like(X, 9.0)
+    for _ in range(4):
+        a0 = rng.uniform(0, TAU)
+        a1 = a0 + rng.uniform(0.6, 1.4) * rng.choice([-1, 1])
+        r0, r1 = rng.uniform(0.5, 0.8), rng.uniform(0.55, 0.9)
+        pts = _bolt(rng, r0 * math.cos(a0), r0 * math.sin(a0) * 1.1, r1 * math.cos(a1), r1 * math.sin(a1) * 1.1)
+        # petite branche
+        k = len(pts) // 2
+        bx, by = pts[k]
+        br = _bolt(rng, bx, by, bx * 1.25 + rng.uniform(-0.15, 0.15), by * 1.25 + rng.uniform(-0.15, 0.15), depth=3)
+        for p in (pts, br):
+            for (x0, y0), (x1, y1) in zip(p, p[1:]):
+                dist = np.minimum(dist, seg_dist(X, Y, x0, y0, x1, y1))
+    d = np.clip(1 - dist / 0.065, 0, 1)
+    return bands(d, rim=0.02, mid=0.35, core=0.68, soft=0.04, glow_sigma=0.035, glow_gain=1.3)
+
+
+def _rising(t, count, seed, shape, size_rng, sway=0.08, speed=1):
+    """objets qui montent en boucle (bulles, spores, cœurs) : densité + reflets"""
+    rng = np.random.default_rng(seed)
+    d = np.zeros_like(X)
+    hi = np.zeros_like(X)
+    for k in range(count):
+        x0 = rng.uniform(-0.7, 0.7)
+        ph = rng.uniform(0, 1)
+        s = rng.uniform(*size_rng)
+        sp = speed * rng.choice([1, 1, 2])  # vitesse entière : boucle parfaite
+        y = ((ph + t * sp) % 1) * 1.7 - 0.85
+        x = x0 + math.sin(TAU * (t * sp + ph)) * sway
+        life = math.sin(math.pi * ((ph + t * sp) % 1))  # grossit en bas, rétrécit en haut
+        s = s * min(1.0, life * 1.8)  # nul aux deux bouts : jamais coupé par le bord de l'étape
+        if shape == "bubble":
+            r = np.hypot(X - x, Y - y)
+            ringd = np.clip(1 - np.abs(r - s) / (s * 0.22), 0, 1)
+            fill = np.clip(1 - r / s, 0, 1) * 0.28
+            d = np.maximum(d, np.maximum(ringd, fill))
+            hi = np.maximum(hi, np.clip(1 - np.hypot(X - x + s * 0.4, Y - y - s * 0.4) / (s * 0.28), 0, 1))
+        elif shape == "heart":
+            d = np.maximum(d, heart(x, y, s))
+        else:  # spore : boule douce
+            r = np.hypot(X - x, Y - y)
+            d = np.maximum(d, np.clip(1 - r / s, 0, 1) ** 0.8)
+    return d, hi
+
+
+def fx_bubbles(t, i):
+    d, hi = _rising(t, 14, 7, "bubble", (0.07, 0.15), sway=0.06)
+    L = bands(d, rim=0.12, mid=0.55, core=0.95, glow_sigma=0.03)
+    L["Core"] = np.maximum(L["Core"], ss(0.3, 0.4, hi))
+    return L
+
+
+def fx_spores(t, i):
+    d, _ = _rising(t, 16, 9, "spore", (0.06, 0.12), sway=0.1)
+    return bands(d, rim=0.05, mid=0.4, core=0.75, glow_sigma=0.04, glow_gain=1.4)
+
+
+def fx_hearts(t, i):
+    d, _ = _rising(t, 10, 13, "heart", (0.1, 0.17), sway=0.07)
+    return bands(d, rim=0.05, mid=0.35, core=0.8, glow_sigma=0.035)
+
+
+def fx_stardust(t, i):
+    """étoiles qui tournent autour de la créature en laissant une traînée (une orbite inclinée)"""
+    d = np.zeros_like(X)
+    n = 5
+    for k in range(n):
+        tilt = (k - 2) * 0.22
+        for back in range(9):  # traînée : étoiles de plus en plus petites derrière
+            a = TAU * (t + k / n) - back * 0.09
+            x = math.cos(a) * 0.72
+            y = math.sin(a) * 0.22 + tilt + math.cos(a) * tilt * 0.4
+            s = (0.22 if back == 0 else 0.075 * (1 - back / 9)) * (0.75 + 0.25 * math.sin(a))
+            if back == 0:
+                d = np.maximum(d, star4(x, y, s, rot=a * 0.5))
+            else:
+                d = np.maximum(d, np.clip(1 - np.hypot(X - x, Y - y) / s, 0, 1) * (0.75 - back * 0.06))
+    return bands(d, rim=0.04, mid=0.35, core=0.62, glow_sigma=0.04, glow_gain=1.3)
+
+
+def fx_glitch(t, i):
+    """pavés et lignes de balayage qui sautent (changent toutes les 2 étapes)"""
+    rng = np.random.default_rng(300 + i // 2)
+    d = np.zeros_like(X)
+    for _ in range(16):
+        a = rng.uniform(0, TAU)
+        r = rng.uniform(0.35, 0.85)
+        cx, cy = math.cos(a) * r, math.sin(a) * r
+        w, h = rng.uniform(0.04, 0.2), rng.uniform(0.03, 0.09)
+        box = np.clip(np.minimum(w - np.abs(X - cx), h - np.abs(Y - cy)) / 0.015, 0, 1)
+        d = np.maximum(d, box * rng.uniform(0.5, 1.0))
+    for _ in range(3):  # lignes horizontales qui traversent
+        y = rng.uniform(-0.8, 0.8)
+        line = np.clip(1 - np.abs(Y - y) / 0.012, 0, 1) * (np.abs(X) < rng.uniform(0.5, 0.9))
+        d = np.maximum(d, line * 0.7)
+    return bands(d, rim=0.05, mid=0.55, core=0.9, soft=0.02, glow_sigma=0.03)
+
+
+def fx_shards(t, i):
+    """éclats de cristal qui tournent autour (orbite inclinée, ceux de derrière plus petits)"""
+    d = np.zeros_like(X)
+    n = 7
+    for k in range(n):
+        a = TAU * (t + k / n)
+        x = math.cos(a) * 0.7
+        y = math.sin(a) * 0.25 + 0.05 * math.sin(3 * a + k)
+        depth = 0.65 + 0.35 * (-math.sin(a))  # devant = plus gros
+        L, W = 0.3 * depth, 0.11 * depth
+        rot = a * 2 + k
+        c, s = math.cos(rot), math.sin(rot)
+        dx = (X - x) * c + (Y - y) * s
+        dy = -(X - x) * s + (Y - y) * c
+        dia = 1 - (np.abs(dx) / W + np.abs(dy) / L)
+        d = np.maximum(d, np.clip(dia * 1.6, 0, 1) * (0.55 + 0.45 * depth))
+    return bands(d, rim=0.03, mid=0.32, core=0.7, glow_sigma=0.035)
+
+
+# Au sol (posés à plat sous la créature) ---------------------------------------------------------
+
+
+def fx_pulse(t, i):
+    """ondes qui partent du centre (deux à la fois, décalées d'une demi-boucle)"""
+    d = np.zeros_like(X)
+    for off in (0, 0.5):
+        p = (t + off) % 1
+        r = 0.15 + p * 0.8
+        th = 0.06 * (1 - p) + 0.012
+        d = np.maximum(d, np.clip(1 - np.abs(RAD - r) / th, 0, 1) * (1 - p) ** 0.7)
+    return bands(d, rim=0.06, mid=0.4, core=0.7, glow_sigma=0.03)
+
+
+def fx_rune(t, i):
+    """cercle magique : deux cercles, graduations et losanges qui tournent (symétrie 8 : boucle)"""
+    sym = 8
+    rot = TAU / sym * t
+    a = ANG - rot
+    d = np.zeros_like(X)
+    d = np.maximum(d, np.clip(1 - np.abs(RAD - 0.88) / 0.025, 0, 1))
+    d = np.maximum(d, np.clip(1 - np.abs(RAD - 0.7) / 0.018, 0, 1))
+    tick = np.abs(np.angle(np.exp(1j * a * 32))) < 0.5
+    d = np.maximum(d, ((RAD > 0.72) & (RAD < 0.8) & tick) * 0.9)
+    # losanges sur l'anneau intérieur, tournant en sens inverse
+    a2 = ANG + rot
+    seg = np.angle(np.exp(1j * a2 * sym)) / sym  # angle local autour de chaque losange
+    lx = seg * 0.79
+    ly = RAD - 0.79
+    dia = 1 - (np.abs(lx) / 0.06 + np.abs(ly) / 0.06)
+    d = np.maximum(d, np.clip(dia * 3, 0, 1))
+    # étoile intérieure (deux carrés)
+    for k in range(2):
+        rr = RAD * np.maximum(np.abs(np.cos(a + k * math.pi / 4)), np.abs(np.sin(a + k * math.pi / 4)))
+        d = np.maximum(d, np.clip(1 - np.abs(rr - 0.45) / 0.015, 0, 1) * 0.8)
+    pulse = 0.85 + 0.15 * math.sin(TAU * t)
+    return bands(d * pulse, rim=0.05, mid=0.45, core=0.8, soft=0.03, glow_sigma=0.025)
+
+
+def fx_gear(t, i):
+    """engrenage qui tourne (12 dents : un douzième de tour par boucle)"""
+    teeth = 12
+    a = ANG - TAU / teeth * t
+    tooth = (np.cos(a * teeth) > 0.1).astype(float)
+    outer = 0.78 + 0.12 * tooth
+    # épaisseur en dégradé : bord coloré, ligne claire au milieu de la couronne
+    d = np.clip(np.minimum(outer - RAD, RAD - 0.6) / 0.07, 0, 1)
+    # rayons
+    sa = np.abs(np.angle(np.exp(1j * a * 6))) / 6 * RAD  # distance au rayon le plus proche
+    d = np.maximum(d, np.clip((0.035 - sa) / 0.035, 0, 1) * ((RAD < 0.62) & (RAD > 0.18)) * 0.8)
+    d = np.maximum(d, np.clip(1 - np.abs(RAD - 0.2) / 0.045, 0, 1))
+    return bands(d, rim=0.05, mid=0.45, core=0.85, soft=0.03, glow_sigma=0.025)
+
+
+EFFECTS = {
+    "Impact": fx_impact,
+    "Flame": fx_flame,
+    "Wisp": fx_wisp,
+    "Electric": fx_electric,
+    "Bubbles": fx_bubbles,
+    "Spores": fx_spores,
+    "Hearts": fx_hearts,
+    "Stardust": fx_stardust,
+    "Glitch": fx_glitch,
+    "Shards": fx_shards,
+    "Pulse": fx_pulse,
+    "Rune": fx_rune,
+    "Gear": fx_gear,
+}
+
+# couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
+PREVIEW = {
+    "Impact": ((255, 150, 40), (255, 230, 120)),
+    "Flame": ((255, 70, 20), (255, 190, 60)),
+    "Wisp": ((90, 220, 210), (190, 255, 245)),
+    "Electric": ((150, 90, 255), (120, 220, 255)),
+    "Bubbles": ((40, 170, 230), (150, 235, 255)),
+    "Spores": ((60, 200, 120), (190, 255, 150)),
+    "Hearts": ((255, 80, 160), (255, 180, 220)),
+    "Stardust": ((255, 180, 40), (255, 240, 150)),
+    "Glitch": ((255, 40, 220), (60, 255, 255)),
+    "Shards": ((60, 150, 255), (170, 230, 255)),
+    "Pulse": ((255, 196, 40), (255, 240, 160)),
+    "Rune": ((40, 200, 140), (255, 220, 100)),
+    "Gear": ((200, 130, 40), (255, 210, 120)),
+}
+
+
+def render(name, fn, out):
+    sheets = {k: np.zeros((FRAME * 4, FRAME * 4)) for k in LAYERS}
+    for i in range(16):
+        t = i / 16
+        L = fn(t, i)
+        for k in LAYERS:
+            a = L[k].reshape(FRAME, SS, FRAME, SS).mean(axis=(1, 3))  # réduction lissée
+            r, c = divmod(i, 4)
+            sheets[k][r * FRAME:(r + 1) * FRAME, c * FRAME:(c + 1) * FRAME] = a
+    for k in LAYERS:
+        a = (np.clip(sheets[k], 0, 1) * 255).astype(np.uint8)
+        img = np.dstack([np.full_like(a, 255)] * 3 + [a])
+        Image.fromarray(img, "RGBA").save(f"{out}/{name}_{k}.png", optimize=True)
+    # aperçu : calques colorés empilés sur fond sombre
+    rim, mid = PREVIEW.get(name, ((255, 255, 255), (255, 255, 255)))
+    cols = {"Glow": (rim, 0.55), "Rim": (rim, 1.0), "Mid": (mid, 1.0), "Core": ((255, 255, 250), 1.0)}
+    bg = np.zeros((FRAME * 4, FRAME * 4, 3)) + np.array([22, 20, 34]) / 255
+    for k in LAYERS:
+        col, op = cols[k]
+        a = np.clip(sheets[k], 0, 1)[..., None] * op
+        bg = bg * (1 - a) + np.array(col)[None, None, :] / 255 * a
+    Image.fromarray((bg * 255).astype(np.uint8), "RGB").save(f"{out}/_apercu_{name}.png")
+
+
+if __name__ == "__main__":
+    out = sys.argv[1]
+    names = sys.argv[2:] or list(EFFECTS)
+    for n in names:
+        render(n, EFFECTS[n], out)
+        print(n, "ok")

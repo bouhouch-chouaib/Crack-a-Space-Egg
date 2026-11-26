@@ -21,6 +21,7 @@ local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
+local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -465,6 +466,29 @@ local function shatter(rock: BasePart)
 	Debris:AddItem(a, 1.6)
 end
 
+-- ÉTOILE D'IMPACT (effet en 4 calques, LayeredFx) ---------------------------------
+-- À chaque coup : pointes qui jaillissent, onde de choc et éclair central, aux couleurs du biome,
+-- tournées au hasard. Plus grosse quand un œuf sort ou que la roche casse.
+local impactAt = Instance.new("Attachment")
+impactAt.Name = "DrillImpactFx"
+impactAt.Parent = workspace.Terrain
+local impactFx = LayeredFx.new(impactAt, {
+	kind = "Impact",
+	size = 6,
+	colors = { Color3.fromRGB(255, 150, 40), Color3.fromRGB(255, 230, 120) },
+	lifetime = 0.38,
+	zOffset = 1.5,
+})
+
+local function impactStar(rock: BasePart, point: Vector3, big: boolean)
+	local tint = biomeColor(rock)
+	local h, s, v = tint:ToHSV()
+	impactFx:SetColors(Color3.fromHSV(h, math.max(s, 0.75), math.max(v, 0.9)), Color3.fromHSV(h, s * 0.45, 1))
+	-- un peu vers la caméra pour ne pas être coupée par la roche
+	impactAt.WorldPosition = point + (camera.CFrame.Position - point).Unit * 1.2
+	impactFx:Emit(math.random(0, 359), if big then 12 + math.random() * 3 else 5 + math.random() * 2)
+end
+
 -- COUPS DU SERVEUR ---------------------------------------------------------------
 
 Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, by: Player, damage: number, rarities: { number }, broken: boolean, left: number?, perEgg: number?)
@@ -500,6 +524,7 @@ Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, by: Player, dam
 		local gold = #rarities > 0
 		damageNumber(point, "-" .. Format.Short(damage), if gold then Color3.fromRGB(255, 220, 80) else Color3.new(1, 1, 1), gold)
 	end
+	impactStar(rock, point, broken or #rarities > 0)
 	-- Petit éclair blanc sur la roche (comme l'éclat sur l'œuf des jeux d'œufs)
 	local hl = rock:FindFirstChild("HitFlash") :: Highlight?
 	if not hl then

@@ -7,13 +7,15 @@
 -- Tout dépend de l'heure du serveur et de l'identifiant de la créature : tous les joueurs la voient
 -- faire la même chose au même endroit, sans réseau.
 -- Les anciennes créatures en pièces gardent leurs groupes animés (Tail, WingL / WingR, Orbit).
--- Les rares brillent : lumière et étincelles (Epic+), aura (Legendary+), particules qui montent (Mythic+).
+-- Les rares brillent : lumière et étincelles (Epic+), particules qui montent (Mythic+).
+-- Chaque espèce a son aura en 4 calques (Config.CreatureAura, LayeredFx), plus grande avec la rareté.
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
 
 local camera = workspace.CurrentCamera
 local H = Config.Hatch
@@ -60,21 +62,6 @@ local function addFx(core: BasePart, rarity: number, h: number)
 	sp.Shape = Enum.ParticleEmitterShape.Sphere
 	sp.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
 	sp.Parent = at
-	if rarity >= 5 then
-		local au = Instance.new("ParticleEmitter")
-		au.Texture = GLOW
-		au.Color = ColorSequence.new(color)
-		au.Size = NumberSequence.new({ kp(0, h * 0.9), kp(1, h * 1.3) })
-		au.Transparency = NumberSequence.new({ kp(0, 1), kp(0.3, 0.84), kp(1, 1) })
-		au.Lifetime = NumberRange.new(1.4, 1.8)
-		au.Rate = 3
-		au.Speed = NumberRange.new(0)
-		au.LightEmission = 0.5
-		au.LightInfluence = 0
-		au.LockedToPart = true
-		au.ZOffset = -4
-		au.Parent = at
-	end
 	if rarity >= 6 then
 		local up = Instance.new("ParticleEmitter")
 		up.Texture = SPARKLE
@@ -89,6 +76,59 @@ local function addFx(core: BasePart, rarity: number, h: number)
 		up.LightInfluence = 0
 		up.Parent = at
 	end
+end
+
+-- Aura propre à l'espèce (Config.CreatureAura) : effet en 4 calques qui l'entoure, et cercle au sol.
+-- Une image de chaque calque dure toute une période (AURA_PERIOD = nombre entier de boucles), la suivante
+-- est émise juste avant la fin et se fond dedans : les deux sont à la même étape, la boucle ne se voit pas.
+local AURA_LOOP = 1.4 -- secondes pour les 16 étapes de l'aura
+local GROUND_LOOP = 2
+local AURA_PERIOD = 14 -- multiple des deux boucles
+local AURA_FADE = 0.4
+
+local function addAura(core: BasePart, species: string, rarity: number, h: number): { LayeredFx.Fx }?
+	local def = Config.CreatureAura[species]
+	if not def or core:FindFirstChild("AuraFx") then
+		return nil
+	end
+	local grow = 0.72 + rarity * 0.06 -- plus rare = plus grande
+	local alpha = math.max(0, 0.45 - rarity * 0.1) -- les communes restent discrètes
+	local shape = LayeredFx.AuraShape[def.Kind] or { Scale = 1.9, Anchor = 0.35 }
+	local size = h * shape.Scale * grow
+	local list = {}
+	local at = Instance.new("Attachment")
+	at.Name = "AuraFx"
+	at.Position = Vector3.new(0, size * shape.Anchor, 0)
+	at.Parent = core
+	table.insert(list, LayeredFx.new(at, {
+		kind = def.Kind,
+		size = size,
+		colors = { def.Rim, def.Mid },
+		lifetime = AURA_PERIOD + AURA_FADE * 2,
+		loop = AURA_LOOP,
+		fade = AURA_FADE,
+		locked = true,
+		alpha = alpha,
+		zOffset = if shape.Behind then -h * 0.55 else 0,
+	}))
+	if def.Ground then
+		local g = Instance.new("Attachment")
+		g.Name = "AuraGround"
+		g.Position = Vector3.new(0, 0.08, 0)
+		g.Parent = core
+		table.insert(list, LayeredFx.new(g, {
+			kind = def.Ground,
+			size = h * 1.7 * grow,
+			colors = { def.Rim, def.Mid },
+			lifetime = AURA_PERIOD + AURA_FADE * 2,
+			loop = GROUND_LOOP,
+			fade = AURA_FADE,
+			locked = true,
+			flat = true,
+			alpha = alpha + 0.1,
+		}))
+	end
+	return list
 end
 
 -- Particules ponctuelles des figures (éclat, flammes, glitch, poussière au sol)
@@ -329,6 +369,17 @@ local function track(m: Instance)
 	addFx(core, rarity, h)
 	p.fx = makeBursts(core, rarity, h)
 	pets[m] = p
+	local aura = addAura(core, (m:GetAttribute("Species") or m:GetAttribute("Creature") or "") :: string, rarity, h)
+	if aura then
+		task.spawn(function()
+			while pets[m] == p and core.Parent do
+				for _, fx in ipairs(aura) do
+					fx:Emit()
+				end
+				task.wait(AURA_PERIOD)
+			end
+		end)
+	end
 end
 
 CollectionService:GetInstanceAddedSignal("Creature"):Connect(track)
