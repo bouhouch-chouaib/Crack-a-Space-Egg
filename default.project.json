@@ -83,9 +83,6 @@
         "Rewards": {
           "$className": "RemoteFunction"
         },
-        "Feedback": {
-          "$className": "RemoteFunction"
-        },
         "Machine": {
           "$className": "RemoteFunction"
         }

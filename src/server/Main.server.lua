@@ -22,7 +22,6 @@ local GearService = require(script.Parent.GearService)
 local RelicService = require(script.Parent.RelicService)
 local AnnounceService = require(script.Parent.AnnounceService)
 local RewardService = require(script.Parent.RewardService)
-local FeedbackService = require(script.Parent.FeedbackService)
 
 WorldBuilder.Build()
 Bases.Start()
@@ -35,7 +34,6 @@ LeaderboardService.Start()
 MonetizationService.Start()
 RewardService.Start() -- connexion quotidienne, temps de jeu, quêtes, codes, groupe, pub
 MonetizationService.AdReward = RewardService.GrantAdBoost
-FeedbackService.Start() -- boîte à retours des joueurs
 MachineService.Start()
 CarryService.Start() -- la roche dans les mains du joueur tant qu'il la rapporte à sa base
 WindTunnelService.Start() -- souffleries : on y farme le niveau du jetpack

@@ -2039,27 +2039,11 @@ Config.Guide = {
 		"Wind tunnel bought", "Jetpack trained", "New drill bought",
 	},
 	-- Tutoriels au bon moment : une seule fois par joueur, quand il en a besoin (Guide.client)
-	Tips = { basefull = true, rewards = true, fuse = true, monsters = true, mailbox = true, scanner = true, starter = true, machine = true },
+	Tips = { basefull = true, rewards = true, fuse = true, monsters = true, scanner = true, starter = true, machine = true },
 	TipMax = 40, -- secondes avant qu'un tip non suivi s'efface tout seul
 	TipShort = 12, -- idem pour un tip sans endroit où aller
 	TipGap = 25, -- secondes de calme entre deux tips d'information (récompenses, fusion, monstres...)
 }
-
--- Boîte à retours (boîte aux lettres du vaisseau, FeedbackService)
-Config.Feedback = {
-	Store = "Feedback_v1",
-	MaxChars = 300,
-	Cooldown = 45, -- secondes entre deux envois
-	PerDay = 5, -- envois par joueur et par jour
-	MaxPerDay = 800, -- retours gardés par jour
-	Categories = {
-		{ Key = "Bug", Label = "Bug", Art = "Warning", Color = "Red" },
-		{ Key = "Idea", Label = "Idea", Art = "Sparkles", Color = "Blue" },
-		{ Key = "TooHard", Label = "Too hard", Art = "Fire", Color = "Orange" },
-		{ Key = "Love", Label = "I love it", Art = "Star", Color = "Green" },
-	},
-}
-
 
 -- INTERFACE (UIKit) ---------------------------------------------------------------------------------
 -- Studs : où l'interface porte des picots (« l'effet lego »).

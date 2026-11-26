@@ -63,11 +63,11 @@ for _, m in ipairs(CollectionService:GetTagged("ShopVendor")) do
 end
 
 -- TAPIS DES STANDS : fenêtre ouverte en marchant dessus ----------------------------------------
-local OPEN = { Store = "Store", Items = "DrillShop", Sell = "Creatures", Mail = "Feedback" } -- attribut Shop du stand -> fenêtre
+local OPEN = { Store = "Store", Items = "DrillShop", Sell = "Creatures" } -- attribut Shop du stand -> fenêtre
 -- mode imposé à l'ouverture : le stand SELL ouvre les créatures en mode vente
 local MODE = { Creatures = "sell" }
 -- fenêtres fermées en quittant le tapis (noms des UIKit.window)
-local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop", "BaseSkins" }, Creatures = { "CreaturesWindow" }, Feedback = { "Feedback" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" } }
+local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop", "BaseSkins" }, Creatures = { "CreaturesWindow" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" } }
 local MAT_MARGIN = 1 -- studs autour du tapis qui comptent encore
 type Mat = { part: BasePart, window: string, on: boolean, radius: number?, home: CFrame? }
 local mats: { Mat } = {}
@@ -77,10 +77,6 @@ task.spawn(function()
 		return
 	end
 	local stands = shops:GetChildren()
-	local mailbox = workspace.Ship:FindFirstChild("Mailbox") -- boîte à retours (tools/build-mailbox.lua)
-	if mailbox then
-		table.insert(stands, mailbox)
-	end
 	for _, stand in ipairs(stands) do
 		local window = OPEN[stand:GetAttribute("Shop") or ""]
 		local mat = stand:FindFirstChild("Mat")
