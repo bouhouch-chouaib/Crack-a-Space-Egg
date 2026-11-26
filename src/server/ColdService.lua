@@ -225,9 +225,12 @@ function ColdService.Start()
 	-- boîte du vaisseau, publiée pour le calcul de la zone sûre chez tous
 	local ship = workspace:WaitForChild("Ship") :: Model
 	local cf, size = ship:GetBoundingBox()
-	ship:SetAttribute("SafeMin", cf.Position - size / 2)
-	ship:SetAttribute("SafeMax", cf.Position + size / 2)
-	shipMin, shipMax = cf.Position - size / 2, cf.Position + size / 2
+	-- la cour est basse (murs de 30) : on y respire aussi en volant au-dessus, comme sur l'ancien vaisseau
+	local mn, mx = cf.Position - size / 2, cf.Position + size / 2
+	mx = Vector3.new(mx.X, math.max(mx.Y, 70), mx.Z)
+	ship:SetAttribute("SafeMin", mn)
+	ship:SetAttribute("SafeMax", mx)
+	shipMin, shipMax = mn, mx
 	Players.PlayerRemoving:Connect(function(player)
 		states[player] = nil
 	end)

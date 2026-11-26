@@ -1,5 +1,5 @@
 -- Carte v2, préparée au démarrage du serveur (docs/Mecaniques.md §2).
--- Le vaisseau (Workspace.Ship : bases, boutique, magasin de vente, machine à fusion, quai) est construit dans Studio :
+-- Le point de départ (Workspace.Ship : cour en herbe, enclos, stands, machine à fusion, sortie ; tools/build-yard.lua) est construit dans Studio :
 -- on y ajoute seulement les invites d'interaction. Le reste est généré par code dans Workspace.World :
 -- la planète, le couloir balisé (sans plateformes), les relais de pression et le décor des 7 anneaux.
 -- Les astéroïdes qui défilent sont gérés par BeltService.

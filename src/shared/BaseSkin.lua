@@ -1,5 +1,6 @@
--- Applique un thème (Config.BaseSkins) à une base : sol, murets, vitres et annexe.
--- Le serveur note une fois le rôle et la couleur d'origine de chaque pièce (attributs SkinRole, SkinDefault) :
+-- Applique un thème (Config.BaseSkins) à une base : sol de l'enclos, barrière de bois et atelier.
+-- Le rôle de chaque pièce (attribut SkinRole : Floor, Main, Trim, Glass) est posé par tools/build-yard.lua ;
+-- le serveur note une fois sa couleur d'origine (SkinDefault), celle du thème de départ (herbe et bois) :
 -- le client s'en sert aussi pour les miniatures de la fenêtre BASE SKINS et pour le thème arc-en-ciel.
 
 local Config = require(script.Parent:WaitForChild("Config"))
@@ -29,13 +30,17 @@ end
 -- Une seule fois au démarrage, quand les bases ont encore leurs couleurs d'origine
 function BaseSkin.Prepare(base: Instance)
 	for _, p in ipairs(parts(base)) do
-		local role = "Main"
-		if p.Material == Enum.Material.Glass then
-			role = "Glass"
-		elseif p.BrickColor.Name == "Dove blue" then
-			role = "Trim"
-		elseif p.BrickColor.Name == "Fog" then
-			role = "Floor"
+		-- rôle posé par l'outil de construction ; sinon deviné d'après la matière et la couleur
+		local role = p:GetAttribute("SkinRole")
+		if not role then
+			role = "Main"
+			if p.Material == Enum.Material.Glass then
+				role = "Glass"
+			elseif p.BrickColor.Name == "Dove blue" then
+				role = "Trim"
+			elseif p.BrickColor.Name == "Fog" then
+				role = "Floor"
+			end
 		end
 		p:SetAttribute("SkinRole", role)
 		p:SetAttribute("SkinDefault", p.Color)

@@ -46,14 +46,15 @@ function Config.AnnounceLevel(mutation: string?, giant: boolean): number?
 end
 
 -- CARTE V2 (docs/Mecaniques.md §2) ---------------------------------------------
--- Le vaisseau (Workspace.Ship, construit dans Studio) a son centre en (0, 0, 0) et son quai en
--- z = FrontZ ; le couloir part du quai vers +Z.
+-- Le point de départ (Workspace.Ship, construit dans Studio par tools/build-yard.lua : depuis le 26 nov.
+-- c'est une cour en herbe, plus un vaisseau, mais le conteneur garde son nom) a son centre en (0, 0, 0)
+-- et sa sortie (ligne rouge) en z = FrontZ ; le couloir part de là vers +Z.
 -- Les anneaux sont des cercles horizontaux autour d'un axe vertical placé derrière le vaisseau,
 -- là où la planète géante est peinte dans le ciel (tools/sky/render_sky.py).
 Config.Map = {
-	FrontZ = 64, -- position du repère Ship.Deck.Dock.DockEnd (bout du quai, début du couloir)
+	FrontZ = 64, -- position du repère Ship.Yard.DockEnd (ligne rouge de la sortie, début du couloir)
 	AxisDistance = 1200, -- distance entre l'axe de rotation des anneaux et le bout du quai
-	CorridorWidth = 120, -- = largeur du quai (Ship.Deck.Dock), à garder identiques
+	CorridorWidth = 120, -- = largeur de la sortie de la cour (tools/build-yard.lua, GATE), à garder identiques
 	FirstRingGap = 12, -- vide entre le bout du quai et le bord de l'anneau 1
 	RingWidth = 64, -- épaisseur de l'anneau 1 : un vrai champ, pas une ligne
 	RingGap = 55, -- vide entre les anneaux 1 et 2 (bord à bord) : chaque biome bien séparé
