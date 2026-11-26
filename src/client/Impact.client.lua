@@ -5,7 +5,8 @@
 -- - Les fissures, elles, suivent l'état de toute la roche (œufs déjà sortis compris).
 -- - Nombres de dégâts qui s'envolent à chaque coup (dorés quand un œuf sort).
 -- - Fissures qui apparaissent par stades (Config.CrackStages), de la couleur du biome.
--- - Le vrai œuf (modèle de l'anneau et de la rareté) jaillit de la roche, fait un arc, vole jusqu'au foreur.
+-- - Le vrai œuf (modèle de l'anneau et de la rareté) jaillit de la roche (éventail de rayons, cailloux,
+--   anneau de poussière en 4 calques), fait un arc avec un halo qui tourne, vole jusqu'au foreur (petit soleil).
 -- - À la casse : éclair, fissures puis éclats et nuage de poussière en 4 calques (LayeredFx), la roche vole en morceaux.
 -- Les coups arrivent du serveur (Remotes.DrillHit), pour tous les joueurs.
 
@@ -283,32 +284,30 @@ local function eggModel(ring: number, rarity: number, color: Color3, size: numbe
 	return m, core
 end
 
--- Halo et rayons autour de l'œuf (plus la rareté est haute, plus c'est gros)
+-- Couleurs d'un effet en 4 calques à partir de la couleur de la rareté (bords saturés, milieu clair)
+local function fxColors(color: Color3): { Color3 }
+	local h, s = color:ToHSV()
+	return { Color3.fromHSV(h, math.max(s, 0.7), 1), Color3.fromHSV(h, s * 0.35, 1) }
+end
+
+-- Halo qui tourne derrière l'œuf pendant son vol (effet en 4 calques « Halo », plus gros avec la rareté)
 local function eggAura(egg: BasePart, color: Color3, rarity: number)
-	local b = Instance.new("BillboardGui")
-	b.Size = UDim2.fromScale(4 + rarity, 4 + rarity)
-	b.LightInfluence = 0
-	b.AlwaysOnTop = false
-	b.Parent = egg
-	local glow = Instance.new("ImageLabel")
-	glow.BackgroundTransparency = 1
-	glow.Size = UDim2.fromScale(1, 1)
-	glow.Image = UIKit.Art.FxGlow
-	glow.ImageColor3 = color
-	glow.ImageTransparency = 0.25
-	glow.Parent = b
-	if rarity >= 4 then
-		local rays = Instance.new("ImageLabel")
-		rays.BackgroundTransparency = 1
-		rays.AnchorPoint = Vector2.new(0.5, 0.5)
-		rays.Position = UDim2.fromScale(0.5, 0.5)
-		rays.Size = UDim2.fromScale(1.6, 1.6)
-		rays.Image = UIKit.Art.FxRays
-		rays.ImageColor3 = color
-		rays.ImageTransparency = 0.15
-		rays.Parent = b
-		tween(rays, 1.4, { Rotation = 200 }, Enum.EasingStyle.Linear)
-	end
+	local a = Instance.new("Attachment")
+	a.Name = "EggHalo"
+	a.Parent = egg
+	local size = 4.5 + rarity * 1.1
+	local halo = LayeredFx.new(a, {
+		kind = "Halo",
+		size = size,
+		colors = fxColors(color),
+		lifetime = 1.6,
+		loop = 0.8,
+		fade = 0.15,
+		locked = true,
+		alpha = math.max(0, 0.35 - rarity * 0.05),
+		zOffset = -size * 0.3,
+	})
+	halo:Emit()
 end
 
 local function flyEgg(from: Vector3, ring: number, rarity: number, to: () -> Vector3?, delay: number, isMine: boolean)
@@ -321,10 +320,24 @@ local function flyEgg(from: Vector3, ring: number, rarity: number, to: () -> Vec
 		egg:PivotTo(CFrame.new(from))
 		egg.Parent = workspace
 		eggAura(core, color, rarity)
-		-- Éclat de sortie
+		-- Éclat de sortie : jaillissement vers le haut en 4 calques (rayons en éventail, cailloux, anneau de
+		-- poussière), le pied de l'éventail sur la roche
 		local burst = Instance.new("Attachment")
 		burst.WorldPosition = from
 		burst.Parent = workspace.Terrain
+		local popSize = 7 + rarity * 0.8
+		local popAt = Instance.new("Attachment")
+		popAt.WorldPosition = from + Vector3.new(0, popSize * 0.125, 0)
+		popAt.Parent = workspace.Terrain
+		LayeredFx.new(popAt, {
+			kind = "EggPop",
+			size = popSize,
+			colors = fxColors(color),
+			lifetime = 0.6,
+			upright = true,
+			zOffset = 1.5,
+		}):Emit()
+		Debris:AddItem(popAt, 0.8)
 		local p = Instance.new("ParticleEmitter")
 		p.Texture = UIKit.Art.FxSparkle
 		p.Color = ColorSequence.new(Color3.new(1, 1, 1), color)
@@ -366,6 +379,12 @@ local function flyEgg(from: Vector3, ring: number, rarity: number, to: () -> Vec
 				egg:Destroy()
 				if isMine then
 					damageNumber(goal + Vector3.new(0, 2, 0), "{Egg} +1 " .. string.upper(Config.EggName(ring, rarity)), color, true)
+					-- petit soleil de la couleur de la rareté là où l'œuf arrive
+					local got = Instance.new("Attachment")
+					got.WorldPosition = goal
+					got.Parent = workspace.Terrain
+					LayeredFx.new(got, { kind = "Celebrate", size = 4 + rarity * 0.6, colors = fxColors(color), lifetime = 0.55, zOffset = 2 }):Emit(math.random(0, 359))
+					Debris:AddItem(got, 0.8)
 				end
 			end
 		end)

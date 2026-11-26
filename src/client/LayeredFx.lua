@@ -41,6 +41,9 @@ LayeredFx.Sheets = {
 	Celebrate = { Glow = "rbxassetid://127190928214483", Rim = "rbxassetid://106263494394533", Mid = "rbxassetid://89835018857798", Core = "rbxassetid://92773400059896" },
 	-- créature mutée (Creatures.client) : trait de lumière qui balaie la silhouette, étoiles qui scintillent
 	Gleam = { Glow = "rbxassetid://84055851302915", Rim = "rbxassetid://123273352762654", Mid = "rbxassetid://121282950937926", Core = "rbxassetid://117937151072568" },
+	-- œuf qui sort de la roche (Impact.client) : jaillissement vers le haut, halo qui tourne pendant le vol
+	EggPop = { Glow = "rbxassetid://85864374889551", Rim = "rbxassetid://130591727503363", Mid = "rbxassetid://118427384435231", Core = "rbxassetid://75789850346283" },
+	Halo = { Glow = "rbxassetid://79163174307055", Rim = "rbxassetid://98294404671465", Mid = "rbxassetid://131066703231740", Core = "rbxassetid://123240916788334" },
 	Converge = { Glow = "rbxassetid://126224476094550", Rim = "rbxassetid://116332369242874", Mid = "rbxassetid://96225808912195", Core = "rbxassetid://134950337727915" },
 }
 

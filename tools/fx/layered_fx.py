@@ -475,6 +475,62 @@ def fx_thrust(t, i):
     return bands(d, rim=0.0, mid=0.3, core=0.74, glow_sigma=0.04)
 
 
+# Œuf qui sort de la roche -------------------------------------------------------------------------
+
+
+def fx_eggpop(t, i):
+    """l'œuf jaillit de la roche : éventail de rayons vers le haut, cailloux qui volent en cloche, anneau
+    de poussière à plat en bas, éclair (une seule fois)"""
+    d = np.zeros_like(X)
+    e = 1 - (1 - t) ** 2.4
+    fade = 1 - ss(0.55, 1.0, t)
+    # éventail de rayons vers le haut (partent d'un peu sous le centre)
+    oy = -0.25
+    rad = np.hypot(X, Y - oy)
+    ang = np.arctan2(Y - oy, X)
+    for k in range(7):
+        a = math.radians(50 + k * 80 / 6)
+        L = (1.05 if k % 2 == 0 else 0.8) * (0.3 + 0.7 * e)
+        da = np.angle(np.exp(1j * (ang - a)))
+        w = 0.24 * np.clip(1 - rad / L, 0, 1) ** 0.8
+        ray = np.where(rad < L, 1 - np.abs(da) / np.maximum(w, 1e-4), 0)
+        d = np.maximum(d, np.clip(ray, 0, 1) * np.clip(1 - rad / L, 0, 1) ** 0.3 * fade)
+    # cailloux en cloche
+    rng = np.random.default_rng(66)
+    for k in range(8):
+        vx = rng.uniform(-0.9, 0.9)
+        vy = rng.uniform(1.4, 2.0)
+        x = vx * t
+        y = oy + vy * t - 1.9 * t * t
+        s = rng.uniform(0.07, 0.11) * (1 - 0.5 * t)
+        if t > 0.03:
+            d = np.maximum(d, np.clip(1 - np.hypot(X - x, Y - y) / s, 0, 1) ** 0.7 * (1 - ss(0.8, 1, t)))
+    # anneau de poussière à plat (ellipse)
+    rr = 0.15 + 0.75 * e
+    ell = np.hypot(X / rr, (Y - oy + 0.05) / (rr * 0.32))
+    d = np.maximum(d, np.clip(1 - np.abs(ell - 1) / (0.25 * (1 - t) + 0.05), 0, 1) * (1 - ss(0.5, 0.9, t)) * 0.85)
+    # éclair
+    if t < 0.3:
+        d = np.maximum(d, np.clip(1 - np.hypot(X, Y - oy) / (0.32 * math.sin(math.pi * t / 0.3) + 1e-4), 0, 1) ** 0.5)
+    return bands(d, rim=0.05, mid=0.35, core=0.68, glow_sigma=0.04)
+
+
+def fx_halo(t, i):
+    """halo qui tourne (en boucle) : soleil de 12 rayons doux qui tourne d'un douzième de tour par boucle,
+    anneau qui respire"""
+    a = ANG - TAU / 12 * t
+    long = np.cos(a * 6) > 0  # un rayon sur deux plus long
+    L = np.where(long, 0.95, 0.72)
+    da = np.abs(np.angle(np.exp(1j * a * 12))) / 12  # écart angulaire au rayon le plus proche
+    w = 0.09 * np.clip(1 - RAD / L, 0, 1)
+    rays = np.clip(1 - da / np.maximum(w, 1e-4), 0, 1) * (RAD < L) * (RAD > 0.3) * np.clip(1 - RAD / L, 0, 1) ** 0.4
+    d = rays * 0.85
+    br = 0.42 + 0.03 * math.sin(TAU * t)
+    d = np.maximum(d, np.clip(1 - np.abs(RAD - br) / 0.03, 0, 1))
+    d = np.maximum(d, np.clip(1 - RAD / 0.42, 0, 1) * 0.07)  # voile doux derrière l'œuf (halo seulement)
+    return bands(d, rim=0.1, mid=0.45, core=0.8, glow_sigma=0.04)
+
+
 # Mutations rares ----------------------------------------------------------------------------------
 
 
@@ -800,6 +856,8 @@ EFFECTS = {
     "Roar": fx_roar,
     "Celebrate": fx_celebrate,
     "Gleam": fx_gleam,
+    "EggPop": fx_eggpop,
+    "Halo": fx_halo,
 }
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
@@ -826,6 +884,8 @@ PREVIEW = {
     "Roar": ((255, 70, 40), (255, 190, 150)),
     "Celebrate": ((255, 170, 20), (255, 240, 140)),
     "Gleam": ((255, 180, 30), (255, 245, 180)),
+    "EggPop": ((70, 140, 255), (190, 220, 255)),
+    "Halo": ((170, 90, 255), (230, 200, 255)),
     "HatchRing": ((170, 90, 255), (225, 200, 255)),
     "Converge": ((255, 70, 160), (255, 200, 230)),
 }
