@@ -675,7 +675,6 @@ local function decideTip(): Hint?
 		local fusion = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Fusion")
 		return { icon = "Creatures", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(if Device.IsGamepad() then Device.Key("machine") else "F"), sub = "It opens the Fusion Machine", target = fusion }
 	end
-	local step = attr("GuideStep")
 	local cargo = attr("Cargo")
 	local machine = myMachine()
 	local job = machine and machine:GetAttribute("Owner") == player.UserId and machine:GetAttribute("JobEnd") ~= nil
@@ -700,19 +699,11 @@ local function decideTip(): Hint?
 		return nil
 	end
 	-- tips d'information : un à la fois, avec du calme entre eux. Un tip déjà affiché continue.
-	local running = tipStart.rewards and not tipSeen("rewards") or tipStart.monsters and not tipSeen("monsters")
+	local running = tipStart.monsters and not tipSeen("monsters")
 	if not running and os.clock() - lastTip < G.TipGap then
 		return nil
 	end
-	-- un cadeau à réclamer, une fois le tutoriel fini
-	if not tipSeen("rewards") and step >= G.Steps and attr("RewardsReady") > 0 then
-		if windowOpen("Rewards") then
-			finishTip("rewards")
-		else
-			local where = if Device.IsGamepad() then "D-pad up" else "the REWARDS button"
-			return timedTip("rewards", G.TipShort, { icon = "Rewards", text = "A gift for you!", sub = ("Press %s to get it"):format(where) })
-		end
-	end
+	-- (26 nov. : plus de conseil « A gift for you! » : le bouton REWARDS a déjà sa pastille)
 	-- premier passage dans un anneau à monstres
 	if not tipSeen("monsters") and player:GetAttribute("MonsterSeen") then
 		return timedTip("monsters", G.TipShort, { icon = "Warning", text = "A monster lives here!", sub = "Steal an egg and it chases you: run home!" })

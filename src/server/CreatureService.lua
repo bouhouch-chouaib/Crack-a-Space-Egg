@@ -179,7 +179,6 @@ function ACTIONS.claim(player, d, ring)
 	local money = Config.IndexReward.Money * Config.Hatch.RingIncome[ring]
 	d.credits += money
 	GameService.Sync(player)
-	GameService.Notice(player, ("{Star} %s complete! +$%s and +%d%% luck forever"):format(Config.Rings[ring].Name, Format.Short(money), math.floor(Config.IndexReward.Luck * 100)), "good")
 	return ACTIONS.index(player, d)
 end
 
@@ -234,7 +233,6 @@ function ACTIONS.sell(player, d, ids)
 	if count == 0 then
 		return false, "Nothing to sell"
 	end
-	GameService.Notice(player, ("{Cash} Sold %d creature%s for $%s"):format(count, if count > 1 then "s" else "", Format.Short(total)), "good")
 	return true, nil, { sold = count, total = total }
 end
 
@@ -330,7 +328,6 @@ function ACTIONS.fuse(player, d, ids)
 		result.x, result.z = nil, nil
 		table.insert(d.inventory, result)
 	end
-	GameService.Notice(player, ("{Star} %s! $%s/s"):format(Config.PetName(result), Format.Short(result.income)), "good")
 	return true, nil, { result = view(result, if placed then "base" else "bag") }
 end
 

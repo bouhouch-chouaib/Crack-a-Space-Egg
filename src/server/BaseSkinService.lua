@@ -11,7 +11,6 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local BaseSkin = require(ReplicatedStorage.Shared.BaseSkin)
 local DataService = require(script.Parent.DataService)
-local GameService = require(script.Parent.GameService)
 local Bases = require(script.Parent.Bases)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 
@@ -152,7 +151,6 @@ function BaseSkinService.Start()
 		for _, s in ipairs(Config.BaseSkins) do
 			if s.PassId == passId then
 				grant(player, s.Key)
-				GameService.Notice(player, ("{Sparkles} %s base skin unlocked!"):format(s.Name), "good")
 			end
 		end
 	end)

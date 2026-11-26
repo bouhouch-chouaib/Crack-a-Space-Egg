@@ -82,15 +82,10 @@ local function buy(player: Player, key: any)
 	if d.credits < cost then
 		return { ok = false, error = ("You need $%s"):format(Format.Short(cost)) }
 	end
-	local before = Config.MachineTier(totalLevels(d))
 	d.credits -= cost
 	d.machine[key] = level + 1
 	Tracking.Funnel(player, "Machine" .. key, level + 1, ("%s %d"):format(key, level + 1))
 	MachineService.Refresh(player)
-	local after = Config.MachineTier(totalLevels(d))
-	if after ~= before then
-		GameService.Notice(player, ("{MachineUp} Your machine is now %s!"):format(after.Name), "good")
-	end
 	return { ok = true }
 end
 
@@ -123,7 +118,6 @@ local function run(player: Player, base: Model, machine: Model)
 		if type(egg) == "table" and Config.Eggs[ring][rarity + 1] and rng:NextNumber() < Config.MachineLuck(levels.Luck or 0) then
 			rarity += 1
 			egg.rarity = rarity
-			GameService.Notice(player, ("{MachineLuck} Lucky Core! Upgraded to %s!"):format(Config.Rarities[rarity].Name), "good")
 			GameService.Sync(player)
 		end
 		local duration = if (d.guide or 0) < Config.Guide.Steps then Config.Derock.Tutorial else Config.MachineTime(rarity, levels.Speed or 0)
@@ -145,7 +139,6 @@ local function run(player: Player, base: Model, machine: Model)
 				skipped[machine] = nil
 				ends = workspace:GetServerTimeNow() + 1
 				machine:SetAttribute("JobEnd", ends)
-				GameService.Notice(player, "{Lightning} Machine boosted!", "good")
 			end
 			task.wait(0.1)
 		end
@@ -164,9 +157,6 @@ local function run(player: Player, base: Model, machine: Model)
 		table.insert(d.ready, { ring = ring, rarity = rarity, rock = if type(egg) == "table" then egg.rock else nil })
 		GameService.Sync(player)
 		Remotes.EggRevealed:FireClient(player, ring, rarity)
-		if duration >= 10 then
-			GameService.Notice(player, ("{Egg} Your %s egg is out of the rock!"):format(Config.Rarities[rarity].Name), "good")
-		end
 		task.wait(Config.Derock.Gap)
 		break
 	end

@@ -298,7 +298,6 @@ buy = function(player: Player, index: number)
 	Tracking.Funnel(player, "WindTunnels", d.tunnel, nextDef.Name)
 	GameService.Sync(player)
 	refresh(index)
-	GameService.Notice(player, ("{WindTunnel} %s ready! +%s XP/s"):format(nextDef.Name, Format.Short(nextDef.XP)), "good")
 end
 WindTunnelService.Buy = buy
 

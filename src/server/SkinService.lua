@@ -130,7 +130,6 @@ function SkinService.Start()
 				local d = DataService.Get(player)
 				if d then
 					equip(player, d, s.Key)
-					GameService.Notice(player, ("{Sparkles} %s skin unlocked!"):format(s.Name), "good")
 				end
 			end
 		end

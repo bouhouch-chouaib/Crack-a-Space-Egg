@@ -235,12 +235,8 @@ function RewardService.Quest(player: Player, kind: string, amount: number?)
 	local changed = false
 	for _, q in ipairs(r.quests.list) do
 		if q.kind == kind and not q.claimed and q.progress < q.goal then
-			local before = q.progress
 			q.progress = math.min(q.goal, q.progress + (amount or 1))
 			changed = true
-			if before < q.goal and q.progress >= q.goal then
-				GameService.Notice(player, "{Star} Quest complete! Claim it in REWARDS", "good")
-			end
 		end
 	end
 	if changed then
@@ -257,8 +253,7 @@ local function claimDaily(player: Player, d, r)
 	local day = dailyNext(r)
 	r.daily.streak = day
 	r.daily.lastDay = today()
-	local got = give(player, d, R.Daily[day])
-	GameService.Notice(player, ("{Star} Day %d reward: %s"):format(day, got), "good")
+	give(player, d, R.Daily[day])
 	return true
 end
 
@@ -271,8 +266,7 @@ local function claimPlaytime(player: Player, d, r, i: any)
 		return false, "Not ready yet!"
 	end
 	r.play.claimed[i] = true
-	local got = give(player, d, p.Reward)
-	GameService.Notice(player, ("{Hourglass} %d min gift: %s"):format(p.Minutes, got), "good")
+	give(player, d, p.Reward)
 	return true
 end
 
@@ -285,16 +279,14 @@ local function claimQuest(player: Player, d, r, i: any)
 		return false, "Not finished yet!"
 	end
 	q.claimed = true
-	local got = give(player, d, R.QuestReward)
-	GameService.Notice(player, "{Star} Quest reward: " .. got, "good")
+	give(player, d, R.QuestReward)
 	local all = true
 	for _, x in ipairs(r.quests.list) do
 		all = all and x.claimed
 	end
 	if all and not r.quests.bonus then
 		r.quests.bonus = true
-		local bonus = give(player, d, R.AllQuestsReward)
-		GameService.Notice(player, "{Sparkles} All quests done! Bonus: " .. bonus, "good")
+		give(player, d, R.AllQuestsReward)
 	end
 	return true
 end
@@ -329,8 +321,7 @@ local function claimGroup(player: Player, d)
 		return false, "Already claimed"
 	end
 	d.groupClaimed = true
-	local got = give(player, d, R.GroupReward)
-	GameService.Notice(player, ("{Star} Thanks for joining! %s and +%d%% luck forever"):format(got, math.floor(R.GroupLuck * 100)), "good")
+	give(player, d, R.GroupReward)
 	return true
 end
 
@@ -390,8 +381,7 @@ function RewardService.GrantAdBoost(player: Player): boolean
 		return false
 	end
 	r.lastAd = os.time()
-	local got = give(player, d, R.AdBoost)
-	GameService.Notice(player, "{Lightning} Free boost: " .. got, "good")
+	give(player, d, R.AdBoost)
 	publish(player)
 	return true
 end

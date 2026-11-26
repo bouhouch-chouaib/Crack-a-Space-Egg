@@ -16,7 +16,6 @@ local MachineService = require(script.Parent.MachineService)
 local BoostService = require(script.Parent.BoostService)
 local SuitService = require(script.Parent.SuitService)
 local GearService = require(script.Parent.GearService)
-local Format = require(ReplicatedStorage.Shared.Format)
 
 local MonetizationService = {}
 
@@ -88,11 +87,7 @@ function MonetizationService.Start()
 	for _, potion in ipairs(shop.Potions) do
 		if potion.Id ~= 0 then
 			HANDLERS[potion.Id] = function(player)
-				local ok = BoostService.Add(player, potion.Key, minutes)
-				if ok then
-					GameService.Notice(player, ("{Lightning} %s active for %d min!"):format(potion.Name, minutes), "good")
-				end
-				return ok
+				return BoostService.Add(player, potion.Key, minutes)
 			end
 		end
 	end
@@ -105,7 +100,6 @@ function MonetizationService.Start()
 		local amount = Config.MoneyPackAmount(base, d.ring)
 		d.credits += amount
 		GameService.Sync(player)
-		GameService.Notice(player, "{Cash} +$" .. Format.Short(amount) .. "!", "good")
 		return true
 	end
 	for _, pack in ipairs(shop.MoneyPacks) do

@@ -913,9 +913,3 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 end)
-
--- Message quand un de ses œufs est dégagé
-ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("EggRevealed").OnClientEvent:Connect(function(ring: number, rarity: number)
-	local r = Config.Rarities[rarity] or Config.Rarities[1]
-	UIKit.toast("{Egg} " .. string.upper(Config.EggName(ring, rarity)) .. " (" .. r.Name .. ") ready to hatch!", "good")
-end)

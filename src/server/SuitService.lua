@@ -179,7 +179,6 @@ local function buy(player: Player)
 	Tracking.Funnel(player, "Suits", tier, nextSuit.Name)
 	GameService.Sync(player)
 	equip(player)
-	GameService.Notice(player, nextSuit.Name .. " equipped!", "good")
 end
 
 -- Combinaison achetée en Robux (MonetizationService). On ne redescend jamais.
@@ -193,7 +192,6 @@ function SuitService.Grant(player: Player, tier: number): boolean
 		Tracking.Funnel(player, "Suits", tier, Config.Suits[tier].Name)
 		GameService.Sync(player)
 		equip(player)
-		GameService.Notice(player, Config.Suits[tier].Name .. " equipped!", "good")
 	end
 	return true
 end

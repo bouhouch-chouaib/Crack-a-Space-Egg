@@ -21,7 +21,6 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Mutation = require(ReplicatedStorage.Shared.Mutation)
-local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local AnnounceService = require(script.Parent.AnnounceService)
 local GameService = require(script.Parent.GameService)
@@ -539,7 +538,6 @@ function HatchService.Hatch(player: Player, id: string)
 					local reward = if special == "wow" then Config.IndexReward.NewMin else math.max(Config.IndexReward.NewMin, math.floor(item.income * Config.IndexReward.NewSeconds))
 					dd.credits += reward
 					GameService.Sync(player)
-					GameService.Notice(player, ("{Star} New in your Index: %s! +$%s"):format(item.name, Format.Short(reward)), "good")
 				end)
 			end
 		end
@@ -607,8 +605,6 @@ function HatchService.UpdateHeld(player: Player)
 	if d and #d.ready > 0 then
 		if #d.base < BoostService.BaseSlots(player) then
 			want = d.ready[1]
-		else
-			GameService.Notice(player, ("{Home} Base full! %d egg(s) waiting"):format(#d.ready), "warn")
 		end
 	end
 	local key = if want then want.ring .. ":" .. want.rarity else nil
@@ -678,7 +674,6 @@ function HatchService.SkipEgg(player: Player, rarity: number): boolean
 	if m then
 		m:SetAttribute("HatchAt", now)
 	end
-	GameService.Notice(player, "{Hatch} Your egg is ready to hatch!", "good")
 	return true
 end
 

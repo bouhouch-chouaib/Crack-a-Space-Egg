@@ -343,6 +343,7 @@ C'est l'équivalent des tapis de course des simulateurs : l'oxygène se farme, i
 
 - ✅ Le MVP a déjà le HUD ($, soute, carburant), la boutique et l'écran de révélation.
 - 💡 À ajouter : jauge de combinaison, jauge de bruit, inventaire et fusion des créatures, index, quêtes, récompenses, boutique Robux, réglages (son, qualité).
+- ✅ **Peu de messages texte** (26 nov.) : les bulles de texte ne restent que là où elles sont indispensables : pourquoi une action échoue (pas assez de $, base pleine, objet verrouillé, « Coming soon! »…), une perte qu'on ne comprendrait pas autrement (œufs perdus de froid ou faute d'oxygène, roche perdue dans l'espace), le bouclier qui a sauvé du monstre, le code cadeau accepté, l'avis envoyé, le tutoriel, l'alerte de froid et le premier passage chez un monstre. Tout ce qui répète ce qu'on voit déjà (gains, achats, « equipped! », récompenses réclamées, machine améliorée, monstre semé…) est retiré : on le montre en jeu.
 
 ## 20. Son et ambiance
 

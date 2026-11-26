@@ -17,7 +17,6 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
-local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -379,13 +378,12 @@ Remotes.DrillHit.OnClientEvent:Connect(function(rock: BasePart?, _by: Player, _d
 		fuel = maxFuel()
 		local v = hrp.AssemblyLinearVelocity
 		hrp.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, 45), v.Z)
-		UIKit.toast("{Jetpack} Your rock broke! Fly to the next one", "info")
 	end
 end)
 
 -- Coup de batte reçu (GearService) ou coup d'un monstre (MonsterService, source « monster ») :
 -- on est repoussé, le réservoir plein pour pouvoir se rattraper
-Remotes:WaitForChild("Gear").OnClientEvent:Connect(function(kind: string, push: Vector3, who: string?, source: string?)
+Remotes:WaitForChild("Gear").OnClientEvent:Connect(function(kind: string, push: Vector3, _who: string?, source: string?)
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local hum = character and character:FindFirstChildOfClass("Humanoid")
@@ -399,7 +397,6 @@ Remotes:WaitForChild("Gear").OnClientEvent:Connect(function(kind: string, push: 
 	if source == "monster" then
 		return -- MonsterFx montre déjà le coup, et la roche tombée montre où aller
 	end
-	UIKit.toast(("%s bonked you away!"):format(who or "Someone"), "warn")
 end)
 
 -- POSE EN VOL ET EFFETS DES AUTRES JOUEURS ---------------------------------------------------

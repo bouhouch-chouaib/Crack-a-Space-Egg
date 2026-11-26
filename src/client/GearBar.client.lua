@@ -405,7 +405,6 @@ local function useHook(slot: () -> Slot)
 		return
 	end
 	if os.clock() - s.lastUsed < s.cooldown then
-		UIKit.toast("Grappling hook is recharging", "info")
 		return
 	end
 	local rock = findRock(hrp.Position, rocks)

@@ -171,7 +171,6 @@ local function buyBat(player: Player)
 	Tracking.Funnel(player, "Bats", tier, bat.Name)
 	GameService.Sync(player)
 	equipBat(player)
-	GameService.Notice(player, bat.Name .. " equipped!", "good")
 end
 
 local function swing(player: Player)
@@ -189,10 +188,7 @@ local function swing(player: Player)
 	local bat = Config.Bats[math.min(d.bat, #Config.Bats)]
 	character:SetAttribute("BatSwing", t)
 	-- monstre à portée : assommé
-	local name = MonsterService.Stun(hrp.Position, G.BatRange, bat.Stun)
-	if name then
-		GameService.Notice(player, ("{Star} %s stunned for %ds!"):format(name, bat.Stun), "good")
-	end
+	MonsterService.Stun(hrp.Position, G.BatRange, bat.Stun)
 	-- autres joueurs : repoussés, jamais sur le vaisseau, et sans leur faire perdre quoi que ce soit
 	if MonsterService.InShip(hrp.Position) then
 		return
@@ -303,7 +299,6 @@ function GearService.GrantShield(player: Player): boolean
 	end
 	d.shields = (d.shields or 0) + 1
 	GameService.Sync(player)
-	GameService.Notice(player, ("{Star} Monster Shield ready! You have %d"):format(d.shields), "good")
 	return true
 end
 

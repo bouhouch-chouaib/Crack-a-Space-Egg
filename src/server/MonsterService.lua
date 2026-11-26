@@ -278,13 +278,9 @@ local function stepLost()
 				table.insert(d.cargo, egg)
 			end
 			GameService.Sync(owner)
-			GameService.Notice(owner, "{Star} You got your rock back!", "good")
 			l.model:Destroy()
 			table.remove(lost, i)
 		elseif not alive or t >= l.expiresAt then
-			if owner.Parent then
-				GameService.Notice(owner, "{Warning} Your rock sank into the asteroid!", "bad")
-			end
 			l.model:SetAttribute("Sinking", true)
 			local model = l.model
 			task.delay(1.2, function()
@@ -315,9 +311,6 @@ local function step(dt: number)
 					m.pos += away.Unit * M.Recoil
 				end
 				release(m, if home then "home" else "lost")
-				if not home then
-					GameService.Notice(player, ("{Star} You escaped the %s!"):format(M.Kinds[ring].Name), "good")
-				end
 				continue
 			end
 			if t < m.t0 + M.Emerge then

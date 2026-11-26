@@ -273,7 +273,6 @@ local function showCreatures(data: any)
 				local res = creatures("sell", { p.id })
 				if res and res.ok then
 					Sfx.Play("Coin", { pitch = 1.2 })
-					UIKit.toast("{Cash} +" .. money(p.price or 0), "good")
 				end
 				if res and res.list then
 					showCreatures(res.list)
