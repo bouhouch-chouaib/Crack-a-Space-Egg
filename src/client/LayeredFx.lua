@@ -23,6 +23,10 @@ LayeredFx.Sheets = {
 	Pulse = { Glow = "rbxassetid://100011621251953", Rim = "rbxassetid://81455035593534", Mid = "rbxassetid://105400752004934", Core = "rbxassetid://74665979691155" },
 	Rune = { Glow = "rbxassetid://134319124948669", Rim = "rbxassetid://101719644120967", Mid = "rbxassetid://80243949445220", Core = "rbxassetid://114942133164191" },
 	Gear = { Glow = "rbxassetid://124663679834377", Rim = "rbxassetid://102295534812069", Mid = "rbxassetid://94679299550587", Core = "rbxassetid://117848019427270" },
+	-- éclosion d'œuf (HatchFx) : explosion de coquille, onde de choc au sol, énergie aspirée pendant la charge
+	Hatch = { Glow = "rbxassetid://74598796633742", Rim = "rbxassetid://122232441320336", Mid = "rbxassetid://71866108082050", Core = "rbxassetid://105850873147597" },
+	HatchRing = { Glow = "rbxassetid://112613559635511", Rim = "rbxassetid://138754948553788", Mid = "rbxassetid://115697792909880", Core = "rbxassetid://73082566312600" },
+	Converge = { Glow = "rbxassetid://126224476094550", Rim = "rbxassetid://116332369242874", Mid = "rbxassetid://96225808912195", Core = "rbxassetid://134950337727915" },
 }
 
 -- Mélange de chaque calque : le halo s'ajoute à la lumière, les autres se posent comme de la peinture

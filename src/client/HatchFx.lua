@@ -30,6 +30,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 local Theme = require(ReplicatedStorage.Shared:WaitForChild("Theme"))
+local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
 
 -- mêmes images que UIKit.Art (FxGlow, FxSparkle, FxShell, FxRays, FxShard)
 local ART = {
@@ -332,6 +333,24 @@ function HatchFx.Charge(egg: Model, o: Opts)
 		e.Parent = ball
 		suck = e
 	end
+	-- traits d'énergie qui filent vers l'œuf (effet en 4 calques, Epic+), une image par boucle
+	local CONV_LOOP = 1
+	local conv: LayeredFx.Fx? = nil
+	local convNext = 0
+	if ball then
+		local a = Instance.new("Attachment")
+		a.Parent = ball
+		conv = LayeredFx.new(a, {
+			kind = "Converge",
+			size = h * 3,
+			colors = { colorOf(rarity, 0), colorOf(rarity, 0):Lerp(WHITE, 0.55) },
+			lifetime = CONV_LOOP + 0.08,
+			loop = CONV_LOOP,
+			fade = 0.04,
+			locked = true,
+			zOffset = -h * 0.3, -- derrière l'œuf
+		})
+	end
 	-- l'écran du propriétaire s'assombrit vers la couleur de la rareté
 	local cc: ColorCorrectionEffect? = nil
 	local cam = workspace.CurrentCamera
@@ -623,6 +642,11 @@ function HatchFx.Charge(egg: Model, o: Opts)
 			suck.Color = ColorSequence.new(WHITE, col)
 			suck.Rate = if frozen then 0 else (10 + 18 * rarity) * k
 		end
+		if conv and not frozen and k > 0.12 and now >= convNext then
+			convNext = now + CONV_LOOP
+			conv:SetColors(col, col:Lerp(WHITE, 0.55))
+			conv:Emit(nil, h * gs * (2.4 + 0.6 * k))
+		end
 		if cc then
 			cc.Brightness = -0.14 * k
 			cc.Contrast = 0.2 * k
@@ -709,17 +733,16 @@ function HatchFx.Burst(center: Vector3, size: number, groundY: number, rarity: n
 		Lifetime = NumberRange.new(0.14),
 		Speed = NumberRange.new(0),
 	}, 1)
-	-- 2. le corps : une boule de lumière qui enfle et s'efface, et une étoile de rayons (Rare+)
-	emit({
-		Texture = ART.Glow,
-		Color = ColorSequence.new(col),
-		LightEmission = 1,
-		Brightness = 2,
-		Size = NumberSequence.new({ kp(0, S * 1.1), kp(1, S * (1.4 + 0.15 * rarity)) }),
-		Transparency = NumberSequence.new({ kp(0, 0.35), kp(1, 1) }),
-		Lifetime = NumberRange.new(0.5 + 0.06 * rarity),
-		Speed = NumberRange.new(0),
-	}, 2, 0.03)
+	-- 2. le corps : explosion en 4 calques (boule en nuage qui se creuse, grosses pointes, éclats de
+	-- coquille ; tools/fx/layered_fx.py « Hatch »), aux couleurs de la rareté, et une étoile de rayons (Rare+)
+	local burst = LayeredFx.new(at, {
+		kind = "Hatch",
+		size = S * (2.2 + 0.2 * rarity),
+		colors = { col, col:Lerp(WHITE, 0.55) },
+		lifetime = 0.55 + 0.05 * rarity,
+		zOffset = S * 1.2, -- vers la caméra : le sol ne la coupe pas
+	})
+	burst:Emit(math.random(0, 359))
 	if rarity >= 3 then
 		emit({
 			Texture = ART.Rays,
@@ -779,22 +802,26 @@ function HatchFx.Burst(center: Vector3, size: number, groundY: number, rarity: n
 		end
 	end
 	-- 5. ondes de choc au sol : 1 (Uncommon+), 2 (Legendary+), 3 (Cosmic)
+	-- (anneau à bord dentelé qui s'élargit puis se brise, effet en 4 calques « HatchRing », posé à plat)
 	local rings = if rarity >= 7 then 3 elseif rarity >= 5 then 2 elseif rarity >= 2 then 1 else 0
-	for i = 1, rings do
-		task.delay(0.04 + 0.12 * (i - 1), function()
-			local d0 = S * 0.6
-			local ring = neon({
-				Name = "Shockwave",
-				Shape = Enum.PartType.Cylinder,
-				Color = colorOf(rarity, os.clock()),
-				Transparency = 0.35,
-				Size = Vector3.new(0.12, d0, d0),
-				CFrame = CFrame.new(center.X, groundY + 0.1 + 0.05 * i, center.Z) * CFrame.Angles(0, 0, math.pi / 2),
-				Parent = folder,
-			})
-			local d1 = S * (1.5 + 0.25 * rarity) * (1 + 0.3 * (i - 1))
-			tween(ring, 0.45 + 0.05 * rarity, { Size = Vector3.new(0.12, d1, d1), Transparency = 1 })
-		end)
+	if rings > 0 then
+		local floor = neon({ Name = "Ground", Transparency = 1, Size = Vector3.one * 0.2, Position = Vector3.new(center.X, groundY + 0.15, center.Z), Parent = folder })
+		local ga = Instance.new("Attachment")
+		ga.Parent = floor
+		local wave = LayeredFx.new(ga, {
+			kind = "HatchRing",
+			size = S * 2,
+			colors = { col, col:Lerp(WHITE, 0.55) },
+			lifetime = 0.5 + 0.05 * rarity,
+			flat = true,
+		})
+		for i = 1, rings do
+			task.delay(0.04 + 0.12 * (i - 1), function()
+				local c = colorOf(rarity, os.clock())
+				wave:SetColors(c, c:Lerp(WHITE, 0.55))
+				wave:Emit(math.random(0, 359), S * (1.7 + 0.28 * rarity) * (1 + 0.3 * (i - 1)))
+			end)
+		end
 	end
 	-- 6. colonne de lumière qui éclate vers le ciel (Legendary+)
 	if rarity >= 5 then

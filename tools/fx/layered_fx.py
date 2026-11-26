@@ -368,6 +368,95 @@ def fx_gear(t, i):
     return bands(d, rim=0.05, mid=0.45, core=0.85, soft=0.03, glow_sigma=0.025)
 
 
+# Éclosion d'œuf --------------------------------------------------------------------------------
+
+
+def _triangle(cx, cy, size, rot):
+    """éclat de coquille : triangle pointu (champ 0..1)"""
+    d = np.full_like(X, 9.0)
+    pts = [(math.cos(rot + k * TAU / 3) * size * (1.5 if k == 0 else 0.8), math.sin(rot + k * TAU / 3) * size * (1.5 if k == 0 else 0.8)) for k in range(3)]
+    inside = np.ones_like(X, dtype=bool)
+    for k in range(3):
+        (x0, y0), (x1, y1) = pts[k], pts[(k + 1) % 3]
+        cross = (x1 - x0) * (Y - cy - y0) - (y1 - y0) * (X - cx - x0)
+        inside &= cross > 0
+        d = np.minimum(d, seg_dist(X - cx, Y - cy, x0, y0, x1, y1))
+    return np.where(inside, np.clip(d / (size * 0.35), 0, 1), 0)
+
+
+def fx_hatch(t, i):
+    """l'œuf éclate : boule de lumière au bord en nuage qui se creuse en anneau, grosses pointes, éclats
+    de coquille qui volent (une seule fois)"""
+    # boule en nuage qui enfle, puis se creuse depuis le centre et se disperse
+    R = 0.2 + 0.62 * (1 - (1 - t) ** 2.5)
+    n = sample(NOISE_C, ANG / TAU * 7, t * 0.6 + RAD * 0.3)
+    rr = RAD / (R * (0.82 + n * 0.36))
+    hole = R * 0.95 * ss(0.3, 1.0, t) ** 0.8
+    puff = np.minimum((1 - rr) * 3, (RAD - hole) / (R * 0.22))
+    d = np.clip(puff, 0, 1) * (1 - ss(0.7, 1.0, t) * 0.7)
+    # grosses pointes (8) qui jaillissent puis s'effilent
+    grow = 1 - (1 - min(1, t / 0.25)) ** 3
+    thin = max(0.0, 1 - max(0, t - 0.1) / 0.35)  # disparues avant que la boule se creuse
+    for k in range(8):
+        a = TAU * k / 8 + 0.2
+        L = (0.75 + 0.2 * (k % 2)) * (0.3 + 0.7 * grow)
+        da = np.angle(np.exp(1j * (ANG - a)))
+        w = 0.32 * thin * np.clip(1 - RAD / L, 0, 1)
+        sp = np.where(RAD < L, 1 - np.abs(da) / np.maximum(w, 1e-4), 0)
+        d = np.maximum(d, np.clip(sp, 0, 1) * np.clip(1 - RAD / L, 0, 1) ** 0.25 * thin)
+    # cœur blanc du début
+    if t < 0.3:
+        d = np.maximum(d, np.clip(1 - RAD / (0.3 * math.sin(math.pi * t / 0.3) + 1e-4), 0, 1) ** 0.5)
+    # éclats de coquille qui volent en tournant
+    rng = np.random.default_rng(42)
+    for k in range(9):
+        a = TAU * k / 9 + rng.uniform(-0.2, 0.2)
+        r = 0.15 + rng.uniform(0.55, 0.78) * (1 - (1 - t) ** 2)
+        s = rng.uniform(0.07, 0.11) * (1 - 0.5 * t)
+        d = np.maximum(d, _triangle(math.cos(a) * r, math.sin(a) * r, s, a + t * rng.uniform(4, 9)) * (1 - ss(0.8, 1, t)))
+    return bands(d, rim=0.05, mid=0.33, core=0.66, glow_sigma=0.05)
+
+
+def fx_hatch_ring(t, i):
+    """onde de choc au sol (à plat) : anneau à bord dentelé qui s'élargit et se brise en morceaux"""
+    r = 0.12 + 0.8 * (1 - (1 - t) ** 2.2)
+    th = 0.09 * (1 - t) ** 0.8 + 0.01
+    band = np.clip(1 - np.abs(RAD - r) / th, 0, 1)
+    # dents vers l'extérieur
+    spk = np.abs(np.cos(ANG * 9)) ** 3 * 0.14 * (1 - t)
+    teeth = np.where(RAD > r, np.clip(1 - (RAD - r) / np.maximum(spk + th, 1e-4), 0, 1), 0)
+    d = np.maximum(band, teeth * 0.8)
+    # traînée douce à l'intérieur
+    d = np.maximum(d, np.clip(1 - (r - RAD) / 0.25, 0, 1) * (RAD < r) * 0.3 * (1 - t))
+    # se brise en morceaux à la fin
+    breaks = sample(NOISE_C, ANG / TAU * 3, 0.37)
+    d = d * ss(t * 0.9 - 0.05, t * 0.9 + 0.05, breaks + 0.15)
+    return bands(d, rim=0.06, mid=0.4, core=0.72, glow_sigma=0.03)
+
+
+def fx_converge(t, i):
+    """énergie aspirée vers l'œuf : traits qui filent vers le centre (en boucle)"""
+    rng = np.random.default_rng(77)
+    d = np.zeros_like(X)
+    for k in range(16):
+        a = TAU * k / 16 + rng.uniform(-0.15, 0.15)
+        ph = rng.uniform(0, 1)
+        sp = int(rng.choice([1, 2]))
+        p = (ph + t * sp) % 1
+        head = 0.7 - 0.58 * p  # la queue reste dans l'étape (jamais coupée par son bord)
+        L = 0.25 * (1 - 0.5 * p)
+        ca, sa = math.cos(a), math.sin(a)
+        # le trait s'amincit vers sa queue
+        along = (X * ca + Y * sa - head) / L
+        across = np.abs(-X * sa + Y * ca)
+        w = 0.042 * np.clip(1 - along, 0, 1)
+        line = np.clip(1 - across / np.maximum(w, 1e-4), 0, 1) * (along >= 0) * (along <= 1)
+        vis = min(1.0, p / 0.12) * min(1.0, (1 - p) / 0.12)
+        d = np.maximum(d, line * vis)
+    # pas de point au centre : c'est l'œuf qui est au centre
+    return bands(d, rim=0.05, mid=0.4, core=0.7, glow_sigma=0.03, glow_gain=1.3)
+
+
 EFFECTS = {
     "Impact": fx_impact,
     "Flame": fx_flame,
@@ -382,6 +471,9 @@ EFFECTS = {
     "Pulse": fx_pulse,
     "Rune": fx_rune,
     "Gear": fx_gear,
+    "Hatch": fx_hatch,
+    "HatchRing": fx_hatch_ring,
+    "Converge": fx_converge,
 }
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
@@ -399,6 +491,9 @@ PREVIEW = {
     "Pulse": ((255, 196, 40), (255, 240, 160)),
     "Rune": ((40, 200, 140), (255, 220, 100)),
     "Gear": ((200, 130, 40), (255, 210, 120)),
+    "Hatch": ((255, 196, 40), (255, 240, 170)),
+    "HatchRing": ((170, 90, 255), (225, 200, 255)),
+    "Converge": ((255, 70, 160), (255, 200, 230)),
 }
 
 
