@@ -26,6 +26,9 @@ LayeredFx.Sheets = {
 	-- éclosion d'œuf (HatchFx) : explosion de coquille, onde de choc au sol, énergie aspirée pendant la charge
 	Hatch = { Glow = "rbxassetid://74598796633742", Rim = "rbxassetid://122232441320336", Mid = "rbxassetid://71866108082050", Core = "rbxassetid://105850873147597" },
 	HatchRing = { Glow = "rbxassetid://112613559635511", Rim = "rbxassetid://138754948553788", Mid = "rbxassetid://115697792909880", Core = "rbxassetid://73082566312600" },
+	-- roche qui casse (Impact.client) : éclair et fissures puis éclats, nuage de poussière façon dessin animé
+	Shatter = { Glow = "rbxassetid://95467819314073", Rim = "rbxassetid://130321780070587", Mid = "rbxassetid://115391815252358", Core = "rbxassetid://81840169311894" },
+	Dust = { Glow = "rbxassetid://98815856856038", Rim = "rbxassetid://79136465450259", Mid = "rbxassetid://107311969464746", Core = "rbxassetid://140277773343582" },
 	Converge = { Glow = "rbxassetid://126224476094550", Rim = "rbxassetid://116332369242874", Mid = "rbxassetid://96225808912195", Core = "rbxassetid://134950337727915" },
 }
 
@@ -56,7 +59,8 @@ end
 
 -- Crée les 4 calques sous `parent` (Attachment).
 -- opts : kind, size, colors = { rim, mid }, lifetime, loop (secondes d'une boucle, sinon une seule fois),
---        flat (posé à plat), zOffset, locked, fade (secondes de fondu au début et à la fin), alpha (0..1 en plus)
+--        flat (posé à plat), zOffset, locked, fade (secondes de fondu au début et à la fin), alpha (0..1 en plus),
+--        light (LightEmission par calque, ex. { Glow = 0 } pour de la fumée qui ne brille pas), glowAlpha
 function LayeredFx.new(parent: Instance, opts: { [string]: any }): Fx
 	local sheet = LayeredFx.Sheets[opts.kind]
 	assert(sheet, "LayeredFx : effet inconnu " .. tostring(opts.kind))
@@ -70,13 +74,14 @@ function LayeredFx.new(parent: Instance, opts: { [string]: any }): Fx
 		e.Name = "Fx" .. layer
 		e.Texture = sheet[layer]
 		e.Color = ColorSequence.new(cols[layer])
-		e.LightEmission = LIGHT[layer]
+		e.LightEmission = if opts.light and opts.light[layer] then opts.light[layer] else LIGHT[layer]
 		e.LightInfluence = 0
 		e.Enabled = false
 		e.Rate = 0
 		e.Lifetime = NumberRange.new(life)
 		e.Size = NumberSequence.new(opts.size or 4)
-		local a = 1 - (1 - ALPHA[layer]) * (1 - extra)
+		local base = if layer == "Glow" and opts.glowAlpha then opts.glowAlpha else ALPHA[layer]
+		local a = 1 - (1 - base) * (1 - extra)
 		if fade > 0 then
 			e.Transparency = NumberSequence.new({ kp(0, 1), kp(fade, a), kp(1 - fade, a), kp(1, 1) })
 		else

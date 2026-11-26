@@ -6,7 +6,7 @@
 -- - Nombres de dégâts qui s'envolent à chaque coup (dorés quand un œuf sort).
 -- - Fissures qui apparaissent par stades (Config.CrackStages), de la couleur du biome.
 -- - Le vrai œuf (modèle de l'anneau et de la rareté) jaillit de la roche, fait un arc, vole jusqu'au foreur.
--- - À la casse : flash, la roche vole en morceaux, nuage de poussière.
+-- - À la casse : éclair, fissures puis éclats et nuage de poussière en 4 calques (LayeredFx), la roche vole en morceaux.
 -- Les coups arrivent du serveur (Remotes.DrillHit), pour tous les joueurs.
 
 local Debris = game:GetService("Debris")
@@ -389,28 +389,32 @@ local function shatter(rock: BasePart)
 			end
 		end
 	end
-	-- Flash
-	local flash = Instance.new("Part")
-	flash.Anchored = true
-	flash.CanCollide = false
-	flash.CanQuery = false
-	flash.Transparency = 1
-	flash.Size = Vector3.one * 0.2
-	flash.Position = center
-	flash.Parent = workspace
-	local fb = Instance.new("BillboardGui")
-	fb.Size = UDim2.fromScale(size.Magnitude * 0.8, size.Magnitude * 0.8)
-	fb.LightInfluence = 0
-	fb.Parent = flash
-	local fi = Instance.new("ImageLabel")
-	fi.BackgroundTransparency = 1
-	fi.Size = UDim2.fromScale(1, 1)
-	fi.Image = UIKit.Art.FxGlow
-	fi.ImageColor3 = Color3.new(1, 1, 1)
-	fi.Parent = fb
-	tween(fb, 0.45, { Size = UDim2.fromScale(size.Magnitude * 2.2, size.Magnitude * 2.2) })
-	tween(fi, 0.45, { ImageTransparency = 1 })
-	Debris:AddItem(flash, 0.6)
+	-- Éclair, fissures en zigzag puis éclats (effet en 4 calques « Shatter », couleurs du biome) et
+	-- nuage de poussière façon dessin animé (« Dust », couleur de la roche, ne brille pas)
+	local a = Instance.new("Attachment")
+	a.WorldPosition = center
+	a.Parent = workspace.Terrain
+	local tint = biomeColor(rock)
+	local th, ts = tint:ToHSV()
+	local burst = LayeredFx.new(a, {
+		kind = "Shatter",
+		size = size.Magnitude * 1.5,
+		colors = { Color3.fromHSV(th, math.max(ts, 0.75), 1), Color3.fromHSV(th, ts * 0.4, 1) },
+		lifetime = 0.75,
+		zOffset = size.Magnitude * 0.7,
+	})
+	burst:Emit(math.random(0, 359))
+	local rh, rs, rv = color:ToHSV()
+	local cloud = LayeredFx.new(a, {
+		kind = "Dust",
+		size = size.Magnitude * 1.7,
+		colors = { Color3.fromHSV(rh, rs * 0.6, math.clamp(rv * 0.75, 0.3, 0.6)), Color3.fromHSV(rh, rs * 0.35, math.clamp(rv * 1.2, 0.65, 0.85)) },
+		lifetime = 1.3,
+		zOffset = size.Magnitude * 0.3,
+		light = { Glow = 0, Rim = 0, Mid = 0, Core = 0.2 },
+		glowAlpha = 0.75,
+	})
+	cloud:Emit(math.random(0, 359))
 	-- Morceaux : des copies réduites de la roche qui partent en tournant
 	local pieces = math.clamp(math.floor(size.Magnitude / 3), 6, 11)
 	for _ = 1, pieces do
@@ -435,22 +439,7 @@ local function shatter(rock: BasePart)
 		}, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		Debris:AddItem(chunk, 1.2)
 	end
-	-- Poussière et étincelles
-	local a = Instance.new("Attachment")
-	a.WorldPosition = center
-	a.Parent = workspace.Terrain
-	local dust = Instance.new("ParticleEmitter")
-	dust.Texture = UIKit.Art.FxGlow
-	dust.Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.4))
-	dust.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size.Magnitude * 0.2), NumberSequenceKeypoint.new(1, size.Magnitude * 0.55) })
-	dust.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 1) })
-	dust.Lifetime = NumberRange.new(0.8, 1.4)
-	dust.Speed = NumberRange.new(4, 10)
-	dust.SpreadAngle = Vector2.new(180, 180)
-	dust.LightInfluence = 1
-	dust.Enabled = false
-	dust.Parent = a
-	dust:Emit(14)
+	-- Étincelles
 	local sparks = Instance.new("ParticleEmitter")
 	sparks.Texture = UIKit.Art.FxSparkle
 	sparks.Color = ColorSequence.new(Color3.new(1, 1, 1), biomeColor(rock))
@@ -463,7 +452,7 @@ local function shatter(rock: BasePart)
 	sparks.Enabled = false
 	sparks.Parent = a
 	sparks:Emit(30)
-	Debris:AddItem(a, 1.6)
+	Debris:AddItem(a, 1.8)
 end
 
 -- ÉTOILE D'IMPACT (effet en 4 calques, LayeredFx) ---------------------------------

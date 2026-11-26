@@ -457,6 +457,96 @@ def fx_converge(t, i):
     return bands(d, rim=0.05, mid=0.4, core=0.7, glow_sigma=0.03, glow_gain=1.3)
 
 
+# Roche qui casse --------------------------------------------------------------------------------
+
+
+def _polygon(cx, cy, pts):
+    """polygone convexe (points autour de cx, cy) : champ 0..1, 1 au centre"""
+    inside = np.ones_like(X, dtype=bool)
+    dist = np.full_like(X, 9.0)
+    n = len(pts)
+    for k in range(n):
+        (x0, y0), (x1, y1) = pts[k], pts[(k + 1) % n]
+        cross = (x1 - x0) * (Y - cy - y0) - (y1 - y0) * (X - cx - x0)
+        inside &= cross > 0
+        dist = np.minimum(dist, seg_dist(X - cx, Y - cy, x0, y0, x1, y1))
+    size = max(math.hypot(x, y) for x, y in pts)
+    return np.where(inside, np.clip(dist / (size * 0.45), 0, 1), 0)
+
+
+def fx_shatter(t, i):
+    """la roche cède : éclair central, fissures en zigzag qui partent du centre, puis éclats anguleux
+    qui volent en tournant et rapetissent (une seule fois)"""
+    rng = np.random.default_rng(21)
+    d = np.zeros_like(X)
+    # éclair central (court)
+    if t < 0.35:
+        r = 0.42 * math.sin(math.pi * min(1, t / 0.35))
+        d = np.maximum(d, np.clip(1 - RAD / max(r, 1e-4), 0, 1) ** 0.5)
+    # fissures en zigzag (les premières étapes)
+    if t < 0.45:
+        grow = 1 - (1 - min(1, t / 0.2)) ** 2
+        fade = 1 - max(0, t - 0.2) / 0.25
+        dist = np.full_like(X, 9.0)
+        for k in range(7):
+            a = TAU * k / 7 + rng.uniform(-0.3, 0.3)
+            L = rng.uniform(0.55, 0.9) * grow
+            pts = _bolt(rng, 0, 0, math.cos(a) * L, math.sin(a) * L, depth=4, disp=0.25)
+            for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+                dist = np.minimum(dist, seg_dist(X, Y, x0, y0, x1, y1))
+        d = np.maximum(d, np.clip(1 - dist / (0.05 * fade + 0.005), 0, 1) * fade)
+    else:
+        for k in range(7):  # garde le hasard identique d'une étape à l'autre
+            rng.uniform(size=1)
+    # éclats anguleux qui volent
+    rng2 = np.random.default_rng(8)
+    fly = 1 - (1 - t) ** 2
+    for k in range(11):
+        a = TAU * k / 11 + rng2.uniform(-0.25, 0.25)
+        r = 0.08 + rng2.uniform(0.45, 0.7) * fly
+        s = rng2.uniform(0.12, 0.19) * (1 - 0.55 * t)
+        rot = rng2.uniform(0, TAU) + t * rng2.uniform(-7, 7)
+        nv = rng2.integers(3, 6)
+        pts = []
+        for v in range(nv):
+            av = rot + TAU * v / nv + rng2.uniform(-0.3, 0.3)
+            rv = s * rng2.uniform(0.6, 1.2)
+            pts.append((math.cos(av) * rv, math.sin(av) * rv))
+        appear = ss(0.05, 0.15, t)
+        d = np.maximum(d, _polygon(math.cos(a) * r, math.sin(a) * r, pts) * appear * (1 - ss(0.85, 1, t)))
+    return bands(d, rim=0.05, mid=0.35, core=0.68, glow_sigma=0.04)
+
+
+def fx_dust(t, i):
+    """nuage de poussière façon dessin animé : boules qui s'écartent, ombrées (reflet en haut à gauche),
+    rongées par le bruit jusqu'à disparaître (une seule fois). Calques : Rim = silhouette, Mid = partie
+    éclairée, Core = reflet, Glow = ombre douce autour"""
+    rng = np.random.default_rng(3)
+    sil = np.zeros_like(X)
+    lit = np.zeros_like(X)
+    hi = np.zeros_like(X)
+    spread = 1 - (1 - t) ** 2.4
+    for k in range(13):
+        a = TAU * k / 13 + rng.uniform(-0.2, 0.2)
+        r0 = rng.uniform(0.05, 0.2)
+        rr = r0 + rng.uniform(0.35, 0.58) * spread
+        cx, cy = math.cos(a) * rr, math.sin(a) * rr * 0.8
+        s = rng.uniform(0.13, 0.22) * (0.55 + 0.7 * spread)
+        sil = np.maximum(sil, 1 - np.hypot(X - cx, Y - cy) / s)
+        lit = np.maximum(lit, 1 - np.hypot(X - cx + s * 0.2, Y - cy - s * 0.2) / (s * 0.78))
+        hi = np.maximum(hi, 1 - np.hypot(X - cx + s * 0.38, Y - cy - s * 0.38) / (s * 0.3))
+    # rongé par le bruit : les boules se trouent puis s'effacent
+    n = sample(NOISE_C, X * 0.9, Y * 0.9) * 0.7 + sample(NOISE_A, X * 1.1, Y * 1.1) * 0.3
+    eat = ss(0.25, 1.0, t)
+    alive = ss(eat - 0.05, eat + 0.05, n * 0.9 + 0.1)
+    soft = 0.03
+    rim = ss(0, soft, sil) * alive
+    mid = ss(0, soft, lit) * rim
+    core = ss(0, soft, hi) * rim * (1 - ss(0.5, 0.8, t))
+    glow = np.clip(blur(rim, 0.04 * R) * 1.2, 0, 1) * 0.8
+    return {"Glow": glow, "Rim": rim, "Mid": mid, "Core": core}
+
+
 EFFECTS = {
     "Impact": fx_impact,
     "Flame": fx_flame,
@@ -474,6 +564,8 @@ EFFECTS = {
     "Hatch": fx_hatch,
     "HatchRing": fx_hatch_ring,
     "Converge": fx_converge,
+    "Shatter": fx_shatter,
+    "Dust": fx_dust,
 }
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
@@ -492,6 +584,8 @@ PREVIEW = {
     "Rune": ((40, 200, 140), (255, 220, 100)),
     "Gear": ((200, 130, 40), (255, 210, 120)),
     "Hatch": ((255, 196, 40), (255, 240, 170)),
+    "Shatter": ((255, 120, 40), (255, 220, 150)),
+    "Dust": ((120, 105, 100), (190, 175, 165)),
     "HatchRing": ((170, 90, 255), (225, 200, 255)),
     "Converge": ((255, 70, 160), (255, 200, 230)),
 }
