@@ -29,6 +29,8 @@ LayeredFx.Sheets = {
 	-- roche qui casse (Impact.client) : éclair et fissures puis éclats, nuage de poussière façon dessin animé
 	Shatter = { Glow = "rbxassetid://95467819314073", Rim = "rbxassetid://130321780070587", Mid = "rbxassetid://115391815252358", Core = "rbxassetid://81840169311894" },
 	Dust = { Glow = "rbxassetid://98815856856038", Rim = "rbxassetid://79136465450259", Mid = "rbxassetid://107311969464746", Core = "rbxassetid://140277773343582" },
+	-- flamme des tuyères du jetpack (Jetpack.client), en boucle, tuyère en haut de l'image
+	Thrust = { Glow = "rbxassetid://85617258806965", Rim = "rbxassetid://121451156008585", Mid = "rbxassetid://103169018205636", Core = "rbxassetid://139605118001905" },
 	Converge = { Glow = "rbxassetid://126224476094550", Rim = "rbxassetid://116332369242874", Mid = "rbxassetid://96225808912195", Core = "rbxassetid://134950337727915" },
 }
 
@@ -40,6 +42,7 @@ export type Fx = {
 	emitters: { ParticleEmitter },
 	Emit: (self: Fx, rotation: number?, size: number?) -> (),
 	SetColors: (self: Fx, rim: Color3, mid: Color3) -> (),
+	Clear: (self: Fx) -> (),
 	Destroy: (self: Fx) -> (),
 }
 
@@ -60,7 +63,8 @@ end
 -- Crée les 4 calques sous `parent` (Attachment).
 -- opts : kind, size, colors = { rim, mid }, lifetime, loop (secondes d'une boucle, sinon une seule fois),
 --        flat (posé à plat), zOffset, locked, fade (secondes de fondu au début et à la fin), alpha (0..1 en plus),
---        light (LightEmission par calque, ex. { Glow = 0 } pour de la fumée qui ne brille pas), glowAlpha
+--        light (LightEmission par calque, ex. { Glow = 0 } pour de la fumée qui ne brille pas), glowAlpha,
+--        upright (l'image garde le haut du monde en haut : jets, colonnes)
 function LayeredFx.new(parent: Instance, opts: { [string]: any }): Fx
 	local sheet = LayeredFx.Sheets[opts.kind]
 	assert(sheet, "LayeredFx : effet inconnu " .. tostring(opts.kind))
@@ -97,6 +101,8 @@ function LayeredFx.new(parent: Instance, opts: { [string]: any }): Fx
 		e.EmissionDirection = Enum.NormalId.Top
 		if opts.flat then
 			e.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
+		elseif opts.upright then
+			e.Orientation = Enum.ParticleOrientation.FacingCameraWorldUp
 		end
 		-- les calques sont empilés dans l'ordre (le cœur devant)
 		e.ZOffset = (opts.zOffset or 0) + i * 0.02
@@ -129,6 +135,12 @@ function LayeredFx.new(parent: Instance, opts: { [string]: any }): Fx
 		local c = LayeredFx.Colors(rim, mid)
 		for i, e in ipairs(self.emitters) do
 			e.Color = ColorSequence.new(c[LAYERS[i]])
+		end
+	end
+	-- Efface tout de suite ce qui est affiché
+	function fx:Clear()
+		for _, e in ipairs(self.emitters) do
+			e:Clear()
 		end
 	end
 	function fx:Destroy()

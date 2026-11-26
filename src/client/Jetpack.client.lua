@@ -4,7 +4,8 @@
 -- avec de l'inertie. Au sol, on marche à la vitesse au sol (GroundSpeed). Carburant rechargé au sol.
 -- Les vitesses viennent du serveur (attributs GroundSpeed / AirSpeed, amélioration Jetpack).
 -- EFFETS (tous les joueurs) : sur les deux tuyères du jetpack porté (Assets.Jetpack, soudé au dos
--- par le serveur) : cœur de flamme, flamme, fumée, étincelles, traînée lumineuse, lumière ;
+-- par le serveur) : cœur de flamme, flamme en 4 calques (LayeredFx « Thrust », dessinée image par image,
+-- plus courte en plané), fumée, étincelles, traînée lumineuse, lumière ;
 -- poussière au décollage et à l'atterrissage. L'état (0 éteint, 1 poussée, 2 plané) passe par le
 -- serveur (Remotes.JetState -> attribut « Jet » du personnage) pour que tout le monde le voie.
 -- POSE (tous les joueurs) : en vol, le corps se penche dans le sens du déplacement, s'incline dans
@@ -17,13 +18,13 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
+local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 local MV = Config.Movement
 
-local FIRE = "rbxasset://textures/particles/fire_main.dds"
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local GLOW = "rbxassetid://103844906730878"
 local SPARKLE = "rbxassetid://138922153683020"
@@ -35,7 +36,22 @@ end
 
 -- EFFETS SUR LES TUYÈRES --------------------------------------------------------------------
 
-type Nozzle = { core: ParticleEmitter, flame: ParticleEmitter, smoke: ParticleEmitter, sparks: ParticleEmitter, trail: Trail }
+type Nozzle = {
+	core: ParticleEmitter,
+	jet: LayeredFx.Fx,
+	jetAt: Attachment,
+	nozzle: Attachment,
+	jetNext: number,
+	smoke: ParticleEmitter,
+	sparks: ParticleEmitter,
+	trail: Trail,
+}
+
+-- Flamme en 4 calques : une image par calque vit JET_PERIOD secondes (nombre entier de boucles), la
+-- suivante prend le relais à la même étape ; taille selon l'état (1 poussée, 2 plané)
+local JET_LOOP = 0.6
+local JET_PERIOD = 6
+local JET_SIZE = { [1] = 2, [2] = 1.2 }
 type Rig = {
 	character: Model,
 	hrp: BasePart,
@@ -74,24 +90,19 @@ local function makeNozzle(a: Attachment): Nozzle
 		EmissionDirection = Enum.NormalId.Bottom,
 		SpreadAngle = Vector2.new(4, 4),
 	})
-	local flame = emitter(a, {
-		Texture = FIRE,
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 240, 160)),
-			ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 140, 40)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 50, 20)),
-		}),
-		LightEmission = 0.45, -- plus bas : la flamme reste orange au lieu de blanchir
-		LightInfluence = 0,
-		Size = NumberSequence.new({ kp(0, 0.8), kp(0.5, 1.05), kp(1, 0.1) }),
-		Transparency = NumberSequence.new({ kp(0, 0.1), kp(1, 1) }),
-		Lifetime = NumberRange.new(0.18, 0.32),
-		Speed = NumberRange.new(14, 20),
-		Rate = 90,
-		RotSpeed = NumberRange.new(-200, 200),
-		Rotation = NumberRange.new(0, 360),
-		EmissionDirection = Enum.NormalId.Bottom,
-		SpreadAngle = Vector2.new(9, 9),
+	-- flamme dessinée (tuyère en haut de l'image) : son centre est posé sous la tuyère
+	local jetAt = Instance.new("Attachment")
+	jetAt.Name = "JetFlame"
+	jetAt.Parent = a.Parent
+	local jet = LayeredFx.new(jetAt, {
+		kind = "Thrust",
+		size = JET_SIZE[1],
+		colors = { Color3.fromRGB(255, 90, 20), Color3.fromRGB(255, 200, 70) },
+		lifetime = JET_PERIOD + 0.1,
+		loop = JET_LOOP,
+		fade = 0.05,
+		locked = true,
+		upright = true,
 	})
 	local smoke = emitter(a, {
 		Texture = SMOKE,
@@ -142,7 +153,7 @@ local function makeNozzle(a: Attachment): Nozzle
 	trail.FaceCamera = true
 	trail.Enabled = false
 	trail.Parent = a.Parent
-	return { core = core, flame = flame, smoke = smoke, sparks = sparks, trail = trail }
+	return { core = core, jet = jet, jetAt = jetAt, nozzle = a, jetNext = 0, smoke = smoke, sparks = sparks, trail = trail }
 end
 
 local function setup(character: Model)
@@ -241,7 +252,8 @@ local function show(rig: Rig, state: number)
 	for _, n in ipairs(rig.nozzles) do
 		n.core.Enabled = state ~= 0
 		n.core.Rate = if state == 1 then 70 else 25
-		n.flame.Enabled = state == 1
+		n.jet:Clear()
+		n.jetNext = 0 -- rallumée à la bonne taille dans la boucle
 		n.smoke.Enabled = state == 1
 		n.sparks.Enabled = state == 1
 		n.trail.Enabled = state ~= 0
@@ -420,6 +432,18 @@ RunService.PreSimulation:Connect(function(dt)
 		-- état des autres joueurs (le local est déjà réglé dans sa boucle)
 		if character ~= player.Character then
 			show(rig, (character:GetAttribute("Jet") or 0) :: number)
+		end
+		-- flamme dessinée : pend droit sous la tuyère (même quand le corps penche), réémise à chaque période
+		if rig.shown ~= 0 then
+			local now = os.clock()
+			local size = JET_SIZE[rig.shown] or JET_SIZE[2]
+			for _, n in ipairs(rig.nozzles) do
+				n.jetAt.WorldCFrame = CFrame.new(n.nozzle.WorldPosition - Vector3.new(0, size * 0.36, 0))
+				if now >= n.jetNext then
+					n.jetNext = now + JET_PERIOD
+					n.jet:Emit(nil, size)
+				end
+			end
 		end
 		-- lumière qui vacille pendant la poussée
 		if rig.light then

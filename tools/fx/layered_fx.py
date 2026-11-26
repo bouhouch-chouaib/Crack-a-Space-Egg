@@ -457,6 +457,24 @@ def fx_converge(t, i):
     return bands(d, rim=0.05, mid=0.4, core=0.7, glow_sigma=0.03, glow_gain=1.3)
 
 
+# Jetpack --------------------------------------------------------------------------------------
+
+
+def fx_thrust(t, i):
+    """flamme de tuyère (en boucle) : la tuyère est en haut de l'étape ; le jet sort étroit, gonfle,
+    puis se termine en langues de feu qui vacillent ; le bruit défile vers le bas"""
+    u = (0.88 - Y) / 1.76  # 0 à la tuyère, 1 en bas de l'étape
+    uc = np.clip(u, 0, 1)
+    w = 0.12 + 0.3 * np.sin(math.pi * np.clip(u / 0.95, 0, 1)) ** 0.8 * (1 - uc * 0.45)
+    sway = (sample(NOISE_C, X * 0.5, Y * 0.5 + t * 2) - 0.5) * 0.25 * uc
+    env = 1 - (np.abs(X + sway) / np.maximum(w, 0.04)) ** 2
+    length = 0.8 + 0.06 * math.sin(TAU * t * 3) + 0.04 * math.sin(TAU * t * 5)  # la flamme vacille
+    env = env - np.clip(u - length, 0, 1) * 7 - np.clip(-u, 0, 1) * 30
+    n = sample(NOISE_C, X * 1.2, Y * 1.0 + t * 3) * 0.65 + sample(NOISE_A, X * 1.6, Y * 1.4 + t * 4) * 0.35
+    d = env * 0.95 + (n - 0.5) * (0.25 + uc * 1.3) - uc * 0.3
+    return bands(d, rim=0.0, mid=0.3, core=0.74, glow_sigma=0.04)
+
+
 # Roche qui casse --------------------------------------------------------------------------------
 
 
@@ -566,6 +584,7 @@ EFFECTS = {
     "Converge": fx_converge,
     "Shatter": fx_shatter,
     "Dust": fx_dust,
+    "Thrust": fx_thrust,
 }
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
@@ -586,6 +605,7 @@ PREVIEW = {
     "Hatch": ((255, 196, 40), (255, 240, 170)),
     "Shatter": ((255, 120, 40), (255, 220, 150)),
     "Dust": ((120, 105, 100), (190, 175, 165)),
+    "Thrust": ((255, 90, 20), (255, 200, 70)),
     "HatchRing": ((170, 90, 255), (225, 200, 255)),
     "Converge": ((255, 70, 160), (255, 200, 230)),
 }
