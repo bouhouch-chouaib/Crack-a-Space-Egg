@@ -58,6 +58,7 @@ local function default()
 		guideRewarded = false, -- récompense de fin de tutoriel déjà donnée
 		tips = {}, -- ["clé"] = true : tutoriels au bon moment déjà montrés (Config.Guide.Tips)
 		feedback = { day = 0, count = 0 }, -- retours envoyés aujourd'hui (FeedbackService)
+		pen = 1, -- niveau de l'enclos (Config.Pen, PenService) : taille de la base et places en plus
 		suit = 1, -- palier de combinaison (Config.Suits)
 		bat = 0, -- palier de batte (Config.Bats, 0 = aucune)
 		shields = 0, -- boucliers anti-monstre en réserve (produit Robux)

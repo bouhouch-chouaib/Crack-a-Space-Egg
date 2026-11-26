@@ -17,6 +17,7 @@ local CreatureService = require(script.Parent.CreatureService)
 local MonsterService = require(script.Parent.MonsterService)
 local SkinService = require(script.Parent.SkinService)
 local BaseSkinService = require(script.Parent.BaseSkinService)
+local PenService = require(script.Parent.PenService)
 local SuitService = require(script.Parent.SuitService)
 local GearService = require(script.Parent.GearService)
 local RelicService = require(script.Parent.RelicService)
@@ -29,6 +30,7 @@ BeltService.Start()
 BoostService.Start() -- passes et potions (avant le chargement des parties)
 GameService.Start() -- branche DataService.Loaded avant que les parties se chargent
 HatchService.Start() -- idem : reconstruit les œufs et créatures de la base au chargement
+PenService.Start() -- enclos agrandi : met la base à son niveau avant que HatchService y repose tout
 DataService.Start()
 LeaderboardService.Start()
 MonetizationService.Start()

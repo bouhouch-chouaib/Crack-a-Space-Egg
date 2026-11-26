@@ -67,7 +67,7 @@ local OPEN = { Store = "Store", Items = "DrillShop", Sell = "Creatures" } -- att
 -- mode imposé à l'ouverture : le stand SELL ouvre les créatures en mode vente
 local MODE = { Creatures = "sell" }
 -- fenêtres fermées en quittant le tapis (noms des UIKit.window)
-local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop", "BaseSkins" }, Creatures = { "CreaturesWindow" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" } }
+local CLOSE = { Store = { "Store" }, DrillShop = { "DrillShop", "BaseSkins" }, Creatures = { "CreaturesWindow" }, MachineUp = { "MachineUp" }, TunnelUp = { "TunnelUp" }, PenUp = { "PenUp" } }
 local MAT_MARGIN = 1 -- studs autour du tapis qui comptent encore
 type Mat = { part: BasePart, window: string, on: boolean, radius: number?, home: CFrame? }
 local mats: { Mat } = {}
@@ -92,7 +92,7 @@ task.spawn(function()
 		task.wait(0.5)
 	end
 	local base = workspace:WaitForChild("Ship"):WaitForChild("Bases"):WaitForChild("Base" .. tostring(player:GetAttribute("Base")))
-	for _, name in ipairs({ "MachineButton", "TunnelButton" }) do
+	for _, name in ipairs({ "MachineButton", "TunnelButton", "PenButton" }) do
 		local button = base:WaitForChild(name, 30)
 		local top = button and button:FindFirstChild("RedTop")
 		if button and top and top:IsA("BasePart") then

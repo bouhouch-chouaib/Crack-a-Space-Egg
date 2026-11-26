@@ -147,7 +147,9 @@ end
 
 -- Emplacements de la base
 function BoostService.BaseSlots(player: Player): number
-	return Config.Hatch.Slots + (if BoostService.HasPass(player, "BaseSlots") then FX.BaseSlots else 0)
+	-- places de départ + niveau de l'enclos (PenService) + passe
+	local d = DataService.Get(player)
+	return Config.Hatch.Slots + Config.PenLevel(d and d.pen).Slots + (if BoostService.HasPass(player, "BaseSlots") then FX.BaseSlots else 0)
 end
 
 function BoostService.Start()

@@ -1552,7 +1552,7 @@ Config.Hatch = {
 	Footprint = { 1.6, 1.7, 1.8, 2.0, 2.3, 2.6, 3.0 },
 	Margin = 2.0, -- marge le long des murs (en plus de la moitié de la place occupée)
 	-- Zone interdite autour du point d'apparition (rayon en studs) ; la machine est hors de la base
-	KeepOut = { Spawn = 4 },
+	KeepOut = { Spawn = 4, PenButton = 3.5 }, -- PenButton : bouton d'agrandissement de l'enclos
 	-- Revenu d'une créature en $/s = SlotIncome[rang dans l'anneau] × RingIncome[anneau] × taille²
 	-- (Config.PetSizes : de ×1 pour une taille normale à ×5,8 pour la plus grosse Giant) × mutation (Config.Mutations)
 	-- × stade de fusion. Les 6 créatures d'un anneau se tiennent (×12 entre la 1re et la 6e) : la 6e d'un
@@ -2045,6 +2045,27 @@ Config.Guide = {
 	TipShort = 12, -- idem pour un tip sans endroit où aller
 	TipGap = 25, -- secondes de calme entre deux tips d'information (récompenses, fusion, monstres...)
 }
+
+-- ENCLOS (PenService, shared/PenBuilder, PenUI.client) ----------------------------------------------
+-- La base du joueur s'agrandit par niveaux achetés en $ (bouton rouge dans l'enclos) :
+-- Size = sol (largeur, profondeur) : il grandit vers le fond et vers le côté libre, dans la place réservée
+-- par tools/build-yard.lua (24 studs derrière, 12 sur le côté) ; Slots = places en plus pour les œufs et les
+-- créatures (en plus de Config.Hatch.Slots et du passe +5) ; Cost = prix en $.
+-- Prix posés à la main (26 nov.) : niveau 2 vers l'anneau 2-3, niveau 3 vers l'anneau 4-5, niveau 4 vers
+-- l'anneau 6-7 ; à régler avec tools/eco-sim.luau.
+Config.Pen = {
+	Levels = {
+		{ Size = Vector2.new(36, 36), Slots = 0, Cost = 0 },
+		{ Size = Vector2.new(36, 48), Slots = 3, Cost = 5e5 },
+		{ Size = Vector2.new(42, 54), Slots = 6, Cost = 1e9 },
+		{ Size = Vector2.new(48, 60), Slots = 10, Cost = 1e12 },
+	},
+	-- bouton rouge dans l'enclos, repère de départ de la base : coin avant, côté atelier (x multiplié par -TunnelSide)
+	Button = Vector3.new(13, 0, 13),
+}
+function Config.PenLevel(level: number?)
+	return Config.Pen.Levels[math.clamp(math.floor(level or 1), 1, #Config.Pen.Levels)]
+end
 
 -- INTERFACE (UIKit) ---------------------------------------------------------------------------------
 -- Studs : où l'interface porte des picots (« l'effet lego »).

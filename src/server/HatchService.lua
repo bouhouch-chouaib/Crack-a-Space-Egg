@@ -32,6 +32,8 @@ local Remotes = ReplicatedStorage.Remotes
 local H = Config.Hatch
 
 local HatchService = {}
+-- Appelé au chargement d'une partie, juste avant de reposer les œufs et créatures (branché par PenService)
+HatchService.BeforeBuild = nil :: ((Player) -> ())?
 
 local rng = Random.new()
 local models: { [Player]: { [string]: Model } } = {}
@@ -339,6 +341,19 @@ local function clear(player: Player)
 		m:Destroy()
 	end
 	models[player] = nil
+end
+
+-- Repose tous les œufs et créatures de la base (le sol vient de changer : enclos agrandi, PenService)
+function HatchService.Rebuild(player: Player)
+	local d = DataService.Get(player)
+	if not d then
+		return
+	end
+	clear(player)
+	for _, item in ipairs(d.base or {}) do
+		build(player, item)
+	end
+	syncBase(player)
 end
 
 -- POSER UN ŒUF ------------------------------------------------------------------------
@@ -778,6 +793,10 @@ function HatchService.Start()
 				break
 			end
 			task.wait(0.1)
+		end
+		-- l'enclos prend d'abord la taille de son niveau (PenService) : les positions sont dans le repère du sol
+		if HatchService.BeforeBuild then
+			HatchService.BeforeBuild(player)
 		end
 		for _, item in ipairs(d.base) do
 			if item.kind == "pet" then

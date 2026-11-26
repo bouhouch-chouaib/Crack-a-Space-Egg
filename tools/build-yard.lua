@@ -36,8 +36,8 @@ local Z_BACK = -110 -- face intérieure du mur du fond
 local GROW_BACK, GROW_SIDE = 24, 12 -- place réservée derrière chaque enclos et sur son côté libre
 -- centre du sol de chaque enclos (deux de chaque côté tournés vers l'allée, deux au fond tournés vers la porte)
 local LOTS = {
-	Base1 = Vector3.new(-116, 0, -10),
-	Base2 = Vector3.new(116, 0, -10),
+	Base1 = Vector3.new(-116, 0, -8), -- 2 studs de plus que la place réservée : au niveau 4 sa barrière ne touche pas l'atelier voisin
+	Base2 = Vector3.new(116, 0, -8),
 	Base3 = Vector3.new(-116, 0, -76),
 	Base4 = Vector3.new(116, 0, -76),
 	Base5 = Vector3.new(-39, 0, -64),
@@ -116,32 +116,41 @@ local function tree(parent: Instance, x: number, y: number, z: number, s: number
 	m.Parent = parent
 end
 
--- Barrière de bois de a à b (points du repère F, y = 0 au sol) : poteaux, deux lisses, croisillons
-local function fence(parent: Instance, F: CFrame, a: Vector3, b: Vector3)
-	local len = (b - a).Magnitude
-	local n = math.max(1, math.floor(len / 6 + 0.5))
-	local function post(at: Vector3)
-		local p = part({ Name = "Post", Color = WOOD_DARK, Size = Vector3.new(0.9, 3.4, 0.9), CFrame = F * CFrame.new(at + Vector3.new(0, 1.7, 0)), Parent = parent })
-		p:SetAttribute("SkinRole", "Trim")
+-- La barrière et la taille des enclos viennent du module du jeu (ReplicatedStorage.Shared.PenBuilder), le même
+-- que le serveur utilise pour les agrandir : on en charge une copie fraîche (require garde l'ancienne en mémoire)
+local function loadPenBuilder()
+	local shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+	local copy = shared:WaitForChild("PenBuilder"):Clone()
+	copy.Name = "PenBuilder_Tool"
+	copy.Parent = shared
+	local ok, m = pcall(require, copy)
+	copy:Destroy()
+	assert(ok, m)
+	return m
+end
+
+-- Bouton rouge au sol (comme tools/build-upgrade-buttons.lua) : marcher dessus ouvre la fenêtre « window »
+local function redButton(base: Instance, name: string, window: string, iconId: string, at: CFrame)
+	local old = base:FindFirstChild(name)
+	if old then
+		old:Destroy()
 	end
-	for i = 0, n - 1 do
-		local p0 = a:Lerp(b, i / n)
-		local p1 = a:Lerp(b, (i + 1) / n)
-		local mid = (p0 + p1) / 2
-		local seg = (p1 - p0).Magnitude
-		post(p0)
-		for _, y in ipairs({ 1.1, 2.5 }) do
-			local r = part({ Name = "Rail", Color = WOOD, Size = Vector3.new(0.5, 0.6, seg), CFrame = F * CFrame.lookAt(mid + Vector3.new(0, y, 0), p1 + Vector3.new(0, y, 0)), Parent = parent })
-			r:SetAttribute("SkinRole", "Main")
-		end
-		for _, up in ipairs({ true, false }) do
-			local q0 = p0 + Vector3.new(0, if up then 1.1 else 2.5, 0)
-			local q1 = p1 + Vector3.new(0, if up then 2.5 else 1.1, 0)
-			local br = part({ Name = "Brace", Color = WOOD, Size = Vector3.new(0.3, 0.45, (q1 - q0).Magnitude), CFrame = F * CFrame.lookAt((q0 + q1) / 2, q1), CanCollide = false, CanQuery = false, Parent = parent }, false)
-			br:SetAttribute("SkinRole", "Main")
-		end
+	local m = Instance.new("Model")
+	m.Name = name
+	m:SetAttribute("Window", window)
+	local function disc(n: string, y: number, height: number, size: number, color: Color3): Part
+		return part({ Name = n, Shape = Enum.PartType.Cylinder, Color = color, Size = Vector3.new(height, size, size), CFrame = (at + Vector3.new(0, y, 0)) * CFrame.Angles(0, 0, math.pi / 2), CanCollide = false, CanQuery = false, CanTouch = false, Parent = m })
 	end
-	post(b)
+	disc("Ring", 0.35, 0.3, 5.4, Color3.fromRGB(34, 40, 72))
+	local top = disc("RedTop", 0.7, 0.5, 4.2, Color3.fromRGB(232, 48, 48))
+	local icon = Instance.new("Decal")
+	icon.Name = "Icon"
+	icon.Face = Enum.NormalId.Right -- le dessus du cylindre couché
+	icon.Texture = iconId
+	icon.ZIndex = 3
+	icon.Parent = top
+	m.PrimaryPart = top
+	m.Parent = base
 end
 
 -- Tourne un modèle autour de la verticale pour que « front » regarde vers « goal », centre de sa boîte en (x, z)
@@ -162,6 +171,8 @@ function Build.Build(): string
 	local ship = workspace:FindFirstChild("Ship")
 	assert(ship, "Workspace.Ship introuvable")
 	local toYard = Vector3.new(0, 0, -1) -- les stands regardent vers la cour
+	local PenBuilder = loadPenBuilder()
+	local PEN = require(game:GetService("ReplicatedStorage").Shared.Config).Pen
 
 	-- 1. L'ancien vaisseau part à la réserve
 	local store = game:GetService("ServerStorage"):FindFirstChild("OldShipParts") or Instance.new("Folder")
@@ -232,7 +243,6 @@ function Build.Build(): string
 			base:SetAttribute("GrowBack", GROW_BACK)
 			base:SetAttribute("GrowSide", GROW_SIDE)
 			local F = floor.CFrame
-			local hx, hz = floor.Size.X / 2, floor.Size.Z / 2
 			-- on apparaît tourné vers l'entrée de son enclos (et plus vers le mur du fond)
 			local spawn = base:FindFirstChild("Spawn")
 			if spawn and spawn:IsA("BasePart") then
@@ -243,12 +253,13 @@ function Build.Build(): string
 			if not floor:FindFirstChild("Checker") then
 				texture(floor, CHECKER, Enum.NormalId.Top, 12, "Checker")
 			end
-			walls:ClearAllChildren()
-			fence(walls, F, Vector3.new(-hx, 0, -hz), Vector3.new(hx, 0, -hz)) -- fond
-			fence(walls, F, Vector3.new(-hx, 0, -hz), Vector3.new(-hx, 0, hz))
-			fence(walls, F, Vector3.new(hx, 0, -hz), Vector3.new(hx, 0, hz))
-			fence(walls, F, Vector3.new(-hx, 0, hz), Vector3.new(-hx / 2, 0, hz)) -- devant : une entrée au milieu
-			fence(walls, F, Vector3.new(hx / 2, 0, hz), Vector3.new(hx, 0, hz))
+			-- enclos au niveau 1 ; son repère de départ sert au serveur quand il grandit (PenService)
+			base:SetAttribute("Origin", F)
+			PenBuilder.Build(base, 1)
+			-- bouton d'agrandissement : dans l'enclos, coin avant côté atelier (ce coin ne bouge jamais)
+			local side = (base:GetAttribute("TunnelSide") or 1) :: number
+			local bp = F:PointToWorldSpace(Vector3.new(-side * PEN.Button.X, 0, PEN.Button.Z))
+			redButton(base, "PenButton", "PenUp", "rbxassetid://112808991360692", CFrame.new(bp.X, 0, bp.Z))
 			local af = annex and annex:FindFirstChild("AnnexFloor")
 			if annex and af and af:IsA("BasePart") then
 				for _, c in ipairs(annex:GetChildren()) do
@@ -262,8 +273,8 @@ function Build.Build(): string
 				local s = if loc.X >= 0 then 1 else -1
 				local x0, x1 = loc.X - s * af.Size.X / 2, loc.X + s * af.Size.X / 2
 				local z0, z1 = loc.Z - af.Size.Z / 2, loc.Z + af.Size.Z / 2
-				fence(annex, F, Vector3.new(x0, 0, z0), Vector3.new(x1, 0, z0)) -- fond de l'atelier
-				fence(annex, F, Vector3.new(x1, 0, z0), Vector3.new(x1, 0, z1)) -- côté extérieur
+				PenBuilder.Fence(annex, F, Vector3.new(x0, 0, z0), Vector3.new(x1, 0, z0)) -- fond de l'atelier
+				PenBuilder.Fence(annex, F, Vector3.new(x1, 0, z0), Vector3.new(x1, 0, z1)) -- côté extérieur
 			end
 			pens += 1
 		end
