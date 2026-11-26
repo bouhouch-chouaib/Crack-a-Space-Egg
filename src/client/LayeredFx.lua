@@ -31,6 +31,8 @@ LayeredFx.Sheets = {
 	Dust = { Glow = "rbxassetid://98815856856038", Rim = "rbxassetid://79136465450259", Mid = "rbxassetid://107311969464746", Core = "rbxassetid://140277773343582" },
 	-- flamme des tuyères du jetpack (Jetpack.client), en boucle, tuyère en haut de l'image
 	Thrust = { Glow = "rbxassetid://85617258806965", Rim = "rbxassetid://121451156008585", Mid = "rbxassetid://103169018205636", Core = "rbxassetid://139605118001905" },
+	-- morsure du monstre (MonsterFx.client) : crocs qui claquent, éclair, trois entailles d'énergie
+	Bite = { Glow = "rbxassetid://106171591917279", Rim = "rbxassetid://87980479626516", Mid = "rbxassetid://99658630256742", Core = "rbxassetid://81610182572383" },
 	Converge = { Glow = "rbxassetid://126224476094550", Rim = "rbxassetid://116332369242874", Mid = "rbxassetid://96225808912195", Core = "rbxassetid://134950337727915" },
 }
 
@@ -149,6 +151,49 @@ function LayeredFx.new(parent: Instance, opts: { [string]: any }): Fx
 		end
 	end
 	return fx :: Fx
+end
+
+-- À l'écran : les 4 calques en ImageLabel empilés, qui passent les 16 étapes en `duration` secondes
+-- (une seule fois) puis disparaissent. opts : kind, colors = { rim, mid }, duration, size (UDim2),
+-- position (UDim2, centre), zIndex
+function LayeredFx.Screen(parent: Instance, opts: { [string]: any })
+	local sheet = LayeredFx.Sheets[opts.kind]
+	assert(sheet, "LayeredFx : effet inconnu " .. tostring(opts.kind))
+	local cols = LayeredFx.Colors(opts.colors[1], opts.colors[2])
+	local labels = {}
+	for i, layer in ipairs(LAYERS) do
+		local img = Instance.new("ImageLabel")
+		img.Name = "Fx" .. layer
+		img.BackgroundTransparency = 1
+		img.AnchorPoint = Vector2.new(0.5, 0.5)
+		img.Position = opts.position or UDim2.fromScale(0.5, 0.5)
+		img.Size = opts.size or UDim2.fromScale(0.6, 0.6)
+		img.SizeConstraint = Enum.SizeConstraint.RelativeYY
+		img.Image = sheet[layer]
+		img.ImageColor3 = cols[layer]
+		img.ImageTransparency = ALPHA[layer]
+		img.ImageRectSize = Vector2.new(256, 256)
+		img.ZIndex = (opts.zIndex or 30) + i
+		img.Parent = parent
+		labels[i] = img
+	end
+	local t0 = os.clock()
+	local dur = opts.duration or 0.8
+	local conn
+	conn = game:GetService("RunService").RenderStepped:Connect(function()
+		local f = math.floor((os.clock() - t0) / dur * 16)
+		if f >= 16 then
+			conn:Disconnect()
+			for _, img in ipairs(labels) do
+				img:Destroy()
+			end
+			return
+		end
+		local off = Vector2.new((f % 4) * 256, math.floor(f / 4) * 256)
+		for _, img in ipairs(labels) do
+			img.ImageRectOffset = off
+		end
+	end)
 end
 
 -- Où se pose chaque aura par rapport à la créature (h = sa hauteur) :

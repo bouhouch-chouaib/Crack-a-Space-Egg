@@ -475,6 +475,74 @@ def fx_thrust(t, i):
     return bands(d, rim=0.0, mid=0.3, core=0.74, glow_sigma=0.04)
 
 
+# Morsure du monstre -----------------------------------------------------------------------------
+
+
+def _poly_any(cx, cy, pts):
+    """polygone convexe dans n'importe quel sens de rotation : champ 0..1, 1 au centre"""
+    pos = np.ones_like(X, dtype=bool)
+    neg = np.ones_like(X, dtype=bool)
+    dist = np.full_like(X, 9.0)
+    n = len(pts)
+    for k in range(n):
+        (x0, y0), (x1, y1) = pts[k], pts[(k + 1) % n]
+        cross = (x1 - x0) * (Y - cy - y0) - (y1 - y0) * (X - cx - x0)
+        pos &= cross > 0
+        neg &= cross < 0
+        dist = np.minimum(dist, seg_dist(X - cx, Y - cy, x0, y0, x1, y1))
+    size = max(math.hypot(x, y) for x, y in pts)
+    return np.where(pos | neg, np.clip(dist / (size * 0.4), 0, 1), 0)
+
+
+def fx_bite(t, i):
+    """morsure : deux rangées de crocs qui se referment, éclair au contact, puis trois entailles
+    d'énergie qui s'ouvrent et s'effacent (une seule fois ; pas de sang : c'est pour les enfants)"""
+    d = np.zeros_like(X)
+    close = min(1.0, t / 0.3) ** 2  # les mâchoires claquent vite
+    gone = 1 - ss(0.38, 0.5, t)
+    if gone > 0:
+        for top in (True, False):
+            sgn = 1 if top else -1
+            base = sgn * (0.72 - 0.62 * close)  # mâchoire entière dans l'étape dès le début
+            for k in range(7):
+                x = -0.72 + k * 0.24
+                y = base + sgn * 0.1 * (x / 0.72) ** 2  # arc en sourire
+                L = 0.32 if k in (1, 5) else 0.24  # deux crocs plus longs
+                w = 0.11
+                pts = [(x - w, y), (x + w, y), (x, y - sgn * L)]
+                d = np.maximum(d, _poly_any(0, 0, pts) * gone)
+            # gencive : bande le long de l'arc
+            gum_y = base + sgn * 0.1 * (X / 0.72) ** 2 + sgn * 0.05
+            band = np.clip(1 - np.abs(Y - gum_y) / 0.06, 0, 1) * (np.abs(X) < 0.85)
+            d = np.maximum(d, band * 0.55 * gone)
+    # éclair au contact
+    if 0.25 < t < 0.6:
+        k = math.sin(math.pi * (t - 0.25) / 0.35)
+        d = np.maximum(d, np.clip(1 - RAD / (0.45 * k + 1e-4), 0, 1) ** 0.5)
+        for a in range(8):
+            ang = TAU * a / 8 + 0.4
+            da = np.angle(np.exp(1j * (ANG - ang)))
+            Lr = 0.9 * k
+            sp = np.where(RAD < Lr, 1 - np.abs(da) / np.maximum(0.2 * np.clip(1 - RAD / max(Lr, 1e-4), 0, 1), 1e-4), 0)
+            d = np.maximum(d, np.clip(sp, 0, 1) * k)
+    # trois entailles en biais qui s'ouvrent puis s'amincissent
+    if t > 0.35:
+        reveal = min(1.0, (t - 0.35) / 0.15)
+        thin = 1 - ss(0.6, 1.0, t)
+        ca, sa = math.cos(math.radians(-35)), math.sin(math.radians(-35))
+        for k in (-1, 0, 1):
+            ox, oy = -sa * k * 0.28, ca * k * 0.28
+            ax = (X - ox) * ca + (Y - oy) * sa
+            ay = -(X - ox) * sa + (Y - oy) * ca
+            Lh = 0.62 - abs(k) * 0.1
+            s = (ax + Lh) / (2 * Lh)
+            yc = 0.1 * (ax / Lh) ** 2
+            wth = 0.075 * np.sin(math.pi * np.clip(s, 0, 1)) * thin + 1e-4
+            cut = np.clip(1 - np.abs(ay - yc) / wth, 0, 1) * (s >= 0) * (s <= reveal)
+            d = np.maximum(d, cut)
+    return bands(d, rim=0.05, mid=0.35, core=0.68, glow_sigma=0.045)
+
+
 # Roche qui casse --------------------------------------------------------------------------------
 
 
@@ -585,6 +653,7 @@ EFFECTS = {
     "Shatter": fx_shatter,
     "Dust": fx_dust,
     "Thrust": fx_thrust,
+    "Bite": fx_bite,
 }
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
@@ -606,6 +675,7 @@ PREVIEW = {
     "Shatter": ((255, 120, 40), (255, 220, 150)),
     "Dust": ((120, 105, 100), (190, 175, 165)),
     "Thrust": ((255, 90, 20), (255, 200, 70)),
+    "Bite": ((200, 40, 255), (255, 170, 240)),
     "HatchRing": ((170, 90, 255), (225, 200, 255)),
     "Converge": ((255, 70, 160), (255, 200, 230)),
 }

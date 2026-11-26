@@ -9,7 +9,8 @@
 --   lumineuse jusqu'à sa base, bord rouge et battements
 --   de cœur qui montent quand il approche, lignes de vitesse et champ de vision élargi, bonds en
 --   claquant des mâchoires quand il est tout près, icône de danger au bord de l'écran de son côté,
---   secousses, sons ; mâchoires qui se ferment s'il attrape, puis, s'il manquait de Speed, un petit
+--   secousses, sons ; mâchoires qui se ferment s'il attrape (avec la morsure dessinée en 4 calques,
+--   LayeredFx « Bite », aussi visible dans le monde par les joueurs autour), puis, s'il manquait de Speed, un petit
 --   encadré « [jetpack] Need 50K Speed » pendant quelques secondes ;
 -- - roche tombée sur un astéroïde après une prise (World.LostRocks) : collée à l'astéroïde qui
 --   défile, rayon lumineux jusqu'à elle, contour et compte à rebours pour son propriétaire.
@@ -23,6 +24,7 @@ local Debris = game:GetService("Debris")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
+local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 
 local M = Config.Monsters
@@ -166,7 +168,17 @@ local function jaw(top: boolean): Frame
 end
 local jawTop, jawBottom = jaw(true), jaw(false)
 
-local function bite()
+local function bite(color: Color3?)
+	-- morsure dessinée en 4 calques (crocs qui claquent avec les mâchoires, éclair, entailles d'énergie)
+	local c = color or Color3.fromRGB(200, 40, 255)
+	local h, s = c:ToHSV()
+	LayeredFx.Screen(gui, {
+		kind = "Bite",
+		colors = { Color3.fromHSV(h, math.max(s, 0.75), 1), Color3.fromHSV(h, s * 0.35, 1) },
+		duration = 0.95,
+		size = UDim2.fromScale(0.95, 0.95),
+		zIndex = 22,
+	})
 	jawTop.Position = UDim2.fromScale(0.5, 0)
 	jawBottom.Position = UDim2.fromScale(0.5, 1)
 	jawTop.Visible, jawBottom.Visible = true, true
@@ -282,6 +294,23 @@ local function shockwave(at: Vector3, color: Color3, size: number)
 	p.Transparency = 0.45
 	TweenService:Create(p, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * size, Transparency = 1 }):Play()
 	Debris:AddItem(p, 0.7)
+end
+
+-- Morsure dans le monde (effet en 4 calques « Bite », couleur du monstre), face à la caméra
+local function worldBite(at: Vector3, color: Color3, size: number)
+	local a = Instance.new("Attachment")
+	a.WorldPosition = at
+	a.Parent = workspace.Terrain
+	local h, s = color:ToHSV()
+	local fx = LayeredFx.new(a, {
+		kind = "Bite",
+		size = size * 1.6,
+		colors = { Color3.fromHSV(h, math.max(s, 0.75), 1), Color3.fromHSV(h, s * 0.35, 1) },
+		lifetime = 0.95,
+		zOffset = size * 0.8,
+	})
+	fx:Emit()
+	Debris:AddItem(a, 1.2)
 end
 
 local STUDS = "rbxassetid://99589690361139"
@@ -534,6 +563,10 @@ function onState(f: Instance)
 		end
 	elseif state == "Return" then
 		local reason = f:GetAttribute("Reason")
+		-- il attrape : la morsure se voit aussi dans le monde, pour les joueurs autour
+		if reason == "caught" and near and kind then
+			worldBite(v.shown, kind.Color, v.size)
+		end
 		if reason == "home" then
 			-- le joueur est chez lui : dôme sur sa base, le monstre s'y écrase et rugit de rage
 			local floor = baseFloor(if wasMine then player.UserId else 0)
@@ -568,7 +601,7 @@ function onState(f: Instance)
 			arrow.Visible = false
 			homeBeam.Enabled = false
 			vignette.ImageTransparency = 1
-			bite()
+			bite(kind and kind.Color)
 			-- il manquait de Speed pour le semer : on le lui dit, une fois les mâchoires passées
 			local need = (kind and kind.Need or 0) :: number
 			local slow = ((player:GetAttribute("JetSpeed") or 0) :: number) < need
