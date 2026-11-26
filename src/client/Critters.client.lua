@@ -6,7 +6,11 @@
 -- Tout est local au joueur (rien sur le serveur, rien à envoyer) : elles sont construites pour le biome
 -- où il se trouve et ses deux voisins, et suivent un trajet calculé (les mêmes à chaque visite).
 -- Purement décoratives : ni collision, ni requête (la foreuse et le grappin passent au travers).
--- Ce script fait aussi tourner les décors étiquetés « DecorSpin » (rouages, sucettes : CorridorDecor).
+-- Depuis le 28 nov., ce sont de vrais modèles low-poly (Assets.CorridorKit.Critters, faits dans Blender :
+-- tools/blender/corridor_kit_4.py, rangés par tools/build-corridor-kit.lua). Chaque pièce mobile (aile,
+-- hélice, queue, mâchoire) porte sa charnière (PivotOffset, elle tourne autour de son axe Z) et ses réglages
+-- (attributs Anim = swing / spin / open, Speed, Amp, Phase) : ce script n'a rien à savoir de chaque créature.
+-- Il fait aussi tourner les décors étiquetés « DecorSpin » (rouages, sucettes : CorridorDecor).
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,53 +23,86 @@ local camera = workspace.CurrentCamera
 local M = Config.Map
 local C = Themes.Critters
 local N = #Config.Rings
+local KIT = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("CorridorKit"):WaitForChild("Critters")
 local STUDS = "rbxassetid://99589690361139"
 local SPARKLE = "rbxassetid://138922153683020"
 local WHITE = Color3.new(1, 1, 1)
-local BLACK = Color3.fromRGB(24, 22, 32)
 local TAU = math.pi * 2
-local X, Y, Z = Vector3.xAxis, Vector3.yAxis, Vector3.zAxis
+local FLIP = CFrame.Angles(0, math.pi, 0) -- l'avant des modèles est +Z, CFrame.lookAt regarde vers -Z
+local BODY = 3 -- largeur du corps des modèles (studs) : Themes.Critters.Size donne la taille voulue en jeu
+-- Corps en plusieurs tronçons qui suivent le trajet avec un peu de retard : { modèle, nombre, nombre pour la géante }
+local TRAILS = { Dragon = { "DragonSeg", 9, 26 }, Ghost = { "GhostSeg", 3, 7 } }
 
 -- CONSTRUCTION ---------------------------------------------------------------------------------------
 
-type Anim = { weld: Weld, base: CFrame, axis: Vector3, speed: number, amp: number, spin: boolean, phase: number }
+type Anim = { weld: Weld, base: CFrame, kind: string, speed: number, amp: number, phase: number }
 type Critter = {
-	root: Part,
+	root: BasePart,
 	anims: { Anim },
-	tail: { Part }, -- segments qui suivent le trajet avec un peu de retard (dragon, fantôme)
-	gap: number, -- secondes de retard entre deux segments
+	tail: { BasePart }, -- tronçons qui suivent le trajet avec un peu de retard (dragon, fantôme)
+	gap: number, -- secondes de retard entre deux tronçons
 	center: Vector3,
 	radius: Vector3,
 	speed: number,
 	phase: number,
 	bob: number,
 }
-type Maker = {
-	add: (shape: string, size: Vector3, cf: CFrame, color: Color3, hinge: CFrame?) -> (Part, Weld),
-	anim: (weld: Weld, axis: Vector3, speed: number, amp: number, spin: boolean?, phase: number?) -> (),
-	glow: (p: Part) -> Part,
-	seg: (d: number, color: Color3) -> Part,
-}
 
-local function newPart(shape: string, size: Vector3, color: Color3, parent: Instance): Part
-	local p = Instance.new(if shape == "Wedge" then "WedgePart" else "Part") :: Part
-	if shape == "Ball" then
-		p.Shape = Enum.PartType.Ball
-	elseif shape == "Cyl" then
-		p.Shape = Enum.PartType.Cylinder
-	end
-	p.Size = size
-	p.Color = color
-	p.Material = Enum.Material.SmoothPlastic
-	p.TopSurface = Enum.SurfaceType.Smooth
-	p.BottomSurface = Enum.SurfaceType.Smooth
+local function quiet(p: BasePart)
 	p.CanCollide = false
 	p.CanQuery = false
 	p.CanTouch = false
 	p.CastShadow = false
 	p.Massless = true
-	-- picots sur les pièces assez grandes (les géantes)
-	if math.min(size.X, size.Y, size.Z) >= 3 then
+end
+
+local function sparkles(parent: Instance, color: ColorSequence, size: number, rate: number, life: NumberRange, speed: NumberRange)
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = SPARKLE
+	e.Color = color
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size), NumberSequenceKeypoint.new(1, 0) })
+	e.Lifetime = life
+	e.Rate = rate
+	e.Speed = speed
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.LightEmission = 1
+	e.LightInfluence = 0
+	e.Parent = parent
+end
+
+-- Clone le modèle d'une créature à la taille S (largeur du corps), soude ses pièces au corps par leur
+-- charnière et note celles qui bougent. Rend le corps (ancré : c'est lui qu'on déplace).
+local function assemble(kind: string, S: number, T: any, big: boolean, parent: Instance, anims: { Anim }, tail: { BasePart }): BasePart
+	local src = KIT:FindFirstChild(kind) or KIT:WaitForChild("Puff")
+	local scale = S / BODY
+	local model = src:Clone() :: Model
+	model:ScaleTo(scale)
+	local body = model.PrimaryPart :: BasePart
+	for _, p in ipairs(model:GetChildren()) do
+		if p:IsA("BasePart") then
+			quiet(p)
+			p.Anchored = p == body
+			if p ~= body then
+				local w = Instance.new("Weld")
+				w.Part0 = body
+				w.Part1 = p
+				w.C0 = body.CFrame:ToObjectSpace(p.CFrame * p.PivotOffset)
+				w.C1 = p.PivotOffset
+				w.Parent = p
+				local anim = p:GetAttribute("Anim")
+				if anim then
+					table.insert(anims, {
+						weld = w, base = w.C0, kind = anim :: string,
+						speed = (p:GetAttribute("Speed") or 4) :: number,
+						amp = (p:GetAttribute("Amp") or 0.5) :: number,
+						phase = (p:GetAttribute("Phase") or 0) :: number,
+					})
+				end
+			end
+		end
+	end
+	-- picots sur le corps des géantes (les petites restent lisses, comme les créatures du jeu)
+	if big then
 		for _, face in ipairs(Enum.NormalId:GetEnumItems()) do
 			local t = Instance.new("Texture")
 			t.Name = "Studs"
@@ -73,307 +110,44 @@ local function newPart(shape: string, size: Vector3, color: Color3, parent: Inst
 			t.Face = face
 			t.StudsPerTileU = 2
 			t.StudsPerTileV = 2
-			t.ZIndex = 2
-			t.Parent = p
+			t.Transparency = 0.35
+			t.Parent = body
 		end
 	end
-	p.Parent = parent
-	return p
-end
-
-local function maker(model: Model, root: Part, anims: { Anim }, tail: { Part }): Maker
-	local mk = {} :: any
-	-- pièce soudée à la racine ; hinge = charnière autour de laquelle elle peut tourner (repère de la racine)
-	function mk.add(shape, size, cf, color, hinge)
-		local p = newPart(shape, size, color, model)
-		local w = Instance.new("Weld")
-		w.Part0 = root
-		w.Part1 = p
-		if hinge then
-			w.C0 = hinge
-			w.C1 = cf:Inverse() * hinge
-		else
-			w.C0 = cf
-		end
-		w.Parent = p
-		return p, w
+	local glow = model:FindFirstChild("Glow")
+	if kind == "Spark" then
+		sparkles(body, ColorSequence.new(WHITE, T.Glow), 0.5 * S, 10, NumberRange.new(0.4, 0.7), NumberRange.new(1, 3))
+	elseif kind == "Fairy" and glow then
+		sparkles(glow, ColorSequence.new(T.Glow), 0.35 * S, 6, NumberRange.new(0.8, 1.4), NumberRange.new(0.5, 1.5))
+	elseif kind == "Ghost" and glow then
+		local light = Instance.new("PointLight")
+		light.Color = T.Glow
+		light.Range = 6 * S
+		light.Brightness = 0.9
+		light.Shadows = false
+		light.Parent = glow
 	end
-	function mk.anim(weld, axis, speed, amp, spin, phase)
-		table.insert(anims, { weld = weld, base = weld.C0, axis = axis, speed = speed, amp = amp, spin = spin == true, phase = phase or 0 })
-	end
-	function mk.glow(p)
-		p.Material = Enum.Material.Neon
-		for _, t in ipairs(p:GetChildren()) do
-			if t:IsA("Texture") then
-				t:Destroy()
+	-- long corps du dragon, traîne du fantôme : des tronçons libres, de plus en plus petits
+	local trail = TRAILS[kind]
+	local segSrc = trail and KIT:FindFirstChild(trail[1])
+	if trail and segSrc then
+		local count = if big then trail[3] else trail[2]
+		for i = 1, count do
+			local seg = segSrc:Clone() :: Model
+			seg:ScaleTo(scale * (0.45 + 0.55 * (1 - i / (count + 1))))
+			local p = seg.PrimaryPart :: BasePart
+			quiet(p)
+			p.Anchored = true
+			if kind == "Ghost" then
+				p.Transparency = math.min(0.8, 0.1 + i * (if big then 0.08 else 0.18))
 			end
+			p.Parent = model
+			seg:Destroy()
+			table.insert(tail, p)
 		end
-		return p
 	end
-	-- segment de queue : pièce libre, posée à chaque image sur le trajet
-	function mk.seg(d, color)
-		local p = newPart("Ball", Vector3.one * d, color, model)
-		p.Anchored = true
-		table.insert(tail, p)
-		return p
-	end
-	return mk
-end
-
-local function v(x: number, y: number, z: number): Vector3
-	return Vector3.new(x, y, z)
-end
-
--- Yeux mignons : deux gros yeux blancs à pupille noire, sur l'avant (−Z)
-local function eyes(mk: Maker, S: number, y: number, z: number, spread: number?)
-	local dx = (spread or 0.24) * S
-	for _, side in ipairs({ -1, 1 }) do
-		mk.add("Ball", Vector3.one * 0.36 * S, CFrame.new(side * dx, y * S, z * S), WHITE)
-		mk.add("Ball", Vector3.one * 0.19 * S, CFrame.new(side * dx, y * S, (z - 0.13) * S), BLACK)
-	end
-end
-
--- Paire d'ailes qui battent
-local function wings(mk: Maker, S: number, color: Color3, w: number, d: number, y: number, speed: number, transparency: number?)
-	for _, side in ipairs({ -1, 1 }) do
-		local hinge = CFrame.new(side * 0.42 * S, y * S, 0)
-		local p, weld = mk.add("Block", v(w * S, 0.07 * S, d * S), CFrame.new(side * (0.42 + w / 2) * S, y * S, 0), color, hinge)
-		p.Transparency = transparency or 0
-		mk.anim(weld, Z, speed, side * 0.75, false, 0)
-	end
-end
-
--- Hélice sur le dessus
-local function propeller(mk: Maker, S: number, y: number, color: Color3)
-	mk.add("Cyl", v(0.5 * S, 0.1 * S, 0.1 * S), CFrame.new(0, (y - 0.2) * S, 0) * CFrame.Angles(0, 0, math.pi / 2), BLACK)
-	local _, weld = mk.add("Block", v(1.5 * S, 0.06 * S, 0.24 * S), CFrame.new(0, y * S, 0), color)
-	mk.anim(weld, Y, 22, 0, true)
-end
-
-local KINDS: { [string]: (Maker, number, any, boolean) -> () } = {}
-
-function KINDS.Puff(mk, S, T)
-	mk.add("Ball", Vector3.one * S, CFrame.identity, T.Body)
-	mk.add("Ball", Vector3.one * 0.62 * S, CFrame.new(0, -0.16 * S, -0.2 * S), T.Belly)
-	eyes(mk, S, 0.12, -0.4)
-	wings(mk, S, T.Belly, 0.6, 0.42, 0.1, 16)
-	mk.add("Cyl", v(0.4 * S, 0.05 * S, 0.05 * S), CFrame.new(0, 0.62 * S, 0) * CFrame.Angles(0, 0, math.pi / 2), T.Body)
-	mk.glow((mk.add("Ball", Vector3.one * 0.18 * S, CFrame.new(0, 0.86 * S, 0), T.Glow)))
-end
-
-function KINDS.Sprite(mk, S, T)
-	mk.add("Ball", Vector3.one * S, CFrame.identity, T.Body)
-	mk.add("Ball", Vector3.one * 0.6 * S, CFrame.new(0, -0.18 * S, -0.2 * S), T.Belly)
-	eyes(mk, S, 0.1, -0.4)
-	wings(mk, S, T.Glow, 0.75, 0.5, 0.15, 20, 0.35)
-	-- couronne de glace
-	for i = -1, 1 do
-		local p = mk.add("Block", v(0.16 * S, (0.5 - math.abs(i) * 0.14) * S, 0.16 * S), CFrame.new(i * 0.22 * S, 0.62 * S, 0) * CFrame.Angles(0, math.pi / 4, i * -0.3), T.Belly)
-		p.Reflectance = 0.3
-	end
-end
-
-function KINDS.Bat(mk, S, T)
-	mk.add("Ball", Vector3.one * S, CFrame.identity, T.Body)
-	mk.glow((mk.add("Ball", Vector3.one * 0.42 * S, CFrame.new(0, -0.2 * S, -0.3 * S), T.Belly)))
-	eyes(mk, S, 0.14, -0.4)
-	wings(mk, S, T.Belly, 1.1, 0.7, 0.05, 11)
-	for _, side in ipairs({ -1, 1 }) do
-		mk.add("Wedge", v(0.14 * S, 0.42 * S, 0.24 * S), CFrame.new(side * 0.28 * S, 0.58 * S, 0), T.Body)
-	end
-end
-
-function KINDS.Jelly(mk, S, T)
-	mk.add("Ball", Vector3.one * S, CFrame.new(0, 0.1 * S, 0), T.Body).Transparency = 0.15
-	mk.add("Cyl", v(0.22 * S, 0.94 * S, 0.94 * S), CFrame.new(0, -0.22 * S, 0) * CFrame.Angles(0, 0, math.pi / 2), T.Belly)
-	eyes(mk, S, 0.14, -0.38)
-	mk.glow((mk.add("Ball", Vector3.one * 0.3 * S, CFrame.new(0, 0.2 * S, 0.05 * S), T.Glow)))
-	-- tentacules qui ondulent
-	for i = 1, 5 do
-		local a = i / 5 * TAU
-		local hinge = CFrame.new(math.cos(a) * 0.3 * S, -0.32 * S, math.sin(a) * 0.3 * S)
-		local _, weld = mk.add("Block", v(0.1 * S, 0.9 * S, 0.1 * S), hinge * CFrame.new(0, -0.45 * S, 0), if i % 2 == 0 then T.Body else T.Belly, hinge)
-		mk.anim(weld, X, 3, 0.35, false, i)
-	end
-end
-
-function KINDS.Chomper(mk, S, T)
-	mk.add("Ball", Vector3.one * S, CFrame.identity, T.Body)
-	eyes(mk, S, 0.26, -0.34, 0.2)
-	-- grande bouche et dents
-	mk.add("Block", v(0.62 * S, 0.2 * S, 0.2 * S), CFrame.new(0, -0.14 * S, -0.42 * S), BLACK)
-	for i = -1, 1 do
-		mk.add("Wedge", v(0.14 * S, 0.16 * S, 0.12 * S), CFrame.new(i * 0.2 * S, -0.1 * S, -0.5 * S) * CFrame.Angles(math.pi, 0, 0), WHITE)
-	end
-	for _, i in ipairs({ -0.5, 0.5 }) do
-		mk.add("Wedge", v(0.14 * S, 0.16 * S, 0.12 * S), CFrame.new(i * 0.2 * S, -0.2 * S, -0.5 * S), WHITE)
-	end
-	wings(mk, S, T.Belly, 0.5, 0.36, 0.2, 24)
-	mk.glow((mk.add("Ball", Vector3.one * 0.16 * S, CFrame.new(0, 0.6 * S, 0), T.Glow)))
-end
-
-function KINDS.Cube(mk, S, T)
-	mk.add("Block", Vector3.one * 0.86 * S, CFrame.identity, T.Body)
-	mk.add("Block", v(0.9 * S, 0.16 * S, 0.9 * S), CFrame.new(0, -0.2 * S, 0), T.Belly)
-	eyes(mk, S, 0.12, -0.42, 0.2)
-	-- petits cubes en orbite
-	for i = 1, 3 do
-		local hinge = CFrame.Angles(0, i / 3 * TAU, 0.3 * i)
-		local p, weld = mk.add("Block", Vector3.one * 0.2 * S, hinge * CFrame.new(0.95 * S, 0, 0), if i % 2 == 0 then T.Belly else T.Glow, hinge)
-		mk.glow(p)
-		mk.anim(weld, Y, 2.4 + i * 0.5, 0, true)
-	end
-end
-
-function KINDS.Chick(mk, S, T)
-	local cream = Color3.fromRGB(255, 246, 224)
-	mk.add("Cyl", v(0.5 * S, 1.02 * S, 1.02 * S), CFrame.new(0, -0.3 * S, 0) * CFrame.Angles(0, 0, math.pi / 2), cream)
-	mk.add("Ball", Vector3.one * 0.9 * S, CFrame.new(0, 0.1 * S, 0), T.Body)
-	eyes(mk, S, 0.22, -0.34, 0.2)
-	mk.add("Wedge", v(0.2 * S, 0.14 * S, 0.24 * S), CFrame.new(0, 0.06 * S, -0.5 * S) * CFrame.Angles(0, math.pi, 0), Color3.fromRGB(255, 150, 50))
-	propeller(mk, S, 0.86, T.Glow)
-	wings(mk, S, T.Body, 0.34, 0.3, 0.06, 18)
-end
-
-function KINDS.Fish(mk, S, T)
-	mk.add("Ball", Vector3.one * S, CFrame.identity, T.Body)
-	mk.add("Ball", Vector3.one * 0.8 * S, CFrame.new(0, 0, 0.36 * S), T.Body)
-	mk.add("Ball", Vector3.one * 0.6 * S, CFrame.new(0, -0.14 * S, -0.16 * S), T.Belly)
-	eyes(mk, S, 0.12, -0.38, 0.3)
-	-- nageoire de queue qui bat
-	local hinge = CFrame.new(0, 0, 0.72 * S)
-	local _, weld = mk.add("Wedge", v(0.08 * S, 0.8 * S, 0.5 * S), hinge * CFrame.new(0, 0, 0.26 * S), T.Glow, hinge)
-	mk.anim(weld, Y, 9, 0.6)
-	mk.add("Wedge", v(0.07 * S, 0.34 * S, 0.5 * S), CFrame.new(0, 0.58 * S, 0.1 * S), T.Glow)
-	for _, side in ipairs({ -1, 1 }) do
-		local h2 = CFrame.new(side * 0.45 * S, -0.1 * S, 0)
-		local _, w2 = mk.add("Block", v(0.36 * S, 0.05 * S, 0.26 * S), h2 * CFrame.new(side * 0.18 * S, 0, 0), T.Glow, h2)
-		mk.anim(w2, Z, 7, side * 0.5)
-	end
-end
-
-function KINDS.Spark(mk, S, T)
-	local body = mk.glow((mk.add("Ball", Vector3.one * 0.9 * S, CFrame.identity, T.Body)))
-	mk.add("Ball", Vector3.one * 0.7 * S, CFrame.new(0, 0, -0.14 * S), T.Belly)
-	eyes(mk, S, 0.08, -0.4, 0.2)
-	-- antennes en éclair
-	for _, side in ipairs({ -1, 1 }) do
-		mk.glow((mk.add("Block", v(0.1 * S, 0.4 * S, 0.1 * S), CFrame.new(side * 0.24 * S, 0.62 * S, 0) * CFrame.Angles(0, 0, side * 0.5), T.Glow)))
-		mk.glow((mk.add("Block", v(0.1 * S, 0.36 * S, 0.1 * S), CFrame.new(side * 0.3 * S, 0.92 * S, 0) * CFrame.Angles(0, 0, side * -0.6), T.Glow)))
-	end
-	local e = Instance.new("ParticleEmitter")
-	e.Texture = SPARKLE
-	e.Color = ColorSequence.new(WHITE, T.Glow)
-	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5 * S), NumberSequenceKeypoint.new(1, 0) })
-	e.Lifetime = NumberRange.new(0.4, 0.7)
-	e.Rate = 10
-	e.Speed = NumberRange.new(1, 3)
-	e.SpreadAngle = Vector2.new(180, 180)
-	e.LightEmission = 1
-	e.LightInfluence = 0
-	e.Parent = body
-end
-
-function KINDS.Drone(mk, S, T)
-	mk.add("Ball", Vector3.one * S, CFrame.identity, T.Body)
-	mk.add("Cyl", v(0.2 * S, 1.06 * S, 1.06 * S), CFrame.Angles(0, 0, math.pi / 2), T.Belly)
-	-- gros œil de verre
-	mk.add("Ball", Vector3.one * 0.5 * S, CFrame.new(0, 0.1 * S, -0.34 * S), WHITE)
-	mk.glow((mk.add("Ball", Vector3.one * 0.28 * S, CFrame.new(0, 0.1 * S, -0.5 * S), T.Glow)))
-	propeller(mk, S, 0.82, T.Belly)
-	-- clé qui tourne dans le dos
-	local hinge = CFrame.new(0, 0, 0.5 * S)
-	mk.add("Cyl", v(0.4 * S, 0.1 * S, 0.1 * S), CFrame.new(0, 0, 0.66 * S) * CFrame.Angles(0, math.pi / 2, 0), BLACK)
-	local _, weld = mk.add("Block", v(0.12 * S, 0.7 * S, 0.1 * S), hinge * CFrame.new(0, 0, 0.4 * S), T.Belly, hinge)
-	mk.anim(weld, Z, 4, 0, true)
-end
-
-function KINDS.Saucer(mk, S, T)
-	local _, weld = mk.add("Cyl", v(0.26 * S, 1.8 * S, 1.8 * S), CFrame.Angles(0, 0, math.pi / 2), T.Body)
-	mk.anim(weld, X, 1.5, 0, true) -- le disque tourne sur lui-même (l'axe du cylindre est son X)
-	mk.add("Cyl", v(0.14 * S, 1.3 * S, 1.3 * S), CFrame.new(0, -0.16 * S, 0) * CFrame.Angles(0, 0, math.pi / 2), T.Belly)
-	local dome = mk.add("Ball", Vector3.one * 0.9 * S, CFrame.new(0, 0.2 * S, 0), T.Glow)
-	dome.Transparency = 0.35
-	mk.add("Ball", Vector3.one * 0.5 * S, CFrame.new(0, 0.2 * S, 0), T.Belly)
-	eyes(mk, S, 0.26, -0.2, 0.12)
-	-- bonbons sur le bord
-	for i = 1, 6 do
-		local a = i / 6 * TAU
-		mk.glow((mk.add("Ball", Vector3.one * 0.2 * S, CFrame.new(math.cos(a) * 0.74 * S, 0.14 * S, math.sin(a) * 0.74 * S), if i % 2 == 0 then T.Glow else WHITE)))
-	end
-end
-
-function KINDS.Fairy(mk, S, T)
-	mk.add("Ball", Vector3.one * 0.82 * S, CFrame.identity, T.Belly)
-	eyes(mk, S, 0.06, -0.34, 0.2)
-	-- chapeau de champignon
-	mk.add("Cyl", v(0.22 * S, 1.3 * S, 1.3 * S), CFrame.new(0, 0.4 * S, 0) * CFrame.Angles(0, 0, math.pi / 2), T.Body)
-	mk.add("Cyl", v(0.22 * S, 0.9 * S, 0.9 * S), CFrame.new(0, 0.6 * S, 0) * CFrame.Angles(0, 0, math.pi / 2), T.Body)
-	for i = 1, 4 do
-		local a = i / 4 * TAU + 0.5
-		mk.add("Ball", Vector3.one * 0.2 * S, CFrame.new(math.cos(a) * 0.42 * S, 0.52 * S, math.sin(a) * 0.42 * S), WHITE)
-	end
-	local body = mk.add("Ball", Vector3.one * 0.2 * S, CFrame.new(0, -0.5 * S, 0), T.Glow)
-	mk.glow(body)
-	wings(mk, S, T.Glow, 0.8, 0.5, 0, 22, 0.3)
-	local e = Instance.new("ParticleEmitter")
-	e.Texture = SPARKLE
-	e.Color = ColorSequence.new(T.Glow)
-	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35 * S), NumberSequenceKeypoint.new(1, 0) })
-	e.Lifetime = NumberRange.new(0.8, 1.4)
-	e.Rate = 6
-	e.Speed = NumberRange.new(0.5, 1.5)
-	e.SpreadAngle = Vector2.new(180, 180)
-	e.LightEmission = 1
-	e.LightInfluence = 0
-	e.Parent = body
-end
-
-function KINDS.Dragon(mk, S, T, big)
-	-- tête
-	mk.add("Ball", Vector3.one * S, CFrame.identity, T.Body)
-	mk.add("Block", v(0.6 * S, 0.4 * S, 0.5 * S), CFrame.new(0, -0.1 * S, -0.5 * S), T.Body)
-	eyes(mk, S, 0.2, -0.36, 0.24)
-	for _, side in ipairs({ -1, 1 }) do
-		-- cornes et moustaches dorées
-		mk.add("Wedge", v(0.12 * S, 0.5 * S, 0.2 * S), CFrame.new(side * 0.26 * S, 0.62 * S, 0.1 * S), T.Belly)
-		local hinge = CFrame.new(side * 0.3 * S, -0.12 * S, -0.66 * S)
-		local p, weld = mk.add("Block", v(0.06 * S, 0.06 * S, 0.8 * S), hinge * CFrame.new(side * 0.1 * S, 0, 0.4 * S), T.Belly, hinge)
-		mk.glow(p)
-		mk.anim(weld, Y, 2.5, side * 0.35, false, side)
-	end
-	-- long corps qui serpente
-	local count = if big then 26 else 9
-	for i = 1, count do
-		local k = 1 - i / (count + 2)
-		mk.seg((0.5 + 0.45 * k) * S, if i % 3 == 0 then T.Belly else T.Body)
-	end
-end
-
-function KINDS.Ghost(mk, S, T, big)
-	local head = mk.add("Ball", Vector3.one * S, CFrame.identity, T.Body)
-	head.Transparency = 0.1
-	eyes(mk, S, 0.08, -0.4, 0.22)
-	mk.add("Ball", Vector3.one * 0.16 * S, CFrame.new(0, -0.18 * S, -0.46 * S), BLACK)
-	-- petits bras qui flottent et lanterne
-	for _, side in ipairs({ -1, 1 }) do
-		local hinge = CFrame.new(side * 0.45 * S, -0.1 * S, 0)
-		local _, weld = mk.add("Ball", Vector3.one * 0.3 * S, hinge * CFrame.new(side * 0.2 * S, 0, -0.1 * S), T.Body, hinge)
-		mk.anim(weld, Z, 3, side * 0.5)
-	end
-	mk.add("Block", v(0.05 * S, 0.5 * S, 0.05 * S), CFrame.new(0.66 * S, -0.4 * S, -0.1 * S), BLACK)
-	local lamp = mk.glow((mk.add("Block", v(0.3 * S, 0.36 * S, 0.3 * S), CFrame.new(0.66 * S, -0.76 * S, -0.1 * S), T.Glow)))
-	local light = Instance.new("PointLight")
-	light.Color = T.Glow
-	light.Range = 6 * S
-	light.Brightness = 0.9
-	light.Shadows = false
-	light.Parent = lamp
-	-- traîne
-	for i = 1, if big then 7 else 3 do
-		local p = mk.seg((0.9 - i * (if big then 0.1 else 0.22)) * S, if i % 2 == 0 then T.Belly else T.Body)
-		p.Transparency = 0.1 + i * 0.08
-	end
+	model.Parent = parent
+	return body
 end
 
 -- TRAJETS ----------------------------------------------------------------------------------------------
@@ -406,19 +180,13 @@ local function build(ring: number, index: number, big: boolean, parent: Instance
 	local half = M.CorridorWidth / 2
 	local S = Themes.Lerp(C.Size, ring, N) * rng:NextNumber(0.8, 1.25)
 	local c: Critter
-	local model = Instance.new("Model")
-	model.Name = T.Kind
-	local root = newPart("Block", Vector3.one, WHITE, model)
-	root.Name = "Root"
-	root.Transparency = 1
-	root.Anchored = true
 	local anims, tail = {}, {}
 	if big then
 		-- la géante : une grande boucle au-dessus du couloir, d'un mur à l'autre
 		S *= Themes.Lerp(C.BigScale, ring, N)
 		local mid = M.FrontZ + (zone.from + zone.to) / 2
 		c = {
-			root = root, anims = anims, tail = tail, gap = 0,
+			root = nil :: any, anims = anims, tail = tail, gap = 0,
 			center = Vector3.new(0, H / 2 + 14 + S * 1.5, mid),
 			radius = Vector3.new(half + 30, 6, math.max(40, (zone.to - zone.from) * 0.38)),
 			speed = rng:NextNumber(0.07, 0.11) * (if rng:NextNumber() < 0.5 then -1 else 1),
@@ -430,7 +198,7 @@ local function build(ring: number, index: number, big: boolean, parent: Instance
 		local side = if index % 2 == 0 then 1 else -1
 		local rx = rng:NextNumber(6, 18)
 		c = {
-			root = root, anims = anims, tail = tail, gap = 0,
+			root = nil :: any, anims = anims, tail = tail, gap = 0,
 			center = Vector3.new(side * (half + rng:NextNumber(-10, 26)), rng:NextNumber(-H * 0.25, H / 2 + 16), M.FrontZ + rng:NextNumber(zone.from + 10, zone.to - 10)),
 			radius = Vector3.new(rx, rng:NextNumber(2, 6), rng:NextNumber(10, 34)),
 			speed = rng:NextNumber(0.3, 0.6) * (if rng:NextNumber() < 0.5 then -1 else 1),
@@ -438,12 +206,10 @@ local function build(ring: number, index: number, big: boolean, parent: Instance
 			bob = rng:NextNumber(0.4, 1.2),
 		}
 	end
-	local make = KINDS[T.Kind] or KINDS.Puff
-	make(maker(model, root, anims, tail), S, T, big)
-	-- retard entre deux segments : la longueur d'un segment à la vitesse du trajet
+	c.root = assemble(T.Kind, S, T, big, parent, anims, tail)
+	-- retard entre deux tronçons : la longueur d'un tronçon à la vitesse du trajet
 	local pace = math.abs(c.speed) * math.max(c.radius.X, c.radius.Z)
-	c.gap = (S * 0.62) / math.max(pace, 0.5)
-	model.Parent = parent
+	c.gap = (S * 0.7) / math.max(pace, 0.5)
 	return c
 end
 
@@ -535,14 +301,27 @@ RunService.RenderStepped:Connect(function()
 				local ahead = position(c, t + 0.05)
 				local dir = ahead - pos
 				if dir.Magnitude > 1e-4 then
-					c.root.CFrame = CFrame.lookAt(pos, pos + dir)
+					c.root.CFrame = CFrame.lookAt(pos, pos + dir) * FLIP
 				end
 				for _, a in ipairs(c.anims) do
-					local angle = if a.spin then t * a.speed else math.sin(t * a.speed + a.phase) * a.amp
-					a.weld.C0 = a.base * CFrame.fromAxisAngle(a.axis, angle)
+					local angle
+					if a.kind == "spin" then
+						angle = t * a.speed
+					elseif a.kind == "open" then
+						angle = (0.5 + 0.5 * math.sin(t * a.speed + a.phase)) * a.amp
+					else
+						angle = math.sin(t * a.speed + a.phase) * a.amp
+					end
+					a.weld.C0 = a.base * CFrame.Angles(0, 0, angle)
 				end
+				-- chaque tronçon regarde celui qui le précède
+				local before = pos
 				for i, seg in ipairs(c.tail) do
-					seg.Position = position(c, t - i * c.gap)
+					local at = position(c, t - i * c.gap)
+					if (before - at).Magnitude > 1e-3 then
+						seg.CFrame = CFrame.lookAt(at, before) * FLIP
+					end
+					before = at
 				end
 			end
 		end

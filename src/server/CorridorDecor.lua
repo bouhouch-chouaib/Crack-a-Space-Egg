@@ -7,6 +7,13 @@
 -- Tout grandit d'anneau en anneau (hauteur du mur, piliers, décors, portail) : chaque biome est plus
 -- impressionnant que le précédent. Rien ne bloque (on peut tout tenter à ses risques) : ni collision,
 -- ni requête, ni contact. Les petites créatures volantes sont faites chez le client (Critters.client).
+--
+-- Depuis le 28 nov., décors, piliers, arches et îles sont de vrais modèles low-poly (Blender :
+-- tools/blender/corridor_kit*.py, rangés par tools/build-corridor-kit.lua dans Assets.CorridorKit) :
+--   Props  : un modèle par décor, texture peinte au pixel avec ses picots ; il est cloné, mis à l'échelle
+--            et tourné vers le couloir. Son sous-modèle « Spin » tourne chez le client (« DecorSpin »).
+--   Struct : pièces unies (Trim / Dark / Glow) reteintes aux couleurs du biome, picots Roblox par-dessus.
+-- Seuls la paroi et les rails restent de simples blocs.
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,27 +27,18 @@ local M = Config.Map
 local STUDS = "rbxassetid://99589690361139"
 local GLOW = "rbxassetid://103844906730878"
 local WHITE = Color3.new(1, 1, 1)
-local BLACK = Color3.fromRGB(26, 24, 34)
 local rgb = Color3.fromRGB
 local FACES = Enum.NormalId:GetEnumItems()
-local UP = CFrame.Angles(0, 0, math.pi / 2) -- cylindre debout
+local SIDES = { Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right }
+local FLIP_DOWN = CFrame.Angles(math.pi, 0, 0)
 
--- KIT DE CONSTRUCTION ----------------------------------------------------------------------------
--- Pièces posées dans le repère « origin » (y = 0 au pied, +Z vers le centre du couloir), à l'échelle s.
+local KIT = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("CorridorKit")
+local PROPS, STRUCT = KIT:WaitForChild("Props"), KIT:WaitForChild("Struct")
 
-type Kit = {
-	block: (number, number, number, number, number, number, Color3, CFrame?) -> Part,
-	wedge: (number, number, number, number, number, number, Color3, CFrame?) -> Part,
-	cyl: (number, number, number, number, number, Color3, CFrame?) -> Part,
-	ball: (number, number, number, number, Color3) -> Part,
-	glow: (Part) -> Part,
-	origin: CFrame,
-	s: number,
-	parent: Instance,
-}
+-- PIÈCES ---------------------------------------------------------------------------------------------
 
-local function studs(p: BasePart, tile: number)
-	for _, face in ipairs(FACES) do
+local function studs(p: BasePart, tile: number, faces: { Enum.NormalId }?)
+	for _, face in ipairs(faces or FACES) do
 		local t = Instance.new("Texture")
 		t.Name = "Studs"
 		t.Texture = STUDS
@@ -52,8 +50,9 @@ local function studs(p: BasePart, tile: number)
 	end
 end
 
-local function base(shape: Enum.PartType?, size: Vector3, cf: CFrame, color: Color3, parent: Instance, class: string?): Part
-	local p = Instance.new(class or "Part") :: Part
+-- Simple bloc (paroi, rails)
+local function base(size: Vector3, cf: CFrame, color: Color3, parent: Instance): Part
+	local p = Instance.new("Part")
 	p.Anchored = true
 	p.CanCollide = false
 	p.CanQuery = false
@@ -62,9 +61,6 @@ local function base(shape: Enum.PartType?, size: Vector3, cf: CFrame, color: Col
 	p.Material = Enum.Material.SmoothPlastic
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
-	if shape then
-		p.Shape = shape
-	end
 	p.Size = size
 	p.CFrame = cf
 	p.Color = color
@@ -76,36 +72,56 @@ local function base(shape: Enum.PartType?, size: Vector3, cf: CFrame, color: Col
 	return p
 end
 
-local function kit(parent: Instance, origin: CFrame, s: number): Kit
-	local k = {} :: any
-	k.origin, k.s, k.parent = origin, s, parent
-	function k.block(sx, sy, sz, x, y, z, color, rot)
-		return base(nil, Vector3.new(sx, sy, sz) * s, origin * CFrame.new(x * s, y * s, z * s) * (rot or CFrame.identity), color, parent)
-	end
-	function k.wedge(sx, sy, sz, x, y, z, color, rot)
-		return base(nil, Vector3.new(sx, sy, sz) * s, origin * CFrame.new(x * s, y * s, z * s) * (rot or CFrame.identity), color, parent, "WedgePart")
-	end
-	-- cylindre debout (d = diamètre, h = hauteur) ; rot le couche ou l'incline
-	function k.cyl(d, h, x, y, z, color, rot)
-		return base(Enum.PartType.Cylinder, Vector3.new(h, d, d) * s, origin * CFrame.new(x * s, y * s, z * s) * (rot or CFrame.identity) * UP, color, parent)
-	end
-	function k.ball(d, x, y, z, color)
-		return base(Enum.PartType.Ball, Vector3.one * d * s, origin * CFrame.new(x * s, y * s, z * s), color, parent)
-	end
-	-- petite touche lumineuse (le néon reste réservé aux détails)
-	function k.glow(p: Part)
-		p.Material = Enum.Material.Neon
-		for _, t in ipairs(p:GetChildren()) do
-			if t:IsA("Texture") then
-				t:Destroy()
-			end
-		end
-		return p
-	end
-	return k
+-- Repère posé en « at » dont l'avant des modèles (+Z) regarde dans la direction « dir »
+local function facing(at: Vector3, dir: Vector3): CFrame
+	return CFrame.lookAt(at, at - dir)
 end
 
-local function emitter(p: BasePart, color: Color3, size: number, rate: number, speed: number, life: number): ParticleEmitter
+-- Couleurs du biome sur une pièce de structure : Trim, Dark, et Glow en petite touche lumineuse
+local function tint(p: BasePart, T: any, swap: boolean?)
+	if p.Name == "Glow" then
+		p.Color = T.Accent
+	elseif (p.Name == "Dark") ~= (swap == true) then
+		p.Color = T.Dark
+	else
+		p.Color = T.Trim
+	end
+end
+
+-- Pièce de structure entière (chapiteau, lanterne, île) : clonée, mise à l'échelle, posée et teintée
+local function piece(parent: Instance, name: string, cf: CFrame, scale: number, T: any, studded: string?): Model
+	local m = STRUCT[name]:Clone()
+	m:ScaleTo(scale)
+	m:PivotTo(cf)
+	for _, p in ipairs(m:GetChildren()) do
+		if p:IsA("BasePart") then
+			tint(p, T)
+			if p.Name == studded then
+				studs(p, 2)
+			end
+		end
+	end
+	m.Parent = parent
+	return m
+end
+
+-- Pièce de structure étirée (fût de pilier, claveau d'arche) : chaque partie prend sa taille à part
+local function stretched(parent: Instance, name: string, cf: CFrame, factor: Vector3, T: any, swap: boolean?, faces: { Enum.NormalId }?, noGlow: boolean?)
+	for _, src in ipairs(STRUCT[name]:GetChildren()) do
+		if src:IsA("BasePart") and not (noGlow and src.Name == "Glow") then
+			local p = src:Clone()
+			p.Size = src.Size * factor
+			p.CFrame = cf
+			tint(p, T, swap)
+			if p.Name == "Trim" then
+				studs(p, 2, faces)
+			end
+			p.Parent = parent
+		end
+	end
+end
+
+local function emitter(p: Instance, color: Color3, size: number, rate: number, speed: number, life: number): ParticleEmitter
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = GLOW
 	e.Color = ColorSequence.new(color)
@@ -122,397 +138,56 @@ local function emitter(p: BasePart, color: Color3, size: number, rate: number, s
 	return e
 end
 
--- Sous-modèle qui tourne sur lui-même chez le client (Critters.client, étiquette « DecorSpin ») :
--- son repère est le centre de rotation, il tourne autour de son axe Z (face au couloir)
-local function spinner(k: Kit, x: number, y: number, z: number, speed: number): Kit
-	local m = Instance.new("Model")
-	m.Name = "Spin"
-	local center = k.origin * CFrame.new(x * k.s, y * k.s, z * k.s)
-	m.WorldPivot = center
-	m:SetAttribute("Speed", speed)
-	m.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- il arrive entier chez le client, qui le fait tourner d'un bloc
-	m.Parent = k.parent
-	CollectionService:AddTag(m, "DecorSpin")
-	return kit(m, center, k.s)
-end
-
 -- DÉCORS -----------------------------------------------------------------------------------------
--- Chaque constructeur reçoit le kit, le thème et le hasard ; il construit un décor d'environ 12 de haut.
+-- Les modèles font environ 12 de haut à l'échelle 1, le pivot au pied. Quelques-uns fument ou éclairent :
+-- { couleur (clé du thème ou couleur), taille, débit, vitesse, durée, tout autour ? }
+local SMOKE: { [string]: { any } } = {
+	Volcano = { "Wall", 3, 5, 9, 1.6 },
+	Rod = { "Accent", 2.4, 3, 5, 0.7, true },
+	Pipe = { rgb(240, 246, 255), 4, 4, 6, 1.8 },
+	Spores = { "Accent", 1.4, 3, 3, 4, true },
+	Clam = { rgb(220, 250, 255), 1.6, 2, 4, 3 },
+}
+local LIT = { Lantern = true, Pumpkin = true }
 
-local PROPS: { [string]: (Kit, any, Random) -> () } = {}
-
-function PROPS.Spire(k, T, rng)
-	local tilt = CFrame.Angles(rng:NextNumber(-0.12, 0.12), rng:NextNumber(0, 3), rng:NextNumber(-0.12, 0.12))
-	k.block(6, 5, 6, 0, 2.5, 0, T.Dark, tilt)
-	k.block(4.6, 5, 4.6, 0.3, 7, 0, T.Trim, tilt * CFrame.Angles(0, 0.5, 0))
-	k.block(3.2, 4.5, 3.2, 0.5, 11.4, 0.2, T.Dark, tilt * CFrame.Angles(0, 1, 0))
-	k.block(1.8, 3.2, 1.8, 0.7, 15, 0.3, T.Trim, tilt)
-	k.ball(2.2, 4, 1.2, 1.5, T.Trim)
-	k.glow(k.ball(0.9, 0.7, 17.2, 0.3, T.Accent))
-end
-
-function PROPS.Pebbles(k, T, rng)
-	for i = 1, 5 do
-		k.ball(rng:NextNumber(1.6, 3.6), rng:NextNumber(-4, 4), 1.5 + i * 2.2, rng:NextNumber(-2, 2), if i % 2 == 0 then T.Trim else T.Dark)
-	end
-	k.glow(k.ball(0.8, 0, 13.5, 0, T.Accent))
-end
-
-function PROPS.Crystal(k, T, rng)
-	local ice = rgb(196, 238, 255)
-	for i = 1, 5 do
-		local h = rng:NextNumber(7, 14)
-		local w = rng:NextNumber(1.6, 2.8)
-		local rot = CFrame.Angles(rng:NextNumber(-0.45, 0.45), rng:NextNumber(0, 3), rng:NextNumber(-0.45, 0.45))
-		local p = k.block(w, h, w, rng:NextNumber(-2, 2), h * 0.42, rng:NextNumber(-1.5, 1.5), if i % 2 == 0 then ice else T.Wall, rot * CFrame.Angles(0, math.pi / 4, 0))
-		p.Reflectance = 0.25
-		p.Transparency = 0.12
-	end
-	k.block(7, 1.6, 6, 0, 0.8, 0, T.Trim)
-end
-
-function PROPS.Snow(k, T)
-	-- bonhomme de neige
-	k.ball(6, 0, 3, 0, WHITE)
-	k.ball(4.4, 0, 7.4, 0, WHITE)
-	k.ball(3.2, 0, 10.6, 0, WHITE)
-	k.ball(0.6, -0.6, 11, 1.4, BLACK)
-	k.ball(0.6, 0.6, 11, 1.4, BLACK)
-	k.block(0.5, 0.5, 1.6, 0, 10.4, 1.9, rgb(255, 150, 50))
-	k.cyl(2.6, 0.4, 0, 12.1, 0, T.Dark)
-	k.cyl(1.7, 1.6, 0, 13, 0, T.Dark)
-end
-
-function PROPS.Volcano(k, T)
-	k.cyl(12, 3, 0, 1.5, 0, T.Dark)
-	k.cyl(9.2, 3, 0, 4.5, 0, T.Trim)
-	k.cyl(6.6, 3, 0, 7.5, 0, T.Dark)
-	k.cyl(4.4, 2.2, 0, 10.1, 0, T.Trim)
-	local lava = k.glow(k.cyl(3.2, 0.6, 0, 11.3, 0, T.Accent))
-	emitter(lava, T.Wall, 3 * k.s, 5, 9 * k.s, 1.6)
-	-- coulées de lave
-	k.glow(k.block(1, 5, 0.5, 1.2, 8.6, 2.6, T.Wall, CFrame.Angles(0.35, 0, 0)))
-	k.glow(k.block(0.8, 4, 0.5, -1.8, 5.4, 4.1, T.Accent, CFrame.Angles(0.35, 0, 0)))
-end
-
-function PROPS.LavaRock(k, T, rng)
-	local rot = CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, 3), rng:NextNumber(-0.3, 0.3))
-	k.block(7, 6, 6, 0, 3.4, 0, T.Dark, rot)
-	k.block(4.5, 4.5, 4.5, 1.5, 8, 0.5, T.Trim, rot * CFrame.Angles(0.4, 0.6, 0))
-	k.glow(k.block(0.5, 4.5, 0.4, 0.5, 3.6, 3.1, T.Accent, CFrame.Angles(0, 0, 0.5)))
-	k.glow(k.block(0.5, 3, 0.4, -1.4, 4.5, 3.1, T.Wall, CFrame.Angles(0, 0, -0.6)))
-end
-
-function PROPS.Puff(k, T)
-	local pale = T.Wall:Lerp(WHITE, 0.55)
-	k.ball(7, 0, 5, 0, pale)
-	k.ball(5.6, 3.6, 4.2, 0.5, T.Wall:Lerp(WHITE, 0.3))
-	k.ball(5, -3.6, 4, -0.4, pale)
-	k.ball(4.6, 1, 7.6, 0, WHITE)
-	-- étoile
-	k.glow(k.block(0.8, 4.4, 0.8, 4.4, 11, 0.5, T.Accent, CFrame.Angles(0, 0, 0.3)))
-	k.glow(k.block(4.4, 0.8, 0.8, 4.4, 11, 0.5, T.Accent, CFrame.Angles(0, 0, 0.3)))
-end
-
-function PROPS.Planet(k, T)
-	k.ball(7.5, 0, 6, 0, T.Trim)
-	k.cyl(13, 0.5, 0, 6, 0, T.Accent, CFrame.Angles(0.5, 0, 0.3))
-	k.ball(2.2, 6.5, 10, 0, T.Wall:Lerp(WHITE, 0.4))
-	k.ball(1, -6, 2.5, 1, WHITE)
-end
-
-function PROPS.Fang(k)
-	local bone = rgb(246, 240, 224)
-	k.block(8, 2.4, 6, 0, 1.2, 0, rgb(160, 60, 100))
-	-- croc recourbé vers le couloir
-	for i = 0, 4 do
-		local w = 4.4 - i * 0.8
-		k.block(w, 3.4, w, 0, 3.6 + i * 2.9, i * i * 0.36, bone, CFrame.Angles(i * 0.16, 0, 0))
-	end
-	k.block(2.4, 4, 2.4, -3.2, 4.2, 0.4, bone, CFrame.Angles(0.15, 0, 0.2))
-	k.block(2.4, 4, 2.4, 3.2, 4.2, 0.4, bone, CFrame.Angles(0.15, 0, -0.2))
-end
-
-function PROPS.Eye(k, T)
-	k.cyl(2.4, 4, 0, 2, 0, T.Dark)
-	k.ball(7.5, 0, 7, 0, WHITE)
-	k.ball(4.4, 0, 7, 2.2, T.Accent)
-	k.ball(2.2, 0, 7, 3.6, BLACK)
-	k.block(8.4, 1.6, 6, 0, 10.6, 0.4, T.Trim, CFrame.Angles(0.25, 0, 0)) -- paupière
-end
-
-function PROPS.Hourglass(k, T)
-	local gold = rgb(240, 200, 92)
-	k.cyl(8, 0.9, 0, 0.45, 0, gold)
-	local steps = { { 6, 1.9 }, { 4.4, 3.6 }, { 2.8, 5.2 }, { 1.4, 6.6 }, { 2.8, 8 }, { 4.4, 9.6 }, { 6, 11.3 } }
-	for i, st in ipairs(steps) do
-		local p = k.cyl(st[1], 1.7, 0, st[2], 0, if i <= 3 then T.Accent else T.Wall)
-		p.Transparency = 0.25
-	end
-	k.cyl(8, 0.9, 0, 12.7, 0, gold)
-	for _, a in ipairs({ 0, 2.1, 4.2 }) do
-		k.cyl(0.6, 12, math.cos(a) * 3.6, 6.5, math.sin(a) * 3.6, gold)
-	end
-end
-
-function PROPS.Glitch(k, T, rng)
-	for i = 1, 8 do
-		local sz = rng:NextNumber(1.3, 3.6)
-		local p = k.block(sz, sz, sz, rng:NextNumber(-4.5, 4.5), rng:NextNumber(1.5, 13), rng:NextNumber(-2.5, 2.5), if i % 3 == 0 then T.Accent elseif i % 3 == 1 then T.Wall else T.Dark)
-		if i % 4 == 0 then
-			k.glow(p)
-		end
-	end
-end
-
-function PROPS.Nest(k, T)
-	k.cyl(11.5, 1.8, 0, 0.9, 0, T.Dark)
-	k.cyl(12.6, 1.2, 0, 2.2, 0, T.Trim)
-	for i = 1, 8 do
-		local a = i / 8 * math.pi * 2
-		k.block(4.6, 0.8, 0.8, math.cos(a) * 5.8, 3, math.sin(a) * 5.8, if i % 2 == 0 then T.Dark else T.Trim, CFrame.Angles(0, -a + 1.3, 0.3))
-	end
-	local cream = rgb(255, 244, 220)
-	k.ball(4.4, -2.2, 4.4, 0.8, cream)
-	k.ball(4.4, 2.4, 4.4, 0.4, T.Accent)
-	k.ball(4, 0, 4.6, -2.6, cream)
-end
-
-function PROPS.BigEgg(k, T)
-	local cream = rgb(255, 244, 220)
-	k.cyl(8, 1.4, 0, 0.7, 0, T.Dark)
-	k.ball(8.4, 0, 5.2, 0, cream)
-	k.ball(7, 0, 8.4, 0, cream)
-	k.ball(5, 0, 10.8, 0, cream)
-	for i = 1, 5 do
-		local a = i / 5 * math.pi * 2
-		k.ball(1.5, math.cos(a) * 3.9, 5.6 + (i % 2) * 2.2, math.sin(a) * 3.9, T.Trim)
-	end
-	k.glow(k.block(0.4, 2.6, 0.3, 0.3, 9.6, 3.2, T.Accent, CFrame.Angles(0, 0, 0.6)))
-	k.glow(k.block(0.4, 2.2, 0.3, -0.7, 8.2, 3.6, T.Accent, CFrame.Angles(0, 0, -0.6)))
-end
-
-function PROPS.Coral(k, T, rng)
-	local colors = { T.Trim, rgb(255, 170, 90), rgb(190, 120, 255) }
-	for c = 1, 2 do
-		local col = colors[c + rng:NextInteger(0, 1)]
-		local ox = if c == 1 then -1.8 else 2.4
-		local h = if c == 1 then 7 else 5
-		k.cyl(1.8, h, ox, h / 2, 0, col)
-		for i = 1, 3 do
-			local side = if i % 2 == 0 then 1 else -1
-			local y = h * (0.45 + i * 0.2)
-			k.cyl(1.3, 4, ox + side * 1.5, y + 1, 0, col, CFrame.Angles(0, 0, -side * 0.7))
-			k.ball(1.9, ox + side * 2.9, y + 2.7, 0, T.Accent)
-		end
-		k.ball(2, ox, h + 0.6, 0, T.Accent)
-	end
-	k.cyl(9, 1.2, 0, 0.6, 0, T.Dark)
-end
-
-function PROPS.Bubbles(k, _T, rng)
-	for i = 1, 6 do
-		local p = k.ball(rng:NextNumber(1.6, 4.4), rng:NextNumber(-3.5, 3.5), 1.5 + i * 2, rng:NextNumber(-2, 2), rgb(200, 250, 255))
-		p.Transparency = 0.55
-		p.Reflectance = 0.25
-	end
-end
-
-function PROPS.StormCloud(k, T)
-	local dark = T.Trim
-	k.ball(7.5, 0, 10, 0, dark)
-	k.ball(6, 3.8, 9.4, 0.5, T.Dark)
-	k.ball(5.6, -3.8, 9.2, -0.4, dark)
-	k.ball(5, 1, 12.6, 0, T.Dark)
-	-- éclair en zigzag
-	k.glow(k.block(1, 3.6, 0.8, 0.6, 5.8, 1, T.Accent, CFrame.Angles(0, 0, 0.5)))
-	k.glow(k.block(1, 3.4, 0.8, -0.3, 3.4, 1, T.Accent, CFrame.Angles(0, 0, -0.6)))
-	k.glow(k.block(0.9, 3, 0.8, 0.5, 1.2, 1, T.Accent, CFrame.Angles(0, 0, 0.45)))
-end
-
-function PROPS.Rod(k, T)
-	k.block(4, 1.4, 4, 0, 0.7, 0, T.Dark)
-	k.cyl(1.3, 12, 0, 7.4, 0, T.Trim)
-	for i = 1, 3 do
-		k.cyl(3.6 - i * 0.5, 0.6, 0, 3 + i * 2.8, 0, T.Dark)
-	end
-	local tip = k.glow(k.ball(2.2, 0, 14.4, 0, T.Accent))
-	emitter(tip, T.Accent, 2.4 * k.s, 3, 5 * k.s, 0.7).SpreadAngle = Vector2.new(180, 180)
-end
-
-function PROPS.Gear(k, T)
-	k.block(1.8, 7, 1.8, 0, 3.5, -1.2, T.Dark)
-	k.block(5, 1.2, 4, 0, 0.6, -1, T.Dark)
-	local g = spinner(k, 0, 8, 0, 0.5)
-	g.cyl(9, 1.6, 0, 0, 0, T.Trim, CFrame.Angles(math.pi / 2, 0, 0))
-	for i = 1, 8 do
-		local a = i / 8 * math.pi * 2
-		g.block(1.9, 2.2, 1.6, math.cos(a) * 5.2, math.sin(a) * 5.2, 0, T.Trim, CFrame.Angles(0, 0, a - math.pi / 2))
-	end
-	g.cyl(3.2, 2.2, 0, 0, 0, T.Dark, CFrame.Angles(math.pi / 2, 0, 0))
-	g.glow(g.cyl(1.2, 2.5, 0, 0, 0, T.Accent, CFrame.Angles(math.pi / 2, 0, 0)))
-	-- petit rouage qui tourne dans l'autre sens
-	local g2 = spinner(k, 5.6, 3.4, 0.2, -0.9)
-	g2.cyl(4.6, 1.4, 0, 0, 0, T.Wall, CFrame.Angles(math.pi / 2, 0, 0))
-	for i = 1, 6 do
-		local a = i / 6 * math.pi * 2
-		g2.block(1.3, 1.5, 1.4, math.cos(a) * 2.8, math.sin(a) * 2.8, 0, T.Wall, CFrame.Angles(0, 0, a - math.pi / 2))
-	end
-end
-
-function PROPS.Pipe(k, T)
-	k.cyl(4.4, 1, 0, 0.5, 0, T.Dark)
-	k.cyl(3, 10, 0, 6, 0, T.Trim)
-	k.cyl(3.8, 0.8, 0, 4, 0, T.Dark)
-	k.cyl(3.8, 0.8, 0, 8.4, 0, T.Dark)
-	k.ball(3.6, 0, 11.4, 0, T.Trim)
-	k.cyl(3, 4, 0, 11.4, 2.2, T.Trim, CFrame.Angles(math.pi / 2, 0, 0))
-	local mouth = k.cyl(3.8, 0.8, 0, 11.4, 4.4, T.Dark, CFrame.Angles(math.pi / 2, 0, 0))
-	local steam = emitter(mouth, rgb(240, 246, 255), 4 * k.s, 4, 6 * k.s, 1.8)
-	steam.EmissionDirection = Enum.NormalId.Right
-	steam.LightEmission = 0.1
-end
-
-function PROPS.Lollipop(k, T, rng)
-	local candy = ({ T.Dark, rgb(120, 220, 255), rgb(170, 110, 255), rgb(255, 190, 60) })[rng:NextInteger(1, 4)]
-	k.cyl(1, 9, 0, 4.5, 0, WHITE)
-	local d = spinner(k, 0, 11.5, 0, 0.35)
-	d.cyl(7.5, 1.4, 0, 0, 0, candy, CFrame.Angles(math.pi / 2, 0, 0))
-	d.cyl(5, 1.7, 0, 0, 0, WHITE, CFrame.Angles(math.pi / 2, 0, 0))
-	d.cyl(2.6, 2, 0, 0, 0, candy, CFrame.Angles(math.pi / 2, 0, 0))
-	d.block(1.2, 1.2, 2.1, 2.6, 2.6, 0, T.Accent)
-	d.block(1.2, 1.2, 2.1, -2.6, -2.6, 0, T.Accent)
-end
-
-function PROPS.CandyCane(k)
-	local red = rgb(235, 50, 70)
-	for i = 0, 6 do
-		k.block(1.8, 1.7, 1.8, 0, 0.85 + i * 1.7, 0, if i % 2 == 0 then red else WHITE)
-	end
-	-- crosse
-	for i = 1, 4 do
-		local a = i * 0.6
-		k.block(1.8, 1.7, 1.8, 1.9 - math.cos(a) * 1.9, 11.5 + math.sin(a) * 1.9, 0, if i % 2 == 0 then WHITE else red, CFrame.Angles(0, 0, -a))
-	end
-end
-
-function PROPS.Gumdrop(k, T, rng)
-	local col = ({ rgb(120, 230, 120), rgb(180, 120, 255), rgb(255, 170, 60), T.Accent })[rng:NextInteger(1, 4)]
-	k.cyl(7, 2.2, 0, 1.1, 0, col)
-	k.cyl(5.8, 1.8, 0, 3.1, 0, col)
-	k.cyl(4, 1.4, 0, 4.7, 0, col)
-	k.cyl(2, 0.8, 0, 5.8, 0, col:Lerp(WHITE, 0.5))
-	k.ball(2.4, 5, 1.2, 1, T.Dark)
-	k.ball(1.8, -4.6, 0.9, -1, WHITE)
-end
-
-function PROPS.Mushroom(k, T, rng)
-	local cap = ({ rgb(232, 70, 80), T.Trim, rgb(70, 190, 240) })[rng:NextInteger(1, 3)]
-	local cream = rgb(250, 240, 222)
-	k.cyl(2.8, 7, 0, 3.5, 0, cream)
-	k.glow(k.cyl(7, 0.35, 0, 7.1, 0, T.Accent))
-	k.cyl(11, 1.7, 0, 8.1, 0, cap)
-	k.cyl(8.6, 1.6, 0, 9.7, 0, cap)
-	k.cyl(5.4, 1.4, 0, 11.1, 0, cap)
-	for i = 1, 5 do
-		local a = i / 5 * math.pi * 2
-		k.cyl(1.7, 0.3, math.cos(a) * 4, 9.05, math.sin(a) * 4, WHITE)
-	end
-	k.cyl(1.9, 0.3, 0, 11.9, 0, WHITE)
-	-- petit champignon à côté
-	k.cyl(1.2, 2.6, 4.6, 1.3, 1.6, cream)
-	k.cyl(4, 1.1, 4.6, 3.1, 1.6, cap)
-	k.cyl(2.4, 0.9, 4.6, 4, 1.6, cap)
-end
-
-function PROPS.Spores(k, T, rng)
-	for i = 1, 7 do
-		k.glow(k.ball(rng:NextNumber(0.7, 1.5), rng:NextNumber(-4, 4), 1 + i * 1.8, rng:NextNumber(-2.5, 2.5), T.Accent))
-	end
-	local src = k.ball(2.4, 0, 1.4, 0, T.Trim)
-	local e = emitter(src, T.Accent, 1.4 * k.s, 3, 3 * k.s, 4)
-	e.SpreadAngle = Vector2.new(60, 60)
-end
-
-function PROPS.Pillar(k, T, rng)
-	local h = rng:NextNumber(7, 11.5)
-	k.block(5.4, 1.5, 5.4, 0, 0.75, 0, T.Trim)
-	k.cyl(3.6, h, 0, 1.5 + h / 2, 0, T.Dark)
-	k.cyl(4.2, 0.7, 0, 1.5 + h * 0.3, 0, T.Trim)
-	k.cyl(4.2, 0.7, 0, 1.5 + h * 0.7, 0, T.Trim)
-	k.block(5.4, 1.5, 5.4, 0, 2.25 + h, 0, T.Trim)
-	k.glow(k.ball(1.6, 0, 3.9 + h, 0, T.Accent))
-end
-
-function PROPS.Torii(k, T)
-	k.cyl(2, 11, -5, 5.5, 0, T.Dark)
-	k.cyl(2, 11, 5, 5.5, 0, T.Dark)
-	k.block(13, 1.2, 1.6, 0, 8.8, 0, T.Dark)
-	k.block(16, 1.5, 2.2, 0, 11.4, 0, T.Trim)
-	k.block(18.5, 0.9, 2.8, 0, 12.7, 0, T.Trim)
-	k.block(3.4, 1.2, 3.4, -5, 0.6, 0, T.Trim)
-	k.block(3.4, 1.2, 3.4, 5, 0.6, 0, T.Trim)
-	k.glow(k.block(1.4, 1.4, 0.4, 0, 10.1, 1, T.Accent))
-end
-
-function PROPS.Idol(k, T)
-	k.block(6, 1.6, 6, 0, 0.8, 0, T.Dark)
-	k.ball(6, 0, 4.4, 0, T.Trim)
-	k.ball(4.2, 0, 8.4, 0.2, T.Trim)
-	k.ball(0.7, -0.9, 8.8, 2.1, BLACK)
-	k.ball(0.7, 0.9, 8.8, 2.1, BLACK)
-	k.glow(k.ball(0.8, 0, 9.8, 2, T.Wall))
-	k.ball(1.8, -2.4, 9.8, 0, T.Trim)
-	k.ball(1.8, 2.4, 9.8, 0, T.Trim)
-end
-
-function PROPS.Lantern(k, T)
-	k.block(2.6, 1, 2.6, 0, 0.5, 0, T.Dark)
-	k.cyl(0.9, 10, 0, 5.5, 0, T.Trim)
-	k.block(0.7, 0.7, 4, 0, 10.2, 1.8, T.Trim)
-	k.block(2.2, 0.5, 2.2, 0, 9.3, 3.4, T.Dark)
-	local lamp = k.glow(k.block(1.8, 2.4, 1.8, 0, 7.9, 3.4, T.Accent))
-	k.block(2.2, 0.5, 2.2, 0, 6.5, 3.4, T.Dark)
-	local light = Instance.new("PointLight")
-	light.Color = T.Accent
-	light.Range = 16 * k.s
-	light.Brightness = 0.8
-	light.Shadows = false
-	light.Parent = lamp
-end
-
-function PROPS.Pumpkin(k, T)
-	local orange = rgb(255, 140, 40)
-	k.ball(6, 0, 3, 0, orange)
-	k.ball(5.2, -1.9, 3, 0, orange:Lerp(BLACK, 0.12))
-	k.ball(5.2, 1.9, 3, 0, orange:Lerp(BLACK, 0.12))
-	k.block(1, 1.6, 1, 0, 6.3, 0, rgb(90, 160, 70), CFrame.Angles(0, 0, 0.25))
-	-- visage qui brille
-	k.glow(k.block(1, 1, 0.4, -1.2, 3.8, 2.9, T.Accent, CFrame.Angles(0, 0, math.pi / 4)))
-	k.glow(k.block(1, 1, 0.4, 1.2, 3.8, 2.9, T.Accent, CFrame.Angles(0, 0, math.pi / 4)))
-	k.glow(k.block(2.8, 0.6, 0.4, 0, 2.2, 2.95, T.Accent))
-end
-
-function PROPS.Tomb(k, T)
-	-- petit fantôme de pierre
-	k.cyl(5.2, 5, 0, 2.5, 0, WHITE)
-	k.ball(5.2, 0, 5.4, 0, WHITE)
-	k.ball(0.9, -1, 5.9, 2.2, BLACK)
-	k.ball(0.9, 1, 5.9, 2.2, BLACK)
-	k.ball(1.6, -3, 3.6, 0.6, WHITE)
-	k.ball(1.6, 3, 3.6, 0.6, WHITE)
-	k.glow(k.ball(0.9, 0, 9.6, 0, T.Accent))
-end
-
-local function prop(parent: Instance, name: string, origin: CFrame, s: number, T: any, rng: Random)
-	local build = PROPS[name]
-	if not build then
+local function prop(parent: Instance, name: string, origin: CFrame, s: number, T: any)
+	local src = PROPS:FindFirstChild(name)
+	if not src then
 		return
 	end
-	local m = Instance.new("Model")
-	m.Name = name
+	local m = src:Clone()
+	m:ScaleTo(s)
+	m:PivotTo(origin)
+	for _, sub in ipairs(m:GetChildren()) do
+		if sub:IsA("Model") then
+			-- ce qui tourne (rouages, sucettes, volants) : animé chez le client autour de l'axe Z de son pivot
+			CollectionService:AddTag(sub, "DecorSpin")
+		end
+	end
+	local smoke = SMOKE[name]
+	local body = m:FindFirstChild("Body")
+	if smoke and body then
+		local cf, size = m:GetBoundingBox()
+		local a = Instance.new("Attachment")
+		a.Name = "Smoke"
+		a.Parent = body
+		a.WorldCFrame = CFrame.new(Vector3.new(origin.Position.X, cf.Position.Y + size.Y / 2, origin.Position.Z))
+		local color = if typeof(smoke[1]) == "string" then T[smoke[1]] else smoke[1]
+		local e = emitter(a, color, smoke[2] * s, smoke[3], smoke[4] * s, smoke[5])
+		if smoke[6] then
+			e.SpreadAngle = Vector2.new(180, 180)
+		end
+	end
+	local glow = m:FindFirstChild("Glow")
+	if LIT[name] and glow then
+		local light = Instance.new("PointLight")
+		light.Color = (glow :: BasePart).Color
+		light.Range = 12 * s
+		light.Brightness = 0.9
+		light.Shadows = false
+		light.Parent = glow
+	end
 	m.Parent = parent
-	build(kit(m, origin, s), T, rng)
 end
 
 -- MURS, RAILS, PILIERS -----------------------------------------------------------------------------
@@ -536,7 +211,7 @@ local function wallSpan(parent: Instance, T: any, side: number, z0: number, z1: 
 	local len = z1 - z0
 	local zc = M.FrontZ + (z0 + z1) / 2
 	local W = Themes.Wall
-	local wall = base(nil, Vector3.new(W.Thickness, H, len), CFrame.new(x, 0, zc), T.Wall, parent)
+	local wall = base(Vector3.new(W.Thickness, H, len), CFrame.new(x, 0, zc), T.Wall, parent)
 	wall.Name = "Wall"
 	wall.Transparency = transparency
 	for _, t in ipairs(wall:GetChildren()) do
@@ -555,41 +230,43 @@ local function wallSpan(parent: Instance, T: any, side: number, z0: number, z1: 
 	end
 	-- délimitations : rail du haut et rail du bas, avec un filet lumineux
 	for _, top in ipairs({ 1, -1 }) do
-		local r = base(nil, Vector3.new(rail * 1.3, rail, len), CFrame.new(x, top * (H / 2 + rail / 2), zc), T.Trim, parent)
+		local r = base(Vector3.new(rail * 1.3, rail, len), CFrame.new(x, top * (H / 2 + rail / 2), zc), T.Trim, parent)
 		r.Name = "Rail"
-		local line = base(nil, Vector3.new(rail * 1.3 + 0.2, 0.35, len), CFrame.new(x, top * (H / 2 - 0.4), zc), T.Accent, parent)
+		local line = base(Vector3.new(rail * 1.3 + 0.2, 0.35, len), CFrame.new(x, top * (H / 2 - 0.4), zc), T.Accent, parent)
 		line.Name = "RailLine"
 		line.Material = Enum.Material.Neon
 	end
 end
 
-local function post(parent: Instance, T: any, side: number, z: number, H: number, rail: number, w: number)
-	local x = side * M.CorridorWidth / 2
-	local zc = M.FrontZ + z
-	local full = H + rail * 2
+-- Pilier : fût à huit pans étiré du bas (y0) au haut (y1), chapiteau à griffes en haut, le même retourné en
+-- bas, et une lanterne accrochée côté couloir (elle remplace les anciennes bouées)
+local function pillar(parent: Instance, T: any, x: number, zc: number, y0: number, y1: number, w: number, name: string, tip: boolean): Model
 	local m = Instance.new("Model")
-	m.Name = "Post"
+	m.Name = name
+	local k = w / 4 -- les pièces sont modelées pour un pilier de 4 de large
+	local h = y1 - y0
+	stretched(m, "PostShaft", CFrame.new(x, (y0 + y1) / 2, zc), Vector3.new(k, h / 10, k), T, false, SIDES)
+	local top = piece(m, "PostCap", CFrame.new(x, y1, zc), k, T, "Dark")
+	local bottom = piece(m, "PostCap", CFrame.new(x, y0, zc) * FLIP_DOWN, k, T, "Dark")
+	bottom.Glow:Destroy()
+	if not tip then
+		top.Glow:Destroy()
+	end
+	local side = if x > 0 then 1 else -1
+	local lampAt = Vector3.new(x - side * w * 0.48, (y0 + y1) / 2 + h * 0.12, zc)
+	piece(m, "PostLamp", facing(lampAt, Vector3.new(-side, 0, 0)), k, T)
 	m.Parent = parent
-	base(nil, Vector3.new(w, full, w), CFrame.new(x, 0, zc), T.Trim, m)
-	for _, top in ipairs({ 1, -1 }) do
-		base(nil, Vector3.new(w * 1.5, rail * 1.2, w * 1.5), CFrame.new(x, top * (full / 2 + rail * 0.6), zc), T.Dark, m)
-	end
-	-- lanterne au milieu du pilier (elle remplace les anciennes bouées) et pointe lumineuse au sommet
-	local lamp = base(Enum.PartType.Ball, Vector3.one * w * 0.95, CFrame.new(x - side * w * 0.45, 0, zc), T.Accent, m)
-	lamp.Material = Enum.Material.Neon
-	for _, t in ipairs(lamp:GetChildren()) do
-		t:Destroy()
-	end
-	local tip = base(Enum.PartType.Ball, Vector3.one * w * 0.7, CFrame.new(x, full / 2 + rail * 1.2 + w * 0.35, zc), T.Accent, m)
-	tip.Material = Enum.Material.Neon
-	for _, t in ipairs(tip:GetChildren()) do
-		t:Destroy()
-	end
+	return m
+end
+
+local function post(parent: Instance, T: any, side: number, z: number, H: number, rail: number, w: number)
+	local full = H + rail * 2
+	pillar(parent, T, side * M.CorridorWidth / 2, M.FrontZ + z, -full / 2, full / 2, w, "Post", true)
 end
 
 -- PORTAIL D'ENTRÉE D'UN BIOME --------------------------------------------------------------------------
--- Deux tours de part et d'autre du couloir, une arche par-dessus et l'emblème du biome au sommet.
-local function gate(parent: Instance, T: any, z: number, H: number, rail: number, w: number, rise: number, scale: number, rng: Random)
+-- Deux tours de part et d'autre du couloir, une arche de claveaux par-dessus et l'emblème du biome au sommet.
+local function gate(parent: Instance, T: any, z: number, H: number, rail: number, w: number, rise: number, scale: number)
 	local m = Instance.new("Model")
 	m.Name = "Gate"
 	m.Parent = parent
@@ -597,43 +274,31 @@ local function gate(parent: Instance, T: any, z: number, H: number, rail: number
 	local zc = M.FrontZ + z
 	local tw = w * 2
 	local topY = H / 2 + rail + 6 * scale
+	local capH = 4.3 * tw / 4 -- hauteur du chapiteau sans sa pointe
 	for _, side in ipairs({ -1, 1 }) do
 		local x = side * half
-		base(nil, Vector3.new(tw, H / 2 + topY, tw), CFrame.new(x, (topY - H / 2) / 2, zc), T.Trim, m)
-		base(nil, Vector3.new(tw * 1.35, rail * 1.5, tw * 1.35), CFrame.new(x, topY + rail * 0.75, zc), T.Dark, m)
-		base(nil, Vector3.new(tw * 1.35, rail * 1.5, tw * 1.35), CFrame.new(x, -H / 2 - rail * 0.75, zc), T.Dark, m)
-		-- bandes de couleur sur la tour
-		for i = 1, 3 do
-			local band = base(nil, Vector3.new(tw + 0.3, 0.6, tw + 0.3), CFrame.new(x, -H / 2 + (H / 2 + topY) * i / 4, zc), T.Accent, m)
-			band.Material = Enum.Material.Neon
-		end
+		pillar(m, T, x, zc, -H / 2 - rail, topY, tw, "Tower", false)
 		-- décor du biome au sommet de chaque tour, tourné vers le couloir
-		local face = CFrame.lookAt(Vector3.new(x, topY + rail * 1.5, zc), Vector3.new(0, topY + rail * 1.5, zc))
-		prop(m, T.Props[2] or T.Props[1], face, scale * 0.9, T, rng)
+		prop(m, T.Props[2] or T.Props[1], facing(Vector3.new(x, topY + capH, zc), Vector3.new(-side, 0, 0)), scale * 0.9, T)
 	end
-	-- arche : une demi-ellipse de tour à tour
+	-- arche : une demi-ellipse de tour à tour, en claveaux qui alternent les deux teintes du biome
 	local th = tw * 0.7
 	local segments = 16
 	local function point(i: number): Vector3
 		local a = i / segments * math.pi
-		return Vector3.new(-math.cos(a) * half, topY + math.sin(a) * rise, zc)
+		return Vector3.new(-math.cos(a) * half, topY + capH * 0.5 + math.sin(a) * rise, zc)
 	end
+	local arch = Instance.new("Model")
+	arch.Name = "Arch"
 	for i = 0, segments - 1 do
 		local a, b = point(i), point(i + 1)
-		local mid = (a + b) / 2
-		local seg = base(nil, Vector3.new(th * 1.2, th, (b - a).Magnitude + 0.6), CFrame.lookAt(mid, b), if i % 2 == 0 then T.Trim else T.Dark, m)
-		seg.Name = "Arch"
-		if i % 4 == 1 then
-			local gem = base(Enum.PartType.Ball, Vector3.one * th * 0.7, CFrame.new(mid - Vector3.new(0, th * 0.6, 0)), T.Accent, m)
-			gem.Material = Enum.Material.Neon
-			for _, t in ipairs(gem:GetChildren()) do
-				t:Destroy()
-			end
-		end
+		local len = (b - a).Magnitude + 0.6
+		stretched(arch, "ArchBlock", CFrame.lookAt((a + b) / 2, b), Vector3.new(th * 1.2 / 4, th / 3.4, len / 12), T, i % 2 == 1, nil, i % 2 == 1)
 	end
+	arch.Parent = m
 	-- emblème : le grand décor du biome, debout sur le sommet de l'arche, tourné vers ceux qui arrivent
-	local apex = Vector3.new(0, topY + rise + th / 2, zc)
-	prop(m, T.Props[1], CFrame.lookAt(apex, apex - Vector3.zAxis), scale * 1.9, T, rng)
+	local apex = Vector3.new(0, topY + capH * 0.5 + rise + th / 2, zc)
+	prop(m, T.Props[1], facing(apex, -Vector3.zAxis), scale * 1.9, T)
 end
 
 -- CONSTRUCTION -----------------------------------------------------------------------------------------
@@ -680,7 +345,7 @@ function CorridorDecor.Build(corridor: Instance)
 			end
 		end
 		if i > 1 then
-			gate(propsFolder, T, zone.from, H, rail, w, Themes.Lerp(W.Gate, i, n), scale, rng)
+			gate(propsFolder, T, zone.from, H, rail, w, Themes.Lerp(W.Gate, i, n), scale)
 		end
 		-- décors : en alternance sur le haut du mur et sur une petite île qui flotte juste derrière
 		local every = Themes.Lerp(W.PropEvery, i, n)
@@ -691,24 +356,16 @@ function CorridorDecor.Build(corridor: Instance)
 				local name = T.Props[rng:NextInteger(1, #T.Props)]
 				local sc = scale * rng:NextNumber(0.85, 1.2)
 				local zc = M.FrontZ + z
+				local inward = Vector3.new(-side, 0, 0)
 				if (c + (if side > 0 then 1 else 0)) % 2 == 0 then
 					-- sur le haut du mur
-					local at = Vector3.new(side * half, H / 2 + rail, zc)
-					prop(propsFolder, name, CFrame.lookAt(at, Vector3.new(0, at.Y, zc)), sc, T, rng)
+					prop(propsFolder, name, facing(Vector3.new(side * half, H / 2 + rail, zc), inward), sc, T)
 				else
 					-- île flottante derrière le mur, à une hauteur au hasard
-					local x = side * (half + rng:NextNumber(9, 20) * scale)
-					local y = rng:NextNumber(-H * 0.45, H * 0.3)
-					local at = Vector3.new(x, y, zc)
-					local origin = CFrame.lookAt(at, Vector3.new(0, y, zc))
-					local island = Instance.new("Model")
-					island.Name = "Island"
-					island.Parent = propsFolder
-					local k = kit(island, origin, sc)
-					k.cyl(12, 1.6, 0, -0.8, 0, T.Trim)
-					k.cyl(8.5, 2, 0, -2.6, 0, T.Dark)
-					k.cyl(4.5, 2, 0, -4.6, 0, T.Dark)
-					prop(island, name, origin, sc, T, rng)
+					local at = Vector3.new(side * (half + rng:NextNumber(9, 20) * scale), rng:NextNumber(-H * 0.45, H * 0.3), zc)
+					local origin = facing(at, inward) * CFrame.Angles(0, rng:NextNumber(-0.5, 0.5), 0)
+					local island = piece(propsFolder, "Island", origin * CFrame.Angles(0, rng:NextNumber(0, 6), 0), sc, T, "Trim")
+					prop(island, name, origin, sc, T)
 				end
 			end
 		end
