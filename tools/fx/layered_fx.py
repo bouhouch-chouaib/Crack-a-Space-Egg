@@ -475,6 +475,44 @@ def fx_thrust(t, i):
     return bands(d, rim=0.0, mid=0.3, core=0.74, glow_sigma=0.04)
 
 
+# Rugissement du monstre -------------------------------------------------------------------------
+
+
+def fx_roar(t, i):
+    """rugissement : trois ondes en dents de scie qui partent l'une après l'autre, lignes de vitesse
+    et éclats au centre (une seule fois)"""
+    d = np.zeros_like(X)
+    for n, start in enumerate((0.0, 0.16, 0.32)):
+        p = (t - start) / 0.68
+        if p <= 0 or p >= 1:
+            continue
+        e = 1 - (1 - p) ** 2
+        r = 0.12 + 0.78 * e
+        teeth = 22 + n * 4
+        saw = np.abs(((ANG / TAU * teeth + n * 0.3) % 1) - 0.5) * 2  # 0..1 en triangle
+        rr = r + (saw - 0.5) * 0.07 * (1 - p * 0.5)
+        th = 0.055 * (1 - p) ** 0.8 + 0.008
+        d = np.maximum(d, np.clip(1 - np.abs(RAD - rr) / th, 0, 1) * (1 - ss(0.75, 1, p)))
+    # lignes de vitesse qui partent du centre
+    if t < 0.7:
+        k = ss(0.0, 0.1, t) * (1 - ss(0.4, 0.7, t))
+        rng = np.random.default_rng(55)
+        for n in range(18):
+            a = TAU * n / 18 + rng.uniform(-0.12, 0.12)
+            L0 = 0.25 + 0.5 * t
+            L1 = min(0.97, L0 + rng.uniform(0.15, 0.3))
+            ca, sa = math.cos(a), math.sin(a)
+            along = X * ca + Y * sa
+            across = np.abs(-X * sa + Y * ca)
+            s = (along - L0) / (L1 - L0)
+            w = 0.02 * np.clip(1 - np.abs(s - 0.5) * 2, 0, 1)
+            d = np.maximum(d, np.clip(1 - across / np.maximum(w, 1e-4), 0, 1) * (s >= 0) * (s <= 1) * k)
+    # éclair au centre (la gueule)
+    if t < 0.35:
+        d = np.maximum(d, np.clip(1 - RAD / (0.28 * math.sin(math.pi * t / 0.35) + 1e-4), 0, 1) ** 0.5)
+    return bands(d, rim=0.05, mid=0.35, core=0.7, glow_sigma=0.035)
+
+
 # Bonus x2 XP ------------------------------------------------------------------------------------
 
 
@@ -698,6 +736,7 @@ EFFECTS = {
     "Thrust": fx_thrust,
     "Bite": fx_bite,
     "PowerUp": fx_powerup,
+    "Roar": fx_roar,
 }
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
@@ -721,6 +760,7 @@ PREVIEW = {
     "Thrust": ((255, 90, 20), (255, 200, 70)),
     "Bite": ((200, 40, 255), (255, 170, 240)),
     "PowerUp": ((170, 70, 255), (235, 190, 255)),
+    "Roar": ((255, 70, 40), (255, 190, 150)),
     "HatchRing": ((170, 90, 255), (225, 200, 255)),
     "Converge": ((255, 70, 160), (255, 200, 230)),
 }

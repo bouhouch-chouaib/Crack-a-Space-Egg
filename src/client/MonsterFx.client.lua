@@ -1,7 +1,8 @@
 -- Monstres des anneaux 3 à 14, côté joueur (MonsterService décide, ce script montre) :
 -- - un monstre par anneau, toujours là (dossier dans Workspace.World.Monsters) : il se promène dans le
 --   couloir de son anneau (State = Patrol : position calculée ici par Config.MonsterPatrol, comme sur
---   le serveur) ; quand un joueur vole un œuf, il rugit et fonce sur lui (Chase : position publiée
+--   le serveur) ; quand un joueur vole un œuf, il rugit (ondes en dents de scie en 4 calques,
+--   LayeredFx « Roar ») et fonce sur lui (Chase : position publiée
 --   par le serveur), puis retourne se promener (Return). Trop loin de la caméra, il n'est pas affiché ;
 -- - traînée, braises et yeux qui brillent ; il heurte les astéroïdes sur son passage ; arrivé à la
 --   base du joueur, un dôme s'allume, il s'y écrase puis repart ;
@@ -313,6 +314,23 @@ local function worldBite(at: Vector3, color: Color3, size: number)
 	Debris:AddItem(a, 1.2)
 end
 
+-- Rugissement dans le monde (effet en 4 calques « Roar ») : ondes en dents de scie de la couleur du monstre
+local function roar(at: Vector3, color: Color3, size: number)
+	local a = Instance.new("Attachment")
+	a.WorldPosition = at
+	a.Parent = workspace.Terrain
+	local h, s = color:ToHSV()
+	local fx = LayeredFx.new(a, {
+		kind = "Roar",
+		size = size,
+		colors = { Color3.fromHSV(h, math.max(s, 0.75), 1), Color3.fromHSV(h, s * 0.35, 1) },
+		lifetime = 0.85,
+		zOffset = size * 0.3,
+	})
+	fx:Emit(math.random(0, 359))
+	Debris:AddItem(a, 1.1)
+end
+
 local STUDS = "rbxassetid://99589690361139"
 
 -- Dôme de protection sur la base du joueur : le monstre s'y écrase
@@ -546,7 +564,7 @@ function onState(f: Instance)
 		v.startDist = nil
 		v.lungeAt = nil
 		if near and kind then
-			shockwave(v.shown, kind.Color, v.size * 2.4)
+			roar(v.shown, kind.Color, v.size * 2.6)
 		end
 		Sfx.Play("MonsterRoar", { at = v.shown, pitch = math.clamp(1.35 - 0.045 * v.ring, 0.7, 1.3) })
 		if v.mine then
@@ -588,6 +606,9 @@ function onState(f: Instance)
 				dome(floor, if typeof(trim) == "Color3" then trim else Color3.fromRGB(110, 210, 255))
 			end
 			Sfx.Play("MonsterRoar", { at = v.shown, pitch = 0.75 })
+			if near and kind then
+				roar(v.shown, kind.Color, v.size * 2.2) -- rugit de rage contre le dôme
+			end
 			if wasMine then
 				Sfx.Play("Escape")
 				shake(0.8, 0.5)
