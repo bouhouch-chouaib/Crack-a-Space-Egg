@@ -1,6 +1,7 @@
 -- Apparence d'une créature mutée (Config.Mutations) : tout son corps prend la matière et la couleur de la
 -- mutation (argent, or, émeraude, rubis), comme les « golden pets » des jeux de créatures : on la reconnaît
--- de loin, sans lire. Les pièces lumineuses (yeux, cristaux) gardent leur lueur.
+-- de loin, sans lire. Les pièces lumineuses (yeux, cristaux) gardent leur lueur. Une mutation peut avoir
+-- deux tons (Dark) : ses membres sont alors plus sombres que le corps, pour qu'on lise encore les formes.
 -- Rainbow : chaque pièce a sa teinte de départ, et MutationFx.client fait défiler les couleurs.
 -- Effets de lumière (Mutation.Effects, créature posée dans la base) : une lumière de sa couleur qui
 -- pulse, des étincelles et des éclats en étoile qui passent sur elle.
@@ -18,6 +19,17 @@ Mutation.LightTag = "MutationLight" -- lumières qui pulsent (MutationFx.client)
 local SPARKLE = "rbxassetid://138922153683020" -- étincelle (comme HatchFx)
 local STAR = "rbxassetid://102151511950781" -- étoile à quatre branches (Icons.Star)
 local kp = NumberSequenceKeypoint.new
+-- Membres d'une créature (début du nom de la pièce) : ils prennent la teinte sombre d'une mutation à deux tons
+local LIMBS = { "Arm", "Ear", "Fin", "Jaw", "Leg", "Tail", "Tentacles", "Wing" }
+
+local function isLimb(name: string): boolean
+	for _, prefix in ipairs(LIMBS) do
+		if string.sub(name, 1, #prefix) == prefix then
+			return true
+		end
+	end
+	return false
+end
 
 -- Couleur d'une pièce arc-en-ciel à l'instant t (hue : décalage de la pièce, 0 à 1)
 function Mutation.RainbowColor(hue: number, t: number): Color3
@@ -41,7 +53,8 @@ function Mutation.Apply(model: Model, key: string?)
 			if d:IsA("MeshPart") then
 				d.TextureID = ""
 			end
-			d.Material = if mut.Metal then Enum.Material.Metal else Enum.Material.SmoothPlastic
+			local limb = mut.Dark ~= nil and isLimb(d.Name)
+			d.Material = if limb or mut.Metal then Enum.Material.Metal elseif mut.Material then (Enum.Material :: any)[mut.Material] else Enum.Material.SmoothPlastic
 			d.Reflectance = mut.Reflect or 0
 			if mut.Rainbow then
 				n += 1
@@ -50,7 +63,7 @@ function Mutation.Apply(model: Model, key: string?)
 				d.Color = Mutation.RainbowColor(hue, 0)
 				CollectionService:AddTag(d, Mutation.RainbowTag)
 			else
-				d.Color = mut.Color
+				d.Color = if limb then mut.Dark else mut.Color
 			end
 		end
 	end

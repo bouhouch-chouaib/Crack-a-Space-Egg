@@ -93,7 +93,8 @@ Config.Map = {
 -- d'astéroïdes gardés) et le poursuit jusqu'à la ligne rouge de la cour (29 nov.) ; il ne la passe pas :
 -- il s'écrase contre la barrière qui s'allume en travers de la sortie et retourne dans son anneau.
 -- Need = vitesse du jetpack (Speed, l'XP totale du jetpack) qu'il faut pour le semer (18 nov.) :
--- avec assez de Speed, il va un peu moins vite que le joueur (Speed du monstre) ; en dessous, il
+-- avec assez de Speed, il va un peu moins vite que le joueur (Speed du monstre : 0,82 à 0,98 depuis le
+-- 29 nov., pour plus de pression ; 0,6 à 0,95 avant) ; en dessous, il
 -- va d'autant plus vite que le joueur en manque (jusqu'à MaxFactor fois la vitesse du joueur).
 -- S'il l'attrape : le joueur est projeté au loin et sa roche retombe sur l'astéroïde le plus proche ;
 -- il a DropTime secondes pour aller la reprendre, sinon elle s'enfonce dans l'astéroïde (œuf perdu).
@@ -101,24 +102,24 @@ Config.Monsters = {
 	Kinds = {
 		-- les deux premiers apprennent la poursuite sans faire mal, dès le premier œuf : petits, lents
 		-- (Need = 0 : toujours semable)
-		[1] = { Name = "Dust Skitter", Model = "DustSkitter", Speed = 0.6, Size = 9, Need = 0, Color = Color3.fromRGB(255, 200, 90), Move = "Walk", Foot = 0.27 },
-		[2] = { Name = "Frost Slink", Model = "FrostSlink", Speed = 0.75, Size = 12, Need = 4e3, Color = Color3.fromRGB(120, 230, 255), Move = "Crawl" },
-		[3] = { Name = "Cinder Maw", Model = "CinderMaw", Speed = 0.85, Size = 16, Need = 50e3, Color = Color3.fromRGB(255, 120, 40), Move = "Crawl" },
-		[4] = { Name = "Nebula Stalker", Model = "NebulaStalker", Speed = 0.85, Size = 20, Need = 500e3, Color = Color3.fromRGB(190, 110, 255), Move = "Float" },
-		[5] = { Name = "Devourer", Model = "Devourer", Speed = 0.85, Size = 26, Need = 7e6, Color = Color3.fromRGB(150, 255, 90), Move = "Crawl" },
-		[6] = { Name = "Rift Watcher", Model = "Watcher", Speed = 0.9, Size = 30, Need = 100e6, Color = Color3.fromRGB(90, 230, 255), Move = "Float" },
-		[7] = { Name = "Nest Queen", Model = "Queen", Speed = 0.9, Size = 34, Need = 1.5e9, Color = Color3.fromRGB(255, 170, 60), Move = "Float" },
-		[8] = { Name = "Abyss Angler", Model = "AbyssAngler", Speed = 0.9, Size = 38, Need = 8e9, Color = Color3.fromRGB(60, 230, 210), Move = "Float" },
-		[9] = { Name = "Storm Hydra", Model = "StormHydra", Speed = 0.9, Size = 42, Need = 70e9, Color = Color3.fromRGB(255, 230, 90), Move = "Walk", Foot = 0.4 },
-		[10] = { Name = "Gear Spider", Model = "GearSpider", Speed = 0.92, Size = 46, Need = 700e9, Color = Color3.fromRGB(240, 170, 80), Move = "Walk", Foot = 0.45 },
-		[11] = { Name = "Sour Worm", Model = "SourWorm", Speed = 0.92, Size = 50, Need = 9e12, Color = Color3.fromRGB(255, 110, 190), Move = "Crawl" },
-		[12] = { Name = "Spore Behemoth", Model = "SporeBehemoth", Speed = 0.92, Size = 54, Need = 150e12, Color = Color3.fromRGB(110, 240, 210), Move = "Walk", Foot = 0.5 },
-		[13] = { Name = "Temple Colossus", Model = "TempleColossus", Speed = 0.95, Size = 58, Need = 3.5e15, Color = Color3.fromRGB(255, 200, 80), Move = "Walk", Foot = 0.5 },
-		[14] = { Name = "Phantom King", Model = "PhantomKing", Speed = 0.95, Size = 64, Need = 40e15, Color = Color3.fromRGB(120, 240, 220), Move = "Float" },
+		[1] = { Name = "Dust Skitter", Model = "DustSkitter", Speed = 0.82, Size = 9, Need = 0, Color = Color3.fromRGB(255, 200, 90), Move = "Walk", Foot = 0.27 },
+		[2] = { Name = "Frost Slink", Model = "FrostSlink", Speed = 0.88, Size = 12, Need = 4e3, Color = Color3.fromRGB(120, 230, 255), Move = "Crawl" },
+		[3] = { Name = "Cinder Maw", Model = "CinderMaw", Speed = 0.92, Size = 16, Need = 50e3, Color = Color3.fromRGB(255, 120, 40), Move = "Crawl" },
+		[4] = { Name = "Nebula Stalker", Model = "NebulaStalker", Speed = 0.92, Size = 20, Need = 500e3, Color = Color3.fromRGB(190, 110, 255), Move = "Float" },
+		[5] = { Name = "Devourer", Model = "Devourer", Speed = 0.92, Size = 26, Need = 7e6, Color = Color3.fromRGB(150, 255, 90), Move = "Crawl" },
+		[6] = { Name = "Rift Watcher", Model = "Watcher", Speed = 0.95, Size = 30, Need = 100e6, Color = Color3.fromRGB(90, 230, 255), Move = "Float" },
+		[7] = { Name = "Nest Queen", Model = "Queen", Speed = 0.95, Size = 34, Need = 1.5e9, Color = Color3.fromRGB(255, 170, 60), Move = "Float" },
+		[8] = { Name = "Abyss Angler", Model = "AbyssAngler", Speed = 0.95, Size = 38, Need = 8e9, Color = Color3.fromRGB(60, 230, 210), Move = "Float" },
+		[9] = { Name = "Storm Hydra", Model = "StormHydra", Speed = 0.95, Size = 42, Need = 70e9, Color = Color3.fromRGB(255, 230, 90), Move = "Walk", Foot = 0.4 },
+		[10] = { Name = "Gear Spider", Model = "GearSpider", Speed = 0.96, Size = 46, Need = 700e9, Color = Color3.fromRGB(240, 170, 80), Move = "Walk", Foot = 0.45 },
+		[11] = { Name = "Sour Worm", Model = "SourWorm", Speed = 0.96, Size = 50, Need = 9e12, Color = Color3.fromRGB(255, 110, 190), Move = "Crawl" },
+		[12] = { Name = "Spore Behemoth", Model = "SporeBehemoth", Speed = 0.96, Size = 54, Need = 150e12, Color = Color3.fromRGB(110, 240, 210), Move = "Walk", Foot = 0.5 },
+		[13] = { Name = "Temple Colossus", Model = "TempleColossus", Speed = 0.98, Size = 58, Need = 3.5e15, Color = Color3.fromRGB(255, 200, 80), Move = "Walk", Foot = 0.5 },
+		[14] = { Name = "Phantom King", Model = "PhantomKing", Speed = 0.98, Size = 64, Need = 40e15, Color = Color3.fromRGB(120, 240, 220), Move = "Float" },
 	},
 	-- Vitesse du monstre quand le joueur manque de Speed : Speed du monstre + (MaxFactor - Speed) × part,
 	-- part = log10(Need / Speed du joueur) / Decades (1 dès qu'il lui manque Decades puissances de 10)
-	MaxFactor = 1.6,
+	MaxFactor = 1.75,
 	Decades = 2,
 	-- Alarme du joueur pris en chasse : Count coups de klaxon, un toutes les Gap secondes, chacun coupé net
 	-- au bout de Length secondes (la note enregistrée dure 0,8 s)
@@ -157,9 +158,9 @@ Config.Monsters = {
 	ReturnSpeed = 90, -- studs/s pour retourner dans son anneau
 	ReturnTime = 20, -- secondes au plus pour y retourner, puis il reprend sa promenade où elle en est
 	LungeDistance = 22, -- studs (en plus de son rayon) : il bondit en claquant des mâchoires (effet seul)
-	Emerge = 1.4, -- secondes où il se tourne vers le voleur et rugit avant de foncer (on a le temps de fuir)
+	Emerge = 1.1, -- secondes où il se tourne vers le voleur et rugit avant de foncer (on a le temps de fuir)
 	CatchRadius = 6, -- en plus de son rayon
-	MinSpeed = 18, -- studs/s au minimum dans l'espace (sinon vitesse en vol du joueur × Speed) ;
+	MinSpeed = 24, -- studs/s au minimum dans l'espace (sinon vitesse en vol du joueur × Speed) ;
 	-- sur le vaisseau : vitesse à pied du joueur × Speed
 	Cooldown = 12, -- secondes de répit après une poursuite
 	StunGap = 4, -- secondes après un coup de batte où le monstre ne peut plus être assommé
@@ -1974,12 +1975,15 @@ end
 -- et rapporte Mult fois plus. Une seule mutation par créature ; elle se cumule avec la taille et le stade
 -- de fusion. Chance = probabilité de base ; la chance du joueur (scanner, potion, Index, groupe) et
 -- l'amélioration « Mutation Ray » de la machine les multiplient toutes, sans dépasser MutationMax au total.
--- Metal = vrai : matière métal ; Reflect : reflet (0 à 1) ; Rainbow : couleurs qui défilent.
+-- Metal = vrai : matière métal (ou Material = nom d'une matière) ; Reflect : reflet (0 à 1) ; Dark : couleur
+-- des membres (pattes, bras, oreilles, queue, ailes...), en métal ; Rainbow : couleurs qui défilent.
 Config.Mutations = {
 	-- Glow = lumière autour de la créature (luminosité), Sparkles = étincelles par seconde, Shine = éclats en
 	-- étoile qui passent sur elle (par seconde) ; la lumière pulse doucement (MutationFx.client).
-	-- Silver (25 nov.) : argent nacré et brillant (plus de métal gris terne), avec sa lumière blanc-bleu.
-	{ Key = "Silver", Name = "Silver", Chance = 0.12, Mult = 1.5, Color = Color3.fromRGB(228, 236, 250), Reflect = 0.42, Glow = 1.4, GlowColor = Color3.fromRGB(190, 225, 255), Sparkles = 9, Shine = 1.2 },
+	-- Silver (29 nov.) : feuille d'argent froissée sur le corps et la tête, acier plus sombre sur les membres
+	-- (Material, Dark). Le blanc nacré uni d'avant, avec son fort reflet du ciel noir, faisait croire à un
+	-- modèle sans texture, à moitié transparent : plus de reflet, et deux tons pour qu'on lise les formes.
+	{ Key = "Silver", Name = "Silver", Chance = 0.12, Mult = 1.5, Color = Color3.fromRGB(212, 218, 230), Material = "Foil", Dark = Color3.fromRGB(128, 138, 162), Reflect = 0, Glow = 1.4, GlowColor = Color3.fromRGB(190, 225, 255), Sparkles = 9, Shine = 1.2 },
 	{ Key = "Gold", Name = "Gold", Chance = 0.04, Mult = 3, Color = Color3.fromRGB(255, 196, 40), Metal = true, Reflect = 0.3, Glow = 1.6, Sparkles = 10, Shine = 1.4 },
 	{ Key = "Emerald", Name = "Emerald", Chance = 0.02, Mult = 5, Color = Color3.fromRGB(50, 215, 120), Reflect = 0.35, Glow = 1.8, Sparkles = 12, Shine = 1.6 },
 	{ Key = "Ruby", Name = "Ruby", Chance = 0.01, Mult = 10, Color = Color3.fromRGB(235, 45, 80), Reflect = 0.35, Glow = 2.1, Sparkles = 14, Shine = 1.8 },
