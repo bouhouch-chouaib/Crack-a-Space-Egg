@@ -9,8 +9,9 @@
 -- - pour le joueur poursuivi : pas de texte (20 nov. : le bandeau au nom du monstre est retiré), flèche
 --   lumineuse jusqu'à sa base, bord rouge et battements
 --   de cœur qui montent quand il approche, lignes de vitesse et champ de vision élargi, bonds en
---   claquant des mâchoires quand il est tout près, icône de danger au bord de l'écran de son côté,
---   secousses, sons (deux coups de klaxon d'alarme au départ de la poursuite) ; mâchoires qui se ferment s'il attrape (avec la morsure dessinée en 4 calques,
+--   claquant des mâchoires quand il est tout près, lueur rouge au bord de l'écran de son côté,
+--   secousses, sons (deux coups de klaxon d'alarme au départ de la poursuite, chacun avec un éclair rouge,
+--   des gyrophares aux coins de l'écran et une lumière rouge sur le joueur) ; mâchoires qui se ferment s'il attrape (avec la morsure dessinée en 4 calques,
 --   LayeredFx « Bite », aussi visible dans le monde par les joueurs autour), puis, s'il manquait de Speed, un petit
 --   encadré « [jetpack] Need 50K Speed » pendant quelques secondes ;
 -- - roche tombée sur un astéroïde après une prise (World.LostRocks) : collée à l'astéroïde qui
@@ -118,8 +119,26 @@ local function showNeed(need: number)
 	end)
 end
 
--- éclair de la couleur du monstre à son réveil
-local flash = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8, Parent = gui })
+-- signaux rouges de l'alarme (29 nov.) : un éclair rouge sur tout l'écran et quatre lueurs de gyrophare aux
+-- coins, rallumés à chaque coup de klaxon ; le bord rouge de l'écran et une lumière rouge sur le joueur suivent
+local RED = Color3.fromRGB(255, 40, 40)
+local flash = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundColor3 = RED, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8, Parent = gui })
+local beacons: { ImageLabel } = {}
+for _, corner in ipairs({ Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) }) do
+	table.insert(beacons, new("ImageLabel", {
+		Name = "Beacon",
+		Image = UIKit.Art.FxGlow,
+		ImageColor3 = RED,
+		ImageTransparency = 1,
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(corner.X, corner.Y),
+		Size = UDim2.fromScale(0.9, 1.4),
+		ZIndex = 7,
+		Parent = gui,
+	}))
+end
+local alarmAt = 0 -- dernier coup d'alarme : le bord rouge de l'écran bat avec lui
 
 -- lignes de vitesse : elles filent vers les bords quand il se rapproche
 local lines = new("Frame", { Name = "SpeedLines", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 2, Parent = gui })
@@ -368,12 +387,15 @@ local function dome(floor: BasePart, color: Color3)
 	Debris:AddItem(d, 2.6)
 end
 
+-- Lueur rouge au bord de l'écran, du côté du monstre quand on ne le voit pas (29 nov. : elle remplace le
+-- panneau d'avertissement)
 local arrow = new("ImageLabel", {
-	Name = "Arrow",
-	Image = UIKit.Art.Warning, -- icône de danger au bord de l'écran, du côté du monstre
+	Name = "MonsterSide",
+	Image = UIKit.Art.FxGlow,
+	ImageColor3 = RED,
 	BackgroundTransparency = 1,
 	AnchorPoint = Vector2.new(0.5, 0.5),
-	Size = UDim2.fromOffset(76, 76),
+	Size = UDim2.fromOffset(260, 260),
 	Visible = false,
 	Parent = gui,
 })
@@ -420,11 +442,39 @@ local function shake(amount: number, duration: number)
 	end)
 end
 
--- Alarme du joueur pris en chasse : deux coups de klaxon coup sur coup (« Wang ! Wang ! »), à l'écran
+-- Un coup de signal rouge : éclair, gyrophares aux quatre coins, bord de l'écran, lumière rouge sur le joueur
+local function redPulse()
+	alarmAt = os.clock()
+	flash.BackgroundColor3 = RED
+	flash.BackgroundTransparency = 0.5
+	TweenService:Create(flash, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+	for _, b in ipairs(beacons) do
+		b.ImageTransparency = 0.1
+		b.Size = UDim2.fromScale(0.6, 0.95)
+		TweenService:Create(b, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { ImageTransparency = 1, Size = UDim2.fromScale(1.1, 1.7) }):Play()
+	end
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		local light = Instance.new("PointLight")
+		light.Name = "AlarmLight"
+		light.Color = RED
+		light.Range = 30
+		light.Brightness = 5
+		light.Shadows = false
+		light.Parent = hrp
+		TweenService:Create(light, TweenInfo.new(0.4), { Brightness = 0 }):Play()
+		Debris:AddItem(light, 0.45)
+	end
+end
+
+-- Alarme du joueur pris en chasse : deux coups de klaxon coup sur coup (« Wang ! Wang ! »), à l'écran,
+-- chacun avec son signal rouge
 local function alarm()
 	local A = M.Alarm
 	for i = 0, A.Count - 1 do
 		task.delay(i * A.Gap, function()
+			redPulse()
 			local s = Sfx.Play("ChaseAlarm")
 			if s then
 				-- la note est coupée net, avec un fondu très court pour ne pas claquer
@@ -603,11 +653,6 @@ function onState(f: Instance)
 			shake(0.9, 0.8)
 			gui.Enabled = true
 			needPill.Visible = false
-			if kind then
-				flash.BackgroundColor3 = kind.Color
-				flash.BackgroundTransparency = 0.6
-				TweenService:Create(flash, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
-			end
 			fovPunch = os.clock()
 		end
 	elseif state == "Return" then
@@ -950,7 +995,8 @@ RunService.RenderStepped:Connect(function(dt)
 				end)
 			end
 			vignette.ImageColor3 = Color3.fromRGB(255, 40, 40)
-			vignette.ImageTransparency = 1 - near * (0.55 + 0.25 * math.sin(os.clock() * (6 + 8 * near)))
+			local beat = math.max(0, 1 - (os.clock() - alarmAt) / 0.45) -- le bord rouge bat avec l'alarme
+			vignette.ImageTransparency = 1 - math.max(near * (0.55 + 0.25 * math.sin(os.clock() * (6 + 8 * near))), beat * 0.9)
 			if near > 0.6 and math.random() < dt * 4 then
 				shake(0.25 * near, 0.2)
 			end
@@ -968,8 +1014,9 @@ RunService.RenderStepped:Connect(function(dt)
 				if d2.Magnitude < 1 then
 					d2 = Vector2.new(0, 1)
 				end
-				local edge = center + d2.Unit * (math.min(vp.X, vp.Y) / 2 - 70)
+				local edge = center + d2.Unit * (math.min(vp.X, vp.Y) / 2 - 20)
 				arrow.Position = UDim2.fromOffset(edge.X, edge.Y)
+				arrow.ImageTransparency = 0.25 + 0.3 * math.sin(os.clock() * 9)
 				arrow.Visible = true
 			end
 		end
