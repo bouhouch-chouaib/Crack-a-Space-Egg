@@ -482,10 +482,10 @@ function HatchService.Hatch(player: Player, id: string)
 	local special = if next(d.index) ~= nil then nil
 		elseif (d.guide or 0) < Config.Guide.Steps and item.rarity == Config.Guide.FirstRarity then "wow"
 		else "first"
-	local size = if special then H.FirstSize else Config.RollPetSize(rng)
-	-- mutation : la chance du joueur (scanner, potion, Index, groupe) et le rayon de la machine la favorisent ;
-	-- jamais sur la toute première créature (le tutoriel reste simple)
+	-- mutations (de matière et de taille) : la chance du joueur (scanner, potion, Index, groupe) et le rayon de
+	-- la machine les favorisent ; jamais sur la toute première créature (le tutoriel reste simple)
 	local luck = Config.Luck(d.levels.Scanner) * BoostService.LuckMult(d) * Config.MachineMutation((d.machine or {}).Mutation or 0)
+	local size = if special then H.FirstSize else Config.RollPetSize(rng, luck)
 	item.kind = "pet"
 	item.name = c.Name
 	item.size = math.floor(size * 100 + 0.5) / 100

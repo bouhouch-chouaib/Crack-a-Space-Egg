@@ -41,7 +41,8 @@ Config.Rarities = {
 }
 -- Messages serveur (AnnounceService) : niveau d'une trouvaille selon sa mutation et sa taille (nil = pas
 -- de message). Depuis le 15 nov., l'espèce dépend du type d'astéroïde foré : ce qui est rare, c'est la mutation.
--- 1 Rare : Ruby, ou Emerald Giant ; 2 Épique : Rainbow, ou Ruby Giant ; 3 Légendaire (tous les serveurs) : Rainbow Giant.
+-- 1 Rare : Ruby, ou Emerald Large ; 2 Épique : Rainbow, ou Ruby Large ; 3 Légendaire (tous les serveurs) : Rainbow Large.
+-- giant : la créature a la plus grande mutation de taille (Large depuis le 29 nov., Giant avant).
 function Config.AnnounceLevel(mutation: string?, giant: boolean): number?
 	if mutation == "Rainbow" then
 		return if giant then 3 else 2
@@ -1590,7 +1591,7 @@ Config.Hatch = {
 	-- Zone interdite autour du point d'apparition (rayon en studs) ; la machine est hors de la base
 	KeepOut = { Spawn = 4, PenButton = 3.5 }, -- PenButton : bouton d'agrandissement de l'enclos
 	-- Revenu d'une créature en $/s = SlotIncome[rang dans l'anneau] × RingIncome[anneau] × taille²
-	-- (Config.PetSizes : de ×1 pour une taille normale à ×5,8 pour la plus grosse Giant) × mutation (Config.Mutations)
+	-- (Config.PetSizes : de ×1 pour une taille normale à ×9 pour la plus grosse Large) × mutation (Config.Mutations)
 	-- × stade de fusion. Les 6 créatures d'un anneau se tiennent (×12 entre la 1re et la 6e) : la 6e d'un
 	-- anneau rapporte 3 fois moins que la 1re de l'anneau suivant. Avant le 15 nov., l'écart dans un
 	-- anneau était de ×6 000 et tout reposait sur un tirage.
@@ -1877,20 +1878,25 @@ Config.PetRules = {
 	StandRange = 26, -- studs : il faut être près du stand pour vendre ou fusionner
 }
 
--- TAILLES DES CRÉATURES (8 nov.) -----------------------------------------------------------------
--- Une même créature sort de l'œuf plus ou moins grande : la taille (item.size) multiplie sa hauteur
--- et son revenu ×taille² (plus elle est grande, plus elle rapporte, et nettement). Elle a un nom
--- (« Giant Pebblepup ») et une couleur affichés partout. Chance = probabilité à l'éclosion ;
--- Min / Max = taille tirée dans ce palier.
+-- TAILLES DES CRÉATURES (8 nov., revues le 29 nov.) ----------------------------------------------
+-- La taille (item.size) multiplie la hauteur d'une créature et son revenu x taille² (Config.SizeIncomePower).
+-- Depuis le 29 nov. :
+--   - la taille tirée au hasard est faible : une créature normale fait de x1 à x1,08, juste de quoi ne pas
+--     avoir deux fois la même (avant, les paliers Big / Huge / Giant sortaient une fois sur trois) ;
+--   - deux MUTATIONS DE TAILLE, rares, donnent un très gros bond : Big (environ x1,8) et Large (environ x2,8,
+--     la plus grande). Elles ont leur nom (« Large Pebblepup ») et leur couleur affichés partout, et leur
+--     étiquette à l'éclosion.
+-- Une mutation de taille se cumule avec la mutation de matière (Config.Mutations) : « Gold Large Pebblepup ».
+-- Comme les autres mutations, la chance du joueur (scanner, potion, Index, groupe) et le Mutation Ray de la
+-- machine multiplient leurs chances (Config.SizeChances), sans dépasser SizeMutationMax à elles deux.
+-- Chance = probabilité de base à l'éclosion ; Min / Max = taille tirée dans ce palier.
 Config.PetSizes = {
-	-- (25 nov. : plus de taille Tiny ni de créature sous la taille normale : aucune taille ne fait gagner
-	-- moins que ×1)
-	{ Name = "", Chance = 0.70, Min = 1.0, Max = 1.12, Color = Color3.fromRGB(255, 255, 255) },
-	{ Name = "Big", Chance = 0.20, Min = 1.2, Max = 1.45, Color = Color3.fromRGB(120, 245, 80) },
-	{ Name = "Huge", Chance = 0.08, Min = 1.55, Max = 1.85, Color = Color3.fromRGB(255, 170, 40) },
-	{ Name = "Giant", Chance = 0.02, Min = 2.0, Max = 2.4, Color = Color3.fromRGB(255, 70, 90) },
+	{ Name = "", Chance = 0.90, Min = 1.0, Max = 1.08, Color = Color3.fromRGB(255, 255, 255) },
+	{ Name = "Big", Chance = 0.08, Min = 1.7, Max = 1.9, Color = Color3.fromRGB(120, 245, 80), Mutation = true },
+	{ Name = "Large", Chance = 0.02, Min = 2.6, Max = 3.0, Color = Color3.fromRGB(255, 70, 90), Mutation = true },
 }
 Config.SizeIncomePower = 2
+Config.SizeMutationMax = 0.4
 
 -- Palier d'une taille (la limite entre deux paliers est à mi-chemin ; marche aussi pour les vieilles
 -- sauvegardes et les créatures fusionnées, dont la taille est la moyenne des trois)
@@ -1905,14 +1911,43 @@ function Config.PetSize(size: number?): any
 	return tiers[1]
 end
 
--- Taille tirée à l'éclosion
-function Config.RollPetSize(r: Random): number
+-- Chance de chaque palier de taille (même ordre que Config.PetSizes) avec cette chance du joueur : les
+-- mutations de taille en profitent, la taille normale prend le reste
+function Config.SizeChances(luck: number?): { number }
+	local tiers = Config.PetSizes
+	local total = 0
+	for _, t in ipairs(tiers) do
+		if t.Mutation then
+			total += t.Chance * (luck or 1)
+		end
+	end
+	local k = if total > Config.SizeMutationMax then Config.SizeMutationMax / total else 1
+	local p = {}
+	local rest = 1
+	for i, t in ipairs(tiers) do
+		if t.Mutation then
+			p[i] = t.Chance * (luck or 1) * k
+			rest -= p[i]
+		end
+	end
+	for i, t in ipairs(tiers) do
+		if not t.Mutation then
+			p[i] = rest
+			rest = 0
+		end
+	end
+	return p
+end
+
+-- Taille tirée à l'éclosion (luck : chance du joueur, pour les mutations de taille), les plus rares d'abord
+function Config.RollPetSize(r: Random, luck: number?): number
+	local p = Config.SizeChances(luck)
 	local x = r:NextNumber()
-	local tier = Config.PetSizes[#Config.PetSizes]
-	for _, t in ipairs(Config.PetSizes) do
-		x -= t.Chance
-		if x <= 0 then
-			tier = t
+	local tier = Config.PetSizes[1]
+	for i = #p, 1, -1 do
+		x -= p[i]
+		if x < 0 then
+			tier = Config.PetSizes[i]
 			break
 		end
 	end
@@ -2029,7 +2064,8 @@ end
 -- de taille, cette mutation (ou aucune). C'est le « 1 in X » montré à l'éclosion (HatchFx).
 function Config.HatchOdds(ringIndex: number, rarity: number, rockType: number?, size: number?, mutation: string?, luck: number): number
 	local p = Config.RockChances(ringIndex, rockType)[rarity] or 0
-	p *= Config.PetSize(size).Chance
+	local tier = Config.PetSize(size)
+	p *= Config.SizeChances(luck)[table.find(Config.PetSizes, tier) or 1]
 	local chances = Config.MutationChances(luck)
 	local none = 1
 	local mine: number? = nil

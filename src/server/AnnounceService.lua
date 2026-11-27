@@ -40,7 +40,7 @@ end
 
 -- Créature qui vient d'éclore : le niveau dépend de sa mutation et de sa taille
 function AnnounceService.Creature(player: Player, item)
-	local level = Config.AnnounceLevel(item.mut, Config.PetSize(item.size).Name == "Giant")
+	local level = Config.AnnounceLevel(item.mut, Config.PetSize(item.size) == Config.PetSizes[#Config.PetSizes])
 	local mut = Config.Mutation(item.mut)
 	if level and mut then
 		local odds = if item.odds then (" (1 in %d)"):format(item.odds) else ""
