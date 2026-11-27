@@ -864,10 +864,15 @@ Config.Sounds = {
 	MusicVolume = 0.3,
 	MusicFade = 1.6, -- secondes de fondu entre deux musiques
 	Music = {
-		Base = 1842185080, -- vaisseau et bases : « Explore », aventure électro pour enfants
+		-- cour et bases : « Gymnopedie No. 1 » de Satie, piano seul, calme (2 min 32, en boucle) ; avant le
+		-- 28 nov. : « Explore », électro (1842185080). Autres enregistrements de la même pièce : 1837474061, 1842971981
+		Base = 9045766377,
 		Belt = 1840200807, -- anneaux et couloir : « Futureworld », science-fiction
 		Chase = 100817604765534, -- poursuite par un monstre : « Dangerous Pursuit »
 	},
+	-- Niveau propre à une musique (x MusicVolume) : le piano est enregistré deux fois plus doucement que
+	-- les autres (niveau efficace mesuré : 0,04 contre 0,085 à 0,12)
+	MusicGain = { Base = 1.6 },
 	-- Sons joués à une position : on les entend jusqu'à cette distance (studs)
 	Range = 160,
 	-- Volumes réglés sur une mesure (AudioAnalyzer, Studio, 7 nov.) : niveau efficace visé

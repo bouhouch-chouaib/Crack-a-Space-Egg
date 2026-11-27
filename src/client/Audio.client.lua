@@ -1,7 +1,7 @@
 -- Ambiance sonore (Config.Sounds) : musique selon le lieu, boucles (jetpack, foreuse, soufflerie,
 -- vent glacé ; les machines à dérocher sont dans Derock.client) et sons des moments clés, lus dans les attributs et les remotes
 -- déjà publiés par le serveur.
---   Musique : Base dans le vaisseau, Belt dans les anneaux, Chase pendant une poursuite de monstre ;
+--   Musique : Base dans la cour (piano calme), Belt dans les anneaux, Chase pendant une poursuite de monstre ;
 --   hors du couloir elle s'efface sous le vent glacé.
 
 local Players = game:GetService("Players")
@@ -113,8 +113,9 @@ RunService.Heartbeat:Connect(function(dt: number)
 	end
 	local musicLevel = if outside then S.MusicVolume * 0.25 else S.MusicVolume
 	for key, s in pairs(tracks) do
-		local goal = if key == current then musicLevel else 0
-		local step = (S.MusicVolume / S.MusicFade) * dt
+		local gain = S.MusicGain[key] or 1
+		local goal = if key == current then musicLevel * gain else 0
+		local step = (S.MusicVolume * gain / S.MusicFade) * dt
 		s.Volume = if s.Volume < goal then math.min(goal, s.Volume + step) else math.max(goal, s.Volume - step)
 		if s.Volume > 0 and not s.IsPlaying then
 			s:Play()
