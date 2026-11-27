@@ -304,8 +304,8 @@ local function redeem(player: Player, d, r, text: any)
 		return false, "Code already used"
 	end
 	r.codes[code] = true
-	local got = give(player, d, reward)
-	GameService.Notice(player, ("{Sparkles} Code %s: %s"):format(code, got), "good")
+	give(player, d, reward)
+	GameService.Notice(player, "{Sparkles} CODE REDEEMED!", "good")
 	return true
 end
 
@@ -315,7 +315,7 @@ local function claimGroup(player: Player, d)
 	end
 	checkGroup(player)
 	if not inGroupCache[player] then
-		return false, "Join the group first!"
+		return false, "Join group first!"
 	end
 	if d.groupClaimed then
 		return false, "Already claimed"
@@ -327,7 +327,7 @@ end
 
 local function showAd(player: Player, r)
 	if os.time() - r.lastAd < R.AdCooldown then
-		return false, "Next free boost soon!"
+		return false, "Boost soon!"
 	end
 	local potion = Config.Shop.Potions[1]
 	if not potion or potion.Id == 0 then
@@ -339,14 +339,14 @@ local function showAd(player: Player, r)
 		return AdService:ShowRewardedVideoAdAsync(player, reward)
 	end)
 	if not ok then
-		return false, "No ad available right now"
+		return false, "No ad now"
 	end
 	-- le boost arrive par ProcessReceipt (canal AdReward, MonetizationService) ; on note la pub vue
 	if res == Enum.ShowAdResult.ShowCompleted then
 		r.lastAd = os.time()
 		return true
 	end
-	return false, "Watch the whole ad to get the boost"
+	return false, "Watch the ad!"
 end
 
 local function onInvoke(player: Player, action: any, arg: any)

@@ -173,7 +173,7 @@ function ACTIONS.claim(player, d, ring)
 		return false, "Already claimed"
 	end
 	if not ringComplete(d, ring) then
-		return false, "Find all 6 creatures of this ring first"
+		return false, "Find all 6!"
 	end
 	d.indexClaimed[tostring(ring)] = true -- clé texte : la sauvegarde refuse les tableaux à trous
 	local money = Config.IndexReward.Money * Config.Hatch.RingIncome[ring]
@@ -189,14 +189,14 @@ end
 function ACTIONS.store(player, d, id)
 	local item, where = find(d, id)
 	if not item or where ~= "base" then
-		return false, "Not in your base"
+		return false, "Not in base"
 	end
 	if #d.inventory >= C.InventoryMax then
-		return false, "Your bag is full!"
+		return false, "Bag full!"
 	end
 	local pet = HatchService.TakePet(player, id)
 	if not pet then
-		return false, "Not in your base"
+		return false, "Not in base"
 	end
 	pet.x, pet.z = nil, nil
 	table.insert(d.inventory, pet)
@@ -206,12 +206,12 @@ end
 function ACTIONS.send(player, d, id)
 	local item, where, i = find(d, id)
 	if not item or where ~= "bag" then
-		return false, "Not in your bag"
+		return false, "Not in bag"
 	end
 	table.remove(d.inventory, i :: number)
 	if not HatchService.PlacePet(player, item) then
 		table.insert(d.inventory, i :: number, item)
-		return false, "No room in your base!"
+		return false, "Base full!"
 	end
 	return true
 end
@@ -266,7 +266,7 @@ end
 
 function ACTIONS.fuse(player, d, ids)
 	if not near(player, "FusionPoint") then
-		return false, "Go to the Fusion Machine to fuse"
+		return false, "Use Fusion Machine"
 	end
 	if type(ids) ~= "table" or #ids ~= 3 or ids[1] == ids[2] or ids[1] == ids[3] or ids[2] == ids[3] then
 		return false, "Pick 3 creatures"
@@ -286,11 +286,11 @@ function ACTIONS.fuse(player, d, ids)
 	local stage = a.stage or 1
 	for _, item in ipairs(items) do
 		if item.ring ~= a.ring or item.rarity ~= a.rarity or (item.stage or 1) ~= stage then
-			return false, "They must be 3 identical creatures"
+			return false, "3 identical needed"
 		end
 	end
 	if stage >= #C.Stages then
-		return false, "Already at the last stage"
+		return false, "Max stage!"
 	end
 	-- le résultat va dans la base si l'une des trois y était, sinon dans le sac
 	local fromBase = false

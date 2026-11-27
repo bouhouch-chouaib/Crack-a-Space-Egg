@@ -8,8 +8,7 @@
 -- faire la même chose au même endroit, sans réseau.
 -- Les anciennes créatures en pièces gardent leurs groupes animés (Tail, WingL / WingR, Orbit).
 -- Les rares brillent : lumière et étincelles (Epic+), particules qui montent (Mythic+).
--- Chaque espèce a son aura en 4 calques (Config.CreatureAura, LayeredFx), plus grande avec la rareté ;
--- mutée, son aura prend les couleurs de la mutation (qui défilent pour Rainbow) avec un reflet qui passe.
+-- Chaque espèce a son aura en 4 calques (Config.CreatureAura, LayeredFx), plus grande avec la rareté.
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -79,112 +78,42 @@ local function addFx(core: BasePart, rarity: number, h: number)
 	end
 end
 
--- Aura propre à l'espèce (Config.CreatureAura) : effet en 4 calques qui l'entoure, et cercle au sol.
+-- Aura propre à l'espèce (Config.CreatureAura) : effet en 4 calques qui l'entoure.
 -- Une image de chaque calque dure toute une période (AURA_PERIOD = nombre entier de boucles), la suivante
 -- est émise juste avant la fin et se fond dedans : les deux sont à la même étape, la boucle ne se voit pas.
+-- 29 nov. : plus de grands anneaux au sol sous les plus rares, et une créature mutée garde simplement l'aura de
+-- son espèce (plus de couleurs de mutation à pleine force, ni de reflet et d'étoiles qui passent) : sa mutation
+-- se voit sur sa peau (shared/Mutation), l'écran était trop chargé.
 local AURA_LOOP = 1.4 -- secondes pour les 16 étapes de l'aura
-local GROUND_LOOP = 2
-local AURA_PERIOD = 14 -- multiple des deux boucles
+local AURA_PERIOD = 14 -- multiple de la boucle
 local AURA_FADE = 0.4
-local GLEAM_LOOP = 1.75 -- reflet des mutées (huit boucles par période)
 
--- Couleurs d'aura d'une mutation (silhouette saturée, milieu clair) ; Rainbow : teinte du moment
-local function mutationColors(mut: any, t: number): (Color3, Color3)
-	if mut.Rainbow then
-		local hue = (t * 0.25) % 1
-		return Color3.fromHSV(hue, 0.85, 1), Color3.fromHSV((hue + 0.08) % 1, 0.3, 1)
-	end
-	local c = mut.GlowColor or mut.Color
-	local h, s = c:ToHSV()
-	return Color3.fromHSV(h, math.max(s, 0.6), 1), Color3.fromHSV(h, s * 0.3, 1)
-end
-
--- Auras des créatures arc-en-ciel : leurs couleurs défilent (mises à jour dix fois par seconde)
-local rainbowFx: { [LayeredFx.Fx]: boolean } = setmetatable({}, { __mode = "k" }) :: any
-task.spawn(function()
-	local rainbow = Config.Mutation("Rainbow")
-	while rainbow do
-		local rim, mid = mutationColors(rainbow, os.clock())
-		for fx in pairs(rainbowFx) do
-			fx:SetColors(rim, mid)
-		end
-		task.wait(0.1)
-	end
-end)
-
--- Mutation (Config.Mutations) : l'aura de l'espèce prend les couleurs de la mutation, à pleine force, un
--- reflet (« Gleam » : trait de lumière qui balaie la silhouette, étoiles qui scintillent) passe sur la
--- créature, et les plus rares (Ruby, Rainbow) ont un cercle au sol même si l'espèce n'en a pas
-local function addAura(core: BasePart, species: string, rarity: number, h: number, mutKey: string?): { LayeredFx.Fx }?
+local function addAura(core: BasePart, species: string, rarity: number, h: number): { LayeredFx.Fx }?
 	local def = Config.CreatureAura[species]
 	if not def or core:FindFirstChild("AuraFx") then
 		return nil
 	end
-	local mut = Config.Mutation(mutKey)
-	local rim, mid = def.Rim, def.Mid
-	if mut then
-		rim, mid = mutationColors(mut, os.clock())
-	end
 	local grow = 0.72 + rarity * 0.06 -- plus rare = plus grande
-	local alpha = if mut then 0 else math.max(0, 0.45 - rarity * 0.1) -- les communes restent discrètes
+	local alpha = math.max(0, 0.45 - rarity * 0.1) -- les communes restent discrètes
 	local shape = LayeredFx.AuraShape[def.Kind] or { Scale = 1.9, Anchor = 0.35 }
 	local size = h * shape.Scale * grow
-	local list = {}
 	local at = Instance.new("Attachment")
 	at.Name = "AuraFx"
 	at.Position = Vector3.new(0, size * shape.Anchor, 0)
 	at.Parent = core
-	table.insert(list, LayeredFx.new(at, {
-		kind = def.Kind,
-		size = size,
-		colors = { rim, mid },
-		lifetime = AURA_PERIOD + AURA_FADE * 2,
-		loop = AURA_LOOP,
-		fade = AURA_FADE,
-		locked = true,
-		alpha = alpha,
-		zOffset = if shape.Behind then -h * 0.55 else 0,
-	}))
-	local ground = def.Ground or (if mut and (mut.Key == "Ruby" or mut.Rainbow) then "Pulse" else nil)
-	if ground then
-		local g = Instance.new("Attachment")
-		g.Name = "AuraGround"
-		g.Position = Vector3.new(0, 0.08, 0)
-		g.Parent = core
-		table.insert(list, LayeredFx.new(g, {
-			kind = ground,
-			size = h * 1.7 * grow,
-			colors = { rim, mid },
+	return {
+		LayeredFx.new(at, {
+			kind = def.Kind,
+			size = size,
+			colors = { def.Rim, def.Mid },
 			lifetime = AURA_PERIOD + AURA_FADE * 2,
-			loop = GROUND_LOOP,
+			loop = AURA_LOOP,
 			fade = AURA_FADE,
 			locked = true,
-			flat = true,
-			alpha = alpha + 0.1,
-		}))
-	end
-	if mut then
-		local gl = Instance.new("Attachment")
-		gl.Name = "AuraGleam"
-		gl.Position = Vector3.new(0, h * 0.5, 0)
-		gl.Parent = core
-		table.insert(list, LayeredFx.new(gl, {
-			kind = "Gleam",
-			size = h * 1.5,
-			colors = { rim, mid },
-			lifetime = AURA_PERIOD + AURA_FADE * 2,
-			loop = GLEAM_LOOP,
-			fade = AURA_FADE,
-			locked = true,
-			zOffset = h * 0.7, -- devant la créature
-		}))
-		if mut.Rainbow then
-			for _, fx in ipairs(list) do
-				rainbowFx[fx] = true
-			end
-		end
-	end
-	return list
+			alpha = alpha,
+			zOffset = if shape.Behind then -h * 0.55 else 0,
+		}),
+	}
 end
 
 -- Particules ponctuelles des figures (éclat, flammes, glitch, poussière au sol)
@@ -425,7 +354,7 @@ local function track(m: Instance)
 	addFx(core, rarity, h)
 	p.fx = makeBursts(core, rarity, h)
 	pets[m] = p
-	local aura = addAura(core, (m:GetAttribute("Species") or m:GetAttribute("Creature") or "") :: string, rarity, h, m:GetAttribute("Mutation") :: string?)
+	local aura = addAura(core, (m:GetAttribute("Species") or m:GetAttribute("Creature") or "") :: string, rarity, h)
 	if aura then
 		task.spawn(function()
 			while pets[m] == p and core.Parent do

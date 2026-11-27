@@ -937,6 +937,10 @@ Config.Sounds = {
 		-- 19 nov. : sons courts et plus doux (mesurés à l'AudioAnalyzer). Avant : une fanfare de 6,5 s pour
 		-- chaque créature rare et chaque annonce, et un jingle de 2,9 s à chaque niveau de jetpack.
 		HatchRare = { Id = 2609981431, Volume = 0.8 }, -- épique et au-delà, annonces, relique : scintillement de 0,9 s
+		-- explosions de l'éclatement (Pro Sound Effects, mesurées à l'AudioAnalyzer), posées en couches selon la
+		-- rareté de l'œuf : voir HatchBoom plus bas
+		Boom = { Id = 9114224354, Volume = 0.55 }, -- explosion sourde qui gronde 7 s (niveau efficace 0,24 au début)
+		Blast = { Id = 9126102254, Volume = 0.28 }, -- déflagration avec une traîne qui chante 5,7 s (niveau 0,5)
 		-- nouveau modèle de jetpack, mutation : petit air montant de 0,7 s (les niveaux ne sonnent plus)
 		LevelUp = { Id = 105193542038988, Volume = 0.3 },
 		-- cadeau, quête ou achat réclamé : un petit « réussi » de 0,7 s (15 nov. : avant, la même fanfare de
@@ -973,6 +977,33 @@ Config.Sounds = {
 		MonsterGrowl = { Id = 9113985466, Volume = 0.5, Region = { 2, 36 } }, -- grondement du monstre (placé sur lui)
 	},
 	RareFrom = 4, -- rareté à partir de laquelle l'éclosion joue la fanfare
+	-- Explosion à l'éclatement de l'œuf, par rareté (Audio.client), en plus du son d'éclosion. Plus l'œuf est
+	-- rare, plus elle est spectaculaire SANS être plus forte : elle devient plus grave (Pitch plus bas), dure plus
+	-- longtemps (Cut plus tard), gagne une déflagration (Blast) puis des échos qui roulent derrière elle (Delay).
+	-- Une Commune n'a que son petit « pop ». Chaque couche : Sfx = le son, Delay = secondes après l'éclatement,
+	-- Pitch, Volume (× celui du son), Cut = secondes avant de la couper en fondu (BoomFade).
+	HatchBoom = {
+		[1] = {},
+		[2] = { { Sfx = "Boom", Pitch = 1.6, Volume = 0.55, Cut = 0.45 } },
+		[3] = { { Sfx = "Boom", Pitch = 1.35, Volume = 0.7, Cut = 0.8 } },
+		[4] = { { Sfx = "Boom", Pitch = 1.15, Volume = 0.8, Cut = 1.3 } },
+		[5] = {
+			{ Sfx = "Boom", Pitch = 1, Volume = 0.85, Cut = 2 },
+			{ Sfx = "Blast", Pitch = 1.25, Volume = 0.6, Cut = 0.9 },
+		},
+		[6] = {
+			{ Sfx = "Boom", Pitch = 0.85, Volume = 0.9, Cut = 3 },
+			{ Sfx = "Blast", Pitch = 1, Volume = 0.8, Cut = 1.8 },
+			{ Sfx = "Boom", Delay = 0.45, Pitch = 0.65, Volume = 0.4, Cut = 1.6 },
+		},
+		[7] = {
+			{ Sfx = "Boom", Pitch = 0.7, Volume = 0.9, Cut = 4.5 },
+			{ Sfx = "Blast", Pitch = 0.8, Volume = 0.9, Cut = 3.2 },
+			{ Sfx = "Boom", Delay = 0.4, Pitch = 0.55, Volume = 0.45, Cut = 2 },
+			{ Sfx = "Boom", Delay = 0.95, Pitch = 0.45, Volume = 0.3, Cut = 2.2 },
+		},
+	},
+	BoomFade = 0.5,
 }
 -- Rideaux de brume dans les vides entre deux anneaux (WorldBuilder)
 Config.FogCurtains = {
@@ -1606,6 +1637,33 @@ Config.Hatch = {
 	-- sa taille) : plus elle est immense, plus il gonfle
 	Grow = 0.85,
 	MinGrow = 1.15,
+	-- Cinématique des œufs les plus rares (client/HatchCinema), pour leur propriétaire seulement : l'écran passe
+	-- au noir, puis on retrouve l'œuf seul dans une salle noire, sous une lampe. Il se charge et éclate là, la
+	-- créature apparaît sous la lumière, puis on revient à la base où elle attend. Les autres joueurs voient
+	-- l'éclosion normale dans la base. Elle dure le temps de la charge (Burst) + Reveal : rien n'est rallongé.
+	Cinema = {
+		From = 6, -- rareté à partir de laquelle l'éclosion se joue dans la salle noire (Mythic et Cosmic)
+		At = { 0, 2400, -900 }, -- où la salle est construite chez le joueur (loin de tout, fermée)
+		Room = { 170, 80 }, -- côté et hauteur de la salle (studs)
+		FadeIn = 0.25, -- fondu au noir à l'entrée
+		FadeOut = 0.3, -- fondu au noir à la sortie
+		Open = 0.45, -- l'image revient
+		Bars = 0.1, -- bandes noires en haut et en bas (part de la hauteur de l'écran)
+		Fov = 50,
+		MaxGrow = 2.2, -- l'œuf gonfle moins que dans la base : le cadrage reste le même pour toutes les créatures
+		Dist = { 3.7, 2.4 }, -- distance de la caméra (× hauteur finale de l'œuf) au début et à la fin de la charge
+		Arc = { -0.6, 0.15 }, -- angle de la caméra autour de l'œuf (radians) au début et à la fin de la charge
+		Tilt = 0.24, -- hauteur de la caméra au-dessus de ce qu'elle regarde (× sa distance)
+		Reveal = 2.8, -- secondes passées sur la créature avant de revenir à la base
+		Turn = 0.35, -- angle que la caméra parcourt encore pendant ce temps
+		PetHeight = 13, -- hauteur de la créature montrée (studs), un peu plus pour une Big ou une Large
+		PetDist = 2.5, -- distance de la caméra (× cette hauteur)
+		Pop = 0.55, -- secondes pour que la créature jaillisse à sa taille
+		PopDelay = 0.12,
+		Lamp = { Height = 40, Angle = 44, Brightness = 3.2, Reveal = 5.5 }, -- la lampe au-dessus de l'œuf
+		Ambient = Color3.fromRGB(12, 12, 20), -- lumière ambiante pendant la cinématique (remise ensuite)
+		Floor = Color3.fromRGB(34, 34, 46),
+	},
 	-- Œuf tenu dans les mains en sortant de la machine : hauteur selon la rareté (studs),
 	-- et délai avant qu'il apparaisse (le temps que l'œuf révélé vole jusqu'au joueur)
 	HeldHeight = { 1.7, 1.85, 2.0, 2.15, 2.35, 2.55, 2.8 },
@@ -1749,8 +1807,9 @@ Config.CreatureMotion = {
 
 -- Aura de chaque espèce (Creatures.client, effets en 4 calques de LayeredFx) : Kind = forme qui tourne
 -- autour d'elle (Flame, Wisp, Electric, Bubbles, Spores, Hearts, Stardust, Glitch, Shards), Rim et Mid =
--- couleurs de la silhouette et du milieu (le cœur est presque blanc), Ground = cercle à plat sous elle
--- (Pulse, Rune, Gear). Plus la rareté est haute, plus l'aura est grande et franche.
+-- couleurs de la silhouette et du milieu (le cœur est presque blanc). Plus la rareté est haute, plus l'aura
+-- est grande et franche. (Ground, le cercle à plat sous les plus rares, n'est plus affiché depuis le 29 nov. :
+-- ces grands anneaux surchargeaient l'écran ; la valeur reste là si on veut le remettre.)
 local function aura(kind: string, rim: Color3, mid: Color3, ground: string?)
 	return { Kind = kind, Rim = rim, Mid = mid, Ground = ground }
 end
@@ -2013,16 +2072,16 @@ end
 -- Metal = vrai : matière métal (ou Material = nom d'une matière) ; Reflect : reflet (0 à 1) ; Dark : couleur
 -- des membres (pattes, bras, oreilles, queue, ailes...), en métal ; Rainbow : couleurs qui défilent.
 Config.Mutations = {
-	-- Glow = lumière autour de la créature (luminosité), Sparkles = étincelles par seconde, Shine = éclats en
-	-- étoile qui passent sur elle (par seconde) ; la lumière pulse doucement (MutationFx.client).
+	-- Glow = lumière douce autour de la créature (luminosité), qui pulse (MutationFx.client). Depuis le 29 nov.
+	-- il n'y a plus d'étincelles ni d'éclats en étoile autour d'elle : l'effet est sur sa peau (shared/Mutation).
 	-- Silver (29 nov.) : feuille d'argent froissée sur le corps et la tête, acier plus sombre sur les membres
 	-- (Material, Dark). Le blanc nacré uni d'avant, avec son fort reflet du ciel noir, faisait croire à un
 	-- modèle sans texture, à moitié transparent : plus de reflet, et deux tons pour qu'on lise les formes.
-	{ Key = "Silver", Name = "Silver", Chance = 0.12, Mult = 1.5, Color = Color3.fromRGB(212, 218, 230), Material = "Foil", Dark = Color3.fromRGB(128, 138, 162), Reflect = 0, Glow = 1.4, GlowColor = Color3.fromRGB(190, 225, 255), Sparkles = 9, Shine = 1.2 },
-	{ Key = "Gold", Name = "Gold", Chance = 0.04, Mult = 3, Color = Color3.fromRGB(255, 196, 40), Metal = true, Reflect = 0.3, Glow = 1.6, Sparkles = 10, Shine = 1.4 },
-	{ Key = "Emerald", Name = "Emerald", Chance = 0.02, Mult = 5, Color = Color3.fromRGB(50, 215, 120), Reflect = 0.35, Glow = 1.8, Sparkles = 12, Shine = 1.6 },
-	{ Key = "Ruby", Name = "Ruby", Chance = 0.01, Mult = 10, Color = Color3.fromRGB(235, 45, 80), Reflect = 0.35, Glow = 2.1, Sparkles = 14, Shine = 1.8 },
-	{ Key = "Rainbow", Name = "Rainbow", Chance = 0.005, Mult = 20, Color = Color3.fromRGB(255, 120, 220), Reflect = 0.15, Rainbow = true, Glow = 2.5, Sparkles = 18, Shine = 2.2 },
+	{ Key = "Silver", Name = "Silver", Chance = 0.12, Mult = 1.5, Color = Color3.fromRGB(212, 218, 230), Material = "Foil", Dark = Color3.fromRGB(128, 138, 162), Reflect = 0, Glow = 1.4, GlowColor = Color3.fromRGB(190, 225, 255) },
+	{ Key = "Gold", Name = "Gold", Chance = 0.04, Mult = 3, Color = Color3.fromRGB(255, 196, 40), Metal = true, Reflect = 0.3, Glow = 1.6 },
+	{ Key = "Emerald", Name = "Emerald", Chance = 0.02, Mult = 5, Color = Color3.fromRGB(50, 215, 120), Reflect = 0.35, Glow = 1.8 },
+	{ Key = "Ruby", Name = "Ruby", Chance = 0.01, Mult = 10, Color = Color3.fromRGB(235, 45, 80), Reflect = 0.35, Glow = 2.1 },
+	{ Key = "Rainbow", Name = "Rainbow", Chance = 0.005, Mult = 20, Color = Color3.fromRGB(255, 120, 220), Reflect = 0.15, Rainbow = true, Glow = 2.5 },
 }
 Config.MutationMax = 0.75
 function Config.Mutation(key: string?)

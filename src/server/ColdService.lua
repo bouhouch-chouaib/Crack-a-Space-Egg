@@ -108,7 +108,7 @@ local function freeze(player: Player, st: State)
 			d.cargo = {}
 			GameService.Sync(player)
 			if lost > 0 then
-				GameService.Notice(player, ("{Freezing} You froze and lost %d egg%s"):format(lost, if lost > 1 then "s" else ""), "bad")
+				GameService.Notice(player, "{Freezing} FROZEN!", "bad")
 			end
 		end
 		st.cold, st.outside, st.frozen = 0, 0, false
@@ -147,7 +147,7 @@ local function suffocate(player: Player, st: State, character: Model, hum: Human
 		GameService.Sync(player)
 	end
 	character:SetAttribute("Suffocated", true)
-	GameService.Notice(player, "{Oxygen} Out of oxygen! You lost your egg. Fly back faster!", "bad")
+	GameService.Notice(player, "{Oxygen} NO OXYGEN!", "bad")
 	hum.Health = 0
 end
 

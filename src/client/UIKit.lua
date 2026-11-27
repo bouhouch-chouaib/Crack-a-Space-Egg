@@ -1493,16 +1493,17 @@ local function stack(): Frame
 	return f
 end
 
--- Petite bulle qui apparaît en « pop » puis s'efface : good (vert), warn/bad (rouge), info (bleu)
+-- Bulle qui apparaît en « pop » puis s'efface : good (vert), warn/bad (rouge), info (bleu). Deux ou trois
+-- mots écrits en grand (29 nov. : plus de phrases en petits caractères).
 function UIKit.toast(text: string, kind: string?)
 	local color = if kind == "good" then "Green" elseif kind == "bad" or kind == "warn" then "Red" else "Blue"
 	local colors = UIKit.Colors[color]
 	local box = new("Frame", {
-		Size = UDim2.fromOffset(460, 50),
+		Size = UDim2.fromOffset(440, 84),
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		Parent = stack(),
-	}, { UIKit.corner(25), UIKit.stroke(3), UIKit.gradient(colors[1], colors[2]) })
-	UIKit.text({ Size = UDim2.new(1, -30, 0.66, 0), Position = UDim2.new(0, 15, 0.17, 0), Text = text, Parent = box })
+	}, { UIKit.corner(30), UIKit.stroke(4), UIKit.gradient(colors[1], colors[2]) })
+	UIKit.text({ Size = UDim2.new(1, -36, 0.7, 0), Position = UDim2.new(0, 18, 0.15, 0), Text = text, Stroke = 3, Parent = box })
 	UIKit.popIn(box)
 	if kind == "warn" or kind == "bad" then
 		UIKit.shake(box)

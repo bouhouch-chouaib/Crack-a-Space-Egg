@@ -81,7 +81,7 @@ local function onInvoke(player: Player, action: unknown, key: unknown)
 			return { ok = false, error = "Already owned" }
 		end
 		if s.Robux then
-			return { ok = false, error = "This skin is sold for Robux" }
+			return { ok = false, error = "Robux skin" }
 		end
 		if d.credits < s.Price then
 			return { ok = false, error = "Not enough $" }
@@ -93,7 +93,7 @@ local function onInvoke(player: Player, action: unknown, key: unknown)
 		return { ok = true, owned = ownedList(player, d), skin = d.skin }
 	elseif action == "equip" then
 		if not owns(player, d, key) then
-			return { ok = false, error = "You don't own this skin" }
+			return { ok = false, error = "Not owned" }
 		end
 		equip(player, d, key)
 		return { ok = true, owned = ownedList(player, d), skin = d.skin }

@@ -106,7 +106,7 @@ local function onInvoke(player: Player, action: unknown, key: unknown)
 		return { ok = false, error = "Unknown action" }
 	end
 	if not owns(player, d, key) then
-		return { ok = false, error = "You don't own this skin" }
+		return { ok = false, error = "Not owned" }
 	end
 	d.baseSkin = key
 	show(player, d)

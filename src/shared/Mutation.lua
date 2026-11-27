@@ -5,8 +5,8 @@
 -- et un reflet glisse sur son corps et sa tête. Les pièces lumineuses (yeux, cristaux) gardent leur lueur. Une mutation peut avoir
 -- deux tons (Dark) : ses membres sont alors plus sombres que le corps, pour qu'on lise encore les formes.
 -- Rainbow : chaque pièce a sa teinte de départ, et MutationFx.client fait défiler les couleurs.
--- Effets de lumière (Mutation.Effects, créature posée dans la base) : une lumière de sa couleur qui
--- pulse, des étincelles et des éclats en étoile qui passent sur elle.
+-- Mutation.Effects (créature posée dans la base) : seulement une lumière douce de sa couleur, qui pulse.
+-- (29 nov. : plus d'étincelles ni d'éclats en étoile autour d'elle ; tout l'effet est sur sa peau.)
 -- Sert au serveur (HatchService, créature posée dans la base) et aux portraits de l'interface.
 
 local CollectionService = game:GetService("CollectionService")
@@ -27,9 +27,6 @@ local DEFAULT_VEIL = 0.27 -- transparence du voile : assez couvrant pour la coul
 local SHINE_ALPHA = 0.3
 local FACES = Enum.NormalId:GetEnumItems()
 
-local SPARKLE = "rbxassetid://138922153683020" -- étincelle (comme HatchFx)
-local STAR = "rbxassetid://102151511950781" -- étoile à quatre branches (Icons.Star)
-local kp = NumberSequenceKeypoint.new
 -- Membres d'une créature (début du nom de la pièce) : ils prennent la teinte sombre d'une mutation à deux tons
 local LIMBS = { "Arm", "Ear", "Fin", "Jaw", "Leg", "Tail", "Tentacles", "Wing" }
 
@@ -118,7 +115,7 @@ function Mutation.Apply(model: Model, key: string?)
 	model:SetAttribute("Mutation", mut.Key)
 end
 
--- Effets de lumière d'une créature mutée de hauteur h (sur sa pièce centrale, qui suit ses déplacements)
+-- Lueur d'une créature mutée de hauteur h (sur sa pièce centrale, qui suit ses déplacements)
 function Mutation.Effects(model: Model, key: string?, h: number)
 	local mut = Config.Mutation(key)
 	local core = model.PrimaryPart
@@ -135,39 +132,6 @@ function Mutation.Effects(model: Model, key: string?, h: number)
 	light:SetAttribute("Base", light.Brightness)
 	light.Parent = core
 	CollectionService:AddTag(light, Mutation.LightTag)
-	-- étincelles tout autour du corps
-	local sp = Instance.new("ParticleEmitter")
-	sp.Name = "MutationSparkle"
-	sp.Texture = SPARKLE
-	sp.Color = ColorSequence.new(Color3.new(1, 1, 1), col)
-	sp.LightEmission = 1
-	sp.LightInfluence = 0
-	sp.Size = NumberSequence.new({ kp(0, 0), kp(0.3, h * 0.12), kp(1, 0) })
-	sp.Transparency = NumberSequence.new({ kp(0, 0.1), kp(1, 1) })
-	sp.Lifetime = NumberRange.new(0.7, 1.2)
-	sp.Speed = NumberRange.new(h * 0.25, h * 0.55)
-	sp.Drag = 2
-	sp.SpreadAngle = Vector2.new(180, 180)
-	sp.Rate = mut.Sparkles or 6
-	local at = Instance.new("Attachment")
-	at.Name = "MutationFx"
-	at.Position = Vector3.new(0, h * 0.45, 0)
-	at.Parent = core
-	sp.Parent = at
-	-- éclats en étoile : de gros reflets qui s'allument sur la créature
-	local st = Instance.new("ParticleEmitter")
-	st.Name = "MutationShine"
-	st.Texture = STAR
-	st.Color = ColorSequence.new(Color3.new(1, 1, 1), col:Lerp(Color3.new(1, 1, 1), 0.5))
-	st.LightEmission = 1
-	st.LightInfluence = 0
-	st.Size = NumberSequence.new({ kp(0, 0), kp(0.4, h * 0.3), kp(1, 0) })
-	st.Lifetime = NumberRange.new(0.45, 0.6)
-	st.Speed = NumberRange.new(0)
-	st.Rotation = NumberRange.new(0, 90)
-	st.RotSpeed = NumberRange.new(-120, 120)
-	st.Rate = mut.Shine or 1
-	st.Parent = at
 end
 
 return Mutation

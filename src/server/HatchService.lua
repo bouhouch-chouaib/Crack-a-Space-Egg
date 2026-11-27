@@ -369,7 +369,7 @@ function HatchService.CanPlace(base: Model, d, x: number, z: number, rarity: num
 	-- la clôture est basse : une géante peut la dépasser un peu (moitié de sa place)
 	local hx, hz = floor.Size.X / 2 - H.Margin - foot * 0.5, floor.Size.Z / 2 - H.Margin - foot * 0.5
 	if math.abs(x) > hx or math.abs(z) > hz then
-		return false, "Too close to the wall"
+		return false, "Too close!"
 	end
 	for name, radius in pairs(H.KeepOut) do
 		local thing = base:FindFirstChild(name)
@@ -386,7 +386,7 @@ function HatchService.CanPlace(base: Model, d, x: number, z: number, rarity: num
 	end
 	for _, item in ipairs(d.base) do
 		if Vector2.new(item.x - x, item.z - z).Magnitude < foot + (H.Footprint[item.rarity] or 3) then
-			return false, "Too close to another egg"
+			return false, "Too close!"
 		end
 	end
 	return true, nil
@@ -406,7 +406,7 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	end
 	local slots = BoostService.BaseSlots(player)
 	if #d.base >= slots then
-		GameService.Notice(player, "{Home} Your base is full! (" .. slots .. " max)", "warn")
+		GameService.Notice(player, "{Home} BASE FULL!", "warn")
 		Tracking.Event(player, "BaseFull")
 		return
 	end
@@ -422,7 +422,7 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	end
 	local ok, why = HatchService.CanPlace(base, d, x, z, rarity)
 	if not ok then
-		GameService.Notice(player, why or "You can't place it here", "warn")
+		GameService.Notice(player, why or "Not here!", "warn")
 		return
 	end
 	local rock = d.ready[index].rock -- type de l'astéroïde d'origine (chance affichée à l'éclosion)
@@ -468,7 +468,7 @@ function HatchService.Hatch(player: Player, id: string)
 	if not item or item.kind ~= "egg" or not m then
 		-- L'œuf d'un autre joueur
 		if not item then
-			GameService.Notice(player, "This is not your egg", "warn")
+			GameService.Notice(player, "Not your egg", "warn")
 		end
 		return
 	end

@@ -287,11 +287,11 @@ buy = function(player: Player, index: number)
 	end
 	local nextDef = J.Tunnels[(d.tunnel or 0) + 1]
 	if not nextDef then
-		GameService.Notice(player, "{WindTunnel} Your wind tunnel is already at max level!", "info")
+		GameService.Notice(player, "{WindTunnel} MAX LEVEL!", "info")
 		return
 	end
 	if d.credits < nextDef.Cost then
-		GameService.Notice(player, ("Not enough money: %s needed"):format(money(nextDef.Cost)), "warn")
+		GameService.Notice(player, ("Need %s"):format(money(nextDef.Cost)), "warn")
 		return
 	end
 	d.credits -= nextDef.Cost

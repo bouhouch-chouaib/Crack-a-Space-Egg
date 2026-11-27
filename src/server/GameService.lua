@@ -210,7 +210,7 @@ local function onDrill(player: Player, target: any, at: any)
 		-- où l'on a déjà sorti un œuf (onglets de l'Index, montant des paquets d'argent)
 		if a.ring > d.ring then
 			d.ring = a.ring
-			notice(player, ("{Star} First egg from the %s!"):format(Config.Rings[a.ring].Name), "good")
+			notice(player, "{Star} FIRST EGG!", "good")
 			Tracking.Funnel(player, "Rings", a.ring, Config.Rings[a.ring].Name)
 		end
 		sync(player)
@@ -244,7 +244,7 @@ local function buyUpgrade(player: Player, id: any)
 	end
 	local cost = Config.UpgradeCost(id, level)
 	if d.credits < cost then
-		notice(player, "Not enough credits", "warn")
+		notice(player, "Not enough $", "warn")
 		return
 	end
 	d.credits -= cost
@@ -412,7 +412,7 @@ local function watchFalls()
 					-- Sa roche a cassé ou disparu sous lui : on le sauve, il garde ses œufs
 					BeltService.Grace[player] = nil
 					character:SetPrimaryPartCFrame(CFrame.new(0, 4, Config.Map.FrontZ - 6))
-					notice(player, "{Lifebuoy} Saved! Your rock broke, your eggs are safe", "info")
+					notice(player, "{Lifebuoy} SAVED!", "info")
 				elseif not character:GetAttribute("VoidDead") then
 					local lost = #d.cargo
 					Tracking.Death(player, "Void", d.cargo[1])
@@ -426,8 +426,8 @@ local function watchFalls()
 						hum.Health = 0
 					end
 					notice(player, if lost > 0
-						then "{Warning} You fell into the Void and lost your egg! Train your jetpack to fly further"
-						else "{Warning} You fell into the Void! Train your jetpack to fly further", "bad")
+						then "{Warning} EGG LOST!"
+						else "{Warning} YOU FELL!", "bad")
 				end
 			end
 		end
@@ -542,10 +542,7 @@ function GameService.Start()
 				equipJetpack(player)
 				local t = Config.Jetpack.Tiers[tier]
 				Tracking.Funnel(player, "JetpackTiers", tier, t.Name)
-				local ring = Config.Rings[math.min(tier, #Config.Rings)]
-				notice(player, if tier <= #Config.Rings
-					then ("{Jetpack} New jetpack: %s! You can now fly to the %s"):format(t.Name, ring.Name)
-					else ("{Jetpack} New jetpack: %s!"):format(t.Name), "good")
+				notice(player, "{Jetpack} NEW JETPACK!", "good")
 			end
 			tierShown = tier
 		end)

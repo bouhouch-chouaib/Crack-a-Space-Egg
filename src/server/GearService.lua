@@ -361,7 +361,7 @@ function GearService.Start()
 					local _, dist = SafeZone.Nearest(hrp.Position)
 					if dist > 0 then
 						setCarpet(player, false)
-						GameService.Notice(player, "{Warning} The carpet only flies inside the corridor!", "warn")
+						GameService.Notice(player, "{Warning} CORRIDOR ONLY!", "warn")
 					end
 				end
 			end

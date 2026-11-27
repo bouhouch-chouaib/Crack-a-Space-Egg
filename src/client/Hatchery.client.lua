@@ -22,6 +22,7 @@ local Mutation = require(ReplicatedStorage.Shared:WaitForChild("Mutation"))
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
 local HatchFx = require(script.Parent:WaitForChild("HatchFx"))
+local HatchCinema = require(script.Parent:WaitForChild("HatchCinema"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -496,14 +497,28 @@ local function startCharge(m: Model)
 	local started = (m:GetAttribute("Hatching") or workspace:GetServerTimeNow()) :: number
 	local dur = (m:GetAttribute("HatchDuration") or 2) :: number
 	local mine = m:GetAttribute("Owner") == player.UserId
-	local fx = HatchFx.Charge(m, {
+	local left = math.max(0.3, dur - (workspace:GetServerTimeNow() - started))
+	local grow = (m:GetAttribute("HatchGrow") or 1) :: number
+	-- les œufs les plus rares du joueur : la charge se joue sur une copie de l'œuf, dans la salle noire
+	-- (client/HatchCinema) ; les autres joueurs voient l'éclosion normale dans la base
+	local stage: Model? = nil
+	if mine and rarity >= H.Cinema.From and left > 2 then
+		stage = HatchCinema.Start(m, left)
+	end
+	local where: Vector3? = nil -- position des sons (aucune dans la salle noire : on y est)
+	if stage then
+		grow = math.min(grow, H.Cinema.MaxGrow)
+	else
+		where = core.Position
+	end
+	local fx = HatchFx.Charge(stage or m, {
 		rarity = rarity,
-		grow = (m:GetAttribute("HatchGrow") or 1) :: number,
-		duration = math.max(0.3, dur - (workspace:GetServerTimeNow() - started)),
+		grow = grow,
+		duration = left,
 		owner = mine,
 		odds = Config.LuckShown((m:GetAttribute("Ring") or 1) :: number, rarity, m:GetAttribute("HatchOdds") :: number?),
 		onCrack = function(i: number)
-			Sfx.Play("Crack", { at = core.Position, volume = if mine then 0.5 else 0.25, pitch = 0.8 + 0.08 * i })
+			Sfx.Play("Crack", { at = where, volume = if mine then 0.5 else 0.25, pitch = 0.8 + 0.08 * i })
 		end,
 		-- compteur de chance : cliquetis qui montent, « ding » à chaque palier ×10, arrivée (propriétaire)
 		onLuck = if mine
@@ -518,12 +533,14 @@ local function startCharge(m: Model)
 			end
 			else nil,
 	})
+	if stage then
+		-- Remotes.Hatched donne la place de l'œuf dans la base : c'est par elle qu'on retrouve cette charge
+		fx.origin = core.Position
+		fx.stage = stage
+	end
 	charging[m] = fx
 	if rarity >= 3 then
-		Sfx.Play(
-			"Riser",
-			{ at = core.Position, volume = if mine then 1 else 0.5, pitch = math.clamp(2.6 / dur, 0.6, 1.2) }
-		)
+		Sfx.Play("Riser", { at = where, volume = if mine then 1 else 0.5, pitch = math.clamp(2.6 / dur, 0.6, 1.2) })
 	end
 end
 
@@ -771,8 +788,17 @@ Remotes:WaitForChild("Hatched").OnClientEvent
 				break
 			end
 		end
+		local look = if special == "wow" then math.max(rarity, 5) else rarity -- la créature rare : effets de Légendaire
+		if fx and fx.stage then
+			-- cinématique : l'œuf éclate dans la salle noire, la créature y apparaît, puis retour à la base
+			fx.stage:Destroy()
+			HatchFx.Burst(fx.center, fx.size, fx.groundY, look, true)
+			HatchCinema.Reveal({ ring = ring, rarity = rarity, size = size, mutation = mutation }, function()
+				hatchBanner(ring, rarity, name, income, size, special, mutation, odds)
+			end)
+			return
+		end
 		if (pos - camera.CFrame.Position).Magnitude < 220 then
-			local look = if special == "wow" then math.max(rarity, 5) else rarity -- la créature rare : effets de Légendaire
 			if fx then
 				HatchFx.Burst(fx.center, fx.size, fx.groundY, look, owner == player)
 			else

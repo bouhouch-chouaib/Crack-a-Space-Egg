@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
@@ -204,11 +205,54 @@ Remotes:WaitForChild("DrillHit").OnClientEvent:Connect(function(rock: BasePart?,
 	end
 end)
 
--- Éclosion : fanfare pour les créatures rares, son placé à la base (les voisins l'entendent aussi)
+-- Une couche de l'explosion d'éclosion (Config.Sounds.HatchBoom) : jouée puis coupée en fondu
+local function boomLayer(layer, at: Vector3?, gain: number)
+	local s = Sfx.Play(layer.Sfx, { at = at, volume = (layer.Volume or 1) * gain, pitch = layer.Pitch })
+	if not s or not layer.Cut then
+		return
+	end
+	task.delay(layer.Cut, function()
+		if not s.Parent then
+			return
+		end
+		TweenService:Create(s, TweenInfo.new(S.BoomFade), { Volume = 0 }):Play()
+		task.wait(S.BoomFade + 0.05)
+		if s.Parent then
+			s:Destroy()
+		end
+	end)
+end
+
+-- Éclosion : fanfare pour les créatures rares, son placé à la base (les voisins l'entendent aussi), et une
+-- explosion de plus en plus riche avec la rareté de l'œuf (plus grave, plus longue, avec des échos : pas plus forte)
 Remotes:WaitForChild("Hatched").OnClientEvent:Connect(function(owner: Player, pos: Vector3, _ring: number, rarity: number)
 	local rare = rarity >= S.RareFrom
-	Sfx.Play(if rare then "HatchRare" else "Hatch", { at = pos, volume = if owner == player then 1 else 0.5 })
-	Sfx.Play("Pop", { at = pos, pitch = 0.8 })
+	local mine = owner == player
+	-- pendant la cinématique de ses œufs les plus rares, le joueur est dans la salle noire : son sans position
+	local at: Vector3? = if mine and player:GetAttribute("HatchCinema") then nil else pos
+	local gain = if mine then 1 else 0.5
+	Sfx.Play(if rare then "HatchRare" else "Hatch", { at = at, volume = gain })
+	Sfx.Play("Pop", { at = at, pitch = 0.8 })
+	for _, layer in ipairs(S.HatchBoom[math.clamp(rarity, 1, #S.HatchBoom)]) do
+		if layer.Delay then
+			task.delay(layer.Delay, boomLayer, layer, at, gain)
+		else
+			boomLayer(layer, at, gain)
+		end
+	end
+end)
+
+-- les deux explosions sont prêtes avant la première éclosion (sinon la première arriverait en retard)
+task.spawn(function()
+	local list = {}
+	for _, name in ipairs({ "Boom", "Blast" }) do
+		local snd = Instance.new("Sound")
+		snd.SoundId = "rbxassetid://" .. S.Sfx[name].Id
+		table.insert(list, snd)
+	end
+	pcall(function()
+		game:GetService("ContentProvider"):PreloadAsync(list)
+	end)
 end)
 
 Remotes:WaitForChild("Notice").OnClientEvent:Connect(function(_text: string, kind: string?)

@@ -341,7 +341,7 @@ local function dropRock(player: Player, items: { any }, from: Vector3): boolean
 		if model then
 			model:Destroy()
 		end
-		GameService.Notice(player, "{Warning} Your rock fell into space!", "bad")
+		GameService.Notice(player, "{Warning} ROCK LOST!", "bad")
 		return false
 	end
 	-- posée sur le dessus de l'astéroïde (le client la garde collée à la roche qui défile)
@@ -373,7 +373,7 @@ local function caught(m: Monster)
 		d.shields -= 1
 		GameService.Sync(player)
 		release(m, "lost")
-		GameService.Notice(player, ("{Star} Your shield stopped the %s! %d left"):format(kind.Name, d.shields), "good")
+		GameService.Notice(player, "{Star} SHIELD USED!", "good")
 		return
 	end
 	local hrp = root(player)

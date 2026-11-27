@@ -183,7 +183,7 @@ local function bind(base: Model)
 	prompt.Parent = point
 	prompt.Triggered:Connect(function(player)
 		if Bases.OwnerOf(base) ~= player then
-			GameService.Notice(player, "This is not your base", "warn")
+			GameService.Notice(player, "Not your base", "warn")
 			return
 		end
 		-- la machine travaille : ce même bouton sert à la finir tout de suite
@@ -201,7 +201,7 @@ local function bind(base: Model)
 		end
 		local d = DataService.Get(player)
 		if not d or #d.cargo == 0 then
-			GameService.Notice(player, "Nothing to derock. Drill asteroids out there!", "warn")
+			GameService.Notice(player, "No rock yet!", "warn")
 			return
 		end
 		task.spawn(run, player, base, machine)
