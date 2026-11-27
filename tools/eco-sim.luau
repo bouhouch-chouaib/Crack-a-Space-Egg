@@ -17,7 +17,7 @@ local roblox = require("@lune/roblox")
 
 local Config = luau.load(fs.readFile("src/shared/Config.lua"), {
 	debugName = "Config",
-	environment = { Color3 = roblox.Color3, Vector3 = roblox.Vector3, CFrame = roblox.CFrame, Enum = roblox.Enum },
+	environment = { Color3 = roblox.Color3, Vector2 = roblox.Vector2, Vector3 = roblox.Vector3, CFrame = roblox.CFrame, Enum = roblox.Enum },
 })()
 
 local TUNNEL_SHARE = tonumber(process.args[1]) or 0.4 -- part du temps dans la soufflerie (une fois achetée)

@@ -751,6 +751,8 @@ local function payOffline(player: Player)
 	d.credits += amount
 	GameService.Sync(player)
 	player:SetAttribute("OfflineSeconds", seconds)
+	-- réserve pleine : le joueur a été absent plus longtemps que ce que les créatures peuvent garder
+	player:SetAttribute("OfflineFull", seconds >= Config.Offline.MaxHours * 3600)
 	player:SetAttribute("OfflineEarned", amount)
 end
 

@@ -302,10 +302,13 @@ local function onOffline()
 	local got = player:GetAttribute("OfflineEarned")
 	local away = player:GetAttribute("OfflineSeconds")
 	if type(got) == "number" and got > 0 then
+		-- réserve pleine : on le dit, pour donner envie de revenir avant
+		local seconds = if type(away) == "number" then away else 0
+		local time = if player:GetAttribute("OfflineFull") then ("MAX %dh"):format(seconds // 3600) else awayText(seconds)
 		table.insert(waiting, {
 			art = "Cash",
 			title = "WELCOME BACK!",
-			text = ("Your pets earned $%s\nwhile you were away (%s)"):format(Format.Short(got), awayText(if type(away) == "number" then away else 0)),
+			text = ("Your pets earned $%s\nwhile you were away (%s)"):format(Format.Short(got), time),
 			button = "AWESOME!",
 			single = true,
 		})

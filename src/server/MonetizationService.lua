@@ -35,15 +35,29 @@ local function processReceipt(receipt): Enum.ProductPurchaseDecision
 		handler = MonetizationService.AdReward
 	end
 	-- Joueur parti ou partie pas encore chargée : Roblox redemandera plus tard
-	if not player or not handler or not DataService.Get(player) then
+	local d = player and DataService.Get(player)
+	if not player or not handler or not d then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	local ok, granted = pcall(handler, player)
-	if not ok or not granted then
+	-- Achat déjà donné (Roblox le représente tant qu'on ne l'a pas confirmé) : on ne le donne pas deux fois
+	d.receipts = d.receipts or {}
+	local id = tostring(receipt.PurchaseId)
+	if not table.find(d.receipts, id) then
+		local ok, granted = pcall(handler, player)
+		if not ok or not granted then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		table.insert(d.receipts, id)
+		while #d.receipts > Config.Session.Receipts do
+			table.remove(d.receipts, 1)
+		end
+	end
+	-- On sauvegarde tout de suite : un achat Robux ne doit jamais se perdre. Tant que la sauvegarde n'est
+	-- pas écrite, on ne confirme pas : si le serveur tombe, Roblox représentera l'achat à la prochaine partie.
+	local okSave, saved = pcall(DataService.Save, player)
+	if not (okSave and saved) and not DataService.Sandbox(player) then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	-- On sauvegarde tout de suite : un achat Robux ne doit jamais se perdre
-	pcall(DataService.Save, player)
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 

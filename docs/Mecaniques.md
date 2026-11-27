@@ -49,6 +49,20 @@ Ce bloc l'emporte sur les sections plus bas quand elles le contredisent.
 - **Poursuite sans bandeau (20 nov.)** : le bandeau « NOM DU MONSTRE! RUN HOME », sa jauge et le texte « Too slow! / You are fast enough! » sont retirés. Restent la flèche lumineuse vers la base, le bord rouge, les sons et l'icône de danger. Seulement quand le joueur s'est fait attraper et qu'il manquait de Speed : un petit encadré avec l'icône du jetpack et « Need 50.0K Speed », pendant 4,5 s. La notification rouge « The … knocked your rock away! » est retirée aussi : la roche tombée se signale seule (« GRAB IT! » et rayon lumineux).
 - **Pas encore fait** : anneaux 15 et suivants (arrêt à 14 décidé le 17 nov.), vraies apparences dessinées pour les 3 types d'astéroïdes (aujourd'hui : forme + matière argent ou or).
 
+
+## 0 bis. Sessions, sauvegarde et revenu hors ligne (28 nov. 2026)
+
+Tout est dans `server/DataService` (réglages : `Config.Session`, `Config.AutosaveSeconds`, `Config.Offline`).
+
+- ✅ **Une partie, un seul serveur à la fois.** À l'arrivée, le serveur lit la sauvegarde et y pose son verrou dans la même écriture (`d.session = { job, at }`). Si un autre serveur la tient encore (le joueur vient de le quitter, sa sauvegarde n'est pas finie), on réessaie toutes les 4 s pendant 30 s ; s'il la tient toujours, le joueur est renvoyé avec « Your save is still closing on another server. Please join again in a minute! ». Chaque sauvegarde automatique rafraîchit le verrou ; un verrou sans nouvelles depuis 120 s vient d'un serveur mort et le suivant le reprend. Au départ, la dernière sauvegarde retire le verrou : on peut entrer ailleurs tout de suite.
+- ✅ **Un serveur qui a perdu la main n'écrit plus.** Si une sauvegarde trouve le verrou d'un autre serveur, elle n'écrit rien et renvoie le joueur (« Your game was opened on another server. Your progress is safe there! »).
+- ✅ **Chargement raté** (DataStore en panne, 5 essais) : dans le vrai jeu le joueur est renvoyé avec « Roblox could not load your save. Nothing is lost! Please join again in a moment. » au lieu de jouer sans que rien ne soit gardé. Dans Studio sans accès aux API, on joue sans sauvegarde comme avant.
+- ✅ **Sauvegardes** : automatique toutes les 60 s par joueur, étalées dans la minute ; une seule écriture à la fois par joueur (celle du départ passe toujours la dernière) ; à la fermeture du serveur, on attend jusqu'à 25 s que toutes les parties soient écrites (3 s avant).
+- ✅ **Achats Robux** : chaque achat donné est noté dans la partie (`d.receipts`, les 60 derniers) et n'est confirmé à Roblox qu'une fois la sauvegarde écrite. Si le serveur tombe avant, Roblox représente l'achat à la partie suivante ; s'il était déjà noté, il n'est pas donné deux fois.
+- ✅ **Suivi des sessions** dans la partie : `stats.sessions` (parties jouées), `stats.seconds` (temps de jeu total), `lastSeen` (dernière sauvegarde).
+- ✅ **Revenu hors ligne** (`HatchService`, inchangé sur le fond) : 40 % du revenu des créatures de la base, passes et reliques compris, sans les potions, pendant 6 h au plus, à partir de 2 minutes d'absence. Le temps d'absence est mis de côté dans la partie dès l'arrivée, payé 4 s plus tard, et annoncé par la fenêtre « WELCOME BACK! » ; quand la réserve de 6 h est pleine, la fenêtre l'indique (« MAX 6h ») pour donner envie de revenir avant. Les œufs en incubation et les potions avancent aussi hors ligne. En jeu, un joueur immobile touche le revenu complet et l'XP de sa soufflerie ; Roblox le déconnecte après 20 minutes sans geste, et il passe alors au revenu hors ligne.
+- 🧪 **Banc d'essai** : `lune run tools/session-test` fait tourner le vrai `DataService` sur deux faux serveurs et un faux DataStore (changement de serveur, serveur mort, panne, départ pendant une sauvegarde, fermeture). À relancer après chaque changement de `DataService`.
+
 ## 1. Univers et ton
 
 - ✅ Le vaisseau des joueurs flotte au-dessus d'une planète géante, avec **7 anneaux** d'astéroïdes autour. Des créatures cosmiques y ont pondu des œufs, aujourd'hui pétrifiés.

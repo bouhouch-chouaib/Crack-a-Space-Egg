@@ -19,6 +19,14 @@ Config.Testers = {
 	Shields = 5,
 }
 Config.AutosaveSeconds = 60
+-- SESSION (server/DataService) : une partie n'est ouverte que sur un serveur à la fois.
+Config.Session = {
+	LockSeconds = 120, -- un verrou sans nouvelles depuis ce temps vient d'un serveur mort (2 sauvegardes automatiques)
+	WaitSeconds = 30, -- à l'arrivée : temps laissé à l'ancien serveur pour finir sa sauvegarde, avant de renvoyer le joueur
+	RetrySeconds = 4, -- entre deux essais pendant cette attente
+	CloseSeconds = 25, -- fermeture du serveur : temps laissé aux dernières sauvegardes (Roblox coupe à 30)
+	Receipts = 60, -- achats Robux gardés en mémoire dans la partie pour ne jamais en donner un deux fois
+}
 
 -- Raretés : nom affiché, valeur de base (crédits à l'anneau 1), couleur.
 -- Les chances sont par œuf et par anneau : voir Config.Eggs plus bas.
