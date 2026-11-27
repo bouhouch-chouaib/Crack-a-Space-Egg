@@ -514,7 +514,7 @@ local function addView(f: Instance)
 		m.Parent = workspace
 		v.model = m
 		if m:GetAttribute("Rig") and m.PrimaryPart then
-			v.rig = MonsterRig.new(m, size)
+			v.rig = MonsterRig.new(m, size, M.ChaseAnim)
 		end
 	end
 	views[f] = v

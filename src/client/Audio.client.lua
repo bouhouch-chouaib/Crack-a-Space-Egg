@@ -112,10 +112,14 @@ RunService.Heartbeat:Connect(function(dt: number)
 		tracks[want].TimePosition = 0
 	end
 	local musicLevel = if outside then S.MusicVolume * 0.25 else S.MusicVolume
+	-- poursuite : la musique presse le pas quand le monstre se rapproche (MonsterNear, de MonsterFx.client)
+	tracks.Chase.PlaybackSpeed = 1 + S.ChaseRush * ((player:GetAttribute("MonsterNear") or 0) :: number)
 	for key, s in pairs(tracks) do
 		local gain = S.MusicGain[key] or 1
 		local goal = if key == current then musicLevel * gain else 0
-		local step = (S.MusicVolume * gain / S.MusicFade) * dt
+		-- la musique de poursuite arrive d'un coup ; les autres se fondent doucement
+		local fade = if key == "Chase" and current == "Chase" then S.ChaseFade else S.MusicFade
+		local step = (S.MusicVolume * gain / fade) * dt
 		s.Volume = if s.Volume < goal then math.min(goal, s.Volume + step) else math.max(goal, s.Volume - step)
 		if s.Volume > 0 and not s.IsPlaying then
 			s:Play()

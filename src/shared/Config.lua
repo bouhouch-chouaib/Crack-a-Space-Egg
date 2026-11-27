@@ -99,7 +99,8 @@ Config.Map = {
 -- il a DropTime secondes pour aller la reprendre, sinon elle s'enfonce dans l'astéroïde (œuf perdu).
 Config.Monsters = {
 	Kinds = {
-		-- les deux premiers apprennent la poursuite sans faire mal : petits, lents (Need = 0 : toujours semable)
+		-- les deux premiers apprennent la poursuite sans faire mal, dès le premier œuf : petits, lents
+		-- (Need = 0 : toujours semable)
 		[1] = { Name = "Dust Skitter", Model = "DustSkitter", Speed = 0.6, Size = 9, Need = 0, Color = Color3.fromRGB(255, 200, 90) },
 		[2] = { Name = "Frost Slink", Model = "FrostSlink", Speed = 0.75, Size = 12, Need = 4e3, Color = Color3.fromRGB(120, 230, 255) },
 		[3] = { Name = "Cinder Maw", Model = "CinderMaw", Speed = 0.85, Size = 16, Need = 50e3, Color = Color3.fromRGB(255, 120, 40) },
@@ -119,8 +120,9 @@ Config.Monsters = {
 	-- part = log10(Need / Speed du joueur) / Decades (1 dès qu'il lui manque Decades puissances de 10)
 	MaxFactor = 1.6,
 	Decades = 2,
-	-- Anneaux où le monstre laisse tranquille un joueur qui n'a pas fini le guide du premier parcours
-	TutorialSafe = 2,
+	-- En poursuite, tous ses gestes vont plus vite (ailes, queue, mâchoires, ondulation) : x ChaseAnim à pleine
+	-- ardeur (client/MonsterRig). Les pas suivent déjà la distance, donc sa vitesse.
+	ChaseAnim = 1.8,
 	-- Prise : le joueur est projeté (studs/s) et sa roche retombe sur l'astéroïde le plus proche
 	Knock = 70,
 	KnockUp = 35,
@@ -878,6 +880,8 @@ Config.FarFade = {
 Config.Sounds = {
 	MusicVolume = 0.3,
 	MusicFade = 1.6, -- secondes de fondu entre deux musiques
+	ChaseFade = 0.35, -- la musique de poursuite arrive d'un coup
+	ChaseRush = 0.1, -- elle accélère jusqu'à +10 % quand le monstre est tout près (attribut MonsterNear)
 	Music = {
 		-- cour et bases : « Gymnopedie No. 1 » de Satie, piano seul, calme (2 min 32, en boucle) ; avant le
 		-- 28 nov. : « Explore », électro (1842185080). Autres enregistrements de la même pièce : 1837474061, 1842971981

@@ -32,8 +32,9 @@ local function quiet(p: BasePart)
 	p.Massless = true
 end
 
--- model : copie du modèle, déjà à sa taille ; size : taille du monstre (Config.Monsters.Kinds[].Size)
-function Rig.new(model: Model, size: number)
+-- model : copie du modèle, déjà à sa taille ; size : taille du monstre (Config.Monsters.Kinds[].Size) ;
+-- rush : vitesse de ses gestes à pleine ardeur (1 = comme en promenade)
+function Rig.new(model: Model, size: number, rush: number?)
 	local root = model.PrimaryPart :: BasePart
 	local self = setmetatable({
 		model = model,
@@ -43,6 +44,9 @@ function Rig.new(model: Model, size: number)
 		segs = {} :: { Seg },
 		gait = Gaits[model:GetAttribute("Kind") or model.Name] or Gaits.Default,
 		travel = 0,
+		rush = rush or 1,
+		clock = 0, -- temps propre au monstre : il s'écoule plus vite en poursuite
+		tick = nil :: number?,
 		last = nil :: Vector3?,
 		pts = {} :: { Vector3 }, -- chemin de la tête, du plus ancien au plus récent
 		q = {} :: { Vector3 },
@@ -132,7 +136,11 @@ local function along(pts: { Vector3 }, from: Vector3, back: Vector3, d: number):
 end
 
 -- base : où est le monstre et où il regarde ; k : ardeur (0 en promenade, 1 en poursuite) ; lunge : bond (0 à 1)
-function Rig:Step(base: CFrame, t: number, k: number, lunge: number)
+function Rig:Step(base: CFrame, now: number, k: number, lunge: number)
+	-- ses gestes suivent son propre temps, qui file plus vite quand il poursuit
+	self.clock += math.clamp(now - (self.tick or now), 0, 0.1) * (1 + (self.rush - 1) * k)
+	self.tick = now
+	local t = self.clock
 	local pos = base.Position
 	if self.last then
 		self.travel += (pos - self.last).Magnitude
