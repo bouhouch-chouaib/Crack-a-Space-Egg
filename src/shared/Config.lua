@@ -90,8 +90,8 @@ Config.Map = {
 -- puis les grands à partir du 3e. Chacun a sa démarche (client/MonsterGaits). Il est toujours
 -- là (20 nov.) : il se promène dans le couloir de son anneau (Patrol, Config.MonsterPatrol). Dès qu'un
 -- joueur sort un œuf d'un astéroïde de son anneau, il fonce droit sur lui (plus de jauge de bruit ni
--- d'astéroïdes gardés) et le poursuit jusqu'à sa base, sur le vaisseau compris ; arrivé chez lui, le
--- monstre s'écrase contre le dôme de la base et retourne se promener dans son anneau.
+-- d'astéroïdes gardés) et le poursuit jusqu'à la ligne rouge de la cour (29 nov.) ; il ne la passe pas :
+-- il s'écrase contre la barrière qui s'allume en travers de la sortie et retourne dans son anneau.
 -- Need = vitesse du jetpack (Speed, l'XP totale du jetpack) qu'il faut pour le semer (18 nov.) :
 -- avec assez de Speed, il va un peu moins vite que le joueur (Speed du monstre) ; en dessous, il
 -- va d'autant plus vite que le joueur en manque (jusqu'à MaxFactor fois la vitesse du joueur).
@@ -151,9 +151,8 @@ Config.Monsters = {
 	-- l'épaisseur de l'anneau parcourues de chaque côté du centre, hauteur moyenne au-dessus du pont
 	Patrol = { Speed = 14, Side = 0.38, Depth = 0.3, Height = 12 },
 	MaxChase = 180, -- secondes : sécurité si le joueur reste coincé quelque part (il rentre alors chez lui)
-	BaseMargin = 3, -- studs autour du sol de la base (et de son annexe) où l'on est à l'abri
-	BaseHeight = 30, -- studs au-dessus du sol de la base encore à l'abri
-	Recoil = 10, -- studs : il rebondit sur le dôme de la base
+	-- (29 nov. : on est à l'abri dès la ligne rouge de la cour, plus seulement dans sa base)
+	Recoil = 10, -- studs : il rebondit sur la barrière de la cour
 	ReturnPause = 0.8, -- secondes de rage avant de rentrer
 	ReturnSpeed = 90, -- studs/s pour retourner dans son anneau
 	ReturnTime = 20, -- secondes au plus pour y retourner, puis il reprend sa promenade où elle en est
@@ -2253,6 +2252,14 @@ function Config.MachineTier(total: number): (any, any?)
 	end
 	return tiers[index], tiers[index + 1]
 end
+
+-- RETOUR À LA BASE AVEC UN ŒUF (client/HomeFx) : petit zoom avant de la caméra et éclat de lumière
+Config.HomeFx = {
+	Zoom = 14, -- degrés de champ de vision en moins au plus fort du zoom
+	ZoomIn = 0.22, -- secondes pour zoomer
+	ZoomOut = 0.6, -- secondes pour revenir
+	Cooldown = 4, -- secondes entre deux effets (on ne le rejoue pas en piétinant le bord de l'enclos)
+}
 
 -- REVENU HORS LIGNE (HatchService, Offers.client) --------------------------------------------------
 -- Les créatures de la base continuent de rapporter quand le joueur est parti : Rate × leur revenu

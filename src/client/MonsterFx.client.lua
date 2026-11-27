@@ -5,9 +5,9 @@
 --   LayeredFx « Roar ») et fonce sur lui (Chase : position publiée
 --   par le serveur), puis retourne se promener (Return). Trop loin de la caméra, il n'est pas affiché ;
 -- - traînée, braises et yeux qui brillent ; il heurte les astéroïdes sur son passage ; arrivé à la
---   base du joueur, un dôme s'allume, il s'y écrase puis repart ;
+--   ligne rouge de la cour, une barrière s'allume en travers de la sortie, il s'y écrase puis repart ;
 -- - pour le joueur poursuivi : pas de texte (20 nov. : le bandeau au nom du monstre est retiré), flèche
---   lumineuse jusqu'à sa base, bord rouge et battements
+--   lumineuse jusqu'à la ligne rouge (et un éclat de victoire s'il la passe avec son œuf), bord rouge et battements
 --   de cœur qui montent quand il approche, lignes de vitesse et champ de vision élargi, bonds en
 --   claquant des mâchoires quand il est tout près, lueur rouge au bord de l'écran de son côté,
 --   secousses, sons (deux coups de klaxon d'alarme au départ de la poursuite, chacun avec un éclair rouge,
@@ -244,23 +244,6 @@ local homeBeam = new("Beam", {
 	Parent = workspace.Terrain,
 })
 
--- Le sol de la base d'un joueur (Ship.Bases : attribut Index = attribut Base du joueur)
-local function baseFloor(userId: number): BasePart?
-	local p = Players:GetPlayerByUserId(userId)
-	local index = p and p:GetAttribute("Base")
-	local ship = workspace:FindFirstChild("Ship")
-	local bases = ship and ship:FindFirstChild("Bases")
-	if type(index) ~= "number" or not bases then
-		return nil
-	end
-	for _, b in ipairs(bases:GetChildren()) do
-		if b:GetAttribute("Index") == index then
-			return b:FindFirstChild("Floor") :: BasePart?
-		end
-	end
-	return nil
-end
-
 -- EFFETS DANS LE MONDE -----------------------------------------------------------------------
 
 local function piece(size: number, color: Color3, cf: CFrame): Part
@@ -357,35 +340,64 @@ end
 
 local STUDS = "rbxassetid://99589690361139"
 
--- Dôme de protection sur la base du joueur : le monstre s'y écrase
-local function dome(floor: BasePart, color: Color3)
-	local top = floor.CFrame * CFrame.new(0, floor.Size.Y / 2, 0)
-	local full = math.max(floor.Size.X, floor.Size.Z) * 1.35
-	local d = piece(2, color, top)
-	d.Shape = Enum.PartType.Ball
-	d.Transparency = 0.55
+-- Barrière de la cour : elle s'allume en travers de la sortie quand un joueur poursuivi passe la ligne rouge,
+-- le monstre s'y écrase
+local SAFE = Color3.fromRGB(90, 255, 170)
+local function gateShield()
+	local map = Config.Map
+	local width, height = map.CorridorWidth, 46
+	local at = CFrame.new(0, height / 2 - 6, map.FrontZ)
+	local wall = piece(2, SAFE, at)
+	wall.Size = Vector3.new(width, 2, 1.2)
+	wall.Transparency = 0.4
 	local textures = {}
-	for _, face in ipairs(Enum.NormalId:GetEnumItems()) do
+	for _, face in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back }) do
 		local t = Instance.new("Texture")
 		t.Texture = STUDS
 		t.Face = face
 		t.StudsPerTileU = 6
 		t.StudsPerTileV = 6
 		t.Transparency = 0.4
-		t.Parent = d
+		t.Parent = wall
 		table.insert(textures, t)
 	end
-	TweenService:Create(d, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.one * full }):Play()
-	shockwave(top.Position, color, full * 1.5)
-	Sfx.Play("Thaw", { at = top.Position, pitch = 0.6, volume = 3 })
+	TweenService:Create(wall, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(width, height, 1.2) }):Play()
+	shockwave(at.Position, SAFE, width * 0.9)
+	Sfx.Play("Thaw", { at = at.Position, pitch = 0.6, volume = 3 })
 	task.delay(1.1, function()
 		local fade = TweenInfo.new(1.2)
-		TweenService:Create(d, fade, { Transparency = 1 }):Play()
+		TweenService:Create(wall, fade, { Transparency = 1 }):Play()
 		for _, t in ipairs(textures) do
 			TweenService:Create(t, fade, { Transparency = 1 }):Play()
 		end
 	end)
-	Debris:AddItem(d, 2.6)
+	Debris:AddItem(wall, 2.6)
+end
+
+-- Le joueur poursuivi a passé la ligne : son de réussite ; s'il rapporte un œuf, éclat de victoire à l'écran
+-- et autour de lui
+local winGui = new("ScreenGui", { Name = "MonsterWin", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 6, Parent = player:WaitForChild("PlayerGui") })
+local winFlash = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundColor3 = SAFE, BackgroundTransparency = 1, BorderSizePixel = 0, Parent = winGui })
+local function escaped()
+	local withEgg = ((player:GetAttribute("Cargo") or 0) :: number) > 0
+	Sfx.Play("Escape", { volume = if withEgg then 1.6 else 1 })
+	if not withEgg then
+		return
+	end
+	Sfx.Play("HatchRare", { volume = 0.9, pitch = 1.15 })
+	local colors = { SAFE, Color3.fromRGB(230, 255, 240) }
+	winFlash.BackgroundTransparency = 0.55
+	TweenService:Create(winFlash, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+	LayeredFx.Screen(winGui, { kind = "Celebrate", colors = colors, duration = 0.95, size = UDim2.fromScale(0.95, 0.95), zIndex = 5 })
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if hrp then
+		local a = Instance.new("Attachment")
+		a.Parent = hrp
+		LayeredFx.new(a, { kind = "PowerUp", size = 14, colors = colors, lifetime = 0.9, zOffset = 2 }):Emit()
+		Debris:AddItem(a, 1.2)
+		shockwave(hrp.Position, SAFE, 34)
+	end
 end
 
 -- Lueur rouge au bord de l'écran, du côté du monstre quand on ne le voit pas (29 nov. : elle remplace le
@@ -666,33 +678,16 @@ function onState(f: Instance)
 		if reason == "caught" and near and kind then
 			worldBite(v.shown, kind.Color, v.size)
 		end
-		if reason == "home" then
-			-- le joueur est chez lui : dôme sur sa base, le monstre s'y écrase et rugit de rage
-			local floor = baseFloor(if wasMine then player.UserId else 0)
-			if not floor then
-				-- la base la plus proche du monstre (poursuite d'un autre joueur)
-				local ship = workspace:FindFirstChild("Ship")
-				local bases = ship and ship:FindFirstChild("Bases")
-				local best = math.huge
-				for _, b in ipairs(if bases then bases:GetChildren() else {}) do
-					local fl = b:FindFirstChild("Floor")
-					if fl and fl:IsA("BasePart") and (fl.Position - v.shown).Magnitude < best then
-						best = (fl.Position - v.shown).Magnitude
-						floor = fl
-					end
-				end
-			end
-			if floor then
-				local trim = floor.Parent and floor.Parent:GetAttribute("TrimColor")
-				dome(floor, if typeof(trim) == "Color3" then trim else Color3.fromRGB(110, 210, 255))
-			end
+		if reason == "line" then
+			-- le joueur a passé la ligne rouge : la barrière de la cour s'allume, le monstre s'y écrase et rugit
+			gateShield()
 			Sfx.Play("MonsterRoar", { at = v.shown, pitch = 0.75 })
 			if near and kind then
-				roar(v.shown, kind.Color, v.size * 2.2) -- rugit de rage contre le dôme
+				roar(v.shown, kind.Color, v.size * 2.2) -- rugit de rage contre la barrière
 			end
 			if wasMine then
-				Sfx.Play("Escape")
-				shake(0.8, 0.5)
+				escaped()
+				shake(0.6, 0.4)
 			end
 		elseif reason == "caught" and wasMine then
 			Sfx.Play("MonsterCatch")
@@ -997,11 +992,11 @@ RunService.RenderStepped:Connect(function(dt)
 		-- interface du joueur poursuivi
 		if v.mine and root and v.state == "Chase" then
 			chased = true
-			-- flèche lumineuse : le chemin jusqu'à sa base
-			local floor = baseFloor(player.UserId)
-			if floor then
-				local goal = floor.Position + Vector3.new(0, floor.Size.Y / 2 + 3, 0)
-				homeTo.WorldPosition = goal
+			-- flèche lumineuse : le chemin jusqu'à la ligne rouge de la cour, là où le monstre s'arrête
+			do
+				local map = Config.Map
+				local reach = map.CorridorWidth / 2 - 6
+				homeTo.WorldPosition = Vector3.new(math.clamp(root.Position.X, -reach, reach), 3, map.FrontZ - 4)
 				if homeFrom.Parent ~= root then
 					homeFrom.Parent = root
 				end

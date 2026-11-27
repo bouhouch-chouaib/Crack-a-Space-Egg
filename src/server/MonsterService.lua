@@ -2,13 +2,14 @@
 -- (ils poursuivent dès le premier œuf, mais on les sème toujours), les grands à partir du 3e.
 -- Un seul monstre par anneau, toujours là (20 nov.) : il se promène dans le couloir de son anneau
 -- (Config.MonsterPatrol, le même calcul chez les clients). Dès qu'un joueur sort un œuf d'un astéroïde
--- de son anneau, il fonce droit sur lui et le poursuit jusqu'à sa base, sur le vaisseau compris.
+-- de son anneau, il fonce droit sur lui et le poursuit jusqu'à la ligne rouge de la cour (29 nov. : il ne
+-- la passe plus ; avant, il allait jusqu'à la base du joueur).
 -- Le serveur décide : cible, poursuite, prise, retour. Il ne déplace pas de modèle : chaque monstre est
 -- un dossier dans Workspace.World.Monsters dont les attributs sont lus par MonsterFx.client, qui anime
 -- le modèle chez chaque joueur.
 --   Kind (anneau), Size, State (Patrol / Chase / Return), Target (UserId, 0 = personne),
 --   Pos, Look (publiés pendant Chase et Return ; en Patrol le client calcule la position),
---   ChaseAt (heure serveur du début de la poursuite), Reason (fin de poursuite : home / caught / lost),
+--   ChaseAt (heure serveur du début de la poursuite), Reason (fin de poursuite : line / caught / lost),
 --   Stunned (heure serveur de fin)
 -- Publié sur le joueur : Chased (heure de fin, pendant qu'il est poursuivi).
 -- Vitesse : chaque monstre demande une Speed de jetpack (Kinds[].Need) ; en dessous, il va d'autant
@@ -25,7 +26,6 @@ local DataService = require(script.Parent.DataService)
 local GameService = require(script.Parent.GameService)
 local BeltService = require(script.Parent.BeltService)
 local CarryService = require(script.Parent.CarryService)
-local Bases = require(script.Parent.Bases)
 local Path = require(ReplicatedStorage.Shared.MonsterPath)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -100,25 +100,10 @@ end
 
 MonsterService.InShip = inShip
 
--- Dans sa propre base (sol ou annexe) : le monstre abandonne
-local function inBase(player: Player, pos: Vector3): boolean
-	local base = Bases.Get(player)
-	if not base then
-		return false
-	end
-	local floors = { base:FindFirstChild("Floor") }
-	local annex = base:FindFirstChild("Annex")
-	table.insert(floors, annex and annex:FindFirstChild("AnnexFloor"))
-	for _, f in ipairs(floors) do
-		if f and f:IsA("BasePart") then
-			local p = f.CFrame:PointToObjectSpace(pos)
-			local s = f.Size
-			if math.abs(p.X) <= s.X / 2 + M.BaseMargin and math.abs(p.Z) <= s.Z / 2 + M.BaseMargin and p.Y > -4 and p.Y < M.BaseHeight then
-				return true
-			end
-		end
-	end
-	return false
+-- Dans la cour, derrière la ligne rouge (Workspace.Ship.Yard.SafeLine, à Config.Map.FrontZ) : le monstre
+-- ne la passe jamais, la poursuite s'arrête là
+local function inYard(pos: Vector3): boolean
+	return pos.Z < Config.Map.FrontZ and inShip(pos)
 end
 
 -- Multiplicateur de vitesse du monstre face à ce joueur : sa propre Speed s'il a assez de Speed,
@@ -274,7 +259,8 @@ local function setState(m: Monster, state: string)
 end
 
 -- Fin de poursuite : le joueur est libéré, le monstre retourne se promener
--- reason : home (le joueur est rentré, il s'écrase sur le dôme), caught, lost (temps écoulé, joueur parti)
+-- reason : line (le joueur a passé la ligne rouge de la cour, il s'écrase sur la barrière), caught,
+-- lost (temps écoulé, joueur parti)
 local function release(m: Monster, reason: string)
 	local player = m.target
 	m.target = nil
@@ -283,7 +269,7 @@ local function release(m: Monster, reason: string)
 	m.folder:SetAttribute("Leg", nil)
 	m.home = if moveOf(m) ~= "Float" then pick(m, Config.MonsterPatrol(m.ring, now()), now(), nil) else nil
 	m.leaveAt = now()
-	m.pause = if reason == "home" then M.ReturnPause elseif reason == "caught" then 0.6 else 0
+	m.pause = if reason == "line" then M.ReturnPause elseif reason == "caught" then 0.6 else 0
 	m.folder:SetAttribute("Reason", reason)
 	m.folder:SetAttribute("Target", 0)
 	setState(m, "Return")
@@ -301,6 +287,10 @@ function MonsterService.Alert(player: Player, ring: number): boolean
 	local m = monsters[ring]
 	local hrp = root(player)
 	if not m or not hrp or m.state == "Chase" or (cooldown[player] or 0) > os.clock() then
+		return false
+	end
+	-- œuf sorti depuis la cour, derrière la ligne rouge : il n'y a personne à poursuivre
+	if inYard(hrp.Position) then
 		return false
 	end
 	-- déjà poursuivi par le monstre d'un autre anneau : un seul à la fois
@@ -445,14 +435,15 @@ local function step(dt: number)
 				continue
 			end
 			local target = hrp.Position
-			local home = inBase(player, target)
-			if home or t >= m.endsAt then
-				-- arrivé chez lui : le monstre s'écrase contre le dôme de la base, puis retourne à son anneau
-				local away = m.pos - target
-				if home and away.Magnitude > 0.01 then
-					m.pos += away.Unit * M.Recoil
+			local safe = inYard(target)
+			if safe or t >= m.endsAt then
+				-- le joueur a passé la ligne rouge : le monstre s'écrase contre la barrière de la cour (il reste
+				-- du côté du couloir), puis retourne à son anneau
+				if safe then
+					local line = Config.Map.FrontZ
+					m.pos = Vector3.new(m.pos.X, m.pos.Y, math.max(m.pos.Z, line + m.size * 0.6) + M.Recoil)
 				end
-				release(m, if home then "home" else "lost")
+				release(m, if safe then "line" else "lost")
 				continue
 			end
 			if t < m.t0 + M.Emerge then
