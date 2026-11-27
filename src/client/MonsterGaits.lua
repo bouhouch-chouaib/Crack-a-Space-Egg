@@ -249,4 +249,83 @@ function Gaits.PhantomKing(r, t, _s, k, lunge)
 	return CFrame.new(0, sin(t * 1.4) * 0.03 * r.size, 0) * CFrame.Angles(0.05 + 0.12 * k, 0, sin(t * 0.8) * 0.06)
 end
 
+-- SAUTS DES MARCHEURS ------------------------------------------------------------------------------------
+-- Quand un marcheur bondit d'un astéroïde à l'autre (shared/MonsterPath), sa pose de saut remplace son pas :
+--   hop   : avancement du bond, de 0 (il quitte la roche) à 1 (il touche la suivante), nil s'il est posé ;
+--   squat : 0 à 1, il se ramasse juste avant de bondir et amortit juste après s'être reçu.
+-- Renvoie le décalage du corps, ajouté à celui de la démarche.
+Gaits.Leap = {}
+
+-- Pattes de côté (scarabée, araignée) : genoux qui montent quand il se ramasse, pattes repliées sous le corps
+-- en l'air, puis tendues vers la roche pour se recevoir
+local function sideLeap(r: any, count: number, hop: number?, squat: number)
+	local tuck = if hop then sin(PI * hop) else 0
+	local reach = if hop then 0.2 * (1 - tuck) else 0
+	for i = 1, count do
+		for _, sd in ipairs({ "L", "R" }) do
+			local name = "Leg" .. sd .. i
+			local side = r:Side(name .. "A")
+			r:J(name .. "A", 0, 0, side * (squat * 0.3 + tuck * 0.45 - reach))
+			r:J(name .. "B", 0, 0, side * (squat * 0.25 + tuck * 0.5))
+		end
+	end
+end
+
+-- Le corps se cabre au départ, pique du nez à l'arrivée, et s'abaisse quand il se ramasse
+local function leapBody(r: any, hop: number?, squat: number, pitch: number, drop: number): CFrame
+	local tilt = if hop then -pitch * cos(PI * hop) else 0
+	return CFrame.new(0, -squat * drop * r.size, 0) * CFrame.Angles(tilt, 0, 0)
+end
+
+function Gaits.Leap.DustSkitter(r, hop, squat)
+	sideLeap(r, 3, hop, squat)
+	return leapBody(r, hop, squat, 0.3, 0.05)
+end
+
+function Gaits.Leap.GearSpider(r, hop, squat)
+	sideLeap(r, 4, hop, squat)
+	return leapBody(r, hop, squat, 0.2, 0.05)
+end
+
+-- Hydre : elle pousse des pattes arrière, tout se replie en l'air, les pattes avant se tendent pour se recevoir
+function Gaits.Leap.StormHydra(r, hop, squat)
+	local h = hop or 0
+	local air = if hop then 1 else 0
+	local tuck = if hop then sin(PI * h) else 0
+	for _, sd in ipairs({ "L", "R" }) do
+		r:J("Fore" .. sd .. "A", air * (-0.2 - 0.4 * h) - squat * 0.15)
+		r:J("Fore" .. sd .. "B", air * (0.7 - 0.6 * h) + squat * 0.4)
+		r:J("Fore" .. sd .. "C", -tuck * 0.3)
+		r:J("Hind" .. sd .. "A", air * (0.7 - 1.0 * h) + squat * 0.15)
+		r:J("Hind" .. sd .. "B", air * (0.6 * h + 0.3 * tuck) + squat * 0.4)
+		r:J("Hind" .. sd .. "C", -tuck * 0.3)
+	end
+	return leapBody(r, hop, squat, 0.28, 0.05)
+end
+
+-- Gorille : les bras partent en arrière pour l'élan, passent par-dessus la tête en l'air, les jambes se replient
+function Gaits.Leap.SporeBehemoth(r, hop, squat)
+	local tuck = if hop then sin(PI * hop) else 0
+	for _, sd in ipairs({ "L", "R" }) do
+		r:J("Arm" .. sd .. "A", squat * 0.4 - tuck * 1.2)
+		r:J("Arm" .. sd .. "B", -tuck * 0.35)
+		r:J("Leg" .. sd, -tuck * 0.5)
+	end
+	return leapBody(r, hop, squat, 0.2, 0.04)
+end
+
+-- Colosse : une grande enjambée, une jambe devant, l'autre qui pousse derrière, les bras levés en l'air
+function Gaits.Leap.TempleColossus(r, hop, squat)
+	local h = hop or 0
+	local air = if hop then 1 else 0
+	local tuck = if hop then sin(PI * h) else 0
+	r:J("LegL", air * (-0.5 - 0.2 * tuck))
+	r:J("LegR", air * (0.6 - 0.9 * h))
+	for _, sd in ipairs({ "L", "R" }) do
+		r:J("Arm" .. sd .. "A", squat * 0.3 - tuck * 0.9)
+		r:J("Arm" .. sd .. "B", -0.2 - tuck * 0.4)
+	end
+	return leapBody(r, hop, squat, 0.15, 0.03)
+end
+
 return Gaits

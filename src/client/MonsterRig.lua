@@ -43,6 +43,9 @@ function Rig.new(model: Model, size: number, rush: number?)
 		joints = {} :: { [string]: Joint },
 		segs = {} :: { Seg },
 		gait = Gaits[model:GetAttribute("Kind") or model.Name] or Gaits.Default,
+		leap = Gaits.Leap[model:GetAttribute("Kind") or model.Name], -- pose de saut des marcheurs
+		hop = nil :: number?, -- bond en cours d'un astéroïde à l'autre (0 à 1), donné par MonsterFx
+		squat = 0, -- il se ramasse avant de bondir, il amortit après (0 à 1)
 		travel = 0,
 		rush = rush or 1,
 		clock = 0, -- temps propre au monstre : il s'écoule plus vite en poursuite
@@ -148,6 +151,10 @@ function Rig:Step(base: CFrame, now: number, k: number, lunge: number)
 	self.last = pos
 	local size = self.size
 	local body, wave: Wave? = self.gait(self, t, self.travel / size, k, lunge)
+	if self.leap and (self.hop or self.squat > 0.02) then
+		-- un marcheur qui bondit : sa pose de saut remplace son pas
+		body = (body or IDENT) * self.leap(self, self.hop, self.squat)
+	end
 	local rootCF = base * (body or IDENT)
 	local segs = self.segs
 	if #segs > 0 then

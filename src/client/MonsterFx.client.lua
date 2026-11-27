@@ -866,12 +866,24 @@ RunService.RenderStepped:Connect(function(dt)
 	for f, v in pairs(views) do
 		-- en promenade, la position se calcule ici (même formule que le serveur) ; sinon le serveur la publie
 		local target, look
+		local hop: number?, squat = nil, 0 -- bond d'un marcheur entre deux astéroïdes (MonsterGaits.Leap)
 		if v.state == "Patrol" then
 			-- en promenade : il flotte (Float), ou il va d'astéroïde en astéroïde, à pied ou en rampant
 			local kind = M.Kinds[v.ring]
 			local move = kind and kind.Move or "Float"
 			if v.leg and move ~= "Float" then
-				target, look = MonsterPath.At(v.leg, workspace:GetServerTimeNow(), move, v.size, (kind.Foot or 0.35) * v.size)
+				local leg, clock = v.leg, workspace:GetServerTimeNow()
+				target, look = MonsterPath.At(leg, clock, move, v.size, (kind.Foot or 0.35) * v.size)
+				if move == "Walk" then
+					-- il bondit vers l'astéroïde suivant, ou il se ramasse juste avant et amortit juste après
+					if clock > leg.t1 and clock < leg.t2 then
+						hop = (clock - leg.t1) / (leg.t2 - leg.t1)
+					elseif clock <= leg.t1 then
+						local before = math.clamp(1 - (leg.t1 - clock) / 0.35, 0, 1)
+						local after = if leg.a.fixed then 0 else math.clamp(1 - (clock - leg.t0) / 0.3, 0, 1)
+						squat = math.max(before, after)
+					end
+				end
 			else
 				target, look = Config.MonsterPatrol(v.ring, workspace:GetServerTimeNow())
 			end
@@ -939,6 +951,7 @@ RunService.RenderStepped:Connect(function(dt)
 				-- chaque monstre a sa démarche (MonsterGaits) : pattes, ailes, mâchoires, corps de serpent
 				local goal = if v.state == "Chase" then 1 elseif v.state == "Return" then 0.6 else 0
 				v.effort = (v.effort or 0) + (goal - (v.effort or 0)) * math.min(1, dt * 3)
+				v.rig.hop, v.rig.squat = hop, squat
 				v.rig:Step(pivot, t, v.effort, lunge)
 			else
 				pivot *= wobble
