@@ -26,6 +26,7 @@ local GameService = require(script.Parent.GameService)
 local BeltService = require(script.Parent.BeltService)
 local CarryService = require(script.Parent.CarryService)
 local Bases = require(script.Parent.Bases)
+local Path = require(ReplicatedStorage.Shared.MonsterPath)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
@@ -47,6 +48,13 @@ type Monster = {
 	lastSent: number,
 	stunUntil: number?,
 	stunReady: number?,
+	-- promenade parmi les astéroïdes (Walk, Crawl) : étape en cours, ses deux astéroïdes, sens de rotation
+	leg: any?,
+	legA: any?,
+	legB: any?,
+	spin: number?,
+	home: any?, -- astéroïde où il retourne après une poursuite
+	homeAng: number?,
 }
 
 local monsters: { [number]: Monster } = {} -- par anneau
@@ -125,6 +133,135 @@ function MonsterService.Factor(ring: number, jetSpeed: number): number
 	return kind.Speed + (M.MaxFactor - kind.Speed) * math.clamp(missing, 0.12, 1)
 end
 
+-- PROMENADE PARMI LES ASTÉROÏDES (shared/MonsterPath, Config.Monsters.Route) -----------------------------
+
+local rng = Random.new()
+
+local function moveOf(m: Monster): string
+	return M.Kinds[m.ring].Move or "Float"
+end
+
+local function footOf(m: Monster): number
+	return (M.Kinds[m.ring].Foot or 0.35) * m.size
+end
+
+local function spotOf(a: any)
+	local s = a.part.Size
+	return Path.Rock(a.radius, a.angle0, a.height, a.omega, a.t0, math.max(s.X, s.Z), s.Y)
+end
+
+-- Secondes pendant lesquelles un astéroïde reste dans la partie du couloir où les monstres se promènent
+local function inside(s: any, t: number): number
+	local limit = Config.Map.CorridorWidth * M.Route.Side
+	if math.abs(Path.Across(s, t)) > limit then
+		return 0
+	elseif s.om == 0 then
+		return math.huge
+	end
+	local exit = s.t0 + (math.asin(math.clamp(limit / s.r, -1, 1)) * math.sign(s.om) - s.a0) / s.om
+	return math.max(0, exit - t)
+end
+
+-- Où est le monstre en promenade, et où il regarde
+local function patrol(m: Monster, t: number): (Vector3, Vector3)
+	if m.leg then
+		return Path.At(m.leg, t, moveOf(m), m.size, footOf(m))
+	end
+	return Config.MonsterPatrol(m.ring, t)
+end
+
+-- Le prochain astéroïde : pas trop loin, encore longtemps dans le couloir, assez gros pour lui
+local function pick(m: Monster, from: Vector3, t: number, exclude: any?): any?
+	local R = M.Route
+	local best, bestScore = nil, math.huge
+	for _, a in ipairs(BeltService.InRing(m.ring)) do
+		if a ~= exclude and a.tEnd > t + 10 then
+			local s = spotOf(a)
+			local stay = inside(s, t + 1)
+			if stay > 4 then
+				local d = (Path.Center(s, t + 1) - from).Magnitude
+				if d > s.sx / 2 + m.size * 0.3 and d < R.Reach then
+					local score = d - math.min(stay, 30) * R.Keep - s.sx * R.Big * m.size / 20 + rng:NextNumber(0, R.Jitter)
+					if score < bestScore then
+						best, bestScore = a, score
+					end
+				end
+			end
+		end
+	end
+	return best
+end
+
+-- Nouvelle étape à partir de l'instant t : le temps passé sur l'astéroïde `rock` (ou nulle part : il part de là
+-- où il est), puis le trajet vers le suivant. ang : par où il est arrivé sur `rock`.
+local function plan(m: Monster, t: number, rock: any?, ang: number)
+	local R = M.Route
+	local move = moveOf(m)
+	local a
+	if rock and BeltService.Alive(rock) then
+		a = spotOf(rock)
+	else
+		rock = nil
+		a = Path.Point(m.pos)
+	end
+	local t1, turn = t, 0
+	if rock then
+		local stay
+		if move == "Walk" then
+			stay = math.clamp(a.sx * 0.56 / (R.WalkSpeed[1] + R.WalkSpeed[2] * m.size), R.Stay[1], R.Stay[2])
+		else
+			m.spin = m.spin or (if rng:NextNumber() < 0.5 then -1 else 1)
+			turn = m.spin * rng:NextNumber(R.Turn[1], R.Turn[2])
+			stay = math.abs(turn) * (a.sx / 2 + m.size * 0.22) / (R.CrawlSpeed[1] + R.CrawlSpeed[2] * m.size)
+		end
+		-- pas plus longtemps que l'astéroïde ne reste dans le couloir
+		local keep = math.min(stay, inside(a, t))
+		if stay > 0 then
+			turn *= keep / stay
+		end
+		t1 = t + keep
+	end
+	-- d'où il part à t1
+	local from = Path.At({ a = a, b = a, t0 = t, t1 = t1, t2 = t1, ang = ang, turn = turn, ang2 = ang }, t1, move, m.size, footOf(m))
+	local nextRock = pick(m, from, t1, rock)
+	local b = if nextRock then spotOf(nextRock) else Path.Point((Config.MonsterPatrol(m.ring, t1 + 3)))
+	local speed = if move == "Walk" then R.HopSpeed[1] + R.HopSpeed[2] * m.size else R.CrawlSpeed[1] + R.CrawlSpeed[2] * m.size
+	local gap = Path.Center(b, t1 + 1) - from
+	local duration = math.clamp(gap.Magnitude / speed, 0.9, 9)
+	local dir = Path.Center(b, t1 + duration) - from
+	local heading = math.atan2(dir.Z, dir.X)
+	local ang2
+	if move == "Walk" then
+		ang2 = heading -- il se pose sur le bord le plus proche et traverse la roche dans le même sens
+	else
+		-- il aborde le flanc le plus proche, un peu de côté, et continue de tourner dans ce sens
+		m.spin = if rng:NextNumber() < 0.5 then -1 else 1
+		ang2 = heading + math.pi + m.spin * 0.8
+	end
+	local leg = { a = a, b = b, t0 = t, t1 = t1, t2 = t1 + duration, ang = ang, turn = turn, ang2 = ang2 }
+	m.leg, m.legA, m.legB = leg, rock, nextRock
+	m.folder:SetAttribute("Leg", Path.Encode(leg))
+end
+
+-- En promenade : étape suivante quand celle-ci est finie, ou tout de suite si son astéroïde a disparu
+local function stroll(m: Monster, t: number)
+	if moveOf(m) == "Float" then
+		return
+	end
+	local leg = m.leg
+	if not leg then
+		m.pos = Config.MonsterPatrol(m.ring, t)
+		plan(m, t, nil, 0)
+	elseif t >= leg.t2 then
+		m.pos = patrol(m, leg.t2)
+		plan(m, leg.t2, m.legB, leg.ang2)
+	elseif (t < leg.t1 and m.legA and not BeltService.Alive(m.legA)) or (m.legB and not BeltService.Alive(m.legB)) then
+		-- la roche sous lui (ou celle qu'il visait) vient de casser : il repart de là où il est
+		m.pos = patrol(m, t)
+		plan(m, t, nil, 0)
+	end
+end
+
 local function publish(m: Monster)
 	m.folder:SetAttribute("Pos", m.pos)
 	m.folder:SetAttribute("Look", m.look)
@@ -141,6 +278,10 @@ end
 local function release(m: Monster, reason: string)
 	local player = m.target
 	m.target = nil
+	-- après la poursuite, il retourne sur un astéroïde de son anneau et reprend sa promenade de là
+	m.leg, m.legA, m.legB = nil, nil, nil
+	m.folder:SetAttribute("Leg", nil)
+	m.home = if moveOf(m) ~= "Float" then pick(m, Config.MonsterPatrol(m.ring, now()), now(), nil) else nil
 	m.leaveAt = now()
 	m.pause = if reason == "home" then M.ReturnPause elseif reason == "caught" then 0.6 else 0
 	m.folder:SetAttribute("Reason", reason)
@@ -169,7 +310,7 @@ function MonsterService.Alert(player: Player, ring: number): boolean
 		end
 	end
 	if m.state == "Patrol" then
-		m.pos, m.look = Config.MonsterPatrol(ring, now())
+		m.pos, m.look = patrol(m, now())
 	end
 	local t = now()
 	m.target = player
@@ -350,6 +491,17 @@ local function step(dt: number)
 			-- un moment sur place (rage contre le dôme, ou après un coup), puis il rentre se promener
 			if t >= m.leaveAt + m.pause then
 				local goal = Config.MonsterPatrol(ring, t)
+				local home = m.home
+				if home and BeltService.Alive(home) then
+					-- il vise le bord de son astéroïde (le dessus pour un marcheur, le flanc pour un rampeur)
+					local spot = spotOf(home)
+					local c = Path.Center(spot, t)
+					m.homeAng = math.atan2(c.Z - m.pos.Z, c.X - m.pos.X)
+					local ang = if moveOf(m) == "Walk" then m.homeAng else m.homeAng + math.pi
+					goal = Path.At({ a = spot, b = spot, t0 = t, t1 = t + 1, t2 = t + 1, ang = ang, turn = 0, ang2 = ang }, t, moveOf(m), m.size, footOf(m))
+				elseif home then
+					m.home = pick(m, m.pos, t, nil)
+				end
 				local delta = goal - m.pos
 				local dist = delta.Magnitude
 				if dist > 0.01 then
@@ -358,6 +510,12 @@ local function step(dt: number)
 				end
 				if dist <= 4 or t >= m.leaveAt + m.pause + M.ReturnTime then
 					m.folder:SetAttribute("Reason", nil)
+					if moveOf(m) ~= "Float" then
+						local arrived = dist <= 4 and m.home ~= nil and BeltService.Alive(m.home)
+						local ang = (m.homeAng or 0) + (if moveOf(m) == "Walk" then 0 else math.pi)
+						plan(m, t, if arrived then m.home else nil, ang)
+						m.home = nil
+					end
 					setState(m, "Patrol")
 					continue
 				end
@@ -367,7 +525,10 @@ local function step(dt: number)
 				publish(m)
 			end
 		end
-		-- Patrol : rien à faire, la position se calcule (Config.MonsterPatrol)
+		-- Patrol : la position se calcule (Config.MonsterPatrol, ou l'étape en cours parmi les astéroïdes)
+		if m.state == "Patrol" then
+			stroll(m, t)
+		end
 	end
 end
 

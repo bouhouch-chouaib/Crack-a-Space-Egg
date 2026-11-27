@@ -99,6 +99,17 @@ function BeltService.NearestAsteroid(pos: Vector3, maxDist: number): (Asteroid?,
 	return best, bestPos
 end
 
+-- Astéroïdes vivants d'un anneau (MonsterService : les monstres se promènent de roche en roche)
+function BeltService.InRing(ringIndex: number): { Asteroid }
+	local list = {}
+	for _, a in pairs(active) do
+		if a.ring == ringIndex then
+			table.insert(list, a)
+		end
+	end
+	return list
+end
+
 -- L'astéroïde est-il encore là (pas cassé ni sorti du couloir) ?
 function BeltService.Alive(a: Asteroid): boolean
 	return active[a.part] == a

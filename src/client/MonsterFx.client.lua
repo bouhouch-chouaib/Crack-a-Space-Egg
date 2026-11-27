@@ -28,6 +28,7 @@ local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
 local MonsterRig = require(script.Parent:WaitForChild("MonsterRig"))
+local MonsterPath = require(ReplicatedStorage.Shared:WaitForChild("MonsterPath"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 
 local M = Config.Monsters
@@ -415,6 +416,7 @@ type View = {
 	light: PointLight?,
 	mine: boolean,
 	hl: Highlight?,
+	leg: any?, -- étape de sa promenade parmi les astéroïdes (attribut Leg, shared/MonsterPath)
 	rig: any?, -- squelette (MonsterRig) : il anime les pièces selon la démarche du monstre
 	effort: number?, -- ardeur lissée : 0 en promenade, 1 en poursuite
 	far: boolean?,
@@ -590,9 +592,12 @@ local function addView(f: Instance)
 		end
 	end
 	views[f] = v
+	v.leg = MonsterPath.Decode(f:GetAttribute("Leg"))
 	f.AttributeChanged:Connect(function(name)
 		if name == "State" then
 			onState(f)
+		elseif name == "Leg" then
+			v.leg = MonsterPath.Decode(f:GetAttribute("Leg"))
 		end
 	end)
 	-- on arrive en pleine poursuite de ce joueur (réapparition, arrivée tardive) : l'interface suit
@@ -862,7 +867,14 @@ RunService.RenderStepped:Connect(function(dt)
 		-- en promenade, la position se calcule ici (même formule que le serveur) ; sinon le serveur la publie
 		local target, look
 		if v.state == "Patrol" then
-			target, look = Config.MonsterPatrol(v.ring, workspace:GetServerTimeNow())
+			-- en promenade : il flotte (Float), ou il va d'astéroïde en astéroïde, à pied ou en rampant
+			local kind = M.Kinds[v.ring]
+			local move = kind and kind.Move or "Float"
+			if v.leg and move ~= "Float" then
+				target, look = MonsterPath.At(v.leg, workspace:GetServerTimeNow(), move, v.size, (kind.Foot or 0.35) * v.size)
+			else
+				target, look = Config.MonsterPatrol(v.ring, workspace:GetServerTimeNow())
+			end
 		else
 			target = (f:GetAttribute("Pos") or v.shown) :: Vector3
 			look = (f:GetAttribute("Look") or v.look) :: Vector3

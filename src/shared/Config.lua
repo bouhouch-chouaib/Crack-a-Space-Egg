@@ -101,20 +101,20 @@ Config.Monsters = {
 	Kinds = {
 		-- les deux premiers apprennent la poursuite sans faire mal, dès le premier œuf : petits, lents
 		-- (Need = 0 : toujours semable)
-		[1] = { Name = "Dust Skitter", Model = "DustSkitter", Speed = 0.6, Size = 9, Need = 0, Color = Color3.fromRGB(255, 200, 90) },
-		[2] = { Name = "Frost Slink", Model = "FrostSlink", Speed = 0.75, Size = 12, Need = 4e3, Color = Color3.fromRGB(120, 230, 255) },
-		[3] = { Name = "Cinder Maw", Model = "CinderMaw", Speed = 0.85, Size = 16, Need = 50e3, Color = Color3.fromRGB(255, 120, 40) },
-		[4] = { Name = "Nebula Stalker", Model = "NebulaStalker", Speed = 0.85, Size = 20, Need = 500e3, Color = Color3.fromRGB(190, 110, 255) },
-		[5] = { Name = "Devourer", Model = "Devourer", Speed = 0.85, Size = 26, Need = 7e6, Color = Color3.fromRGB(150, 255, 90) },
-		[6] = { Name = "Rift Watcher", Model = "Watcher", Speed = 0.9, Size = 30, Need = 100e6, Color = Color3.fromRGB(90, 230, 255) },
-		[7] = { Name = "Nest Queen", Model = "Queen", Speed = 0.9, Size = 34, Need = 1.5e9, Color = Color3.fromRGB(255, 170, 60) },
-		[8] = { Name = "Abyss Angler", Model = "AbyssAngler", Speed = 0.9, Size = 38, Need = 8e9, Color = Color3.fromRGB(60, 230, 210) },
-		[9] = { Name = "Storm Hydra", Model = "StormHydra", Speed = 0.9, Size = 42, Need = 70e9, Color = Color3.fromRGB(255, 230, 90) },
-		[10] = { Name = "Gear Spider", Model = "GearSpider", Speed = 0.92, Size = 46, Need = 700e9, Color = Color3.fromRGB(240, 170, 80) },
-		[11] = { Name = "Sour Worm", Model = "SourWorm", Speed = 0.92, Size = 50, Need = 9e12, Color = Color3.fromRGB(255, 110, 190) },
-		[12] = { Name = "Spore Behemoth", Model = "SporeBehemoth", Speed = 0.92, Size = 54, Need = 150e12, Color = Color3.fromRGB(110, 240, 210) },
-		[13] = { Name = "Temple Colossus", Model = "TempleColossus", Speed = 0.95, Size = 58, Need = 3.5e15, Color = Color3.fromRGB(255, 200, 80) },
-		[14] = { Name = "Phantom King", Model = "PhantomKing", Speed = 0.95, Size = 64, Need = 40e15, Color = Color3.fromRGB(120, 240, 220) },
+		[1] = { Name = "Dust Skitter", Model = "DustSkitter", Speed = 0.6, Size = 9, Need = 0, Color = Color3.fromRGB(255, 200, 90), Move = "Walk", Foot = 0.27 },
+		[2] = { Name = "Frost Slink", Model = "FrostSlink", Speed = 0.75, Size = 12, Need = 4e3, Color = Color3.fromRGB(120, 230, 255), Move = "Crawl" },
+		[3] = { Name = "Cinder Maw", Model = "CinderMaw", Speed = 0.85, Size = 16, Need = 50e3, Color = Color3.fromRGB(255, 120, 40), Move = "Crawl" },
+		[4] = { Name = "Nebula Stalker", Model = "NebulaStalker", Speed = 0.85, Size = 20, Need = 500e3, Color = Color3.fromRGB(190, 110, 255), Move = "Float" },
+		[5] = { Name = "Devourer", Model = "Devourer", Speed = 0.85, Size = 26, Need = 7e6, Color = Color3.fromRGB(150, 255, 90), Move = "Crawl" },
+		[6] = { Name = "Rift Watcher", Model = "Watcher", Speed = 0.9, Size = 30, Need = 100e6, Color = Color3.fromRGB(90, 230, 255), Move = "Float" },
+		[7] = { Name = "Nest Queen", Model = "Queen", Speed = 0.9, Size = 34, Need = 1.5e9, Color = Color3.fromRGB(255, 170, 60), Move = "Float" },
+		[8] = { Name = "Abyss Angler", Model = "AbyssAngler", Speed = 0.9, Size = 38, Need = 8e9, Color = Color3.fromRGB(60, 230, 210), Move = "Float" },
+		[9] = { Name = "Storm Hydra", Model = "StormHydra", Speed = 0.9, Size = 42, Need = 70e9, Color = Color3.fromRGB(255, 230, 90), Move = "Walk", Foot = 0.4 },
+		[10] = { Name = "Gear Spider", Model = "GearSpider", Speed = 0.92, Size = 46, Need = 700e9, Color = Color3.fromRGB(240, 170, 80), Move = "Walk", Foot = 0.45 },
+		[11] = { Name = "Sour Worm", Model = "SourWorm", Speed = 0.92, Size = 50, Need = 9e12, Color = Color3.fromRGB(255, 110, 190), Move = "Crawl" },
+		[12] = { Name = "Spore Behemoth", Model = "SporeBehemoth", Speed = 0.92, Size = 54, Need = 150e12, Color = Color3.fromRGB(110, 240, 210), Move = "Walk", Foot = 0.5 },
+		[13] = { Name = "Temple Colossus", Model = "TempleColossus", Speed = 0.95, Size = 58, Need = 3.5e15, Color = Color3.fromRGB(255, 200, 80), Move = "Walk", Foot = 0.5 },
+		[14] = { Name = "Phantom King", Model = "PhantomKing", Speed = 0.95, Size = 64, Need = 40e15, Color = Color3.fromRGB(120, 240, 220), Move = "Float" },
 	},
 	-- Vitesse du monstre quand le joueur manque de Speed : Speed du monstre + (MaxFactor - Speed) × part,
 	-- part = log10(Need / Speed du joueur) / Decades (1 dès qu'il lui manque Decades puissances de 10)
@@ -132,6 +132,21 @@ Config.Monsters = {
 	DropTime = 30, -- secondes pour reprendre sa roche
 	DropSearch = 500, -- studs : astéroïde le plus proche cherché dans ce rayon (sinon la roche est perdue)
 	PickRadius = 9, -- studs : on reprend sa roche en la touchant (en plus de sa taille)
+	-- Façon de se promener (Kinds[].Move, shared/MonsterPath) : Float flotte librement (Patrol ci-dessous) ;
+	-- Walk se tient sur les astéroïdes, les traverse à pied et saute de l'un à l'autre (Foot = distance du
+	-- centre du monstre à ses pieds, en part de sa taille) ; Crawl rampe à plat autour d'eux.
+	Route = {
+		Side = 0.42, -- part de la largeur du couloir où il choisit ses astéroïdes, de chaque côté du centre
+		Reach = 170, -- studs : il ne vise pas un astéroïde plus loin
+		WalkSpeed = { 6, 0.3 }, -- marche sur la roche : studs/s = base + part × taille du monstre
+		HopSpeed = { 26, 0.5 }, -- bond d'une roche à l'autre
+		CrawlSpeed = { 16, 0.35 }, -- reptation
+		Stay = { 2.5, 6 }, -- secondes sur un astéroïde (marcheur)
+		Turn = { 2.4, 4.6 }, -- radians de tour autour d'un astéroïde (rampeur)
+		Keep = 2, -- studs de préférence par seconde que l'astéroïde passera encore dans le couloir
+		Big = 1.2, -- préférence pour les gros astéroïdes, d'autant plus forte que le monstre est grand
+		Jitter = 30, -- hasard (studs) : il ne prend pas toujours le plus proche
+	},
 	-- Promenade dans le couloir : vitesse (studs/s au plus), part de la largeur du couloir et de
 	-- l'épaisseur de l'anneau parcourues de chaque côté du centre, hauteur moyenne au-dessus du pont
 	Patrol = { Speed = 14, Side = 0.38, Depth = 0.3, Height = 12 },
