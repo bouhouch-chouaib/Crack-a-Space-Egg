@@ -120,6 +120,9 @@ Config.Monsters = {
 	-- part = log10(Need / Speed du joueur) / Decades (1 dès qu'il lui manque Decades puissances de 10)
 	MaxFactor = 1.6,
 	Decades = 2,
+	-- Alarme du joueur pris en chasse : Count coups de klaxon, un toutes les Gap secondes, chacun coupé net
+	-- au bout de Length secondes (la note enregistrée dure 0,8 s)
+	Alarm = { Count = 2, Gap = 0.5, Length = 0.38 },
 	-- En poursuite, tous ses gestes vont plus vite (ailes, queue, mâchoires, ondulation) : x ChaseAnim à pleine
 	-- ardeur (client/MonsterRig). Les pas suivent déjà la distance, donc sa vitesse.
 	ChaseAnim = 1.8,
@@ -932,6 +935,9 @@ Config.Sounds = {
 		Thaw = { Id = 96795857757261, Volume = 0.3, Pitch = 1.4 },
 		-- monstres
 		MonsterRoar = { Id = 9113980319, Volume = 1.8 }, -- réveil
+		-- alarme du joueur poursuivi : une note de klaxon de science-fiction (Pro Sound Effects), jouée deux fois
+		-- coup sur coup (« Wang ! Wang ! », Config.Monsters.Alarm). Niveau efficace de l'enregistrement : 0,09.
+		ChaseAlarm = { Id = 9118805665, Volume = 2.2 },
 		MonsterWarn = { Id = 9118805486, Volume = 1.5 }, -- trop de bruit : il remue
 		MonsterCatch = { Id = 9118612665, Volume = 1, Pitch = 0.7 }, -- il t'attrape
 		Escape = { Id = 71587723216424, Volume = 0.6 }, -- il abandonne : petit « réussi » de 0,9 s

@@ -10,7 +10,7 @@
 --   lumineuse jusqu'à sa base, bord rouge et battements
 --   de cœur qui montent quand il approche, lignes de vitesse et champ de vision élargi, bonds en
 --   claquant des mâchoires quand il est tout près, icône de danger au bord de l'écran de son côté,
---   secousses, sons ; mâchoires qui se ferment s'il attrape (avec la morsure dessinée en 4 calques,
+--   secousses, sons (deux coups de klaxon d'alarme au départ de la poursuite) ; mâchoires qui se ferment s'il attrape (avec la morsure dessinée en 4 calques,
 --   LayeredFx « Bite », aussi visible dans le monde par les joueurs autour), puis, s'il manquait de Speed, un petit
 --   encadré « [jetpack] Need 50K Speed » pendant quelques secondes ;
 -- - roche tombée sur un astéroïde après une prise (World.LostRocks) : collée à l'astéroïde qui
@@ -420,6 +420,28 @@ local function shake(amount: number, duration: number)
 	end)
 end
 
+-- Alarme du joueur pris en chasse : deux coups de klaxon coup sur coup (« Wang ! Wang ! »), à l'écran
+local function alarm()
+	local A = M.Alarm
+	for i = 0, A.Count - 1 do
+		task.delay(i * A.Gap, function()
+			local s = Sfx.Play("ChaseAlarm")
+			if s then
+				-- la note est coupée net, avec un fondu très court pour ne pas claquer
+				task.delay(A.Length, function()
+					if s.Parent then
+						TweenService:Create(s, TweenInfo.new(0.07), { Volume = 0 }):Play()
+						Debris:AddItem(s, 0.1)
+					end
+				end)
+			end
+		end)
+	end
+end
+
+-- chargée d'avance (jouée une fois sans volume) : le premier coup de la première poursuite ne doit pas arriver en retard
+task.defer(Sfx.Play, "ChaseAlarm", { volume = 0 })
+
 local onState: (Instance) -> ()
 local fovPunch = 0 -- coup de zoom au réveil
 
@@ -577,7 +599,7 @@ function onState(f: Instance)
 		end
 		Sfx.Play("MonsterRoar", { at = v.shown, pitch = math.clamp(1.35 - 0.045 * v.ring, 0.7, 1.3) })
 		if v.mine then
-			Sfx.Play("Warning")
+			alarm()
 			shake(0.9, 0.8)
 			gui.Enabled = true
 			needPill.Visible = false
