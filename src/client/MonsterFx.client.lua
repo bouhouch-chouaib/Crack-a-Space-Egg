@@ -1,4 +1,4 @@
--- Monstres des anneaux 3 à 14, côté joueur (MonsterService décide, ce script montre) :
+-- Monstres de chaque anneau, côté joueur (MonsterService décide, ce script montre) :
 -- - un monstre par anneau, toujours là (dossier dans Workspace.World.Monsters) : il se promène dans le
 --   couloir de son anneau (State = Patrol : position calculée ici par Config.MonsterPatrol, comme sur
 --   le serveur) ; quand un joueur vole un œuf, il rugit (ondes en dents de scie en 4 calques,
@@ -26,6 +26,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local UIKit = require(script.Parent:WaitForChild("UIKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 local LayeredFx = require(script.Parent:WaitForChild("LayeredFx"))
+local MonsterRig = require(script.Parent:WaitForChild("MonsterRig"))
 local Format = require(ReplicatedStorage.Shared:WaitForChild("Format"))
 
 local M = Config.Monsters
@@ -43,7 +44,8 @@ local function template(ring: number): Model?
 	return kind and folder and folder:FindFirstChild(kind.Model) :: Model?
 end
 
--- Copie du modèle à la taille voulue (plus grande dimension = size)
+-- Copie du modèle à la taille voulue : sa plus grande dimension = size x Span (un serpent allongé est bien
+-- plus long que large : son Span dépasse 1, voir tools/blender/monster_rig.py)
 local function makeModel(ring: number, size: number): Model?
 	local t = template(ring)
 	if not t then
@@ -51,7 +53,9 @@ local function makeModel(ring: number, size: number): Model?
 	end
 	local m = t:Clone()
 	local _, s = m:GetBoundingBox()
-	m:ScaleTo(m:GetScale() * size / math.max(s.X, s.Y, s.Z))
+	local span = (t:GetAttribute("Span") or 1) :: number
+	m:ScaleTo(m:GetScale() * size * span / math.max(s.X, s.Y, s.Z))
+	m:SetAttribute("Kind", t.Name) -- la démarche se choisit au nom du modèle (MonsterGaits)
 	return m
 end
 
@@ -389,6 +393,8 @@ type View = {
 	light: PointLight?,
 	mine: boolean,
 	hl: Highlight?,
+	rig: any?, -- squelette (MonsterRig) : il anime les pièces selon la démarche du monstre
+	effort: number?, -- ardeur lissée : 0 en promenade, 1 en poursuite
 	far: boolean?,
 	eyes: { Attachment }?,
 	lungeAt: number?,
@@ -487,7 +493,7 @@ local function addView(f: Instance)
 			-- deux yeux qui brillent, placés devant lui à chaque image (sauf les monstres faits au kit,
 			-- qui ont leurs propres yeux lumineux : pièce « Glow »)
 			local eyes = {}
-			for _ = 1, if m:FindFirstChild("Glow", true) then 0 else 2 do
+			for _ = 1, if m:GetAttribute("Rig") or m:FindFirstChild("Glow", true) then 0 else 2 do
 				local e = Instance.new("Attachment")
 				e.Parent = workspace.Terrain
 				local bb = Instance.new("BillboardGui")
@@ -507,6 +513,9 @@ local function addView(f: Instance)
 		end
 		m.Parent = workspace
 		v.model = m
+		if m:GetAttribute("Rig") and m.PrimaryPart then
+			v.rig = MonsterRig.new(m, size)
+		end
 	end
 	views[f] = v
 	f.AttributeChanged:Connect(function(name)
@@ -806,6 +815,9 @@ RunService.RenderStepped:Connect(function(dt)
 			if v.model then
 				v.model.Parent = workspace
 			end
+			if v.rig then
+				v.rig:Reset()
+			end
 		end
 		v.shown = v.shown:Lerp(target, 1 - math.exp(-10 * dt))
 		if root and not player:GetAttribute("MonsterSeen") and (v.shown - root.Position).Magnitude < 280 then
@@ -843,19 +855,29 @@ RunService.RenderStepped:Connect(function(dt)
 					at += toward.Unit * v.size * 0.35 * lunge
 				end
 			end
-			local pivot = CFrame.lookAt(at, at + dir) * wobble
-			m:PivotTo(pivot)
+			local pivot = CFrame.lookAt(at, at + dir)
+			if v.rig then
+				-- chaque monstre a sa démarche (MonsterGaits) : pattes, ailes, mâchoires, corps de serpent
+				local goal = if v.state == "Chase" then 1 elseif v.state == "Return" then 0.6 else 0
+				v.effort = (v.effort or 0) + (goal - (v.effort or 0)) * math.min(1, dt * 3)
+				v.rig:Step(pivot, t, v.effort, lunge)
+			else
+				pivot *= wobble
+				m:PivotTo(pivot)
+			end
 			-- les yeux, devant lui
 			if v.eyes and #v.eyes == 2 then
 				local s2 = v.size * grow
 				v.eyes[1].WorldPosition = (pivot * CFrame.new(-s2 * 0.12, s2 * 0.14, -s2 * 0.42)).Position
 				v.eyes[2].WorldPosition = (pivot * CFrame.new(s2 * 0.12, s2 * 0.14, -s2 * 0.42)).Position
 			end
-			local _, s = m:GetBoundingBox()
-			local cur = math.max(s.X, s.Y, s.Z)
-			local want = math.max(0.5, v.size * grow * (1 + 0.18 * lunge))
-			if math.abs(cur - want) > 0.05 then
-				m:ScaleTo(m:GetScale() * want / cur)
+			if not v.rig then
+				local _, s = m:GetBoundingBox()
+				local cur = math.max(s.X, s.Y, s.Z)
+				local want = math.max(0.5, v.size * grow * (1 + 0.18 * lunge))
+				if math.abs(cur - want) > 0.05 then
+					m:ScaleTo(m:GetScale() * want / cur)
+				end
 			end
 			if v.growl then
 				v.growl:Set(if v.state == "Chase" then 1 elseif v.state == "Return" then 0.6 else 0.3)

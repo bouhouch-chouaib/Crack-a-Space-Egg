@@ -1,4 +1,5 @@
--- Monstres des anneaux 3 à 14 (Config.Monsters, docs/Mecaniques.md §13 et §0).
+-- Monstres de chaque anneau (Config.Monsters, docs/Mecaniques.md §13 et §0) : deux petits aux anneaux 1 et 2
+-- (ils laissent tranquille un joueur qui n'a pas fini le guide), les grands à partir du 3e.
 -- Un seul monstre par anneau, toujours là (20 nov.) : il se promène dans le couloir de son anneau
 -- (Config.MonsterPatrol, le même calcul chez les clients). Dès qu'un joueur sort un œuf d'un astéroïde
 -- de son anneau, il fonce droit sur lui et le poursuit jusqu'à sa base, sur le vaisseau compris.
@@ -159,6 +160,11 @@ function MonsterService.Alert(player: Player, ring: number): boolean
 	local m = monsters[ring]
 	local hrp = root(player)
 	if not m or not hrp or m.state == "Chase" or (cooldown[player] or 0) > os.clock() then
+		return false
+	end
+	-- premiers anneaux : pas de poursuite pendant le guide du premier parcours (le joueur apprend à forer)
+	local d = DataService.Get(player)
+	if ring <= M.TutorialSafe and d and (d.guide or 0) < Config.Guide.Steps then
 		return false
 	end
 	-- déjà poursuivi par le monstre d'un autre anneau : un seul à la fois

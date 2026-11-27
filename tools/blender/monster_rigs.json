@@ -1,0 +1,3614 @@
+{
+ "AbyssAngler": {
+  "objects": 13,
+  "parts": {
+   "Dorsal": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -1.9268,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Jaw": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -4.8638
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "PecL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     2.3792,
+     0.0,
+     1.1
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "PecR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -2.3792,
+     0.0,
+     1.1
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Stalk1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.1144,
+     -1.3473,
+     -1.3439
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Stalk2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.7481,
+     -1.5003
+    ],
+    "index": 0,
+    "parent": "Stalk1"
+   },
+   "Stalk3": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.021,
+     1.6284,
+     -0.2714
+    ],
+    "index": 0,
+    "parent": "Stalk2"
+   },
+   "Tail1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     1.7698
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Tail2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     0.7
+    ],
+    "index": 0,
+    "parent": "Tail1"
+   },
+   "Tail3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     2.4104
+    ],
+    "index": 0,
+    "parent": "Tail2"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.0,
+     0.0,
+     -0.0738
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   17.72,
+   14.06,
+   20.57
+  ],
+  "span": 1.0,
+  "tris": 2946
+ },
+ "CinderMaw": {
+  "objects": 32,
+  "parts": {
+   "HornL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.7776,
+     -1.3594,
+     0.5965
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "HornR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.7776,
+     -1.3594,
+     0.5965
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Lip0": {
+    "axis": [
+     0.4349,
+     -0.9005,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     -0.1816,
+     -1.3735
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Lip1": {
+    "axis": [
+     -0.4426,
+     -0.8967,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     -1.0875
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Lip2": {
+    "axis": [
+     -0.8089,
+     -0.5879,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.1106,
+     0.0,
+     -1.0876
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Lip3": {
+    "axis": [
+     -0.9678,
+     -0.2517,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.986
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Lip4": {
+    "axis": [
+     -0.9867,
+     0.1625,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.1576,
+     -0.8
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Lip5": {
+    "axis": [
+     -0.7537,
+     0.6573,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     -1.0072
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Lip6": {
+    "axis": [
+     -0.295,
+     0.9555,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.9569
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Lip7": {
+    "axis": [
+     0.3671,
+     0.9302,
+     0.0
+    ],
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.0573,
+     -0.3989,
+     -1.0878
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Seg01": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "index": 1,
+    "parent": "Torso"
+   },
+   "Seg02": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 2,
+    "parent": "Torso"
+   },
+   "Seg03": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     -0.0,
+     0.4715
+    ],
+    "index": 3,
+    "parent": "Torso"
+   },
+   "Seg04": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     0.3076
+    ],
+    "index": 4,
+    "parent": "Torso"
+   },
+   "Seg05": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     0.4243
+    ],
+    "index": 5,
+    "parent": "Torso"
+   },
+   "Seg06": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     0.0768
+    ],
+    "index": 6,
+    "parent": "Torso"
+   },
+   "Seg07": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.1698
+    ],
+    "index": 7,
+    "parent": "Torso"
+   },
+   "Seg08": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 8,
+    "parent": "Torso"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     0.1625
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   14.71,
+   13.95,
+   24.13
+  ],
+  "span": 1.2,
+  "tris": 2004
+ },
+ "Devourer": {
+  "objects": 26,
+  "parts": {
+   "Jaw": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     -3.2326
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "MandL1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -3.289
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "MandL2": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.2454,
+     0.1011,
+     -2.6988
+    ],
+    "index": 0,
+    "parent": "MandL1"
+   },
+   "MandR1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -3.289
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "MandR2": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.2454,
+     0.1011,
+     -2.6988
+    ],
+    "index": 0,
+    "parent": "MandR1"
+   },
+   "Seg01": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 1,
+    "parent": "Torso"
+   },
+   "Seg02": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     0.7168
+    ],
+    "index": 2,
+    "parent": "Torso"
+   },
+   "Seg03": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     0.9317
+    ],
+    "index": 3,
+    "parent": "Torso"
+   },
+   "Seg04": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     -0.0,
+     0.1518
+    ],
+    "index": 4,
+    "parent": "Torso"
+   },
+   "Seg05": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.5911
+    ],
+    "index": 5,
+    "parent": "Torso"
+   },
+   "Seg06": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "index": 6,
+    "parent": "Torso"
+   },
+   "Seg07": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     0.6733
+    ],
+    "index": 7,
+    "parent": "Torso"
+   },
+   "Seg08": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     0.5442
+    ],
+    "index": 8,
+    "parent": "Torso"
+   },
+   "Seg09": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 9,
+    "parent": "Torso"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   15.18,
+   16.4,
+   42.69
+  ],
+  "span": 1.5,
+  "tris": 2752
+ },
+ "DustSkitter": {
+  "objects": 20,
+  "parts": {
+   "AntL": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.0805,
+     -0.7719,
+     -0.757
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "AntR": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0805,
+     -0.7719,
+     -0.757
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL1A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.499,
+     -0.2905,
+     -0.1737
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL1B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.8236,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegL1A"
+   },
+   "LegL2A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.5444,
+     -0.2927,
+     0.0765
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL2B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.8185,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegL2A"
+   },
+   "LegL3A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.4623,
+     -0.367,
+     0.2104
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL3B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.8236,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegL3A"
+   },
+   "LegR1A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.499,
+     -0.2905,
+     -0.1737
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR1B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.8236,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegR1A"
+   },
+   "LegR2A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.5444,
+     -0.2927,
+     0.0765
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR2B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.8185,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegR2A"
+   },
+   "LegR3A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.4623,
+     -0.367,
+     0.2104
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR3B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.8236,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegR3A"
+   },
+   "MandL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.8356
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "MandR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.8356
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.525,
+     -0.0
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   10.04,
+   5.33,
+   9.31
+  ],
+  "span": 1.0,
+  "tris": 892
+ },
+ "FrostSlink": {
+  "objects": 20,
+  "parts": {
+   "Jaw": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -1.6
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Seg01": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 1,
+    "parent": "Torso"
+   },
+   "Seg02": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.5725,
+     -0.0
+    ],
+    "index": 2,
+    "parent": "Torso"
+   },
+   "Seg03": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 3,
+    "parent": "Torso"
+   },
+   "Seg04": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.5281,
+     -0.0
+    ],
+    "index": 4,
+    "parent": "Torso"
+   },
+   "Seg05": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 5,
+    "parent": "Torso"
+   },
+   "Seg06": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.4836,
+     -0.0
+    ],
+    "index": 6,
+    "parent": "Torso"
+   },
+   "Seg07": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 7,
+    "parent": "Torso"
+   },
+   "Seg08": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.4388,
+     -0.0
+    ],
+    "index": 8,
+    "parent": "Torso"
+   },
+   "Seg09": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 9,
+    "parent": "Torso"
+   },
+   "Seg10": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.3742,
+     -0.0
+    ],
+    "index": 10,
+    "parent": "Torso"
+   },
+   "Seg11": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 11,
+    "parent": "Torso"
+   },
+   "Tongue": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -1.1841
+    ],
+    "index": 0,
+    "parent": "Jaw"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   3.06,
+   3.79,
+   28.16
+  ],
+  "span": 2.2,
+  "tris": 1210
+ },
+ "GearSpider": {
+  "objects": 29,
+  "parts": {
+   "GearAL": {
+    "axis": [
+     1.0,
+     0.0,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "GearAR": {
+    "axis": [
+     1.0,
+     0.0,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "GearBL": {
+    "axis": [
+     1.0,
+     0.0,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "GearBR": {
+    "axis": [
+     1.0,
+     0.0,
+     -0.0
+    ],
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "HandH": {
+    "axis": [
+     0,
+     0,
+     -1
+    ],
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.7404,
+     -0.6898,
+     -0.002
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "HandM": {
+    "axis": [
+     0,
+     0,
+     -1
+    ],
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.7872,
+     -1.2921,
+     0.02
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL1A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     2.0467,
+     -2.9114,
+     -1.7892
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL1B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     1.1566,
+     4.9643,
+     -1.2625
+    ],
+    "index": 0,
+    "parent": "LegL1A"
+   },
+   "LegL2A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     2.3069,
+     -3.1323,
+     -0.6972
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL2B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     1.5242,
+     5.2515,
+     -0.4115
+    ],
+    "index": 0,
+    "parent": "LegL2A"
+   },
+   "LegL3A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     2.2583,
+     -3.0288,
+     0.8431
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL3B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     1.5249,
+     5.1615,
+     0.4372
+    ],
+    "index": 0,
+    "parent": "LegL3A"
+   },
+   "LegL4A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     1.9286,
+     -2.7051,
+     1.8988
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL4B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     1.1854,
+     4.9856,
+     1.3042
+    ],
+    "index": 0,
+    "parent": "LegL4A"
+   },
+   "LegR1A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -2.0467,
+     -2.9114,
+     -1.7892
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR1B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -1.1566,
+     4.9643,
+     -1.2625
+    ],
+    "index": 0,
+    "parent": "LegR1A"
+   },
+   "LegR2A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -2.3069,
+     -3.1323,
+     -0.6972
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR2B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -1.5242,
+     5.2515,
+     -0.4115
+    ],
+    "index": 0,
+    "parent": "LegR2A"
+   },
+   "LegR3A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -2.2583,
+     -3.0288,
+     0.8431
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR3B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -1.5249,
+     5.1615,
+     0.4372
+    ],
+    "index": 0,
+    "parent": "LegR3A"
+   },
+   "LegR4A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -1.9286,
+     -2.7051,
+     1.8988
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR4B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -1.1854,
+     4.9856,
+     1.3042
+    ],
+    "index": 0,
+    "parent": "LegR4A"
+   },
+   "PincerL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -2.061
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "PincerR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -2.061
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "SteamA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -2.0995,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "SteamB": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -2.0995,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   22.55,
+   20.16,
+   18.73
+  ],
+  "span": 1.0,
+  "tris": 6138
+ },
+ "NebulaStalker": {
+  "objects": 34,
+  "parts": {
+   "HornL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -2.1952
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "HornR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -2.1952
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Jaw": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.53
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Tail1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     2.1
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Tail2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     1.2179
+    ],
+    "index": 0,
+    "parent": "Tail1"
+   },
+   "Tail3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     1.3448
+    ],
+    "index": 0,
+    "parent": "Tail2"
+   },
+   "Tail4": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     1.1741
+    ],
+    "index": 0,
+    "parent": "Tail3"
+   },
+   "Tail5": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     1.0004
+    ],
+    "index": 0,
+    "parent": "Tail4"
+   },
+   "Tail6": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.228,
+     0.3052,
+     0.8309
+    ],
+    "index": 0,
+    "parent": "Tail5"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.25,
+     -0.0
+    ],
+    "index": 0,
+    "parent": ""
+   },
+   "WingL1": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     2.9596,
+     0.0951,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "WingL2": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     3.0196,
+     0.0927,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "WingL1"
+   },
+   "WingL3": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     2.8367,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "WingL2"
+   },
+   "WingL4": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     1.7382,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "WingL3"
+   },
+   "WingR1": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     -2.9596,
+     0.0951,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "WingR2": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     -3.0196,
+     0.0927,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "WingR1"
+   },
+   "WingR3": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     -2.8367,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "WingR2"
+   },
+   "WingR4": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -1.7382,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "WingR3"
+   }
+  },
+  "size": [
+   26.7,
+   7.73,
+   26.53
+  ],
+  "span": 1.0,
+  "tris": 1622
+ },
+ "PhantomKing": {
+  "objects": 29,
+  "parts": {
+   "ArmLA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.6703,
+     -1.356,
+     0.3532
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "ArmLB": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.0179,
+     -2.9693,
+     -3.1332
+    ],
+    "index": 0,
+    "parent": "ArmLA"
+   },
+   "ArmRA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.6703,
+     -1.356,
+     0.3532
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "ArmRB": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0239,
+     -2.9693,
+     -3.1332
+    ],
+    "index": 0,
+    "parent": "ArmRA"
+   },
+   "Cape": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     6.0452,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "FinL1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.7964,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "FinL2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.5015,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "FinL3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.475,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "FinL4": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.7964,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "FinR1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.7964,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "FinR2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.475,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "FinR3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.5016,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "FinR4": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.7964,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Jaw": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LanBL": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     1.465,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LanBR": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     1.465,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LanL": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     1.825,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LanR": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     1.825,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Tail1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.1365,
+     -0.3318
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Tail2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.4848,
+     1.0931,
+     0.3643
+    ],
+    "index": 0,
+    "parent": "Tail1"
+   },
+   "Tail3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.2578,
+     1.0502,
+     0.6194
+    ],
+    "index": 0,
+    "parent": "Tail2"
+   },
+   "Tail4": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.3881,
+     0.5636,
+     0.7756
+    ],
+    "index": 0,
+    "parent": "Tail3"
+   },
+   "Tail5": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.016,
+     0.1362,
+     0.9623
+    ],
+    "index": 0,
+    "parent": "Tail4"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.0,
+     0.0,
+     0.0
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   18.35,
+   20.42,
+   16.34
+  ],
+  "span": 1.0,
+  "tris": 4074
+ },
+ "Queen": {
+  "objects": 28,
+  "parts": {
+   "Abdo1": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.975,
+     4.3609
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Abdo2": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     2.5552
+    ],
+    "index": 0,
+    "parent": "Abdo1"
+   },
+   "Abdo3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     2.8246
+    ],
+    "index": 0,
+    "parent": "Abdo2"
+   },
+   "ArmL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     1.4084,
+     0.6712,
+     -0.621
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "ArmR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -1.4084,
+     0.6712,
+     -0.621
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Head": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     -4.7647,
+     -6.489
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Jaw": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -2.015
+    ],
+    "index": 0,
+    "parent": "Head"
+   },
+   "LegL1A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.1875,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL1B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     4.1612,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegL1A"
+   },
+   "LegL2A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.9875,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL2B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     4.0632,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegL2A"
+   },
+   "LegR1A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.1875,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR1B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     4.1612,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegR1A"
+   },
+   "LegR2A": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.9875,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR2B": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     4.0632,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "LegR2A"
+   },
+   "MandibleL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -2.4001
+    ],
+    "index": 0,
+    "parent": "Head"
+   },
+   "MandibleR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -2.4001
+    ],
+    "index": 0,
+    "parent": "Head"
+   },
+   "ScytheL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.2421,
+     0.9315,
+     1.5919
+    ],
+    "index": 0,
+    "parent": "ArmL"
+   },
+   "ScytheR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.2421,
+     0.9315,
+     1.5919
+    ],
+    "index": 0,
+    "parent": "ArmR"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": ""
+   },
+   "WingLoL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     3.7359,
+     0.0,
+     1.5446
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "WingLoR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -3.7359,
+     0.0,
+     1.5446
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "WingUpL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     4.4799,
+     0.0,
+     1.4368
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "WingUpR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -4.4799,
+     0.0,
+     1.4368
+    ],
+    "index": 0,
+    "parent": "Torso"
+   }
+  },
+  "size": [
+   19.7,
+   19.65,
+   19.8
+  ],
+  "span": 1.0,
+  "tris": 4254
+ },
+ "SourWorm": {
+  "objects": 38,
+  "parts": {
+   "AntL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -1.7103,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "AntR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -1.7103,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "HoodL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     2.6346,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "HoodR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -2.6346,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Seg01": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 1,
+    "parent": "Torso"
+   },
+   "Seg02": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 2,
+    "parent": "Torso"
+   },
+   "Seg03": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 3,
+    "parent": "Torso"
+   },
+   "Seg04": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 4,
+    "parent": "Torso"
+   },
+   "Seg05": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 5,
+    "parent": "Torso"
+   },
+   "Seg06": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.3906,
+     -0.0
+    ],
+    "index": 6,
+    "parent": "Torso"
+   },
+   "Seg07": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 7,
+    "parent": "Torso"
+   },
+   "Seg08": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 8,
+    "parent": "Torso"
+   },
+   "Seg09": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 9,
+    "parent": "Torso"
+   },
+   "Seg10": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.404,
+     -0.0
+    ],
+    "index": 10,
+    "parent": "Torso"
+   },
+   "Seg11": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 11,
+    "parent": "Torso"
+   },
+   "Seg12": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 12,
+    "parent": "Torso"
+   },
+   "Seg13": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 13,
+    "parent": "Torso"
+   },
+   "Seg14": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 14,
+    "parent": "Torso"
+   },
+   "Seg15": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 15,
+    "parent": "Torso"
+   },
+   "Seg16": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 16,
+    "parent": "Torso"
+   },
+   "Seg17": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 17,
+    "parent": "Torso"
+   },
+   "Seg18": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     -0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 18,
+    "parent": "Torso"
+   },
+   "Seg19": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 19,
+    "parent": "Torso"
+   },
+   "Seg20": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     -0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 20,
+    "parent": "Torso"
+   },
+   "Seg21": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 21,
+    "parent": "Torso"
+   },
+   "Seg22": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 22,
+    "parent": "Torso"
+   },
+   "Seg23": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 23,
+    "parent": "Torso"
+   },
+   "Seg24": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 24,
+    "parent": "Torso"
+   },
+   "Seg25": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 25,
+    "parent": "Torso"
+   },
+   "Seg26": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 26,
+    "parent": "Torso"
+   },
+   "Seg27": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 27,
+    "parent": "Torso"
+   },
+   "Seg28": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 28,
+    "parent": "Torso"
+   },
+   "Seg29": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 29,
+    "parent": "Torso"
+   },
+   "Seg30": {
+    "axis": null,
+    "chain": "Seg",
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 30,
+    "parent": "Torso"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   11.18,
+   12.23,
+   57.26
+  ],
+  "span": 2.4,
+  "tris": 2624
+ },
+ "SporeBehemoth": {
+  "objects": 12,
+  "parts": {
+   "ArmLA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     3.3879,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "ArmLB": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     3.75,
+     0.0
+    ],
+    "index": 0,
+    "parent": "ArmLA"
+   },
+   "ArmRA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     3.3879,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "ArmRB": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     3.75,
+     0.0
+    ],
+    "index": 0,
+    "parent": "ArmRA"
+   },
+   "Cap": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -2.78,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Head": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     -3.2241,
+     -4.7349
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Jaw": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.0,
+     0.0,
+     -2.4052
+    ],
+    "index": 0,
+    "parent": "Head"
+   },
+   "LegL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.05,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.05,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   16.76,
+   19.41,
+   12.43
+  ],
+  "span": 1.0,
+  "tris": 3788
+ },
+ "StormHydra": {
+  "objects": 43,
+  "parts": {
+   "ForeLA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.5662,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "ForeLB": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.4655,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "ForeLA"
+   },
+   "ForeLC": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.475,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "ForeLB"
+   },
+   "ForeRA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.5662,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "ForeRB": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.4655,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "ForeRA"
+   },
+   "ForeRC": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.475,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "ForeRB"
+   },
+   "HeadC": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.0435,
+     -1.4739,
+     0.541
+    ],
+    "index": 0,
+    "parent": "NeckC3"
+   },
+   "HeadL": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0398,
+     -0.8312,
+     0.2527
+    ],
+    "index": 0,
+    "parent": "NeckL3"
+   },
+   "HeadR": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.0398,
+     -0.8312,
+     0.2527
+    ],
+    "index": 0,
+    "parent": "NeckR3"
+   },
+   "HindLA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.7,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "HindLB": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.1292,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "HindLA"
+   },
+   "HindLC": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.475,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "HindLB"
+   },
+   "HindRA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.7,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "HindRB": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.1292,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "HindRA"
+   },
+   "HindRC": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.475,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "HindRB"
+   },
+   "JawC": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -1.7941
+    ],
+    "index": 0,
+    "parent": "HeadC"
+   },
+   "JawL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -1.5246
+    ],
+    "index": 0,
+    "parent": "HeadL"
+   },
+   "JawR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -1.5246
+    ],
+    "index": 0,
+    "parent": "HeadR"
+   },
+   "NeckC1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -0.7121,
+     -1.1069
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "NeckC2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.0115,
+     -1.4775,
+     0.4351
+    ],
+    "index": 0,
+    "parent": "NeckC1"
+   },
+   "NeckC3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -1.0306,
+     0.0909
+    ],
+    "index": 0,
+    "parent": "NeckC2"
+   },
+   "NeckL1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.6786,
+     -0.4876,
+     -0.8553
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "NeckL2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.926,
+     -0.7116,
+     -0.2991
+    ],
+    "index": 0,
+    "parent": "NeckL1"
+   },
+   "NeckL3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.6735,
+     -0.5009,
+     -0.0813
+    ],
+    "index": 0,
+    "parent": "NeckL2"
+   },
+   "NeckR1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.6786,
+     -0.4876,
+     -0.8553
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "NeckR2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.926,
+     -0.7116,
+     -0.2991
+    ],
+    "index": 0,
+    "parent": "NeckR1"
+   },
+   "NeckR3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.6735,
+     -0.5009,
+     -0.0813
+    ],
+    "index": 0,
+    "parent": "NeckR2"
+   },
+   "Tail1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     1.6449
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Tail2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     1.7535
+    ],
+    "index": 0,
+    "parent": "Tail1"
+   },
+   "Tail3": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     1.4127
+    ],
+    "index": 0,
+    "parent": "Tail2"
+   },
+   "Tail4": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.747,
+     0.4978,
+     0.9405
+    ],
+    "index": 0,
+    "parent": "Tail3"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     -0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": ""
+   },
+   "WingLA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     2.0766,
+     -1.3072,
+     0.3876
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "WingLB": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     2.9331,
+     -5.3331,
+     -0.2435
+    ],
+    "index": 0,
+    "parent": "WingLA"
+   },
+   "WingRA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -2.0766,
+     -1.3072,
+     0.3876
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "WingRB": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -2.9331,
+     -5.3331,
+     -0.2435
+    ],
+    "index": 0,
+    "parent": "WingRA"
+   }
+  },
+  "size": [
+   25.3,
+   20.37,
+   23.42
+  ],
+  "span": 1.0,
+  "tris": 4336
+ },
+ "TempleColossus": {
+  "objects": 15,
+  "parts": {
+   "ArmLA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     2.1109,
+     3.4869,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "ArmLB": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     3.6137,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "ArmLA"
+   },
+   "ArmRA": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -2.1109,
+     3.4869,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "ArmRB": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.0,
+     3.6657,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "ArmRA"
+   },
+   "Head": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     0.0,
+     -3.8286,
+     0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegL": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.35,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LegR": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.35,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Plume": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -3.5744,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Head"
+   },
+   "Skirt": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     -0.0,
+     2.0875,
+     0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.0,
+     -0.0755,
+     0.049
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   17.89,
+   24.4,
+   6.77
+  ],
+  "span": 1.0,
+  "tris": 3168
+ },
+ "Watcher": {
+  "objects": 30,
+  "parts": {
+   "Halo": {
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     0.0,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LidLow": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     -0.9505,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "LidUp": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.3065,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "TentL1_1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.656,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "TentL1_2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.1323,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentL1_1"
+   },
+   "TentL1_3": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.2038,
+     0.8423,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentL1_2"
+   },
+   "TentL2_1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.4863,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "TentL2_2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.947,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentL2_1"
+   },
+   "TentL2_3": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.2107,
+     0.8096,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentL2_2"
+   },
+   "TentL3_1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.3388,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "TentL3_2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.844,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentL3_1"
+   },
+   "TentL3_3": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     0.2142,
+     0.7932,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentL3_2"
+   },
+   "TentR1_1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.656,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "TentR1_2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.1323,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentR1_1"
+   },
+   "TentR1_3": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.2038,
+     0.8423,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentR1_2"
+   },
+   "TentR2_1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.4863,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "TentR2_2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.947,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentR2_1"
+   },
+   "TentR2_3": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.2107,
+     0.8096,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentR2_2"
+   },
+   "TentR3_1": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     2.3388,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "Torso"
+   },
+   "TentR3_2": {
+    "axis": null,
+    "chain": null,
+    "glow": 0,
+    "hinge": [
+     0.0,
+     1.844,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentR3_1"
+   },
+   "TentR3_3": {
+    "axis": null,
+    "chain": null,
+    "glow": 1,
+    "hinge": [
+     -0.2142,
+     0.7932,
+     -0.0
+    ],
+    "index": 0,
+    "parent": "TentR3_2"
+   },
+   "Torso": {
+    "axis": null,
+    "chain": null,
+    "glow": 2,
+    "hinge": [
+     0.0,
+     -0.5691,
+     -0.225
+    ],
+    "index": 0,
+    "parent": ""
+   }
+  },
+  "size": [
+   17.36,
+   24.22,
+   13.8
+  ],
+  "span": 1.0,
+  "tris": 3514
+ }
+}

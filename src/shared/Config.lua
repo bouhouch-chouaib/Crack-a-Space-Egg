@@ -84,8 +84,10 @@ Config.Map = {
 -- Hors du couloir (entre les bouées) et hors du vaisseau, il n'y a plus d'oxygène et le froid gagne :
 -- après quelques secondes de répit, le gel monte ; trop loin, il monte tout de suite et 2× plus vite.
 -- À 100 %, le joueur est pris dans un bloc de glace puis renvoyé à sa base (il perd ses œufs).
--- MONSTRES (anneaux 3 à 14, docs/Mecaniques.md §13 et §0) -----------------------------------
--- Un seul monstre par anneau à partir du 3e, de plus en plus grand et impressionnant. Il est toujours
+-- MONSTRES (un par anneau, docs/Mecaniques.md §13 et §0) -------------------------------------
+-- Un seul monstre par anneau, de plus en plus grand et impressionnant : deux petits pour commencer
+-- (28 nov. : un scarabée de roche qu'on sème toujours à l'anneau 1, un serpent de glace à l'anneau 2),
+-- puis les grands à partir du 3e. Chacun a sa démarche (client/MonsterGaits). Il est toujours
 -- là (20 nov.) : il se promène dans le couloir de son anneau (Patrol, Config.MonsterPatrol). Dès qu'un
 -- joueur sort un œuf d'un astéroïde de son anneau, il fonce droit sur lui (plus de jauge de bruit ni
 -- d'astéroïdes gardés) et le poursuit jusqu'à sa base, sur le vaisseau compris ; arrivé chez lui, le
@@ -97,6 +99,9 @@ Config.Map = {
 -- il a DropTime secondes pour aller la reprendre, sinon elle s'enfonce dans l'astéroïde (œuf perdu).
 Config.Monsters = {
 	Kinds = {
+		-- les deux premiers apprennent la poursuite sans faire mal : petits, lents (Need = 0 : toujours semable)
+		[1] = { Name = "Dust Skitter", Model = "DustSkitter", Speed = 0.6, Size = 9, Need = 0, Color = Color3.fromRGB(255, 200, 90) },
+		[2] = { Name = "Frost Slink", Model = "FrostSlink", Speed = 0.75, Size = 12, Need = 4e3, Color = Color3.fromRGB(120, 230, 255) },
 		[3] = { Name = "Cinder Maw", Model = "CinderMaw", Speed = 0.85, Size = 16, Need = 50e3, Color = Color3.fromRGB(255, 120, 40) },
 		[4] = { Name = "Nebula Stalker", Model = "NebulaStalker", Speed = 0.85, Size = 20, Need = 500e3, Color = Color3.fromRGB(190, 110, 255) },
 		[5] = { Name = "Devourer", Model = "Devourer", Speed = 0.85, Size = 26, Need = 7e6, Color = Color3.fromRGB(150, 255, 90) },
@@ -114,6 +119,8 @@ Config.Monsters = {
 	-- part = log10(Need / Speed du joueur) / Decades (1 dès qu'il lui manque Decades puissances de 10)
 	MaxFactor = 1.6,
 	Decades = 2,
+	-- Anneaux où le monstre laisse tranquille un joueur qui n'a pas fini le guide du premier parcours
+	TutorialSafe = 2,
 	-- Prise : le joueur est projeté (studs/s) et sa roche retombe sur l'astéroïde le plus proche
 	Knock = 70,
 	KnockUp = 35,
