@@ -182,9 +182,27 @@ end
 -- d'oxygène (OxygenFx) s'accroche à ce groupe
 group("Egg", Vector2.new(1, 0), UDim2.new(1, -18, 0, 14), UDim2.fromOffset(280, 92))
 
--- POTIONS ACTIVES (sous l'œuf, en haut à droite) : icône qui flotte et temps restant ---------
-local boostGroup = group("Boosts", Vector2.new(1, 0), UDim2.new(1, -18, 0, 112), UDim2.fromOffset(260, 84))
-new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, Padding = UDim.new(0, 6), Parent = boostGroup })
+-- POTIONS ACTIVES (en bas à droite) : icône qui flotte et temps restant ---------
+-- 30 nov. : elles étaient sous l'œuf, en haut à droite, où la jauge du jetpack les cachait. Sur un écran
+-- tactile, le coin est pris par les boutons de saut et de forage : elles se rangent juste à leur gauche.
+local boostGroup = group("Boosts", Vector2.new(1, 1), UDim2.new(1, -18, 1, -18), UDim2.fromOffset(260, 84))
+new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Bottom, Padding = UDim.new(0, 6), Parent = boostGroup })
+local function placeBoosts()
+	local x = -18
+	if Device.IsTouch() then
+		local v = workspace.CurrentCamera.ViewportSize
+		local touchGui = player.PlayerGui:FindFirstChild("TouchGui")
+		local jump = touchGui and touchGui:FindFirstChild("JumpButton", true) :: GuiObject?
+		if jump and jump.AbsoluteSize.X > 10 then
+			-- le bouton de forage (Mobile.client) fait 1,25 fois le bouton de saut et dépasse à sa gauche
+			local drill = math.clamp(jump.AbsoluteSize.X * 1.25, 80, 140)
+			x = -(v.X - jump.AbsolutePosition.X + drill * 1.12 + 14)
+		else
+			x = -(math.clamp(math.min(v.X, v.Y) * 0.22, 80, 140) * 2.6 + 14)
+		end
+	end
+	boostGroup.Position = UDim2.new(1, x, 1, -18)
+end
 local boostCards: { [string]: { frame: Frame, time: TextLabel } } = {}
 for i, potion in ipairs(Config.Shop.Potions) do
 	do
@@ -198,6 +216,7 @@ for i, potion in ipairs(Config.Shop.Potions) do
 end
 task.spawn(function()
 	while true do
+		placeBoosts() -- l'appareil, la taille de l'écran et les boutons tactiles de Roblox peuvent changer
 		local now = os.time()
 		for key, card in pairs(boostCards) do
 			local ends = player:GetAttribute("Boost_" .. key) :: number?
