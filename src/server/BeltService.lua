@@ -5,6 +5,9 @@
 -- Chaque anneau a 3 types d'astéroïdes (Config.RockTypes), rangés par profondeur : tendres du côté du
 -- vaisseau, durs au fond. Le type fixe la taille, le stock, la vie de chaque œuf, l'apparence
 -- (shared/RockLook) et ce qu'on y trouve (GameService).
+-- Répartition (30 nov.) : chaque type naît à son propre rythme régulier dans chaque anneau (sa part des
+-- astéroïdes, Share), au lieu d'être tiré au hasard à chaque naissance : les trois types défilent en même
+-- temps, espacés régulièrement, sans long moment sans l'un d'eux.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -37,7 +40,8 @@ local rng = Random.new()
 local active: { [BasePart]: Asteroid } = {}
 local count = 0
 local folder: Folder
-local nextSpawn: { number } = {}
+local nextSpawn: { { number } } = {} -- par anneau puis par type : heure de la prochaine naissance
+local tries: { { number } } = {} -- naissances ratées de suite (place prise)
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -47,16 +51,13 @@ local function travelTime(ringIndex: number): number
 	return 2 * Config.Belt.SpawnArc / Config.Rings[ringIndex].Speed
 end
 
-local function pickType(): number
-	local x = rng:NextNumber()
-	local acc = 0
-	for i, t in ipairs(Config.RockTypes) do
-		acc += t.Share
-		if x < acc then
-			return i
-		end
-	end
-	return 1
+-- Secondes entre deux naissances d'un type dans un anneau : sa part des Active astéroïdes de la traversée
+local function interval(ringIndex: number, rockType: number): number
+	return travelTime(ringIndex) / math.max(0.01, Config.Rings[ringIndex].Active * Config.RockTypes[rockType].Share)
+end
+
+local function jitter(): number
+	return 1 + rng:NextNumber(-Config.Belt.Jitter, Config.Belt.Jitter)
 end
 
 -- Position d'un astéroïde à l'instant t (même formule que Belt.client)
@@ -174,10 +175,10 @@ local function build(ringIndex: number, diameter: number, rockType: number): Mod
 	return m
 end
 
--- age : secondes déjà écoulées depuis la naissance (pour remplir le tapis au démarrage)
-local function spawn(ringIndex: number, age: number)
+-- age : secondes déjà écoulées depuis la naissance (pour remplir le tapis au démarrage).
+-- Renvoie faux si la place était prise (rien n'est né).
+local function spawn(ringIndex: number, rockType: number, age: number): boolean
 	local ring = Config.Rings[ringIndex]
-	local rockType = pickType()
 	local size = Config.RockTypes[rockType]
 	local diameter = rng:NextNumber(size.Min, size.Max)
 	local width = Config.RingWidth(ringIndex)
@@ -218,7 +219,7 @@ local function spawn(ringIndex: number, age: number)
 		if free then
 			break
 		elseif attempt == 6 then
-			return -- champ trop plein à cet endroit : on réessaiera au prochain tour
+			return false -- champ trop plein à cet endroit : on réessaie un peu plus tard
 		end
 	end
 	local a: Asteroid = {
@@ -268,6 +269,7 @@ local function spawn(ringIndex: number, age: number)
 	active[p] = a
 	count += 1
 	model.Parent = folder
+	return true
 end
 
 local function step()
@@ -277,12 +279,21 @@ local function step()
 			remove(a)
 		end
 	end
-	for i, ring in ipairs(Config.Rings) do
-		if t >= nextSpawn[i] then
-			if count < Config.Belt.MaxActive then
-				spawn(i, 0)
+	local B = Config.Belt
+	for i in ipairs(Config.Rings) do
+		for k in ipairs(Config.RockTypes) do
+			local due = nextSpawn[i][k]
+			if t >= due then
+				if count < B.MaxActive and not spawn(i, k, 0) and tries[i][k] < B.Retries then
+					-- place prise : on réessaie bientôt, sans perdre le tour de ce type
+					tries[i][k] += 1
+					nextSpawn[i][k] = t + B.Retry
+				else
+					-- le rythme part de l'heure prévue, pas de l'heure réelle : il ne dérive pas
+					tries[i][k] = 0
+					nextSpawn[i][k] = math.max(due, t - interval(i, k)) + interval(i, k) * jitter()
+				end
 			end
-			nextSpawn[i] = t + travelTime(i) / ring.Active * rng:NextNumber(0.6, 1.4)
 		end
 	end
 end
@@ -329,12 +340,22 @@ end
 function BeltService.Start()
 	folder = workspace:WaitForChild("World"):WaitForChild("Belt") :: Folder
 	-- Remplit le tapis dès le démarrage : des astéroïdes à tous les stades de leur traversée
-	for i, ring in ipairs(Config.Rings) do
+	-- (chaque type à son rythme, décalé au hasard pour que les trois ne naissent pas ensemble)
+	for i in ipairs(Config.Rings) do
 		local travel = travelTime(i)
-		for k = 1, ring.Active do
-			spawn(i, travel * (k - rng:NextNumber(0.2, 0.8)) / ring.Active)
+		nextSpawn[i] = {}
+		tries[i] = {}
+		for k in ipairs(Config.RockTypes) do
+			local gap = interval(i, k)
+			local youngest = gap * rng:NextNumber(0.1, 0.9) -- âge du dernier né de ce type
+			local age = youngest
+			while age < travel do
+				spawn(i, k, math.clamp(age + gap * rng:NextNumber(-Config.Belt.Jitter, Config.Belt.Jitter), 0, travel - 1))
+				age += gap
+			end
+			nextSpawn[i][k] = now() + gap - youngest
+			tries[i][k] = 0
 		end
-		nextSpawn[i] = now() + travel / ring.Active * rng:NextNumber(0.3, 1)
 	end
 	RunService.Heartbeat:Connect(step)
 	Players.PlayerRemoving:Connect(function(player)

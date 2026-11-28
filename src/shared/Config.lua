@@ -224,6 +224,14 @@ Config.Belt = {
 	HeightPerWidth = 0.15, -- + 15 % de l'épaisseur de l'anneau
 	HeightMax = 36,
 	Spacing = 0.9, -- deux astéroïdes ne naissent pas plus près que 90 % de leurs rayons cumulés
+	-- Répartition des types (30 nov., BeltService) : chaque type d'astéroïde a son propre rythme de naissance dans
+	-- chaque anneau, régulier (un toutes les « traversée / (Active × Share) » secondes, à ± Jitter près), au lieu
+	-- d'un tirage au hasard à chaque naissance. Les trois types défilent donc en même temps, bien espacés : plus
+	-- de longs moments sans roche d'or (avant, le couloir de l'anneau 1 n'en avait aucune un quart du temps).
+	-- Si la place est prise, on réessaie Retry secondes plus tard (Retries fois) au lieu de sauter un tour.
+	Jitter = 0.12,
+	Retry = 1,
+	Retries = 6,
 	-- Couche de marche : une partie des astéroïdes passe à la hauteur du pont, du côté intérieur de
 	-- l'anneau. On peut forer depuis le quai (ou un relais) et sauter de roche en roche.
 	WalkShare = 0.8, -- part des astéroïdes tendres (type 1, côté vaisseau) dans la couche de marche
@@ -241,7 +249,7 @@ end
 -- Chaque anneau a 3 types d'astéroïdes, rangés par profondeur : les plus tendres du côté du vaisseau, les
 -- plus durs au fond. Le type décide de ce qu'on trouve dedans : le joueur sait à peu près ce qu'il va
 -- avoir (seules la taille et la mutation restent du hasard).
---   Share  : part des astéroïdes de l'anneau
+--   Share  : part des astéroïdes de l'anneau (chaque type naît à son propre rythme régulier : Config.Belt.Jitter)
 --   Depth  : bande de l'épaisseur de l'anneau où ils passent (0 = bord côté vaisseau, 1 = bord du fond)
 --   Min, Max : diamètre (studs) ; Eggs = { min, max } : stock d'œufs, qui sortent un par un
 --   HP     : × EggHP de l'anneau (vie de chaque œuf)
