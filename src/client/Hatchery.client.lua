@@ -764,7 +764,7 @@ local function hatchBanner(ring: number, rarity: number, name: string, income: n
 		end
 	end
 	UIKit.popIn(frame)
-	task.delay(if wow then 4.6 else 3.2, function()
+	task.delay(H.BannerTime, function()
 		local s = frame:FindFirstChild("AnimScale") :: UIScale?
 		if s then
 			UIKit.tween(s, 0.25, { Scale = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)

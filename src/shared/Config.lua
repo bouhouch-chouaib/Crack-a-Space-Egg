@@ -1637,6 +1637,10 @@ Config.Hatch = {
 	-- sa taille) : plus elle est immense, plus il gonfle
 	Grow = 0.85,
 	MinGrow = 1.15,
+	-- Aperçu de la créature qui vient d'éclore (bannière « YOU HATCHED », Hatchery.client) : secondes à l'écran
+	-- avant qu'elle se referme (0,3 s de plus pour disparaître : 2 s en tout au plus, 30 nov. ; avant : 3,2 s,
+	-- et 4,6 s pour la créature rare du tutoriel)
+	BannerTime = 1.7,
 	-- Cinématique des œufs les plus rares (client/HatchCinema), pour leur propriétaire seulement : l'écran passe
 	-- au noir, puis on retrouve l'œuf seul dans une salle noire, sous une lampe. Il se charge et éclate là, la
 	-- créature apparaît sous la lumière, puis on revient à la base où elle attend. Les autres joueurs voient
@@ -1654,7 +1658,7 @@ Config.Hatch = {
 		Dist = { 3.7, 2.4 }, -- distance de la caméra (× hauteur finale de l'œuf) au début et à la fin de la charge
 		Arc = { -0.6, 0.15 }, -- angle de la caméra autour de l'œuf (radians) au début et à la fin de la charge
 		Tilt = 0.24, -- hauteur de la caméra au-dessus de ce qu'elle regarde (× sa distance)
-		Reveal = 2.8, -- secondes passées sur la créature avant de revenir à la base
+		Reveal = 2, -- secondes passées sur la créature avant de revenir à la base
 		Turn = 0.35, -- angle que la caméra parcourt encore pendant ce temps
 		PetHeight = 13, -- hauteur de la créature montrée (studs), un peu plus pour une Big ou une Large
 		PetDist = 2.5, -- distance de la caméra (× cette hauteur)
