@@ -44,6 +44,8 @@ LayeredFx.Sheets = {
 	-- œuf qui sort de la roche (Impact.client) : jaillissement vers le haut, halo qui tourne pendant le vol
 	EggPop = { Glow = "rbxassetid://85864374889551", Rim = "rbxassetid://130591727503363", Mid = "rbxassetid://118427384435231", Core = "rbxassetid://75789850346283" },
 	Halo = { Glow = "rbxassetid://79163174307055", Rim = "rbxassetid://98294404671465", Mid = "rbxassetid://131066703231740", Core = "rbxassetid://123240916788334" },
+	-- éclair de chance qui tombe du ciel sur l'œuf (HatchFx) : il descend, frappe, se rallume, s'effiloche
+	Strike = { Glow = "rbxassetid://99153037994446", Rim = "rbxassetid://107842448073108", Mid = "rbxassetid://114748307130791", Core = "rbxassetid://127812846193501" },
 	Converge = { Glow = "rbxassetid://126224476094550", Rim = "rbxassetid://116332369242874", Mid = "rbxassetid://96225808912195", Core = "rbxassetid://134950337727915" },
 }
 

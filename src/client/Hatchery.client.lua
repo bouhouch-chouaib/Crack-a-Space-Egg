@@ -517,6 +517,23 @@ local function startCharge(m: Model)
 		duration = left,
 		owner = mine,
 		odds = Config.LuckShown((m:GetAttribute("Ring") or 1) :: number, rarity, m:GetAttribute("HatchOdds") :: number?),
+		luck = m:GetAttribute("HatchLuck") :: number?,
+		-- éclair de chance : un claquement sec, et un coup de tonnerre court derrière lui
+		onStrike = function(i: number)
+			Sfx.Play("Crack", { at = where, volume = if mine then 0.8 else 0.4, pitch = 1.45 + 0.05 * i })
+			local thunder = Sfx.Play("Boom", { at = where, volume = if mine then 0.45 else 0.22, pitch = 1.9 })
+			if thunder then
+				task.delay(0.3, function()
+					if thunder.Parent then
+						UIKit.tween(thunder, 0.3, { Volume = 0 })
+						task.wait(0.35)
+						if thunder.Parent then
+							thunder:Destroy()
+						end
+					end
+				end)
+			end
+		end,
 		onCrack = function(i: number)
 			Sfx.Play("Crack", { at = where, volume = if mine then 0.5 else 0.25, pitch = 0.8 + 0.08 * i })
 		end,

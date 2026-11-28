@@ -12,6 +12,9 @@
 --   Cosmic     + couleurs arc-en-ciel, tout se fige un instant avant l'éclatement
 -- L'œuf grossit pendant la charge jusqu'à la taille de la créature à naître (grow = hauteur finale / hauteur
 -- de l'œuf) : plus elle est immense, plus il gonfle.
+-- Éclairs de chance (luck, 30 nov.) : quand le joueur a un gros bonus de chance, des éclairs verts tombent du
+-- ciel sur l'œuf pendant qu'il grossit (planche « Strike » en 4 calques, Config.Hatch.Lightning) : plus sa
+-- chance est grande, plus il y en a. L'œuf crépite et sursaute à chaque coup.
 -- Compteur de chance (odds = N, 19 nov.) : au-dessus de l'œuf, un trèfle vert et « x1,233,433 » (au-delà
 -- d'un milliard : « x1.43Qa ») sur une pastille sombre, à l'écran (devant les rayons et les halos de
 -- l'œuf, qui le cachaient). Le nombre défile très vite dès le début, comme un vrai compteur, et
@@ -247,6 +250,8 @@ type Opts = {
 	speed: number?,
 	odds: number?, -- nombre final du compteur « x N » (Config.LuckShown ; rien si absent)
 	onCrack: ((number) -> ())?,
+	luck: number?, -- chance du joueur à l'éclosion (multiplicateur) : au-dessus de Config.Hatch.Lightning.From, des éclairs
+	onStrike: ((number) -> ())?, -- son de chaque éclair
 	-- sons du compteur : « tick » (le nombre défile, k = avancée 0..1), « step » (palier ×10), « lock » (il se fige)
 	onLuck: ((string, number) -> ())?,
 }
@@ -477,6 +482,69 @@ function HatchFx.Charge(egg: Model, o: Opts)
 		oddsPart, oddsPill, oddsText, oddsScale, oddsIcon, oddsHalo, oddsSparks = p, anchor, label, s, icon, halo, e
 	end
 
+	-- éclairs de chance (Config.Hatch.Lightning) : moments de la charge où ils tombent, d'autant plus nombreux
+	-- que la chance du joueur est grande
+	local LT = Config.Hatch.Lightning
+	local strikes: { number } = {}
+	local struck = 0
+	local zap = 0 -- sursaut de l'œuf à chaque éclair, retombe tout seul
+	local luck = o.luck or 1
+	if luck >= LT.From then
+		local count = math.floor(LT.Base + LT.PerDouble * math.log(luck / LT.From, 2) + 0.5)
+		count = math.clamp(count, 1, math.max(1, math.min(LT.Max, math.floor(dur / LT.MinGap))))
+		for i = 1, count do
+			local f = if count > 1 then (i - 1) / (count - 1) else 1
+			local jitter = if i < count then rng:NextNumber(-0.03, 0.03) else 0
+			table.insert(strikes, LT.Window[1] + (LT.Window[2] - LT.Window[1]) * f + jitter)
+		end
+	end
+	local strikeAnchor: Part? = nil
+	-- Un éclair tombe du ciel sur le haut de l'œuf : l'image (4 calques) est posée pour que son point d'impact
+	-- soit sur la coquille, l'œuf crépite un instant, un éclat de lumière et un sursaut
+	local function strike(top: Vector3, eggH: number, index: number)
+		local anchor = strikeAnchor
+		if not anchor then
+			anchor = Instance.new("Part")
+			anchor.Name = "Strike"
+			anchor.Anchored = true
+			anchor.CanCollide = false
+			anchor.CanQuery = false
+			anchor.CanTouch = false
+			anchor.Transparency = 1
+			anchor.Size = Vector3.one * 0.2
+			anchor.CFrame = CFrame.new(top)
+			anchor.Parent = folder
+			strikeAnchor = anchor
+		end
+		zap = 1
+		local size = LT.Size * rng:NextNumber(0.9, 1.12)
+		local sky = Instance.new("Attachment")
+		sky.Parent = anchor
+		sky.WorldPosition = top + Vector3.new(rng:NextNumber(-0.4, 0.4), LT.Hit * size / 2, 0)
+		LayeredFx.new(sky, { kind = "Strike", size = size, colors = { LT.Rim, LT.Mid }, lifetime = LT.Life, upright = true }):Emit()
+		local shell = Instance.new("Attachment")
+		shell.Parent = anchor
+		shell.WorldPosition = top - Vector3.new(0, eggH * 0.4, 0)
+		LayeredFx.new(shell, { kind = "Electric", size = eggH * 2.1, colors = { LT.Rim, LT.Mid }, lifetime = 0.45, loop = 0.3, fade = 0.08 }):Emit()
+		local flash = Instance.new("PointLight")
+		flash.Color = LT.Mid
+		flash.Brightness = LT.Light
+		flash.Range = math.min(60, eggH * 5)
+		flash.Shadows = false
+		flash.Parent = shell
+		tween(flash, 0.3, { Brightness = 0 })
+		task.delay(LT.Life + 0.2, function()
+			sky:Destroy()
+			shell:Destroy()
+		end)
+		if owner then
+			HatchFx.Shake(LT.Shake, 0.25)
+		end
+		if o.onStrike then
+			task.spawn(o.onStrike, index)
+		end
+	end
+
 	local t0 = os.clock()
 	local last = t0
 	local spin = 0
@@ -506,7 +574,8 @@ function HatchFx.Charge(egg: Model, o: Opts)
 		local g = 1 + (grow - 1) * k ^ 1.5
 		local beat = if rarity >= 3 then 0.05 * math.max(0, math.sin(now * (5 + 12 * k))) ^ 6 * k else 0
 		local pop = 0.14 * smooth((k - 0.86) / 0.14)
-		local gs = g * (1 + beat + pop)
+		zap = math.max(0, zap - dt * 5)
+		local gs = g * (1 + beat + pop + 0.07 * zap)
 		egg:ScaleTo(scale0 * gs)
 		-- s'élève et tourne (Epic+)
 		local lift = 0
@@ -528,6 +597,10 @@ function HatchFx.Charge(egg: Model, o: Opts)
 				* CFrame.Angles(math.sin(now * 41) * a, 0, math.cos(now * 37) * a)
 		)
 		handle.center = center
+		while struck < #strikes and k >= strikes[struck + 1] do
+			struck += 1
+			strike(center + Vector3.new(0, h * gs * 0.42, 0), h * gs, struck)
+		end
 		handle.size = h * gs
 		-- compteur de chance : il défile très vite dès le début (comme un vrai compteur) et se fige sur sa
 		-- valeur à 90 % de la charge ; huit fois en route : un coup, des étincelles et un son plus aigu

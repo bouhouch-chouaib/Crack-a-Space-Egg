@@ -530,6 +530,8 @@ function HatchService.Hatch(player: Player, id: string)
 	m:SetAttribute("HatchDuration", dur)
 	m:SetAttribute("HatchGrow", math.max(H.MinGrow, petHeight * H.Grow / eggHeight))
 	m:SetAttribute("HatchOdds", item.odds)
+	-- chance du joueur à cet instant : au-dessus de Config.Hatch.Lightning.From, des éclairs tombent sur l'œuf
+	m:SetAttribute("HatchLuck", if special then nil else math.floor(luck * 100 + 0.5) / 100)
 	m:SetAttribute("Hatching", workspace:GetServerTimeNow())
 	local pos = m:GetPivot().Position
 	task.delay(dur, function()

@@ -831,7 +831,110 @@ def fx_dust(t, i):
     return {"Glow": glow, "Rim": rim, "Mid": mid, "Core": core}
 
 
+# point où l'éclair frappe dans l'étape (le jeu pose l'image pour que ce point soit sur l'œuf : HatchFx)
+STRIKE_HIT = (0.0, -0.62)
+# par étape : part du tracé déjà descendue, épaisseur du trait, rayon de l'éclat au point d'impact
+STRIKE_STEPS = [
+    (0.38, 0.030, 0.00),  # le trait descend du ciel
+    (0.78, 0.034, 0.00),
+    (1.00, 0.095, 0.36),  # il frappe : trait épais, grand éclat
+    (1.00, 0.080, 0.42),
+    (1.00, 0.048, 0.30),
+    (1.00, 0.022, 0.16),  # il faiblit
+    (1.00, 0.078, 0.34),  # il se rallume
+    (1.00, 0.055, 0.27),
+    (1.00, 0.044, 0.21),  # puis s'effiloche en morceaux
+    (1.00, 0.038, 0.17),
+    (1.00, 0.032, 0.13),
+    (1.00, 0.026, 0.10),
+    (1.00, 0.020, 0.07),
+    (1.00, 0.015, 0.05),
+    (1.00, 0.010, 0.03),
+    (1.00, 0.006, 0.00),
+]
+
+
+def fx_strike(t, i):
+    """éclair qui tombe du ciel sur l'œuf (une seule fois) : il descend, frappe, se rallume, s'effiloche"""
+    reach, width, flash = STRIKE_STEPS[i]
+    hx, hy = STRIKE_HIT
+    # tracé principal : le même à chaque étape, qui tremble un peu (et change au rallumage)
+    rng = np.random.default_rng(900 if i < 6 else 901)
+    main = _bolt(rng, 0.1, 1.02, hx, hy, depth=5, disp=0.2)
+    jit = np.random.default_rng(950 + i)
+    main = [main[0]] + [(x + jit.uniform(-0.014, 0.014), y) for x, y in main[1:-1]] + [main[-1]]
+    # branches : elles partent du tronc vers le bas et l'extérieur, plus fines
+    brng = np.random.default_rng(910 if i < 6 else 911)
+    branches = []
+    for k in (5, 10, 16, 22, 27):
+        bx, by = main[k]
+        side = 1 if brng.random() < 0.5 else -1
+        ex = bx + side * brng.uniform(0.24, 0.5)
+        ey = by - brng.uniform(0.18, 0.4)
+        branches.append(_bolt(brng, bx, by, ex, ey, depth=3, disp=0.26))
+    ycut = 1.02 - reach * (1.02 - hy)  # ce qui est au-dessus est déjà tracé
+    d = np.zeros_like(X)
+
+    def draw(pts, w, taper):
+        nonlocal d
+        n = len(pts) - 1
+        for j, ((x0, y0), (x1, y1)) in enumerate(zip(pts, pts[1:])):
+            if max(y0, y1) < ycut:
+                continue
+            ww = w * (1 - taper * j / n)
+            if ww <= 1e-4:
+                continue
+            d = np.maximum(d, np.clip(1 - seg_dist(X, Y, x0, y0, x1, y1) / ww, 0, 1) ** 0.7)
+
+    draw(main, width, 0.0)
+    if 2 <= i <= 4 or 6 <= i <= 8:
+        for b in branches:
+            draw(b, width * 0.55, 0.85)
+    # il s'effiloche : des trous de plus en plus grands le coupent en morceaux
+    if i >= 8:
+        u = (i - 8) / 7
+        n = sample(NOISE_B, X * 1.3 + 0.2, Y * 1.3)
+        d = d * ss(0.2 + 0.5 * u, 0.32 + 0.5 * u, n)
+    # il sort du haut de l'image en s'effaçant (pas de coupure nette dans le ciel)
+    d = d * ss(1.0, 0.8, Y)
+    # éclat au point d'impact : cœur rond et pointes
+    if flash > 0:
+        r = np.hypot(X - hx, Y - hy)
+        a = np.arctan2(Y - hy, X - hx)
+        blob = np.clip(1 - r / (flash * 0.62), 0, 1) ** 0.6
+        srng = np.random.default_rng(920)
+        spikes = np.zeros_like(X)
+        for sa in np.sort(srng.uniform(0, TAU, 9)):
+            L = flash * srng.uniform(0.75, 1.15)
+            da = np.angle(np.exp(1j * (a - sa)))
+            wgt = 0.22 * (1 - r / L)
+            sp = np.where(r < L, 1 - np.abs(da) / np.maximum(wgt, 1e-4), 0)
+            spikes = np.maximum(spikes, np.clip(sp, 0, 1) * np.clip(1 - r / L, 0, 1) ** 0.35)
+        d = np.maximum(d, np.maximum(blob, spikes))
+    # onde écrasée qui s'ouvre sous l'impact (vue de côté)
+    if 2 <= i <= 9:
+        u = (i - 2) / 8
+        rr = 0.12 + 0.5 * (1 - (1 - u) ** 2)
+        th = 0.05 * (1 - u) ** 1.2 + 0.004
+        er = np.hypot(X - hx, (Y - hy + 0.05) / 0.3)
+        d = np.maximum(d, np.clip(1 - np.abs(er - rr) / th, 0, 1) * (1 - u) ** 0.7 * 0.8)
+    # étincelles qui giclent de l'impact et retombent
+    if i >= 3:
+        u = (i - 3) / 12
+        prng = np.random.default_rng(930)
+        for _ in range(10):
+            pa = prng.uniform(0.15, math.pi - 0.15)
+            sp = prng.uniform(0.35, 0.75)
+            px = hx + math.cos(pa) * sp * u
+            py = hy + math.sin(pa) * sp * u * 0.8 - 0.55 * u * u
+            sz = prng.uniform(0.02, 0.04) * (1 - u)
+            if sz > 0.004:
+                d = np.maximum(d, np.clip(1 - np.hypot(X - px, Y - py) / sz, 0, 1) ** 0.5 * 0.9)
+    return bands(d, rim=0.04, mid=0.36, core=0.68, soft=0.035, glow_sigma=0.035, glow_gain=1.4)
+
+
 EFFECTS = {
+    "Strike": fx_strike,
     "Impact": fx_impact,
     "Flame": fx_flame,
     "Wisp": fx_wisp,
@@ -862,6 +965,7 @@ EFFECTS = {
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
 PREVIEW = {
+    "Strike": ((50, 225, 90), (185, 255, 165)),
     "Impact": ((255, 150, 40), (255, 230, 120)),
     "Flame": ((255, 70, 20), (255, 190, 60)),
     "Wisp": ((90, 220, 210), (190, 255, 245)),

@@ -1651,6 +1651,28 @@ Config.Hatch = {
 	-- sa taille) : plus elle est immense, plus il gonfle
 	Grow = 0.85,
 	MinGrow = 1.15,
+	-- Éclairs de chance (HatchFx, 30 nov.) : quand le joueur a un gros bonus de chance au moment de l'éclosion
+	-- (potion x2, scanner, Index, groupe, Mutation Ray : tout multiplié), des éclairs verts tombent du ciel sur
+	-- l'œuf pendant qu'il grossit. From = chance à partir de laquelle ils tombent ; Base éclairs à ce niveau,
+	-- PerDouble de plus chaque fois que la chance double, Max au plus, jamais plus d'un toutes les MinGap
+	-- secondes. Window = part de la charge où ils tombent (le dernier juste avant que le compteur se fige).
+	-- Size = côté de l'image de l'éclair (studs), Hit = hauteur du point d'impact dans l'image
+	-- (tools/fx/layered_fx.py, STRIKE_HIT), Life = secondes d'un éclair, Light = éclat de lumière, Shake = secousse.
+	Lightning = {
+		From = 2,
+		Base = 2,
+		PerDouble = 2,
+		Max = 8,
+		MinGap = 0.45,
+		Window = { 0.18, 0.88 },
+		Size = 46,
+		Hit = 0.62,
+		Life = 0.55,
+		Light = 5,
+		Shake = 0.5,
+		Rim = Color3.fromRGB(50, 225, 90), -- vert du trèfle de la chance
+		Mid = Color3.fromRGB(185, 255, 165),
+	},
 	-- Aperçu de la créature qui vient d'éclore (bannière « YOU HATCHED », Hatchery.client) : secondes à l'écran
 	-- avant qu'elle se referme (0,3 s de plus pour disparaître : 2 s en tout au plus, 30 nov. ; avant : 3,2 s,
 	-- et 4,6 s pour la créature rare du tutoriel)
