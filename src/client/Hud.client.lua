@@ -324,27 +324,25 @@ end
 refreshJetGauge()
 player:GetAttributeChangedSignal("JetTier"):Connect(refreshJetGauge)
 
--- CHUTE DANS LE VIDE : l'écran devient noir, « LOST IN THE VOID », puis on réapparaît à la base
-local voidScreen = new("Frame", { Name = "Void", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, Visible = false, ZIndex = 50, Parent = gui })
-local voidText = UIKit.text({
-	Text = "LOST IN THE VOID",
-	AnchorPoint = Vector2.new(0.5, 0.5),
-	Position = UDim2.fromScale(0.5, 0.45),
-	Size = UDim2.fromOffset(700, 80),
-	TextColor3 = Color3.fromRGB(255, 90, 110),
-	TextTransparency = 1,
-	ZIndex = 51,
-	Parent = voidScreen,
+-- CHUTE DANS LE VIDE : tout l'écran devient noir, puis on réapparaît à la base.
+-- 30 nov. : le noir couvre vraiment tout l'écran, barre du haut comprise (il est dans sa propre interface, qui
+-- ignore la marge de Roblox ; avant, une bande restait claire en haut), et le texte « LOST IN THE VOID » est
+-- retiré : le message du serveur (« EGG LOST! » / « YOU FELL! », affiché par-dessus) suffit.
+local voidGui = new("ScreenGui", {
+	Name = "VoidFall",
+	ResetOnSpawn = false,
+	IgnoreGuiInset = true,
+	DisplayOrder = 15, -- sous les messages (Toasts : 20), au-dessus du reste du jeu
+	Parent = player:WaitForChild("PlayerGui"),
 })
+local voidScreen = new("Frame", { Name = "Void", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, Parent = voidGui })
 local function watchVoid(character: Model)
 	voidScreen.Visible = false
 	voidScreen.BackgroundTransparency = 1
-	voidText.TextTransparency = 1
 	character:GetAttributeChangedSignal("VoidDead"):Connect(function()
 		if character:GetAttribute("VoidDead") then
 			voidScreen.Visible = true
-			TweenService:Create(voidScreen, TweenInfo.new(0.8), { BackgroundTransparency = 0.15 }):Play()
-			TweenService:Create(voidText, TweenInfo.new(0.8), { TextTransparency = 0 }):Play()
+			TweenService:Create(voidScreen, TweenInfo.new(0.8), { BackgroundTransparency = 0.05 }):Play()
 		end
 	end)
 end
