@@ -1639,7 +1639,14 @@ Config.Hatch = {
 	RingIncome = { 5, 178, 6300, 224000, 7.9e6, 2.8e8, 1e10, 3.55e11, 1.26e13, 4.47e14, 1.58e16, 5.6e17, 1.98e19, 7e20 },
 	-- Secondes entre l'appui sur « Hatch » et l'éclatement, selon la rareté : l'œuf se charge (tremble,
 	-- brille, se fissure de rayons, s'élève...) de plus en plus longtemps et fort (HatchFx)
-	Burst = { 1.6, 2.1, 2.7, 3.4, 4.3, 5.4, 6.8 },
+	-- 30 nov. : nettement plus long pour les plus rares (avant : 1,6 à 6,8 s), et une mutation ou une grande
+	-- taille rallonge encore l'attente (BurstMutation, BurstSize : secondes en plus, BurstMax au plus). Le
+	-- compteur de chance défile pendant 90 % de ce temps : plus la créature est rare, plus il monte longtemps.
+	-- Voir Config.HatchBurst.
+	Burst = { 1.6, 2.2, 3, 4.2, 5.8, 8, 10.5 },
+	BurstMutation = { Silver = 0.5, Gold = 1, Emerald = 1.6, Ruby = 2.4, Rainbow = 3.2 },
+	BurstSize = { Big = 0.8, Large = 1.8 },
+	BurstMax = 14,
 	-- Pendant la charge, l'œuf grossit jusqu'à Grow × la hauteur de la créature à naître (au moins MinGrow ×
 	-- sa taille) : plus elle est immense, plus il gonfle
 	Grow = 0.85,
@@ -2146,6 +2153,18 @@ function Config.HatchOdds(ringIndex: number, rarity: number, rockType: number?, 
 		end
 	end
 	return p * (mine or none)
+end
+
+-- Secondes de charge avant l'éclatement de l'œuf (HatchService) : selon la rareté, plus un supplément pour une
+-- mutation et pour une grande taille. Plus la créature est rare, plus l'éclosion et son compteur durent.
+function Config.HatchBurst(rarity: number, size: number?, mutation: string?): number
+	local h = Config.Hatch
+	local t = h.Burst[rarity] or 2
+	if mutation then
+		t += h.BurstMutation[mutation] or 0
+	end
+	t += h.BurstSize[Config.PetSize(size).Name] or 0
+	return math.min(h.BurstMax, t)
 end
 
 -- Chance AFFICHÉE à l'éclosion (compteur au trèfle et bannière, 19 nov.) : un nombre de spectacle, pas

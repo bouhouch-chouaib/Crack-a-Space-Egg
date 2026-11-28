@@ -521,9 +521,9 @@ function HatchService.Hatch(player: Player, id: string)
 	if prompt then
 		prompt.Enabled = false
 	end
-	-- Charge plus longue et plus spectaculaire avec la rareté ; l'œuf grossit jusqu'à la taille de la
-	-- créature à naître (HatchFx sur les clients)
-	local dur = H.Burst[item.rarity] or 2
+	-- Charge plus longue et plus spectaculaire avec la rareté (et encore plus pour une mutation ou une grande
+	-- taille) ; l'œuf grossit jusqu'à la taille de la créature à naître (HatchFx sur les clients)
+	local dur = Config.HatchBurst(item.rarity, item.size, item.mut)
 	local petHeight = (H.PetHeight[item.rarity] or 3.5) * item.size
 	local eggHeight = (m:GetAttribute("BodyHeight") or 3) :: number
 	m:SetAttribute("Rarity", item.rarity)

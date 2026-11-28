@@ -540,7 +540,14 @@ local function startCharge(m: Model)
 	end
 	charging[m] = fx
 	if rarity >= 3 then
-		Sfx.Play("Riser", { at = where, volume = if mine then 1 else 0.5, pitch = math.clamp(2.6 / dur, 0.6, 1.2) })
+		-- la montée dure 2,6 s à vitesse normale : sur une longue charge, elle part plus tard pour finir
+		-- pile sur l'éclatement
+		local pitch = math.clamp(2.6 / left, 0.6, 1.2)
+		task.delay(math.max(0, left - 2.6 / pitch), function()
+			if charging[m] == fx then
+				Sfx.Play("Riser", { at = where, volume = if mine then 1 else 0.5, pitch = pitch })
+			end
+		end)
 	end
 end
 
