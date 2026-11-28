@@ -157,7 +157,12 @@ UIKit.Art = {
 	Money4 = "rbxassetid://131346362295272",
 	Money5 = "rbxassetid://95885845881469",
 	-- Lumières (blanches, teintées par ImageColor3), dessinées par tools/fx
-	FxRays = "rbxassetid://100803246971606",
+	FxRays = "rbxassetid://100803246971606", -- anciens rayons flous (encore la texture d'une particule de HatchFx)
+	-- Rayons de lumière en 4 calques (planche « Burst », tools/fx/layered_fx.py, 16 étapes en boucle) : UIKit.rays
+	FxBurstGlow = "rbxassetid://112792872155044",
+	FxBurstRim = "rbxassetid://82046024714671",
+	FxBurstMid = "rbxassetid://105466862213460",
+	FxBurstCore = "rbxassetid://106415189003352",
 	FxGlow = "rbxassetid://103844906730878",
 	FxSparkle = "rbxassetid://138922153683020",
 	-- Particules des biomes (tools/fx/make_particles.py)
@@ -560,27 +565,69 @@ local function centerOf(g: GuiObject): UDim2
 end
 UIKit.centerOf = centerOf
 
--- Rayons de soleil qui tournent derrière une illustration
+-- Rayons de lumière derrière une illustration.
+-- 30 nov. : refaits. Avant, une seule image floue de 12 rayons tous pareils, qu'on faisait pivoter : elle
+-- faisait tache à côté du reste (effets dessinés en 4 calques, interface à bords nets), et une image qui pivote
+-- n'est pas rognée par son panneau. Maintenant ce sont les 4 calques de la planche « Burst » empilés (halo,
+-- silhouette, milieu plus clair, cœur presque blanc) : des rayons larges et fins dessinés à la main, en deux
+-- tons, qui s'allongent et se rétractent en vague autour du centre, avec de petites étoiles qui scintillent.
+-- Rien ne pivote : on passe les 16 étapes de la planche en boucle (speed règle la cadence, comme avant).
+-- L'objet renvoyé est le calque de halo : changer sa couleur (ImageColor3) ou le cacher agit sur les 4 calques.
+local BURST_FRAME = Vector2.new(256, 256)
 function UIKit.rays(parent: GuiObject, props: { color: Color3?, size: number?, speed: number?, transparency: number?, position: UDim2?, z: number? }): ImageLabel
 	local size = props.size or 200
+	local z = props.z or parent.ZIndex
+	local base = props.transparency or 0.3
 	local r = new("ImageLabel", {
 		Name = "Rays",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = props.position or UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(size, size),
 		BackgroundTransparency = 1,
-		Image = UIKit.Art.FxRays,
+		Image = UIKit.Art.FxBurstGlow,
+		ImageRectSize = BURST_FRAME,
 		ImageColor3 = props.color or Color3.fromRGB(255, 240, 170),
-		ImageTransparency = props.transparency or 0.3,
-		ZIndex = props.z or parent.ZIndex,
+		ImageTransparency = 1 - (1 - base) * 0.5,
+		ZIndex = z,
 		Parent = parent,
 	})
-	local speed = props.speed or 18
-	local base = r.ImageTransparency
-	local phase = math.random() * 10
+	local layers: { ImageLabel } = {}
+	for i, name in ipairs({ "Rim", "Mid", "Core" }) do
+		layers[i] = new("ImageLabel", {
+			Name = name,
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			Image = UIKit.Art["FxBurst" .. name],
+			ImageRectSize = BURST_FRAME,
+			ImageTransparency = base,
+			ZIndex = z,
+			Parent = r,
+		})
+	end
+	local loop = math.clamp(30 / math.max(1, math.abs(props.speed or 18)), 0.8, 2.6) -- secondes pour les 16 étapes
+	local phase = math.random()
+	local frame = -1
+	local white = Color3.new(1, 1, 1)
 	UIKit.every(r, function(t)
-		r.Rotation = (t * speed + phase * 36) % 360
-		r.ImageTransparency = math.clamp(base + 0.12 * math.sin(t * 2 + phase), 0, 1)
+		local f = math.floor((t / loop + phase) % 1 * 16)
+		if f ~= frame then
+			frame = f
+			local off = Vector2.new((f % 4) * BURST_FRAME.X, (f // 4) * BURST_FRAME.Y)
+			r.ImageRectOffset = off
+			for _, l in ipairs(layers) do
+				l.ImageRectOffset = off
+			end
+		end
+		-- la couleur vient du calque de halo (certains écrans la changent en route) ; l'ensemble respire un peu
+		local c = r.ImageColor3
+		local a = math.clamp(base + 0.08 * math.sin(t * 2 + phase * 10), 0, 1)
+		r.ImageTransparency = 1 - (1 - a) * 0.5
+		layers[1].ImageColor3 = c
+		layers[1].ImageTransparency = a
+		layers[2].ImageColor3 = c:Lerp(white, 0.5)
+		layers[2].ImageTransparency = a
+		layers[3].ImageColor3 = c:Lerp(white, 0.85)
+		layers[3].ImageTransparency = math.clamp(a + 0.08, 0, 1)
 	end)
 	return r
 end
@@ -764,7 +811,8 @@ function UIKit.burst(parent: GuiObject, at: UDim2?, color: Color3?)
 		Position = pos,
 		Size = UDim2.fromOffset(60, 60),
 		BackgroundTransparency = 1,
-		Image = UIKit.Art.FxRays,
+		Image = UIKit.Art.FxBurstRim,
+		ImageRectSize = BURST_FRAME,
 		ImageColor3 = c,
 		ZIndex = z,
 		Parent = parent,

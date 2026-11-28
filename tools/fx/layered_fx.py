@@ -831,6 +831,40 @@ def fx_dust(t, i):
     return {"Glow": glow, "Rim": rim, "Mid": mid, "Core": core}
 
 
+def fx_burst(t, i):
+    """rayons de lumière derrière une illustration de l'interface (boucle, UIKit.rays) : des pointes larges et
+    fines, à la main, qui s'allongent et se rétractent en vague autour du centre (on croit les voir tourner,
+    sans rien faire pivoter), et de petites étoiles qui scintillent entre elles"""
+    rng = np.random.default_rng(700)
+    n = 16
+    step = TAU / n
+    d = np.zeros_like(X)
+    for k in range(n):
+        big = k % 2 == 0
+        a = k * step + rng.uniform(-0.2, 0.2) * step
+        L0 = rng.uniform(0.84, 0.93) if big else rng.uniform(0.52, 0.68)
+        w0 = (rng.uniform(0.32, 0.38) if big else rng.uniform(0.24, 0.3)) * step
+        # deux crêtes font le tour du cercle pendant la boucle
+        wave = math.sin(TAU * (t - 2 * k / n))
+        L = min(0.97, L0 * (1 + 0.1 * wave))
+        w = w0 * (1 + 0.2 * wave)
+        da = np.abs(np.angle(np.exp(1j * (ANG - a))))
+        # un rayon large qui s'ouvre en éventail et finit en pointe sur son dernier tiers
+        tip = np.clip((L - RAD) / (0.34 * L), 0, 1)
+        across = np.where(RAD < L, 1 - da / np.maximum(w * tip**0.8, 1e-4), 0)
+        d = np.maximum(d, np.clip(across, 0, 1) ** 0.7 * (0.42 + 0.58 * np.clip(1 - RAD / L, 0, 1) ** 0.45))
+    # centre : un disque doux (l'illustration est posée dessus), pas un cœur blanc
+    d = np.maximum(d, np.clip(1 - RAD / 0.3, 0, 1) ** 0.5 * 0.6)
+    # petites étoiles entre les rayons, qui s'allument chacune à son tour
+    for j in range(6):
+        sa = (j * 2 + 1 + rng.uniform(-0.25, 0.25)) * step + (j % 2) * step * 2
+        sr = rng.uniform(0.74, 0.88)
+        size = rng.uniform(0.1, 0.15) * max(0.0, math.sin(TAU * (t + rng.uniform(0, 1)))) ** 1.5
+        if size > 0.012:
+            d = np.maximum(d, star4(sr * math.cos(sa), sr * math.sin(sa), size, rot=0.3) * 0.95)
+    return bands(d, rim=0.03, mid=0.4, core=0.74, soft=0.02, glow_sigma=0.045, glow_gain=1.1)
+
+
 # point où l'éclair frappe dans l'étape (le jeu pose l'image pour que ce point soit sur l'œuf : HatchFx)
 STRIKE_HIT = (0.0, -0.62)
 # par étape : part du tracé déjà descendue, épaisseur du trait, rayon de l'éclat au point d'impact
@@ -934,6 +968,7 @@ def fx_strike(t, i):
 
 
 EFFECTS = {
+    "Burst": fx_burst,
     "Strike": fx_strike,
     "Impact": fx_impact,
     "Flame": fx_flame,
@@ -965,6 +1000,7 @@ EFFECTS = {
 
 # couleurs de l'aperçu (Rim, Mid) — en jeu ce sont celles de chaque créature
 PREVIEW = {
+    "Burst": ((255, 170, 30), (255, 226, 120)),
     "Strike": ((50, 225, 90), (185, 255, 165)),
     "Impact": ((255, 150, 40), (255, 230, 120)),
     "Flame": ((255, 70, 20), (255, 190, 60)),

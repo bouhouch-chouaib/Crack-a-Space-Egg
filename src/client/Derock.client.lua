@@ -213,10 +213,16 @@ local function makeEgg(ring: number, rarity: number): Model
 		rays.AnchorPoint = Vector2.new(0.5, 0.5)
 		rays.Position = UDim2.fromScale(0.5, 0.5)
 		rays.Size = UDim2.fromScale(1.5, 1.5)
-		rays.Image = UIKit.Art.FxRays
+		rays.Image = UIKit.Art.FxBurstRim -- nouveaux rayons en calques (UIKit.rays), une étape fixe
+		rays.ImageRectSize = Vector2.new(256, 256)
 		rays.ImageColor3 = r.Color
 		rays.ImageTransparency = 0.2
 		rays.Parent = b
+		local inner = rays:Clone()
+		inner.Name = "RaysMid"
+		inner.Image = UIKit.Art.FxBurstMid
+		inner.ImageColor3 = r.Color:Lerp(Color3.new(1, 1, 1), 0.5)
+		inner.Parent = b
 	end
 	return egg
 end
