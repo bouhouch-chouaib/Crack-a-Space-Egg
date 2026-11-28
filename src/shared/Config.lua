@@ -686,6 +686,13 @@ Config.Jetpack = {
 	-- Prix réglés avec tools/eco-sim.luau : la soufflerie n se paie à l'arrivée dans l'anneau n (trop chère
 	-- avec les revenus de l'anneau d'avant, vite payée avec ceux du nouveau).
 	TunnelRadius = 4.5,
+	-- Caméra d'entraînement (WindTunnel.client, 30 nov.) : dès que le joueur flotte dans sa soufflerie, la caméra
+	-- se rapproche un peu de lui et tourne lentement autour du tube, comme une petite cinématique. Un bouton
+	-- EXIT (touche X, B à la manette) le repose devant le tube, là d'où il est entré ; marcher hors du courant
+	-- marche toujours. Delay = secondes dans le courant avant qu'elle parte, Blend = secondes pour y glisser,
+	-- Dist = distance à l'axe du tube (studs ; elle se rapproche si un mur gêne), Height = au-dessus du joueur,
+	-- Speed = tour (radians/s : un tour en 26 s), Bob = léger va-et-vient vertical, ExitGap = studs devant le tube.
+	TunnelCam = { Delay = 0.5, Blend = 1.1, Dist = 13, Height = 3, Speed = 0.24, Bob = 0.5, ExitGap = 5 },
 	TunnelHeight = 20,
 	TunnelOffset = Vector3.new(12, 0, 26), -- dans le repère du sol de la base : devant l'entrée ; le signe de x vient de l'attribut TunnelSide de la base (côté opposé à la machine)
 	Tunnels = {

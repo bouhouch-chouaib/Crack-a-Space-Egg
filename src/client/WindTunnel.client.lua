@@ -10,6 +10,8 @@
 -- Effets en 4 calques (LayeredFx) : tourbillon violet là où on tape, puis aura de flammes violettes et
 -- tourbillon autour du joueur quand le gain doublé tombe.
 -- Chaque niveau gagné dans la soufflerie : un flash très léger et un petit tremblement de la caméra.
+-- Caméra d'entraînement (Config.Jetpack.TunnelCam) : dans le courant, elle se rapproche un peu du joueur et
+-- tourne lentement autour du tube ; un bouton EXIT le repose devant le tube et rend la caméra.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -149,6 +151,11 @@ task.spawn(function()
 	end)
 end)
 
+-- soufflerie où le joueur flotte en ce moment, depuis quand, et dernier endroit où il a marché hors du courant
+local current: Tunnel? = nil
+local inSince = 0
+local lastOut: Vector3? = nil
+
 local spin = 0
 RunService.RenderStepped:Connect(function(dt)
 	spin += dt * FAN_SPEED
@@ -175,6 +182,7 @@ RunService.RenderStepped:Connect(function(dt)
 	local hum = character and character:FindFirstChildOfClass("Humanoid")
 	if not hrp or not hum or hum.Health <= 0 then
 		player:SetAttribute("InTunnel", nil)
+		current = nil
 		return
 	end
 	local t = tunnelAt(hrp.Position)
@@ -182,9 +190,17 @@ RunService.RenderStepped:Connect(function(dt)
 		if player:GetAttribute("InTunnel") then
 			player:SetAttribute("InTunnel", nil)
 		end
+		current = nil
+		if not t and hum.FloorMaterial ~= Enum.Material.Air then
+			lastOut = hrp.Position
+		end
 		return
 	end
 	player:SetAttribute("InTunnel", true)
+	if current ~= t then
+		current = t
+		inSince = now
+	end
 	local rising = UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonA) or hum.Jump
 	local target = t.base.Y + (if rising then J.TunnelHeight * HOVER_UP else HOVER) + math.sin(now * 2.2) * 0.6
 	local vy = math.clamp((target - hrp.Position.Y) * LIFT, -14, 22)
@@ -526,4 +542,137 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 	boostPos = p
 	holder.Position = UDim2.fromScale(p.X, p.Y)
+end)
+
+-- CAMÉRA D'ENTRAÎNEMENT ET BOUTON EXIT ---------------------------------------------------------
+-- Dans le courant, la caméra quitte le joueur : elle glisse vers un cercle autour du tube, un peu plus près
+-- que d'habitude, et tourne lentement en le regardant. Un mur trop proche la fait se rapprocher. Elle rend
+-- la main dès qu'il sort (ou pendant la cinématique d'un œuf rare, qui a sa propre caméra).
+
+local CAM = J.TunnelCam
+local camOn = false
+local camStart = 0
+local camFrom = CFrame.new()
+local camAngle = 0
+local camY = 0
+local camR = CAM.Dist
+local camParams = RaycastParams.new()
+camParams.FilterType = Enum.RaycastFilterType.Exclude
+camParams.RespectCanCollide = true
+
+local exitButton = new("TextButton", {
+	Name = "Exit",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.74),
+	Size = UDim2.fromOffset(190, 62),
+	BackgroundColor3 = Color3.new(1, 1, 1),
+	AutoButtonColor = false,
+	Text = "",
+	Visible = false,
+	ZIndex = 4,
+	Parent = boostGui,
+}, { UIKit.corner(16), UIKit.stroke(4), UIKit.gradient(UIKit.Colors.Red[1], UIKit.Colors.Red[2]) })
+UIKit.autoScale(exitButton)
+UIKit.studs(exitButton, 0.5, "Studs", 18, "button")
+UIKit.text({ Size = UDim2.new(1, -20, 0.72, 0), Position = UDim2.new(0, 10, 0.14, 0), Text = "EXIT", ZIndex = 5, Stroke = 4, Parent = exitButton })
+local exitKey = UIKit.text({ Name = "Key", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(40, 32), Position = UDim2.new(1, -4, 0, 2), Text = "X", ZIndex = 6, Stroke = 3.5, Parent = exitButton })
+UIKit.juice(exitButton)
+
+-- Sortir : le joueur est reposé devant le tube, du côté d'où il est entré, dos au tube
+local function exitTunnel()
+	local t = current
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not t or not character or not hrp then
+		return
+	end
+	local dir = if lastOut then Vector3.new(lastOut.X - t.base.X, 0, lastOut.Z - t.base.Z) else Vector3.zero
+	if dir.Magnitude < 0.5 then
+		-- pas d'entrée connue : du côté de la caméra
+		local c = workspace.CurrentCamera.CFrame.Position
+		dir = Vector3.new(c.X - t.base.X, 0, c.Z - t.base.Z)
+	end
+	dir = if dir.Magnitude < 0.5 then Vector3.new(0, 0, 1) else dir.Unit
+	local out = t.base + dir * (J.TunnelRadius + CAM.ExitGap) + Vector3.new(0, 3.2, 0)
+	hrp.AssemblyLinearVelocity = Vector3.zero
+	character:PivotTo(CFrame.lookAt(out, out + dir))
+	Sfx.Play("Click")
+end
+exitButton.MouseButton1Click:Connect(exitTunnel)
+
+local function showExit(on: boolean)
+	if exitButton.Visible == on then
+		return
+	end
+	exitButton.Visible = on
+	if on then
+		local kind = Device.Kind()
+		exitKey.Visible = kind ~= "Touch"
+		exitKey.Text = if kind == "Gamepad" then Device.PadName(Device.Pad.Cancel) else "X"
+		UIKit.popIn(exitButton)
+		ContextActionService:BindAction("TunnelExit", function(_, state)
+			if state == Enum.UserInputState.Begin then
+				exitTunnel()
+			end
+			return Enum.ContextActionResult.Sink
+		end, false, Enum.KeyCode.X, Device.Pad.Cancel)
+	else
+		ContextActionService:UnbindAction("TunnelExit")
+	end
+end
+
+local function stopCam()
+	camOn = false
+	showExit(false)
+	local cam = workspace.CurrentCamera
+	if not player:GetAttribute("HatchCinema") then
+		cam.CameraType = Enum.CameraType.Custom
+		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			cam.CameraSubject = hum
+		end
+	end
+end
+
+RunService:BindToRenderStep("TunnelCam", Enum.RenderPriority.Camera.Value, function(dt: number)
+	local t = current
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local now = os.clock()
+	if not t or not character or not hrp or player:GetAttribute("HatchCinema") or now - inSince < CAM.Delay then
+		if camOn then
+			stopCam()
+		end
+		return
+	end
+	local cam = workspace.CurrentCamera
+	if not camOn then
+		-- elle part de là où elle est : même angle autour du tube, puis elle glisse vers son cercle
+		camOn = true
+		camStart = now
+		camFrom = cam.CFrame
+		camAngle = math.atan2(cam.CFrame.Position.X - t.base.X, cam.CFrame.Position.Z - t.base.Z)
+		camY = hrp.Position.Y
+		camR = CAM.Dist
+		showExit(true)
+	end
+	cam.CameraType = Enum.CameraType.Scriptable
+	camAngle += dt * CAM.Speed
+	camY += (hrp.Position.Y - camY) * math.min(1, dt * 3)
+	-- elle regarde entre l'axe du tube et le joueur : il reste au centre sans que l'image le suive au millimètre
+	local focus = Vector3.new((t.base.X + hrp.Position.X) / 2, camY + 0.5, (t.base.Z + hrp.Position.Z) / 2)
+	local dir = Vector3.new(math.sin(camAngle), 0, math.cos(camAngle))
+	local up = CAM.Height + math.sin(now * 0.5) * CAM.Bob
+	-- un mur ou une clôture haute sur le chemin : elle se rapproche plutôt que de passer derrière
+	camParams.FilterDescendantsInstances = { character, t.model }
+	local reach = dir * CAM.Dist + Vector3.new(0, up, 0)
+	local hit = workspace:Raycast(focus, reach, camParams)
+	local goalR = if hit then math.max(J.TunnelRadius + 2.5, CAM.Dist * hit.Distance / reach.Magnitude - 1.2) else CAM.Dist
+	camR += (goalR - camR) * math.min(1, dt * 6)
+	local eye = Vector3.new(t.base.X, camY, t.base.Z) + dir * camR + Vector3.new(0, up, 0)
+	local goal = CFrame.lookAt(eye, focus)
+	local k = math.clamp((now - camStart) / CAM.Blend, 0, 1)
+	k = k * k * (3 - 2 * k)
+	cam.CFrame = camFrom:Lerp(goal, k)
+	cam.Focus = CFrame.new(focus)
 end)
