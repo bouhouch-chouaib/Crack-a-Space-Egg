@@ -431,6 +431,10 @@ local function placeEgg(player: Player, ring: any, rarity: any, x: any, z: any)
 	-- le tout premier œuf du joueur éclot en quelques secondes
 	local first = next(d.index) == nil and #d.base == 0
 	local total = if first then H.FirstTime else math.ceil((H.Time[rarity] or 60) * BoostService.HatchTimeMult(player))
+	-- pendant le tutoriel, on n'attend jamais longtemps : il refait la boucle deux fois de suite
+	if (d.guide or 0) < Config.Guide.Steps then
+		total = math.min(total, Config.Guide.EggTime)
+	end
 	local item = {
 		kind = "egg",
 		id = ("%d%03d"):format(os.time(), nextId % 1000),

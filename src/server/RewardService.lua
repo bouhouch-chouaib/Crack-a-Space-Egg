@@ -394,10 +394,29 @@ local function guideDone(player: Player)
 	end
 end
 
+-- Fin de l'acte 2 du tutoriel : une potion de chance (les prochains œufs éclosent sous les éclairs), et son
+-- argent est complété jusqu'au prix de la première soufflerie pour qu'il l'achète sans attendre
+local function guideGift(player: Player)
+	local d = data(player)
+	if not d then
+		return
+	end
+	local gift = Config.Guide.Gift
+	BoostService.Add(player, "Luck", gift.Luck)
+	if (d.tunnel or 0) < 1 then
+		local cost = Config.Jetpack.Tunnels[1].Cost
+		d.credits = math.max(d.credits + gift.MinMoney, cost)
+	else
+		d.credits += gift.MinMoney
+	end
+	GameService.Sync(player)
+end
+
 function RewardService.Start()
 	Remotes.Rewards.OnServerInvoke = onInvoke
 	GameService.Quest = RewardService.Quest
 	GameService.GuideDone = guideDone
+	GameService.GuideGift = guideGift
 	DataService.Loaded:Connect(function(player: Player)
 		task.spawn(checkGroup, player)
 		publish(player)

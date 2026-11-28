@@ -95,6 +95,8 @@ GameService.Notice = notice
 GameService.Quest = function(_player: Player, _kind: string, _amount: number?) end
 -- Fin du tutoriel : RewardService remplace cette fonction
 GameService.GuideDone = function(_player: Player) end
+-- Fin de l'acte 2 du tutoriel (RewardService) : potion de chance et de quoi payer la soufflerie
+GameService.GuideGift = function(_player: Player) end
 -- Appelé à chaque coup de foreuse (posé par MonsterService) : (player, roche, anneau)
 -- Œuf sorti d'un astéroïde : (joueur, roche, anneau). MonsterService y lance le monstre de l'anneau.
 GameService.EggHook = nil :: ((Player, BasePart, number) -> ())?
@@ -493,11 +495,17 @@ function GameService.Start()
 		if step > (d.guide or 0) then
 			for s = (d.guide or 0) + 1, step do
 				Tracking.Onboarding(player, s + 1, Config.Guide.Names[s] or ("Step " .. s))
+				Tracking.Event(player, ("GuideSeconds_%d"):format(s), math.clamp(os.time() - (d.firstJoin or os.time()), 0, 3600))
 			end
 			d.guide = step
 			player:SetAttribute("GuideStep", step)
+			-- acte 2 fini (il a refait la boucle tout seul) : le cadeau, une seule fois
+			if step >= 5 and not d.guideGift and ((d.stats.hatched or 0) >= 2 or (d.tunnel or 0) >= 1) then
+				d.guideGift = true
+				GameService.GuideGift(player)
+			end
 			-- tutoriel fini pour de bon (pas passé) : la récompense
-			if step >= Config.Guide.Steps and not d.guideRewarded and d.drill >= Config.Guide.Drill and (d.tunnel or 0) >= 1 then
+			if step >= Config.Guide.Steps and not d.guideRewarded and (d.tunnel or 0) >= 1 then
 				d.guideRewarded = true
 				GameService.GuideDone(player)
 			end

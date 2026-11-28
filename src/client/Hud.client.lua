@@ -141,8 +141,9 @@ local function refreshMoney()
 end
 
 -- GROS BOUTONS (à gauche) : la boutique (améliorations, passes, potions, récompenses…
--- tout s'y trouve en faisant défiler), l'index des créatures et les récompenses (REWARDS n'apparaît
--- qu'une fois le tutoriel fini : avant, il détourne l'attention)
+-- tout s'y trouve en faisant défiler), l'index des créatures et les récompenses.
+-- 30 nov. : l'écran se dévoile au fil du tutoriel (Config.Guide.Reveal), pour ne pas tout montrer à un joueur qui
+-- ne sait pas encore voler : INDEX apparaît quand sa première créature est née, STORE et REWARDS à la fin.
 local menu = group("Menu", Vector2.new(0, 0.5), UDim2.new(0, 34, 0.5, -46), UDim2.fromOffset(220, 3 * 76))
 new("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = menu })
 local buttons = {}
@@ -166,16 +167,19 @@ local function refreshBadges()
 	buttons.Store.badge.Visible = Config.Shop.Featured.Id ~= 0 and not player:GetAttribute("StarterBought") and ends > os.time()
 	-- REWARDS : cadeaux, quêtes et connexion quotidienne à réclamer (RewardService)
 	buttons.Rewards.badge.Visible = ((player:GetAttribute("RewardsReady") or 0) :: number) > 0
-	-- caché pendant le tutoriel ; il saute aux yeux quand il arrive
-	local holder = buttons.Rewards.button.Parent :: Frame
+	-- cachés au début du tutoriel ; chacun saute aux yeux quand il arrive
 	local step = player:GetAttribute("GuideStep")
-	local unlocked = type(step) == "number" and step >= Config.Guide.Steps
-	if unlocked and not holder.Visible then
-		holder.Visible = true
-		UIKit.popIn(holder)
-		UIKit.burst(holder, UDim2.fromScale(0.5, 0.5), Color3.fromRGB(190, 120, 255))
+	local reveal = Config.Guide.Reveal
+	for name, from in pairs({ Index = reveal.Index, Store = reveal.Store, Rewards = Config.Guide.Steps }) do
+		local holder = buttons[name].button.Parent :: Frame
+		local unlocked = type(step) == "number" and step >= from
+		if unlocked and not holder.Visible then
+			holder.Visible = true
+			UIKit.popIn(holder)
+			UIKit.burst(holder, UDim2.fromScale(0.5, 0.5), if name == "Index" then Color3.fromRGB(110, 205, 255) elseif name == "Store" then Color3.fromRGB(176, 245, 70) else Color3.fromRGB(190, 120, 255))
+		end
+		holder.Visible = unlocked
 	end
-	holder.Visible = unlocked
 end
 
 -- Emplacement en haut à droite : les deux carrés d'inventaire (Inventory.client) y sont, et la jauge

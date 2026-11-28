@@ -2210,29 +2210,50 @@ function Config.LuckShown(ring: number, rarity: number, odds: number?): number
 end
 
 -- GUIDE DES PREMIÈRES MINUTES (Guide.client) ------------------------------------------
--- Fait pour qu'un enfant suive sans lire : bulles de 3 à 5 mots, grosses icônes, flèche au sol,
--- main qui montre le geste, petite fête à chaque réussite. Il accompagne le joueur pendant toute la
--- première boucle : forer, rapporter, poser, faire éclore, puis s'entraîner et s'équiper.
--- Pas d'étape « va à l'anneau 2 » : le joueur ira de lui-même.
--- Étapes enregistrées (d.guide) = nombre d'étapes franchies (15 nov. : plus de géode à vendre) :
+-- Refait le 30 nov. en trois actes, 4 à 5 minutes en tout (avant : 7 étapes d'affilée avec deux murs d'argent,
+-- 8 à 10 minutes, une bulle qui ne partait jamais et des phrases en sous-titre).
+--   Acte 1, le premier œuf (guidé de bout en bout, une consigne à la fois) : voler, forer, fuir le monstre,
+--           machine, poser, faire éclore. Une créature Épique en 1 min 30.
+--   Acte 2, tout seul : il refait la boucle jusqu'à avoir Pets créatures. Seule une petite pastille « PETS 1/3 »
+--           reste à l'écran ; la flèche et la consigne ne reviennent que s'il reste bloqué (Patience).
+--           À la fin : une potion de chance et de quoi payer la soufflerie tout de suite (Gift).
+--   Acte 3, plus fort : acheter sa soufflerie, y passer TunnelTime secondes, puis le coffre (Reward) et le
+--           bouton REWARDS qui apparaît.
+-- Règles : 2 ou 3 mots en gros avec une icône, jamais de phrase (au plus un chiffre de progression) ; pendant
+-- le tutoriel les œufs incubent en EggTime s au plus et, tant que la première créature n'est pas née, le
+-- monstre poursuit mais ne rattrape pas (SafeGap) ; l'écran se dévoile au fur et à mesure (Reveal).
+-- Sortis du tutoriel : acheter une foreuse et monter le jetpack au niveau 5 (ils viennent d'eux-mêmes).
+-- Étapes enregistrées (d.guide) = nombre d'étapes franchies :
 --   0 voler jusqu'à une roche et forer   1 rapporter la roche à la machine   2 poser l'œuf dans sa base
---   3 le faire éclore (« ta créature rapporte des $ »)   4 acheter sa soufflerie
---   5 s'y entraîner jusqu'au niveau JetLevel du jetpack   6 acheter la foreuse n° Drill   7 (= Steps) terminé
+--   3 le faire éclore   4 avoir Pets créatures (tout seul)   5 acheter sa soufflerie
+--   6 s'y entraîner TunnelTime secondes   7 (= Steps) terminé
 Config.Guide = {
 	Steps = 7,
-	Drill = 2,
-	JetLevel = 5, -- niveau du jetpack à atteindre dans sa soufflerie (étape 5)
-	TunnelTime = 5, -- secondes à passer dans le courant d'air pour valider l'étape 5, même si le niveau est déjà là
-	FirstRarity = 4, -- rareté du tout premier œuf (Épique, la plus haute qu'un astéroïde tendre peut donner) : un vrai « wow », et de quoi payer la soufflerie
+	Drill = 2, -- foreuse qu'un joueur achète peu après le tutoriel (tools/eco-sim : moment de la récompense)
+	Pets = 3, -- acte 2 : créatures à avoir dans sa base pour passer à la soufflerie
+	TunnelTime = 10, -- acte 3 : secondes à passer dans le courant d'air de sa soufflerie
+	FirstRarity = 4, -- rareté du tout premier œuf (Épique, la plus haute qu'un astéroïde tendre peut donner) : un vrai « wow »
+	EggTime = 12, -- pendant le tutoriel, un œuf incube au plus ce temps (le tout premier : Config.Hatch.FirstTime)
+	-- première poursuite sans risque : tant que le joueur n'a pas franchi l'étape SafeUntil (sa première créature
+	-- est née), le monstre le poursuit, rugit et le talonne, mais s'arrête à SafeGap studs de lui
+	SafeUntil = 4,
+	SafeGap = 14,
+	-- acte 2 : secondes sans avancer avant que la consigne et la flèche reviennent, selon ce qu'il a à faire
+	Patience = { Rock = 10, Carry = 18, Place = 6, Hatch = 5 },
+	-- fin de l'acte 2 : potion de chance (minutes), et son argent est complété jusqu'au prix de la soufflerie
+	-- (au moins MinMoney $ de plus) : pas d'attente devant le bouton rouge
+	Gift = { Luck = 5, MinMoney = 500 },
 	Reward = { Money = 1000, Luck = 15, MoneyBoost = 15 }, -- fin du tutoriel : $ (× revenu de base de l'anneau 1) et potions x2 de 15 min
+	-- étape à partir de laquelle chaque gros bouton de gauche apparaît (REWARDS : à la fin, Hud.client)
+	Reveal = { Index = 4, Store = 7 },
 	Arrow = "rbxassetid://111578532993258", -- chevrons blancs à contour sombre (poutre au sol)
 	-- (Tips : « machine » = panneau de première fois des améliorations)
 	MachineNear = 18, -- studs : assez près de la machine pour appuyer sur E
-	PetCheer = 5, -- secondes de « ta créature rapporte des $ »
+	PetCheer = 4, -- secondes de « IT EARNS MONEY! » après la première créature
 	-- Nom de chaque étape dans l'entonnoir Onboarding (Tracking) ; l'étape 1 de l'entonnoir est « Join »
 	Names = {
 		"Egg drilled", "Machine used", "Egg placed", "Pet hatched",
-		"Wind tunnel bought", "Jetpack trained", "New drill bought",
+		"Three pets", "Wind tunnel bought", "Jetpack trained",
 	},
 	-- Tutoriels au bon moment : une seule fois par joueur, quand il en a besoin (Guide.client)
 	Tips = { basefull = true, rewards = true, fuse = true, monsters = true, scanner = true, starter = true, machine = true },

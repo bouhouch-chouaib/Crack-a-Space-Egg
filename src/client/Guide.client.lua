@@ -1,17 +1,18 @@
--- Guide des premières minutes (docs/Mecaniques.md §16, Config.Guide).
--- Fait pour qu'un enfant le suive sans difficulté : une bulle de 3 à 5 mots avec une grosse icône,
--- une flèche au sol qui file vers le but, une flèche qui rebondit au-dessus et un contour qui le fait
--- briller, une main qui montre le geste à faire (maintenir, toucher), et une petite fête à chaque réussite.
--- Il suit l'état réel du joueur, pas un script figé : s'il tombe, perd son œuf ou part ailleurs, la
--- bulle s'adapte (« Fly to a rock! », « Bring it home! »...). Le tutoriel (15 nov., sans géode) : un premier
--- œuf, rare, guidé de A à Z (forer, rapporter, machine, poser, faire éclore), puis la soufflerie, quelques
--- niveaux de jetpack dedans, une nouvelle foreuse, et la récompense (Offers.client). Chaque objectif
--- d'argent renvoie vers les roches avec la flèche : on n'attend jamais sans savoir quoi faire.
--- Étape atteinte : attribut GuideStep (sauvegardé par le serveur via Remotes.Guide).
--- La même bulle sert aux tutoriels au bon moment (Config.Guide.Tips), une seule fois par joueur et
--- seulement quand il en a besoin : sa base pleine, un cadeau à réclamer, les monstres, la boîte à
--- retours. Les tips d'information attendent Config.Guide.TipGap secondes entre eux, pour ne pas noyer le joueur.
--- Publie l'attribut local Guide (texte en cours) : l'aide du bas (Hud) se cache pendant le guide.
+-- Guide des premières minutes (docs/Mecaniques.md §16, Config.Guide), refait le 30 nov. en trois actes.
+--   Acte 1, le premier œuf : guidé de bout en bout, une consigne à la fois (voler, forer, rentrer, machine,
+--           poser, faire éclore). Le premier œuf est rare ; le monstre poursuit mais ne rattrape pas (serveur).
+--   Acte 2, tout seul : le joueur refait la boucle jusqu'à avoir Config.Guide.Pets créatures. Il ne reste à
+--           l'écran qu'une petite pastille « PETS 1/3 » ; la consigne et la flèche ne reviennent que s'il
+--           n'avance plus (Config.Guide.Patience). À la fin : un cadeau (potion de chance, de quoi payer la soufflerie).
+--   Acte 3, plus fort : acheter sa soufflerie, y passer quelques secondes, puis le coffre de fin et le bouton
+--           REWARDS qu'une main vient montrer.
+-- Règles : 2 ou 3 mots en gros avec une grosse icône, jamais de phrase ; au plus un chiffre dans la pastille de
+-- droite (secondes d'air, compte à rebours, argent). Une flèche au sol file vers le but, une flèche rebondit
+-- au-dessus, un contour le fait briller, une main montre le geste, et une petite fête salue chaque réussite.
+-- Il suit l'état réel du joueur, pas un script figé : s'il tombe, perd son œuf ou part ailleurs, la consigne
+-- s'adapte. Étape atteinte : attribut GuideStep (sauvegardé par le serveur via Remotes.Guide).
+-- La même bulle sert aux tutoriels au bon moment (Config.Guide.Tips), une seule fois par joueur et seulement
+-- quand il en a besoin. Publie l'attribut local Guide (texte en cours) : l'aide du bas (Hud) se cache.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -52,7 +53,7 @@ local bubble = new("Frame", {
 	Name = "Bubble",
 	AnchorPoint = Vector2.new(0.5, 1),
 	Position = UDim2.fromScale(0.5, 1),
-	Size = UDim2.fromOffset(560, 104),
+	Size = UDim2.fromOffset(470, 96),
 	BackgroundColor3 = Color3.new(1, 1, 1),
 	Parent = holder,
 }, { UIKit.corner(28), UIKit.stroke(5, INK), UIKit.gradient(Color3.new(1, 1, 1), Color3.fromRGB(225, 232, 255)) })
@@ -67,12 +68,13 @@ new("Frame", {
 	ZIndex = 0,
 	Parent = bubble,
 }, { UIKit.stroke(5, INK) })
-local icon = UIKit.icon("Jetpack", { Size = UDim2.fromOffset(104, 104), Position = UDim2.new(0, -30, 0.5, -60), ZIndex = 3, Parent = bubble })
+local icon = UIKit.icon("Jetpack", { Size = UDim2.fromOffset(104, 104), Position = UDim2.new(0, -34, 0.5, -56), ZIndex = 3, Parent = bubble })
 UIKit.float(icon, 4, 4, 2.4)
+-- la consigne : 2 ou 3 mots, sur toute la hauteur de la bulle
 local mainText = UIKit.text({
 	Name = "Main",
-	Size = UDim2.new(1, -110, 0, 54),
-	Position = UDim2.fromOffset(88, 10),
+	Size = UDim2.new(1, -100, 0, 64),
+	Position = UDim2.fromOffset(80, 16),
 	Text = "",
 	TextColor3 = INK,
 	TextXAlignment = Enum.TextXAlignment.Left,
@@ -80,22 +82,36 @@ local mainText = UIKit.text({
 	ZIndex = 3,
 	Parent = bubble,
 })
-local subText = UIKit.text({
-	Name = "Sub",
-	Size = UDim2.new(1, -110, 0, 28),
-	Position = UDim2.fromOffset(90, 64),
-	Text = "",
-	TextColor3 = Color3.fromRGB(90, 96, 130),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Stroke = 0,
+-- pastille sombre à droite : un chiffre seulement (secondes, argent), jamais une phrase
+local chip = new("Frame", {
+	Name = "Chip",
+	AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.new(1, -14, 0.5, 0),
+	Size = UDim2.fromOffset(104, 50),
+	BackgroundColor3 = INK,
+	Visible = false,
 	ZIndex = 3,
 	Parent = bubble,
-})
+}, { UIKit.corner(16) })
+local chipText = UIKit.text({ Size = UDim2.new(1, -12, 1, -10), Position = UDim2.fromOffset(6, 5), Text = "", ZIndex = 4, Stroke = 0, Parent = chip })
+-- petite pastille d'objectif (acte 2 : « PETS 1/3 ») : le joueur joue seul, elle ne demande rien
+local pill = new("Frame", {
+	Name = "Pill",
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position = UDim2.fromScale(0.5, 1),
+	Size = UDim2.fromOffset(250, 52),
+	BackgroundColor3 = INK,
+	BackgroundTransparency = 0.1,
+	Visible = false,
+	Parent = holder,
+}, { UIKit.corner(26), UIKit.stroke(3, Color3.new(1, 1, 1)) })
+local pillIcon = UIKit.icon("Egg", { Size = UDim2.fromOffset(44, 44), Position = UDim2.fromOffset(10, 4), ZIndex = 3, Parent = pill })
+local pillText = UIKit.text({ Size = UDim2.new(1, -72, 1, -14), Position = UDim2.fromOffset(60, 7), Text = "", TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Stroke = 2.5, Parent = pill })
 -- étoiles de progression au-dessus de la bulle
 local stars = new("Frame", {
 	Name = "Stars",
 	AnchorPoint = Vector2.new(0.5, 1),
-	Position = UDim2.new(0.5, 0, 1, -112),
+	Position = UDim2.new(0.5, 0, 1, -104),
 	Size = UDim2.fromOffset(G.Steps * 26, 24),
 	BackgroundTransparency = 1,
 	Parent = holder,
@@ -121,12 +137,12 @@ local skip = new("TextButton", {
 UIKit.icon("Cross", { Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), ZIndex = 6, Parent = skip })
 local skipAsk = UIKit.text({
 	AnchorPoint = Vector2.new(1, 1),
-	Position = UDim2.new(1, 0, 0, -18),
-	Size = UDim2.fromOffset(220, 26),
-	Text = "Tap again to skip",
+	Position = UDim2.new(1, 0, 0, -4),
+	Size = UDim2.fromOffset(170, 26),
+	Text = "TAP AGAIN!",
 	Visible = false,
 	ZIndex = 6,
-	Parent = bubble,
+	Parent = skip,
 })
 local skipArmed = 0
 
@@ -172,7 +188,7 @@ local cheer = UIKit.text({
 local cheerScale = new("UIScale", { Parent = cheer })
 -- calque plein écran pour les étincelles de la fête (UIKit.burst a besoin d'un cadre)
 local fxLayer = new("Frame", { Name = "Fx", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 29, Parent = gui })
-local CHEERS = { "Great!", "Awesome!", "Nice job!", "Super!", "Amazing!" }
+local CHEERS = { "GREAT!", "AWESOME!", "NICE JOB!", "SUPER!", "AMAZING!" }
 
 local cheerToken = 0
 
@@ -433,13 +449,6 @@ local function myPets(): number
 	return n
 end
 
--- Stand ITEMS du vaisseau (Ship.Shops.ItemsStand) : on vise son tapis, qui ouvre l'atelier quand on marche dessus
-local function shopKiosk(): Instance?
-	local shops = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Shops")
-	local stand = shops and shops:FindFirstChild("ItemsStand")
-	return stand and (stand:FindFirstChild("Mat") or stand:FindFirstChild("ShopPoint"))
-end
-
 local function attr(name: string): number
 	local v = player:GetAttribute(name)
 	return if type(v) == "number" then v else 0
@@ -458,59 +467,87 @@ local function windowOpen(name: string): boolean
 end
 
 -- QUOI DIRE --------------------------------------------------------------------------------
+-- Une consigne : icône, 2 ou 3 mots, et au besoin un chiffre (chip), un but dans le monde (target), un geste
+-- montré par la main (hold), un bouton de l'écran à montrer (ui), ou la petite pastille d'objectif (small).
 
-type Hint = { icon: string, text: string, sub: string?, target: Instance?, hold: string? }
+type Hint = { icon: string, text: string, chip: string?, target: Instance?, hold: string?, ui: string?, small: boolean? }
 
 local reached = -1 -- étape la plus avancée envoyée au serveur
 local petCheerAt = 0
+local justFinished = false -- le tutoriel vient d'être fini dans cette partie (la main montre REWARDS)
 
 -- Étape suivante franchie : on l'enregistre et on fait la fête
-local function advance(step: number, quiet: boolean?)
+local function advance(step: number, quiet: boolean?, cheerText: string?)
 	if step <= reached then
 		return
 	end
 	reached = step
 	Remotes.Guide:FireServer(step)
+	if step >= G.Steps then
+		justFinished = true
+	end
 	if not quiet then
-		celebrate(if step >= G.Steps then "You did it!" else nil)
+		celebrate(if step >= G.Steps then "YOU DID IT!" else cheerText)
 	end
 end
 
+local function pressText(action: string, touch: string): string
+	return if Device.IsTouch() then touch else ("PRESS %s!"):format(Device.Key(action))
+end
+
 -- « Vole jusqu'à une roche » ou, une fois dessus, « maintiens pour forer »
-local function goRock(ring: number?, sub: string?): Hint
-	local rock = nearestRock(ring)
+local function rockHint(): Hint
+	local rock = nearestRock(1)
 	if player:GetAttribute("RockNear") then
 		local kind = Device.Kind()
 		return {
 			icon = if kind == "Touch" then "Tap" elseif kind == "Gamepad" then "Lightning" else "Mouse",
-			text = if kind == "Touch" then "Hold DRILL!" elseif kind == "Gamepad" then ("Hold %s to drill!"):format(Device.Key("drill")) else "Hold click to drill!",
-			sub = sub,
+			text = if kind == "Touch" then "HOLD DRILL!" elseif kind == "Gamepad" then ("HOLD %s!"):format(Device.Key("drill")) else "HOLD TO DRILL!",
 			target = rock,
 			hold = "drill",
 		}
 	end
-	return { icon = "Jetpack", text = if ring and ring > 1 then ("Fly to Ring %d!"):format(ring) else "Fly to a rock!", sub = sub or ("Hold %s to fly"):format(if Device.IsTouch() then "jump" else Device.Key("jump")), target = rock }
+	return { icon = "Jetpack", text = "FLY TO ROCK!", target = rock }
 end
 
--- Rapporter la roche à la machine
-local function carryHint(machine: Model?): Hint
+-- Rapporter la roche à la machine ; l'air qui reste à l'œuf (ColdService) s'affiche en secondes, sans phrase
+local function carryHint(machine: Model?, rare: boolean): Hint
 	local here = rootPos()
 	local console = machine and machine:FindFirstChild("PromptPoint", true)
 	local mp = posOf(console or machine)
 	if here and mp and (here - mp).Magnitude < G.MachineNear then
-		return { icon = "Lightning", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(Device.Key("machine")), sub = "Free your egg from the rock", target = machine }
+		return { icon = "Lightning", text = pressText("machine", "TAP BUTTON!"), target = machine }
 	end
-	-- l'air de l'œuf s'épuise (ColdService) : on le dit à l'enfant, en secondes
 	local air = player:GetAttribute("O2Left")
 	return {
 		icon = "Home",
-		text = "Bring it home!",
-		sub = if type(air) == "number" then ("Fast! %d s of air left"):format(math.ceil(air)) else "Follow the arrow",
+		text = if rare then "RARE EGG! RUN!" else "RUN HOME!",
+		chip = if type(air) == "number" then ("%d s"):format(math.ceil(air)) else nil,
 		target = machine,
 	}
 end
 
-local tunnelTime = 0 -- secondes passées dans sa soufflerie pendant l'étape d'entraînement
+-- Acte 2 : le joueur a-t-il cessé d'avancer ? On regarde ce qu'il a à faire (state) et s'il s'en rapproche
+-- (distance au but, ou vie de la roche qui baisse) ; tant qu'il avance, on se tait.
+local watch = { state = "", since = 0, best = math.huge }
+local function stuck(state: string, patience: number, measure: number?): boolean
+	local now = os.clock()
+	local m = measure or math.huge
+	if watch.state ~= state then
+		watch.state, watch.since, watch.best = state, now, m
+	elseif m < watch.best - 3 then
+		watch.best, watch.since = m, now
+	end
+	return now - watch.since >= patience
+end
+
+local function distanceTo(x: Instance?): number?
+	local here = rootPos()
+	local there = posOf(x)
+	return if here and there then (here - there).Magnitude else nil
+end
+
+local tunnelTime = 0 -- secondes passées dans sa soufflerie pendant l'acte 3
 local lastDecide = os.clock()
 
 local function decideStep(step: number): Hint?
@@ -522,6 +559,9 @@ local function decideStep(step: number): Hint?
 	local pets = myPets()
 	local base = myBase()
 	local floor = base and base:FindFirstChild("Floor")
+	local tunnel = myTunnel()
+	local hasTunnel = tunnel ~= nil and tunnel:GetAttribute("OwnerId") == player.UserId and ((tunnel:GetAttribute("Tier") or 0) :: number) >= 1
+	local tunnelCost = Config.Jetpack.Tunnels[1].Cost
 	local now = os.clock()
 	local dt = math.min(now - lastDecide, 1)
 	lastDecide = now
@@ -545,95 +585,106 @@ local function decideStep(step: number): Hint?
 		step = 4
 		petCheerAt = os.clock()
 	end
-	local tunnel = myTunnel()
-	local hasTunnel = tunnel ~= nil and tunnel:GetAttribute("OwnerId") == player.UserId and ((tunnel:GetAttribute("Tier") or 0) :: number) >= 1
-	if step == 4 and hasTunnel then
-		advance(5)
+	-- acte 2 fini : il a ses créatures (ou déjà de quoi acheter la soufflerie) ; le serveur donne le cadeau
+	if step == 4 and (pets >= G.Pets or hasTunnel or attr("Credits") >= tunnelCost) then
+		advance(5, false, "GIFT!")
+		Sfx.Play("Coin")
 		step = 5
 	end
-	if step == 5 then
-		-- il faut y avoir vraiment été : le niveau seul ne suffit pas (on en gagne aussi en volant)
+	if step == 5 and hasTunnel then
+		advance(6)
+		step = 6
+	end
+	if step == 6 then
 		if player:GetAttribute("InTunnel") then
 			tunnelTime += dt
 		end
-		if attr("JetLevel") >= G.JetLevel and tunnelTime >= G.TunnelTime then
-			advance(6)
-			step = 6
+		if tunnelTime >= G.TunnelTime then
+			advance(G.Steps)
+			step = G.Steps
 		end
-	end
-	if step == 6 and attr("Drill") >= G.Drill then
-		advance(G.Steps)
-		step = G.Steps
 	end
 	if step >= G.Steps then
 		return nil
 	end
 
-	-- la boucle de l'œuf passe avant tout (même pendant les objectifs suivants)
+	-- ce que la boucle de l'œuf demande maintenant
+	local rare = false
+	if step <= 2 and cargo > 0 then
+		local rarity = tonumber(string.split(player:GetAttribute("CargoRarities") or "", ",")[1] or "")
+		rare = rarity ~= nil and rarity >= G.FirstRarity
+	end
+	local state, hint, patience, measure
 	if readyEgg then
-		return { icon = "Hatch", text = if Device.IsTouch() then "Tap HATCH!" else ("Press %s to hatch!"):format(Device.Key("hatch")), sub = "Your egg is ready", target = readyEgg }
-	end
-	if held then
-		return { icon = "Egg", text = "Put your egg down!", sub = if Device.IsTouch() then "Tap the floor of your base" elseif Device.IsGamepad() then ("Walk on your base, press %s"):format(Device.Key("place")) else "Click the floor of your base", target = floor, hold = "tap" }
-	end
-	if job then
-		return { icon = "Lightning", text = "Watch the machine!", sub = "It breaks the rock", target = machine }
-	end
-	if cargo > 0 then
-		return carryHint(machine)
+		state, patience, measure = "hatch", G.Patience.Hatch, distanceTo(readyEgg)
+		hint = { icon = "Hatch", text = pressText("hatch", "TAP HATCH!"), target = readyEgg }
+	elseif held then
+		state, patience, measure = "place", G.Patience.Place, distanceTo(floor)
+		hint = { icon = "Egg", text = "PLACE YOUR EGG!", target = floor, hold = "tap" }
+	elseif job then
+		state, patience = "job", math.huge
+		hint = { icon = "Lightning", text = "ROCK BREAKING!", target = machine }
+	elseif cargo > 0 then
+		state, patience, measure = "carry", G.Patience.Carry, distanceTo(machine)
+		hint = carryHint(machine, rare)
+	else
+		local rock = nearestRock(1)
+		state, patience = "rock", G.Patience.Rock
+		-- sur la roche : c'est sa vie qui montre qu'il avance ; sinon la distance qui reste
+		measure = if player:GetAttribute("RockNear") and rock then ((rock:GetAttribute("HP") or 0) :: number) / math.max(1, (rock:GetAttribute("MaxHP") or 1) :: number) * 30 else distanceTo(rock)
+		hint = rockHint()
 	end
 
-	-- objectifs
-	if step == 4 and petCheerAt > 0 and os.clock() - petCheerAt < G.PetCheer then
-		return { icon = "Cash", text = "Your pet makes money!", sub = "Every second! Bigger pets earn more" }
+	-- ACTE 1 : tout est guidé
+	if step <= 3 then
+		if state == "rock" and step == 3 and anyEgg then
+			-- l'œuf est posé : il n'y a qu'à attendre quelques secondes
+			local at = anyEgg:GetAttribute("HatchAt") :: number?
+			local left = if at then math.max(0, math.ceil(at - workspace:GetServerTimeNow())) else nil
+			return { icon = "Hatch", text = "ALMOST READY!", chip = if left then ("%d s"):format(left) else nil, target = anyEgg }
+		end
+		return hint
 	end
-	if step <= 2 then
-		return goRock(1)
-	elseif step == 3 then
-		if anyEgg then
-			return { icon = "Hatch", text = "Your egg is hatching!", sub = "Just a few seconds...", target = anyEgg }
+
+	-- ACTE 2 : il joue seul ; la consigne ne revient que s'il n'avance plus
+	if step == 4 then
+		if petCheerAt > 0 and os.clock() - petCheerAt < G.PetCheer then
+			return { icon = "Cash", text = "IT EARNS MONEY!" }
 		end
-		return goRock(1)
-	elseif step == 4 then
-		local cost = Config.Jetpack.Tunnels[1].Cost
-		if attr("Credits") >= cost then
-			if windowOpen("TunnelUp") then
-				return { icon = "WindTunnel", text = "Press BUY!", sub = "It makes your jetpack stronger" }
-			end
-			-- debout sur le bouton : il reste à appuyer (ShipShops.client publie l'attribut OnButton)
-			if player:GetAttribute("OnButton") == "TunnelUp" then
-				return { icon = "WindTunnel", text = if Device.IsTouch() then "Tap UPGRADE!" else ("Press %s!"):format(Device.Key("machine")), sub = "Buy your wind tunnel" }
-			end
-			return { icon = "WindTunnel", text = "Step on the red button!", sub = "Buy your wind tunnel", target = base and base:FindFirstChild("TunnelButton") }
+		if stuck(state, patience, measure) then
+			return hint
 		end
-		return goRock(nil, ("Save $%s for a wind tunnel  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
-	elseif step == 5 then
-		local goal = Config.JetpackXPTotal(G.JetLevel)
-		local level = ("Speed %s / %s"):format(Format.Short(math.min(attr("JetSpeed"), goal)), Format.Short(goal))
-		if player:GetAttribute("InTunnel") then
-			return { icon = "WindTunnel", text = "Your jetpack is training!", sub = level }
-		end
-		return { icon = "WindTunnel", text = "Jump into your wind tunnel!", sub = level, target = tunnel }
-	elseif step == 6 then
-		local cost = Config.Drills[G.Drill].Cost
-		if attr("Credits") >= cost then
-			return { icon = "Lightning", text = "Buy a new drill!", sub = "Step on the ITEMS mat", target = shopKiosk() }
-		end
-		return goRock(nil, ("Save $%s for a new drill  ($%s)"):format(Format.Short(cost), Format.Short(attr("Credits"))))
+		return { icon = "Egg", text = ("PETS %d/%d"):format(math.min(pets, G.Pets), G.Pets), small = true }
 	end
-	return nil
+
+	-- ACTE 3 : la soufflerie
+	if step == 5 then
+		if attr("Credits") < tunnelCost then
+			-- ne devrait pas arriver (le cadeau complète son argent) : on montre ce qui manque, sans phrase
+			if stuck(state, patience, measure) then
+				return hint
+			end
+			return { icon = "Cash", text = ("$%s / $%s"):format(Format.Short(attr("Credits")), Format.Short(tunnelCost)), small = true }
+		end
+		if windowOpen("TunnelUp") then
+			return { icon = "WindTunnel", text = "PRESS BUY!" }
+		end
+		-- debout sur le bouton : il reste à appuyer (ShipShops.client publie l'attribut OnButton)
+		if player:GetAttribute("OnButton") == "TunnelUp" then
+			return { icon = "WindTunnel", text = pressText("machine", "TAP UPGRADE!") }
+		end
+		return { icon = "WindTunnel", text = "RED BUTTON!", target = base and base:FindFirstChild("TunnelButton") }
+	end
+	if player:GetAttribute("InTunnel") then
+		local offer = player:GetAttribute("TunnelBoostOffer")
+		local bonus = type(offer) == "number" and offer > workspace:GetServerTimeNow()
+		return { icon = "WindTunnel", text = if bonus then "TAP x2!" else "TRAINING!", chip = ("%d s"):format(math.max(0, math.ceil(G.TunnelTime - tunnelTime))) }
+	end
+	return { icon = "WindTunnel", text = "JUMP IN!", target = tunnel }
 end
 
--- Le tout premier œuf est rare (imposé par le serveur) : on le fête pendant qu'il le rapporte
 local function decide(step: number): Hint?
-	local h = decideStep(step)
-	if h and reached <= 2 and attr("Cargo") > 0 then
-		local rarity = tonumber(string.split(player:GetAttribute("CargoRarities") or "", ",")[1] or "")
-		if rarity and rarity >= G.FirstRarity then
-			h.text = "WOW! A rare egg!"
-		end
-	end
-	return h
+	return decideStep(step)
 end
 
 -- TUTORIELS AU BON MOMENT -------------------------------------------------------------------
@@ -677,7 +728,7 @@ local function decideTip(): Hint?
 			return nil
 		end
 		local fusion = workspace:FindFirstChild("Ship") and workspace.Ship:FindFirstChild("Fusion")
-		return { icon = "Creatures", text = if Device.IsTouch() then "Tap the button!" else ("Press %s!"):format(if Device.IsGamepad() then Device.Key("machine") else "F"), sub = "It opens the Fusion Machine", target = fusion }
+		return { icon = "Creatures", text = if Device.IsTouch() then "TAP BUTTON!" else ("PRESS %s!"):format(if Device.IsGamepad() then Device.Key("machine") else "F"), target = fusion }
 	end
 	local cargo = attr("Cargo")
 	local machine = myMachine()
@@ -692,7 +743,7 @@ local function decideTip(): Hint?
 		if windowOpen("CreaturesWindow") then
 			finishTip("basefull")
 		else
-			return timedTip("basefull", G.TipMax, { icon = "Home", text = "Your base is full!", sub = "At SELL, sell a pet to make room", target = sellMat() })
+			return timedTip("basefull", G.TipMax, { icon = "Home", text = "BASE FULL! SELL!", target = sellMat() })
 		end
 	end
 	-- le grand panneau (récompense, retour de pause) est à l'écran : on ne parle pas en même temps
@@ -710,7 +761,15 @@ local function decideTip(): Hint?
 	-- (26 nov. : plus de conseil « A gift for you! » : le bouton REWARDS a déjà sa pastille)
 	-- premier passage dans un anneau à monstres
 	if not tipSeen("monsters") and player:GetAttribute("MonsterSeen") then
-		return timedTip("monsters", G.TipShort, { icon = "Warning", text = "A monster lives here!", sub = "Steal an egg and it chases you: run home!" })
+		return timedTip("monsters", G.TipShort, { icon = "Warning", text = "MONSTER HERE!" })
+	end
+	-- le tutoriel vient d'être fini : une main montre le bouton REWARDS qui vient d'apparaître (cadeaux du jour)
+	if justFinished and not tipSeen("rewards") then
+		if windowOpen("Rewards") then
+			finishTip("rewards")
+		else
+			return timedTip("rewards", G.TipShort, { icon = "Rewards", text = "DAILY GIFTS!", ui = "Rewards" })
+		end
 	end
 	-- (25 nov. : plus de conseil vers la boîte aux lettres, le joueur y va de lui-même s'il en a envie)
 	return nil
@@ -732,19 +791,36 @@ local function show(h: Hint?)
 		currentTarget = nil
 		return
 	end
-	local changed = not shown or shown.text ~= h.text or shown.icon ~= h.icon
+	local changed = not shown or shown.text ~= h.text or shown.icon ~= h.icon or shown.small ~= h.small
+	local swapped = not shown or shown.icon ~= h.icon or shown.small ~= h.small or (shown.small ~= true and shown.text ~= h.text)
 	shown = h
 	currentTarget = h.target
+	local art = Icons.Ids[h.icon] or UIKit.Art[h.icon] or ""
 	if changed then
-		icon.Image = Icons.Ids[h.icon] or UIKit.Art[h.icon] or ""
-		Icons.Apply(mainText, h.text)
 		player:SetAttribute("Guide", h.text)
 		holder.Visible = true
-		UIKit.popIn(bubble)
+		bubble.Visible = not h.small
+		pill.Visible = h.small == true
+		skip.Parent = if h.small then pill else bubble
+		if h.small then
+			pillIcon.Image = art
+			Icons.Apply(pillText, h.text)
+		else
+			icon.Image = art
+			Icons.Apply(mainText, h.text)
+		end
+		-- la pastille d'objectif ne saute pas à chaque créature : seul un vrai changement de consigne « pope »
+		if swapped then
+			UIKit.popIn(if h.small then pill else bubble)
+		end
 	end
-	subText.Text = h.sub or ""
+	if not h.small then
+		chip.Visible = h.chip ~= nil
+		chipText.Text = h.chip or ""
+		mainText.Size = UDim2.new(1, if h.chip then -208 else -100, 0, 64)
+	end
 	local step = attr("GuideStep")
-	stars.Visible = step < G.Steps
+	stars.Visible = step < G.Steps and not h.small
 	for i, s in ipairs(starIcons) do
 		s.ImageTransparency = if i <= step then 0 else 0.7
 		s.ImageColor3 = if i <= step then Color3.new(1, 1, 1) else Color3.fromRGB(120, 120, 140)
@@ -877,7 +953,20 @@ RunService.RenderStepped:Connect(function()
 	local h = shown
 	local pad = Device.IsGamepad()
 	padBadge.Visible = false
-	if h and h.hold and pad then
+	if h and h.ui then
+		-- un bouton du HUD : la main tapote à côté de lui
+		local hud = player.PlayerGui:FindFirstChild("MainHUD")
+		local menu = hud and hud:FindFirstChild("Menu")
+		local button = menu and menu:FindFirstChild(h.ui, true) :: GuiObject?
+		if button and button.Visible and button.AbsoluteSize.X > 0 then
+			local pos = button.AbsolutePosition + Vector2.new(button.AbsoluteSize.X + 26, button.AbsoluteSize.Y * 0.7) + game:GetService("GuiService"):GetGuiInset()
+			hand.Visible = true
+			hand.Position = UDim2.fromOffset(pos.X, pos.Y)
+			handScale.Scale = 1 - 0.15 * math.abs(math.sin(os.clock() * 6))
+		else
+			hand.Visible = false
+		end
+	elseif h and h.hold and pad then
 		hand.Visible = false
 		if tp then
 			local v, onScreen = workspace.CurrentCamera:WorldToViewportPoint(tp)

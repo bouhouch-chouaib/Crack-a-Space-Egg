@@ -286,7 +286,7 @@ end
 local function onReward()
 	local got = player:GetAttribute("TutorialReward")
 	if type(got) == "string" and got ~= "" then
-		table.insert(waiting, { art = "Rewards", title = "TUTORIAL COMPLETE!", text = "Thanks for following along!\n" .. got, button = "AWESOME!", single = true })
+		table.insert(waiting, { art = "Rewards", title = "YOU DID IT!", text = got .. "\nPETS EARN OFFLINE!", button = "AWESOME!", single = true })
 	end
 end
 player:GetAttributeChangedSignal("TutorialReward"):Connect(onReward)

@@ -15,6 +15,7 @@
 -- Vitesse : chaque monstre demande une Speed de jetpack (Kinds[].Need) ; en dessous, il va d'autant
 -- plus vite que le joueur en manque. S'il l'attrape, le joueur est projeté et sa roche reste en apesanteur
 -- à l'endroit exact de la prise (Workspace.World.LostRocks), à reprendre en DropTime s.
+-- Tutoriel (Config.Guide.SafeUntil) : pendant le tout premier trajet d'un nouveau joueur, il poursuit sans rattraper.
 -- Chaque fois qu'un joueur prend un œuf (foré, ou repris après une prise), le monstre de l'anneau le poursuit :
 -- il n'y a plus de temps de répit entre deux poursuites (30 nov.).
 
@@ -454,11 +455,15 @@ local function step(dt: number)
 				end
 				local delta = target - m.pos
 				local dist = delta.Magnitude
+				-- tutoriel : tant que sa première créature n'est pas née, il le talonne sans le rattraper
+				local pd = DataService.Get(player)
+				local safeTrip = pd ~= nil and (pd.guide or 0) < Config.Guide.SafeUntil
+				local reach = if safeTrip then math.max(0, dist - (m.size / 2 + M.CatchRadius + Config.Guide.SafeGap)) else dist
 				if dist > 0.01 then
 					m.look = m.look:Lerp(delta.Unit, math.min(1, dt * 4)).Unit
-					m.pos += delta.Unit * math.min(dist, speed * dt)
+					m.pos += delta.Unit * math.min(reach, speed * dt)
 				end
-				if (target - m.pos).Magnitude <= m.size / 2 + M.CatchRadius then
+				if not safeTrip and (target - m.pos).Magnitude <= m.size / 2 + M.CatchRadius then
 					caught(m)
 					continue
 				end
