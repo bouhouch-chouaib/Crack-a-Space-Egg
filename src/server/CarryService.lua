@@ -105,7 +105,7 @@ function CarryService.Update(player: Player)
 	end
 end
 
--- Roche posée seule (MonsterService : la roche du joueur attrapé retombe sur un astéroïde) :
+-- Roche posée seule (MonsterService : la roche du joueur attrapé flotte là où il a été pris) :
 -- même roche que celle qu'on porte, ancrée, sans collision, un peu plus grande pour bien la voir
 function CarryService.LooseRock(ring: number, scale: number): Model?
 	local template = rockTemplate(ring)

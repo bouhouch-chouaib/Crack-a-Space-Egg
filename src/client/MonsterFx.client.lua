@@ -14,8 +14,9 @@
 --   des gyrophares aux coins de l'écran et une lumière rouge sur le joueur) ; mâchoires qui se ferment s'il attrape (avec la morsure dessinée en 4 calques,
 --   LayeredFx « Bite », aussi visible dans le monde par les joueurs autour), puis, s'il manquait de Speed, un petit
 --   encadré « [jetpack] Need 50K Speed » pendant quelques secondes ;
--- - roche tombée sur un astéroïde après une prise (World.LostRocks) : collée à l'astéroïde qui
---   défile, rayon lumineux jusqu'à elle, contour et compte à rebours pour son propriétaire.
+-- - roche lâchée après une prise (World.LostRocks) : elle flotte en apesanteur à l'endroit exact où le monstre
+--   a attrapé le joueur (elle tourne lentement sur elle-même), rayon lumineux jusqu'à elle, contour et compte
+--   à rebours pour son propriétaire ; à la fin du temps elle rétrécit et disparaît.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -735,7 +736,7 @@ end
 
 -- ROCHES TOMBÉES (après une prise) ---------------------------------------------------------
 
-type LostView = { model: Model, mine: boolean, phase: number, label: TextLabel?, from: Attachment?, to: Attachment?, beam: Beam?, sinkAt: number? }
+type LostView = { model: Model, mine: boolean, phase: number, scale: number, label: TextLabel?, from: Attachment?, to: Attachment?, beam: Beam?, sinkAt: number? }
 local lostViews: { [Instance]: LostView } = {}
 local lostFolder = world:WaitForChild("LostRocks", 30)
 
@@ -744,7 +745,7 @@ local function addLost(m: Instance)
 		return
 	end
 	local mine = m:GetAttribute("Owner") == player.UserId
-	local lv: LostView = { model = m, mine = mine, phase = math.random() * 6 }
+	local lv: LostView = { model = m, mine = mine, phase = math.random() * 6, scale = m:GetScale() }
 	if mine then
 		-- contour visible à travers les roches, compte à rebours au-dessus et rayon jusqu'à elle
 		local hl = Instance.new("Highlight")
@@ -802,7 +803,7 @@ if lostFolder then
 		addLost(m)
 	end
 	lostFolder.ChildAdded:Connect(function(m)
-		task.wait() -- on laisse arriver les attributs et la référence à l'astéroïde
+		task.wait() -- on laisse arriver les attributs
 		addLost(m)
 	end)
 	lostFolder.ChildRemoved:Connect(removeLost)
@@ -813,20 +814,19 @@ local function stepLost()
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local t = workspace:GetServerTimeNow()
 	for m, lv in pairs(lostViews) do
-		local ref = m:FindFirstChild("Asteroid") :: ObjectValue?
-		local rock = ref and ref.Value :: BasePart?
-		local offset = (m:GetAttribute("Offset") or Vector3.zero) :: Vector3
-		if rock and rock:IsDescendantOf(workspace) then
-			-- elle tourne doucement sur le dessus de l'astéroïde ; elle s'y enfonce à la fin du temps
+		local at = m:GetAttribute("From") :: Vector3?
+		if at then
+			-- en apesanteur là où le monstre a attrapé le joueur : elle monte et descend à peine et tourne
+			-- lentement sur elle-même ; à la fin du temps elle rétrécit et s'éteint
 			local sink = 0
 			if m:GetAttribute("Sinking") then
 				lv.sinkAt = lv.sinkAt or os.clock()
 				sink = math.clamp((os.clock() - (lv.sinkAt :: number)) / 1.1, 0, 1)
+				m:ScaleTo(lv.scale * math.max(0.05, 1 - sink))
 			end
-			local bob = math.sin(os.clock() * 3 + lv.phase) * 0.4 * (1 - sink)
-			local h = (m:GetAttribute("BodyHeight") or 3) :: number
-			local pos = rock.Position + offset + Vector3.new(0, bob - sink * h * 1.2, 0)
-			m:PivotTo(CFrame.new(pos) * CFrame.Angles(0, os.clock() * 1.4 + lv.phase, 0.15))
+			local c = os.clock()
+			local bob = math.sin(c * 1.6 + lv.phase) * 0.5 * (1 - sink)
+			m:PivotTo(CFrame.new(at + Vector3.new(0, bob, 0)) * CFrame.Angles(c * 0.35 + lv.phase, c * 0.6 + lv.phase, math.sin(c * 0.4 + lv.phase) * 0.3))
 		end
 		if lv.mine then
 			local left = math.max(0, ((m:GetAttribute("ExpiresAt") or t) :: number) - t)

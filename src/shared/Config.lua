@@ -97,8 +97,10 @@ Config.Map = {
 -- avec assez de Speed, il va un peu moins vite que le joueur (Speed du monstre : 0,82 à 0,98 depuis le
 -- 29 nov., pour plus de pression ; 0,6 à 0,95 avant) ; en dessous, il
 -- va d'autant plus vite que le joueur en manque (jusqu'à MaxFactor fois la vitesse du joueur).
--- S'il l'attrape : le joueur est projeté au loin et sa roche retombe sur l'astéroïde le plus proche ;
--- il a DropTime secondes pour aller la reprendre, sinon elle s'enfonce dans l'astéroïde (œuf perdu).
+-- S'il l'attrape : le joueur est projeté au loin et sa roche reste en apesanteur à l'endroit exact de la
+-- prise (30 nov. ; avant, elle retombait sur l'astéroïde le plus proche) ; il a DropTime secondes pour aller
+-- la reprendre, sinon elle disparaît (œuf perdu). La reprendre relance la poursuite : chaque fois qu'on prend
+-- un œuf, foré ou repris, le monstre de l'anneau fonce (plus de temps de répit entre deux poursuites).
 Config.Monsters = {
 	Kinds = {
 		-- les deux premiers apprennent la poursuite sans faire mal, dès le premier œuf : petits, lents
@@ -128,11 +130,11 @@ Config.Monsters = {
 	-- En poursuite, tous ses gestes vont plus vite (ailes, queue, mâchoires, ondulation) : x ChaseAnim à pleine
 	-- ardeur (client/MonsterRig). Les pas suivent déjà la distance, donc sa vitesse.
 	ChaseAnim = 1.8,
-	-- Prise : le joueur est projeté (studs/s) et sa roche retombe sur l'astéroïde le plus proche
+	-- Prise : le joueur est projeté (studs/s) et sa roche flotte là où il a été attrapé
 	Knock = 70,
 	KnockUp = 35,
 	DropTime = 30, -- secondes pour reprendre sa roche
-	DropSearch = 500, -- studs : astéroïde le plus proche cherché dans ce rayon (sinon la roche est perdue)
+	DropGrab = 1.5, -- secondes avant de pouvoir la reprendre (le temps d'être projeté ; pas de reprise dans la mâchoire)
 	PickRadius = 9, -- studs : on reprend sa roche en la touchant (en plus de sa taille)
 	-- Façon de se promener (Kinds[].Move, shared/MonsterPath) : Float flotte librement (Patrol ci-dessous) ;
 	-- Walk se tient sur les astéroïdes, les traverse à pied et saute de l'un à l'autre (Foot = distance du
@@ -163,7 +165,6 @@ Config.Monsters = {
 	CatchRadius = 6, -- en plus de son rayon
 	MinSpeed = 24, -- studs/s au minimum dans l'espace (sinon vitesse en vol du joueur × Speed) ;
 	-- sur le vaisseau : vitesse à pied du joueur × Speed
-	Cooldown = 12, -- secondes de répit après une poursuite
 	StunGap = 4, -- secondes après un coup de batte où le monstre ne peut plus être assommé
 	RingMargin = 30, -- studs autour de l'épaisseur de l'anneau où il règne
 }
